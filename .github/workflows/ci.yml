@@ -216,6 +216,7 @@ jobs:
           - tagging_water_increment
           - tagging_water_increment_explicit
           - tagging_water_leak
+          - tagging_water_precipitation
           - parameterizations
           - restarts
         # The groups that test upstream ClimaAtmos code run on 1.11 only. A

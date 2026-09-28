@@ -364,9 +364,13 @@ denominator of [`water_tag_share_norm!`](@ref). Under 0M,
 `ᶜtagging_q_rainouts` holds every tag's part of the rain-out and
 `ᶜtagging_q_rainout_res` the part no region tag takes, computed once per
 output time for `pr_tag` ([`update_water_tag_rainouts!`](@ref)), and
-`tagging_q_rainout_time` that time in seconds. `ᶜtagging_q_leak_correction`,
-under `water_tag_leak_correction: true` only, holds one tag's correction of the
-diffusion's leak at a time ([`correct_water_tag_diffusion_leak!`](@ref)).
+`tagging_q_rainout_time` that time in seconds. Under
+`water_tag_precipitation: true`, which needs 1M,
+`_water_tag_precipitation_scratch` adds the rain and snow parts' share
+denominators and snapshots.
+`ᶜtagging_q_leak_correction`, under `water_tag_leak_correction: true` only,
+holds one tag's correction of the diffusion's leak at a time
+([`correct_water_tag_diffusion_leak!`](@ref)).
 """
 tagging_scratch(Y, atmos::AtmosModel) = (;
     (
@@ -383,6 +387,7 @@ tagging_scratch(Y, atmos::AtmosModel) = (;
                 has_water_tag_leak_correction(atmos.water_tagging_model) ?
                 (; ᶜtagging_q_leak_correction = similar(Y.c.ρ)) : (;)
             )...,
+            _water_tag_precipitation_scratch(Y, atmos.water_tagging_model)...,
             # Each tag's part of the 0M rain-out, for `pr_tag` (WP4a).
             (
                 atmos.microphysics_model isa EquilibriumMicrophysics0M ?
@@ -1077,12 +1082,12 @@ never touched.
 function rebuild_tags_from_state!(Y, atmos)
     ᶜcoord = Fields.coordinate_field(Y.c)
     _rebuild_tags_of_family!(Y.c, ᶜcoord, Y.c.ρe_tot, atmos.tagging_model)
-    # The water partition's target is the parent's non-negative part
-    # (known issue 7, option C).
-    hasproperty(Y.c, :ρq_tot) && _rebuild_tags_of_family!(
+    # Each water tag's parts take their masked share of their compartments'
+    # non-negative parts (known issue 7, option C). Without
+    # `water_tag_precipitation` that is the whole of `max(ρq_tot, 0)`.
+    hasproperty(Y.c, :ρq_tot) && rebuild_water_tags_from_state!(
         Y.c,
         ᶜcoord,
-        (@. lazy(water_tag_partition_target(Y.c.ρq_tot))),
         atmos.water_tagging_model,
     )
     rebuild_water_tag_updraft_copies!(
@@ -1247,6 +1252,8 @@ in each case:
     because a shape-preserving adjustment applied per tag has no reason to
     reproduce the parent's and would break `Σᵢ ρq_tag_i = ρq_tot`. Water tags
     follow the parent's limiting through [`rescale_water_tags!`](@ref) instead.
+    The same holds for their rain and snow parts, `ρq_rtag_*` and `ρq_stag_*`
+    ([`is_water_precip_part_name`](@ref)).
   - `ρe_src_*` is exempt for the same partition reason as the water tags. It
     has no equivalent of `rescale_water_tags!`. Instead
     `repair_energy_source_tags!`, on by default, puts negative tags back after
@@ -1257,4 +1264,5 @@ in each case:
 is_tagged_tracer_name(name) =
     is_energy_tag_name(name) ||
     is_water_tag_name(name) ||
+    is_water_precip_part_name(name) ||
     is_energy_source_tag_name(name)

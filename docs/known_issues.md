@@ -347,3 +347,7 @@ part is a named remainder, `q_tag_negative`.
   - The limiters' rescale and the copies' repair aim at the non-negative part.
   - The closure check and `q_tag_res` compare the partition with it.
   - Where the parent is never negative, nothing changes, bit for bit.
+  - Under `water_tag_precipitation: true` option C applies per compartment:
+    the parts of each tag partition the non-negative parts of the
+    non-precipitating water, of rain and of snow, and `q_tag_negative` is the
+    sum of the three negative parts (docs/src/tagged_water_precipitation.md).

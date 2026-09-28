@@ -27,6 +27,10 @@ physically admissible range:
   - `enforce_physical_constraints!(Y, p, t, p.atmos)`: grid-mean microphysics and
     EDMF updraft corrections.
 
+  - `follow_water_tag_precipitation!`: under `water_tag_precipitation: true`,
+    moves what the constraints did to rain and snow between the water tags'
+    parts, measured from `snapshot_water_tag_precipitation!` at the start
+
   - `repair_water_tag_partition!`: restores non-negativity of the tagged water
     partition without changing its sum
 
@@ -40,12 +44,18 @@ The `dss!` and `set_precomputed_quantities!` calls are not part of this — the
 timestepper runs them through its own `dss!` and `cache!` hooks. Returns `nothing`.
 """
 NVTX.@annotate function constrain_state!(Y, p, t)
+    # The water tags' rain and snow parts follow what the constraints do to
+    # rain and snow, measured from here.
+    snapshot_water_tag_precipitation!(Y, p)
     prescribe_flow!(Y, p, t, p.atmos.prescribed_flow)
     tracer_nonnegativity_constraint!(Y, p, t, p.atmos.water.tracer_nonnegativity_method)
     # The water tags' ledger of the updraft filter reads the copies around it.
     snapshot_water_tag_copy_water!(Y, p)
     enforce_physical_constraints!(Y, p, t, p.atmos)
     record_water_tag_copy_filter!(Y, p)
+    # The constraints change rain and snow without ρq_tot, such as the clip and
+    # rescale of the condensates. The rain and snow parts follow that here.
+    follow_water_tag_precipitation!(Y, p)
     # Last: the corrections above can still move ρq_tot (and rescale the tags to
     # follow it), while the repair only needs the tags to be self-consistent.
     repair_water_tag_partition!(Y, p)

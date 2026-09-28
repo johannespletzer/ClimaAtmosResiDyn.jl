@@ -2406,7 +2406,8 @@ struct IncrementWaterTagTransport <: AbstractWaterTagTransport end
 """
     WaterTaggingModel(tags::Tuple; updraft_copies = false,
                       transport = TracerWaterTagTransport(),
-                      ledger_per_tag = false, leak_correction = false)
+                      ledger_per_tag = false, precipitation = false,
+                      leak_correction = false)
 
 Model component holding a `Tuple` of [`WaterTag`](@ref)s. Constructed from the
 `water_tracers` config entry; see `AtmosTagging(::AtmosConfig)` in
@@ -2430,6 +2431,13 @@ for the limiters' rescale and the partition repair, and, under the increment,
 `q_tag_led_inc_<name>` for the follower. Off by default, since each adds a
 state field per tag. A type parameter, like `updraft_copies`.
 
+`precipitation`, from `water_tag_precipitation`, splits each tag into three
+parts: `ρq_tag_<name>` holds the water that is neither rain nor snow,
+`ρq_rtag_<name>` the rain and `ρq_stag_<name>` the snow. It is a type
+parameter too. It needs 1-moment microphysics, which the configuration checks,
+and it is refused here with updraft copies. See
+[`has_water_tag_precipitation`](@ref).
+
 `leak_correction`, from `water_tag_leak_correction`, charges each tag the EDMF
 vertical diffusion of its share of the rain and snow, which the parent does not
 diffuse, on the grid mean and on the copies (WP4c). Off by default. A type
@@ -2440,6 +2448,7 @@ struct WaterTaggingModel{
     UpdraftCopies,
     TR <: AbstractWaterTagTransport,
     LedgerPerTag,
+    Precipitation,
     LeakCorrection,
 }
     tags::T
@@ -2450,8 +2459,19 @@ function WaterTaggingModel(
     updraft_copies::Bool = false,
     transport::AbstractWaterTagTransport = TracerWaterTagTransport(),
     ledger_per_tag::Bool = false,
+    precipitation::Bool = false,
     leak_correction::Bool = false,
 )
+    # The copies of the rain and snow parts are stage 3 of the design note
+    # (design/RAIN_SNOW_TAGS.md on the record branch, section 13). Their build
+    # cost is measured first.
+    precipitation &&
+        updraft_copies &&
+        error(
+            "`water_tag_precipitation: true` is refused with \
+            `water_tag_updraft_copy: true`. The updraft copies of the rain and \
+            snow parts are not built yet. Drop one of the two keys.",
+        )
     # The correction gives the partition the parent's increment, less what the
     # partition's own tendencies moved. Without a partition the tags that carry
     # a source would take the parent's whole implicit transport on top of
@@ -2472,6 +2492,7 @@ function WaterTaggingModel(
         updraft_copies,
         typeof(transport),
         ledger_per_tag,
+        precipitation,
         leak_correction,
     }(
         tags,
@@ -2513,6 +2534,19 @@ has_water_tag_ledger_per_tag(
 ) where {T, U, TR, LedgerPerTag} = LedgerPerTag
 
 """
+    has_water_tag_precipitation(model)
+
+Whether each water tag of `model` has a rain part and a snow part, from the
+`water_tag_precipitation` config key. Then `ρq_tag_<name>` holds only the water
+that is neither rain nor snow. A property of the model's type, so it folds away
+at compile time. `false` without water tags.
+"""
+has_water_tag_precipitation(::Nothing) = false
+has_water_tag_precipitation(
+    ::WaterTaggingModel{T, U, TR, L, Precipitation},
+) where {T, U, TR, L, Precipitation} = Precipitation
+
+"""
     has_water_tag_leak_correction(model)
 
 Whether the water tags of `model` are charged the EDMF vertical diffusion of
@@ -2521,8 +2555,8 @@ key (WP4c). `false` without water tags.
 """
 has_water_tag_leak_correction(::Nothing) = false
 has_water_tag_leak_correction(
-    ::WaterTaggingModel{T, U, TR, L, LeakCorrection},
-) where {T, U, TR, L, LeakCorrection} = LeakCorrection
+    ::WaterTaggingModel{T, U, TR, L, P, LeakCorrection},
+) where {T, U, TR, L, P, LeakCorrection} = LeakCorrection
 
 """
     EnergySourceTag{name}(region, source = :none)

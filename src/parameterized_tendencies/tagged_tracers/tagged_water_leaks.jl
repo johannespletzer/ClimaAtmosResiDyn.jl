@@ -48,10 +48,16 @@ takes it out again, into `q_tag_upfix_<name>`.
 Zero where the path is off, or on a column for the horizontal paths. On the
 sphere the result is DSSed, as a tendency diagnostic is. See
 [`WATER_TAG_LEAK_PATHS`](@ref) for the paths.
+
+Zero under `water_tag_precipitation: true`. There the tags' `ρq_tag_<name>`
+fields hold the diffusing water and move as it does, and the hyperdiffusion
+takes each tag's share of the reference profile, so no path leaks
+(`prep_water_tag_hyperdiffusion!`). The copies are refused with the key.
 """
 function water_tag_leak!(ᶜleak, Y, p, path::Val)
     @. ᶜleak = 0
-    _water_tag_leak!(ᶜleak, Y, p, path)
+    has_water_tag_precipitation(p.atmos.water_tagging_model) ||
+        _water_tag_leak!(ᶜleak, Y, p, path)
     do_dss(axes(Y.c)) && Spaces.weighted_dss!(ᶜleak)
     return ᶜleak
 end

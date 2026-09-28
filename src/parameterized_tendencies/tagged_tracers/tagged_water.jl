@@ -22,6 +22,11 @@
 #####
 ##### `ρq_tot` is advected implicitly and the tags explicitly. That split is the
 ##### one unavoidable source of closure drift, and `q_tag_res` measures it.
+#####
+##### Under `water_tag_precipitation: true` each tag also has a rain part and a
+##### snow part, and `ρq_tag_<name>` holds only the water that is neither. Every
+##### share of a `ρq_tag_<name>` field below then divides by that water,
+##### `water_tag_parent`, not by `ρq_tot`. See `tagged_water_precipitation.jl`.
 
 # ============================================================================
 # Names, state, and initial values
@@ -286,6 +291,7 @@ function _water_tagging_cache(Y, model::WaterTaggingModel)
         ᶜwater_neg,
         _water_copy_cache(Y, model)...,
         _water_tag_increment_cache(Y, model)...,
+        _water_tag_precipitation_cache(Y, model)...,
     )
 end
 
@@ -337,13 +343,15 @@ What the water closure check compares the partition with, in the form
 that fills `p.tagging.ᶜwater_parent` with the partition's target,
 `water_tag_partition_target(ρq_tot)`, and returns it. The closure's `total`,
 `scale` and residuals are then over the parent's non-negative water; its
-negative part is the named remainder `q_tag_negative`.
+negative part is the named remainder `q_tag_negative`. Under
+`water_tag_precipitation: true` the target is the sum of the three
+compartments' non-negative parts ([`water_partition_target`](@ref)).
 """
 water_closure_total(::Nothing) = :ρq_tot
 water_closure_total(::WaterTaggingModel) = water_closure_parent
 function water_closure_parent(Y, p)
     ᶜparent = p.tagging.ᶜwater_parent
-    @. ᶜparent = water_tag_partition_target(Y.c.ρq_tot)
+    @. ᶜparent = $(water_partition_target(Y.c, p.atmos.water_tagging_model))
     return ᶜparent
 end
 
@@ -399,6 +407,7 @@ function _attribute_tagged_ρq_tot!(Yₜ, Y, p, source, model::WaterTaggingModel
         ᶜΔρq_tot,
         source,
         model.tags,
+        water_tag_parent(Y.c, model),
     )
     return nothing
 end
@@ -408,9 +417,25 @@ end
 # for two reasons. It keeps the whole update in one broadcast over `ᶜΔ`. And a
 # `-` directly before a modifier letter such as `ᶜ` parses as the suffixed
 # operator `-ᶜ`, which Julia leaves undefined.
-_accumulate_water_tags!(ᶜYₜ, ᶜY, ᶜmasks, ᶜΔ, source, ::Tuple{}) = nothing
-function _accumulate_water_tags!(ᶜYₜ, ᶜY, ᶜmasks, ᶜΔ, source, tags::Tuple)
-    _accumulate_water_tag!(ᶜYₜ, ᶜY, ᶜmasks, ᶜΔ, source, first(tags))
+#
+# `ᶜparent` is the water the tags partition, which the loss's donor share
+# divides by: `ρq_tot`, or under `water_tag_precipitation: true` the water that
+# is neither rain nor snow (`water_tag_parent`). A bracketed process moves only
+# `ρq_tot`, so under the key its change is the non-precipitating water's.
+_accumulate_water_tags!(ᶜYₜ, ᶜY, ᶜmasks, ᶜΔ, source, tags::Tuple) =
+    _accumulate_water_tags!(ᶜYₜ, ᶜY, ᶜmasks, ᶜΔ, source, tags, ᶜY.ρq_tot)
+_accumulate_water_tags!(ᶜYₜ, ᶜY, ᶜmasks, ᶜΔ, source, ::Tuple{}, ᶜparent) =
+    nothing
+function _accumulate_water_tags!(
+    ᶜYₜ,
+    ᶜY,
+    ᶜmasks,
+    ᶜΔ,
+    source,
+    tags::Tuple,
+    ᶜparent,
+)
+    _accumulate_water_tag!(ᶜYₜ, ᶜY, ᶜmasks, ᶜΔ, source, first(tags), ᶜparent)
     return _accumulate_water_tags!(
         ᶜYₜ,
         ᶜY,
@@ -418,6 +443,7 @@ function _accumulate_water_tags!(ᶜYₜ, ᶜY, ᶜmasks, ᶜΔ, source, tags::T
         ᶜΔ,
         source,
         Base.tail(tags),
+        ᶜparent,
     )
 end
 
@@ -429,31 +455,39 @@ function _accumulate_water_tag!(
     ᶜΔ,
     source,
     tag::WaterTag{name, Nothing},
+    ᶜparent,
 ) where {name}
     ᶜρq_tagₜ = tag_field(ᶜYₜ, tag)
     ᶜρq_tag = tag_field(ᶜY, tag)
     if tag_receives_source(tag, source)
         @. ᶜρq_tagₜ +=
-            max(ᶜΔ, 0) +
-            min(ᶜΔ, 0) * water_tag_fraction(ᶜρq_tag, ᶜY.ρq_tot)
+            max(ᶜΔ, 0) + min(ᶜΔ, 0) * water_tag_fraction(ᶜρq_tag, ᶜparent)
     else
-        @. ᶜρq_tagₜ += min(ᶜΔ, 0) * water_tag_fraction(ᶜρq_tag, ᶜY.ρq_tot)
+        @. ᶜρq_tagₜ += min(ᶜΔ, 0) * water_tag_fraction(ᶜρq_tag, ᶜparent)
     end
     return nothing
 end
 
 # Tag with a region: production is masked. Loss stays donor-proportional, so
 # water leaves from wherever the tag is holding it.
-function _accumulate_water_tag!(ᶜYₜ, ᶜY, ᶜmasks, ᶜΔ, source, tag::WaterTag)
+function _accumulate_water_tag!(
+    ᶜYₜ,
+    ᶜY,
+    ᶜmasks,
+    ᶜΔ,
+    source,
+    tag::WaterTag,
+    ᶜparent,
+)
     ᶜρq_tagₜ = tag_field(ᶜYₜ, tag)
     ᶜρq_tag = tag_field(ᶜY, tag)
     ᶜmask = tag_field(ᶜmasks, tag)
     if tag_receives_source(tag, source)
         @. ᶜρq_tagₜ +=
             ᶜmask * max(ᶜΔ, 0) +
-            min(ᶜΔ, 0) * water_tag_fraction(ᶜρq_tag, ᶜY.ρq_tot)
+            min(ᶜΔ, 0) * water_tag_fraction(ᶜρq_tag, ᶜparent)
     else
-        @. ᶜρq_tagₜ += min(ᶜΔ, 0) * water_tag_fraction(ᶜρq_tag, ᶜY.ρq_tot)
+        @. ᶜρq_tagₜ += min(ᶜΔ, 0) * water_tag_fraction(ᶜρq_tag, ᶜparent)
     end
     return nothing
 end
@@ -567,7 +601,7 @@ state.
 """
 function water_tag_sediment_dshare_field(Y, p, tag)
     ᶜρq_tag = tag_field(Y.c, tag)
-    ᶜρq_tot = Y.c.ρq_tot
+    ᶜρq_tot = water_tag_parent(Y.c, p.atmos.water_tagging_model)
     if _is_partition_tag(tag)
         ᶜnorm = p.scratch.ᶜtagging_q_share_norm
         return @. lazy(water_tag_sediment_dshare(ᶜρq_tag, ᶜρq_tot, ᶜnorm))
@@ -589,7 +623,7 @@ state.
 """
 function water_tag_sediment_share_field(Y, p, tag)
     ᶜρq_tag = tag_field(Y.c, tag)
-    ᶜρq_tot = Y.c.ρq_tot
+    ᶜρq_tot = water_tag_parent(Y.c, p.atmos.water_tagging_model)
     if _is_partition_tag(tag)
         ᶜnorm = p.scratch.ᶜtagging_q_share_norm
         return @. lazy(water_tag_sediment_share(ᶜρq_tag, ᶜρq_tot, ᶜnorm))
@@ -605,6 +639,11 @@ Fill `p.scratch.ᶜtagging_q_share_norm` with `Σⱼ clamp(ρq_tag_j / ρq_tot)`
 the *partition* tags, the denominator [`water_tag_sediment_share`](@ref) divides
 by. A no-op when water tagging is disabled.
 
+Under `water_tag_precipitation: true` the share is of the water that is neither
+rain nor snow ([`water_tag_parent`](@ref)), and the rain and snow parts' own
+denominators are filled beside it, in `ᶜtagging_q_share_norm_rai` and
+`ᶜtagging_q_share_norm_sno`.
+
 Lives in `p.scratch` rather than `p.tagging` for the same reason as the `ρq_tot`
 snapshot: the implicit tendency is evaluated with `ForwardDiff.Dual` numbers when
 an automatic-differentiation Jacobian is used, and only `p.precomputed` and
@@ -619,45 +658,79 @@ _water_tag_share_norm!(p, Y, ::Nothing) = nothing
 function _water_tag_share_norm!(p, Y, model::WaterTaggingModel)
     ᶜnorm = p.scratch.ᶜtagging_q_share_norm
     ᶜnorm .= zero(eltype(ᶜnorm))
-    _accumulate_share_norm!(ᶜnorm, Y.c, model.tags)
+    _accumulate_share_norm!(
+        ᶜnorm,
+        Y.c,
+        model.tags,
+        water_tag_parent(Y.c, model),
+    )
+    _water_tag_precipitation_share_norms!(p, Y, model)
     return nothing
 end
 
-_accumulate_share_norm!(ᶜnorm, ᶜY, ::Tuple{}) = nothing
-function _accumulate_share_norm!(ᶜnorm, ᶜY, tags::Tuple)
+_accumulate_share_norm!(ᶜnorm, ᶜY, tags::Tuple) =
+    _accumulate_share_norm!(ᶜnorm, ᶜY, tags, ᶜY.ρq_tot)
+_accumulate_share_norm!(ᶜnorm, ᶜY, ::Tuple{}, ᶜparent) = nothing
+function _accumulate_share_norm!(ᶜnorm, ᶜY, tags::Tuple, ᶜparent)
     tag = first(tags)
     if _is_partition_tag(tag)
         ᶜρq_tag = tag_field(ᶜY, tag)
-        @. ᶜnorm += water_tag_fraction(ᶜρq_tag, ᶜY.ρq_tot)
+        @. ᶜnorm += water_tag_fraction(ᶜρq_tag, ᶜparent)
     end
-    return _accumulate_share_norm!(ᶜnorm, ᶜY, Base.tail(tags))
+    return _accumulate_share_norm!(ᶜnorm, ᶜY, Base.tail(tags), ᶜparent)
 end
 
 """
-    sediment_water_tags!(Yₜ, Y, p, ᶜq, ᶜw, ᶠρ)
+    sediment_water_tags!(Yₜ, Y, p, ᶜq, ᶜw, ᶠρ, ρq_name)
 
 Add one sedimenting species' mirrored flux divergence to every tagged water
 tracer, where `ᶜq` is that species' specific content, `ᶜw` its terminal velocity
 and `ᶠρ` the face-interpolated density — the same three quantities the parent
 `ρq_tot` flux is built from in `vertical_advection_of_water_tendency!`, so that
-the tagged fluxes sum to it exactly.
+the tagged fluxes sum to it exactly. `ρq_name` is the species' `@name`.
+
+Under `water_tag_precipitation: true` rain falls in each tag's rain part and
+snow in its snow part, linearly, and only the cloud falls in `ρq_tag_<name>`,
+by its share of the water that is neither rain nor snow. See
+`_sediment_water_tag_parts!`.
 
 Call once per species, from inside that function's species loop, with
 [`water_tag_share_norm!`](@ref) already evaluated for the current state. A no-op
 when water tagging is disabled.
 """
-sediment_water_tags!(Yₜ, Y, p, ᶜq, ᶜw, ᶠρ) =
-    _sediment_water_tags!(Yₜ, Y, p, ᶜq, ᶜw, ᶠρ, p.atmos.water_tagging_model)
-_sediment_water_tags!(Yₜ, Y, p, ᶜq, ᶜw, ᶠρ, ::Nothing) = nothing
-function _sediment_water_tags!(
+sediment_water_tags!(Yₜ, Y, p, ᶜq, ᶜw, ᶠρ, ρq_name) =
+    _sediment_water_tags_of_model!(
+        Yₜ,
+        Y,
+        p,
+        ᶜq,
+        ᶜw,
+        ᶠρ,
+        ρq_name,
+        p.atmos.water_tagging_model,
+    )
+_sediment_water_tags_of_model!(Yₜ, Y, p, ᶜq, ᶜw, ᶠρ, ρq_name, ::Nothing) =
+    nothing
+function _sediment_water_tags_of_model!(
     Yₜ,
     Y,
     p,
     ᶜq,
     ᶜw,
     ᶠρ,
+    ρq_name,
     model::WaterTaggingModel,
 )
+    has_water_tag_precipitation(model) && return _sediment_water_tag_parts!(
+        Yₜ,
+        Y,
+        p,
+        ᶜq,
+        ᶜw,
+        ᶠρ,
+        ρq_name,
+        model,
+    )
     _sediment_water_tags!(
         Yₜ.c,
         Y.c,
@@ -670,8 +743,19 @@ function _sediment_water_tags!(
     return nothing
 end
 
-_sediment_water_tags!(ᶜYₜ, ᶜY, ᶜnorm, ᶜq, ᶜw, ᶠρ, ::Tuple{}) = nothing
-function _sediment_water_tags!(ᶜYₜ, ᶜY, ᶜnorm, ᶜq, ᶜw, ᶠρ, tags::Tuple)
+_sediment_water_tags!(ᶜYₜ, ᶜY, ᶜnorm, ᶜq, ᶜw, ᶠρ, tags::Tuple) =
+    _sediment_water_tags!(ᶜYₜ, ᶜY, ᶜnorm, ᶜq, ᶜw, ᶠρ, tags, ᶜY.ρq_tot)
+_sediment_water_tags!(ᶜYₜ, ᶜY, ᶜnorm, ᶜq, ᶜw, ᶠρ, ::Tuple{}, ᶜparent) = nothing
+function _sediment_water_tags!(
+    ᶜYₜ,
+    ᶜY,
+    ᶜnorm,
+    ᶜq,
+    ᶜw,
+    ᶠρ,
+    tags::Tuple,
+    ᶜparent,
+)
     tag = first(tags)
     ᶜρq_tagₜ = tag_field(ᶜYₜ, tag)
     ᶜρq_tag = tag_field(ᶜY, tag)
@@ -684,7 +768,7 @@ function _sediment_water_tags!(ᶜYₜ, ᶜY, ᶜnorm, ᶜq, ᶜw, ᶠρ, tags::
                 ᶠρ * ᶠtop_bias(
                     Geometry.WVector(-(ᶜw)) *
                     ᶜq *
-                    water_tag_sediment_share(ᶜρq_tag, ᶜY.ρq_tot, ᶜnorm),
+                    water_tag_sediment_share(ᶜρq_tag, ᶜparent, ᶜnorm),
                 ),
             )
     else
@@ -693,7 +777,7 @@ function _sediment_water_tags!(ᶜYₜ, ᶜY, ᶜnorm, ᶜq, ᶜw, ᶠρ, tags::
                 ᶠρ * ᶠtop_bias(
                     Geometry.WVector(-(ᶜw)) *
                     ᶜq *
-                    water_tag_source_sediment_share(ᶜρq_tag, ᶜY.ρq_tot),
+                    water_tag_source_sediment_share(ᶜρq_tag, ᶜparent),
                 ),
             )
     end
@@ -705,6 +789,7 @@ function _sediment_water_tags!(ᶜYₜ, ᶜY, ᶜnorm, ᶜq, ᶜw, ᶠρ, tags::
         ᶜw,
         ᶠρ,
         Base.tail(tags),
+        ᶜparent,
     )
 end
 
@@ -933,31 +1018,46 @@ holds the corrected value. The signed water moved is accumulated into
 "the limiters moved water" stays distinguishable from "the transport operators
 disagree", which `q_tag_res` alone would conflate.
 
+Under `water_tag_precipitation: true` a correction can also change `ρq_rai` and
+`ρq_sno`. Their changes since [`snapshot_water_tag_precipitation!`](@ref) move
+first, each between the tags' rain or snow parts and their non-precipitating
+parts ([`water_tag_part_follow_shift`](@ref)). Where a compartment is negative
+before or after, the non-precipitating parts then also take the rest of their
+compartment's change of target, by the rule above. Then the non-precipitating
+parts take the change of `ρq_tot` by the rule above, on their own compartment
+`ρq_tot - ρq_rai - ρq_sno`. The design note's section 8.
+
 A no-op when water tagging is disabled.
 """
 rescale_water_tags!(Y, p, ᶜρq_tot_before) =
     _rescale_water_tags!(Y, p, ᶜρq_tot_before, p.atmos.water_tagging_model)
 _rescale_water_tags!(Y, p, ᶜρq_tot_before, ::Nothing) = nothing
 function _rescale_water_tags!(Y, p, ᶜρq_tot_before, model::WaterTaggingModel)
-    (; ᶜwater_fix, ᶜwater_fix_gross, ᶜwater_fix_count, ᶜwater_pos) = p.tagging
-    ᶜwater_pos .= zero(eltype(ᶜwater_pos))
-    _accumulate_partition_pos!(ᶜwater_pos, Y.c, model.tags)
     # What this call adds to the ledgers per mechanism goes to their
-    # `attempted`, whether or not the stepper keeps it (WP6, step 3).
+    # `attempted`, whether or not the stepper keeps it (WP6, step 3). The
+    # bracket holds both branches, since the parts' rescale under
+    # `water_tag_precipitation: true` adds to the same two ledgers.
     mechanisms = Val((:q_tag_led_rescale, :q_tag_led_empty))
     before_tag_ledgers!(p, Y, mechanisms)
-    _apply_water_tag_rescale!(
-        Y.c,
-        tag_ledger(
-            ᶜwater_fix,
-            ᶜwater_fix_gross,
-            ᶜwater_fix_count,
-            water_tag_fix_ledger_view(Y, model),
-        ),
-        ᶜwater_pos,
-        ᶜρq_tot_before,
-        model.tags,
-    )
+    if has_water_tag_precipitation(model)
+        _rescale_water_tag_parts!(Y, p, ᶜρq_tot_before, model, Val(true))
+    else
+        (; ᶜwater_fix, ᶜwater_fix_gross, ᶜwater_fix_count, ᶜwater_pos) = p.tagging
+        ᶜwater_pos .= zero(eltype(ᶜwater_pos))
+        _accumulate_partition_pos!(ᶜwater_pos, Y.c, model.tags)
+        _apply_water_tag_rescale!(
+            Y.c,
+            tag_ledger(
+                ᶜwater_fix,
+                ᶜwater_fix_gross,
+                ᶜwater_fix_count,
+                water_tag_fix_ledger_view(Y, model),
+            ),
+            ᶜwater_pos,
+            ᶜρq_tot_before,
+            model.tags,
+        )
+    end
     after_tag_ledgers!(p, Y, mechanisms)
     return nothing
 end
@@ -965,14 +1065,51 @@ end
 # `ᶜpos` is read-only here and comes from the pre-correction state, so each tag
 # can be rewritten in place and a later tag's share still holds. Same reasoning
 # as `_apply_partition_repair!` below.
-_apply_water_tag_rescale!(ᶜY, ledger, ᶜpos, ᶜρq_tot_before, ::Tuple{}) =
-    nothing
+#
+# `ᶜafter` is the corrected parent, `ρq_tot` without the key. Under
+# `water_tag_precipitation: true` it is the corrected non-precipitating water,
+# and `ᶜρq_tot_before` that water before the correction.
+#
+# `ᶜgate`, where given, is a lazy field of `Bool`s. Outside it every field this
+# writes is left as it was, bit for bit, signed zeros included. `nothing`
+# applies the rescale everywhere.
+_apply_water_tag_rescale!(ᶜY, ledger, ᶜpos, ᶜρq_tot_before, tags::Tuple) =
+    _apply_water_tag_rescale!(
+        ᶜY,
+        ledger,
+        ᶜpos,
+        ᶜρq_tot_before,
+        tags,
+        ᶜY.ρq_tot,
+        nothing,
+    )
+_apply_water_tag_rescale!(ᶜY, ledger, ᶜpos, ᶜρq_tot_before, tags::Tuple, ᶜafter) =
+    _apply_water_tag_rescale!(
+        ᶜY,
+        ledger,
+        ᶜpos,
+        ᶜρq_tot_before,
+        tags,
+        ᶜafter,
+        nothing,
+    )
+_apply_water_tag_rescale!(
+    ᶜY,
+    ledger,
+    ᶜpos,
+    ᶜρq_tot_before,
+    ::Tuple{},
+    ᶜafter,
+    ᶜgate,
+) = nothing
 function _apply_water_tag_rescale!(
     ᶜY,
     ledger,
     ᶜpos,
     ᶜρq_tot_before,
     tags::Tuple,
+    ᶜafter,
+    ᶜgate,
 )
     tag = first(tags)
     ᶜρq_tag = tag_field(ᶜY, tag)
@@ -986,76 +1123,85 @@ function _apply_water_tag_rescale!(
         # The state ledgers per mechanism take the partition's shift: the
         # rescale where the parent held water, the emptying where it did not
         # (WP6, design/GROSS_ACCUMULATORS.md section 9).
-        @. ᶜY.q_tag_led_rescale += ifelse(
-            ᶜρq_tot_before > 0,
-            water_tag_rescale_shift(ᶜρq_tag, ᶜY.ρq_tot, ᶜρq_tot_before, ᶜpos),
-            zero(ᶜρq_tot_before),
+        @. ᶜY.q_tag_led_rescale += _gated(
+            ᶜgate,
+            ifelse(
+                ᶜρq_tot_before > 0,
+                water_tag_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before, ᶜpos),
+                zero(ᶜρq_tot_before),
+            ),
         )
-        @. ᶜY.q_tag_led_empty += ifelse(
-            ᶜρq_tot_before > 0,
-            zero(ᶜρq_tot_before),
-            water_tag_rescale_shift(ᶜρq_tag, ᶜY.ρq_tot, ᶜρq_tot_before, ᶜpos),
+        @. ᶜY.q_tag_led_empty += _gated(
+            ᶜgate,
+            ifelse(
+                ᶜρq_tot_before > 0,
+                zero(ᶜρq_tot_before),
+                water_tag_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before, ᶜpos),
+            ),
         )
-        @. ᶜgross += abs(
-            water_tag_rescale_shift(ᶜρq_tag, ᶜY.ρq_tot, ᶜρq_tot_before, ᶜpos),
+        @. ᶜgross += _gated(
+            ᶜgate,
+            abs(water_tag_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before, ᶜpos)),
         )
-        @. ᶜcount += tag_event(
-            water_tag_rescale_shift(ᶜρq_tag, ᶜY.ρq_tot, ᶜρq_tot_before, ᶜpos),
-            ᶜρq_tot_before,
+        @. ᶜcount += _gated(
+            ᶜgate,
+            tag_event(
+                water_tag_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before, ᶜpos),
+                ᶜρq_tot_before,
+            ),
         )
         # The tag's own ledger, where kept, takes the same change (step 3).
         add_to_tag_ledger!(
             ledger.state,
             tag,
             @. lazy(
-                water_tag_rescale_shift(
-                    ᶜρq_tag,
-                    ᶜY.ρq_tot,
-                    ᶜρq_tot_before,
-                    ᶜpos,
+                _gated(
+                    ᶜgate,
+                    water_tag_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before, ᶜpos),
                 ),
             )
         )
-        @. ᶜfix += water_tag_rescale_shift(
-            ᶜρq_tag,
-            ᶜY.ρq_tot,
-            ᶜρq_tot_before,
-            ᶜpos,
+        @. ᶜfix += _gated(
+            ᶜgate,
+            water_tag_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before, ᶜpos),
         )
-        @. ᶜρq_tag += water_tag_rescale_shift(
-            ᶜρq_tag,
-            ᶜY.ρq_tot,
-            ᶜρq_tot_before,
-            ᶜpos,
+        @. ᶜρq_tag += _gated(
+            ᶜgate,
+            water_tag_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before, ᶜpos),
         )
     else
-        @. ᶜgross += abs(
-            water_tag_source_rescale_shift(ᶜρq_tag, ᶜY.ρq_tot, ᶜρq_tot_before),
+        @. ᶜgross += _gated(
+            ᶜgate,
+            abs(water_tag_source_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before)),
         )
-        @. ᶜcount += tag_event(
-            water_tag_source_rescale_shift(ᶜρq_tag, ᶜY.ρq_tot, ᶜρq_tot_before),
-            ᶜρq_tot_before,
+        @. ᶜcount += _gated(
+            ᶜgate,
+            tag_event(
+                water_tag_source_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before),
+                ᶜρq_tot_before,
+            ),
         )
         add_to_tag_ledger!(
             ledger.state,
             tag,
             @. lazy(
-                water_tag_source_rescale_shift(
-                    ᶜρq_tag,
-                    ᶜY.ρq_tot,
-                    ᶜρq_tot_before,
+                _gated(
+                    ᶜgate,
+                    water_tag_source_rescale_shift(
+                        ᶜρq_tag,
+                        ᶜafter,
+                        ᶜρq_tot_before,
+                    ),
                 ),
             )
         )
-        @. ᶜfix += water_tag_source_rescale_shift(
-            ᶜρq_tag,
-            ᶜY.ρq_tot,
-            ᶜρq_tot_before,
+        @. ᶜfix += _gated(
+            ᶜgate,
+            water_tag_source_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before),
         )
-        @. ᶜρq_tag += water_tag_source_rescale_shift(
-            ᶜρq_tag,
-            ᶜY.ρq_tot,
-            ᶜρq_tot_before,
+        @. ᶜρq_tag += _gated(
+            ᶜgate,
+            water_tag_source_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before),
         )
     end
     return _apply_water_tag_rescale!(
@@ -1064,8 +1210,15 @@ function _apply_water_tag_rescale!(
         ᶜpos,
         ᶜρq_tot_before,
         Base.tail(tags),
+        ᶜafter,
+        ᶜgate,
     )
 end
+
+# A change outside the gate is `-0`, which leaves any value it is added to as it
+# was, bit for bit, `-0.0` included. Without a gate the change is kept.
+@inline _gated(::Nothing, change) = change
+@inline _gated(gate::Bool, change) = ifelse(gate, change, -zero(change))
 
 # ============================================================================
 # Partition repair
@@ -1140,14 +1293,15 @@ function _repair_water_tag_partition!(Y, p, model::WaterTaggingModel)
     _accumulate_partition_neg!(ᶜwater_neg, Y.c, model.tags)
     mechanisms = Val((:q_tag_led_repair, :q_tag_led_repairnet))
     before_tag_ledgers!(p, Y, mechanisms)
+    ledger = tag_ledger(
+        ᶜwater_fix,
+        ᶜwater_fix_gross,
+        ᶜwater_fix_count,
+        water_tag_fix_ledger_view(Y, model),
+    )
     _apply_partition_repair!(
         Y.c,
-        tag_ledger(
-            ᶜwater_fix,
-            ᶜwater_fix_gross,
-            ᶜwater_fix_count,
-            water_tag_fix_ledger_view(Y, model),
-        ),
+        ledger,
         ᶜwater_pos,
         ᶜwater_neg,
         model.tags,
@@ -1158,17 +1312,33 @@ function _repair_water_tag_partition!(Y, p, model::WaterTaggingModel)
     # (WP6, the code review's S1).
     @. Y.c.q_tag_led_repair -= max(-(ᶜwater_pos + ᶜwater_neg), 0) / 2
     @. Y.c.q_tag_led_repairnet += max(-(ᶜwater_pos + ᶜwater_neg), 0)
+    # Under `water_tag_precipitation: true` the rain parts and the snow parts
+    # are repaired the same way, each among themselves, into the same ledgers.
+    # Each tag's own ledger takes their changes too. They add to the ledgers
+    # per mechanism, so they run before `after_tag_ledgers!`.
+    _repair_water_tag_precip_parts!(Y, p, ledger, model)
     after_tag_ledgers!(p, Y, mechanisms)
     return nothing
 end
 
 # `ᶜpos` and `ᶜneg` are read-only here and come from the pre-repair state, so
 # each tag can be rewritten in place and a later tag's factor still holds.
-_apply_partition_repair!(ᶜY, ledger, ᶜpos, ᶜneg, ::Tuple{}) = nothing
-function _apply_partition_repair!(ᶜY, ledger, ᶜpos, ᶜneg, tags::Tuple)
+# `part` is the tags' part the repair acts on: the one field of each tag
+# without the key, and one of its three parts with it.
+_apply_partition_repair!(ᶜY, ledger, ᶜpos, ᶜneg, tags::Tuple) =
+    _apply_partition_repair!(
+        ᶜY,
+        ledger,
+        ᶜpos,
+        ᶜneg,
+        tags,
+        NonPrecipitatingPart(),
+    )
+_apply_partition_repair!(ᶜY, ledger, ᶜpos, ᶜneg, ::Tuple{}, part) = nothing
+function _apply_partition_repair!(ᶜY, ledger, ᶜpos, ᶜneg, tags::Tuple, part)
     tag = first(tags)
     if _is_partition_tag(tag)
-        ᶜρq_tag = tag_field(ᶜY, tag)
+        ᶜρq_tag = water_tag_part_field(ᶜY, tag, part)
         (ᶜfix, ᶜgross, ᶜcount) = tag_ledger_fields(ledger, tag)
         # Ledger first, so it records the correction itself and not its effect
         # on an already-corrected tag. This matches `rescale_water_tags!`. The
@@ -1204,5 +1374,6 @@ function _apply_partition_repair!(ᶜY, ledger, ᶜpos, ᶜneg, tags::Tuple)
         ᶜpos,
         ᶜneg,
         Base.tail(tags),
+        part,
     )
 end
