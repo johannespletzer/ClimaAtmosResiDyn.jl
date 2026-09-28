@@ -483,7 +483,9 @@ changes an approved row.
     is supported. The forcing as a whole attributes it (1.000, as in every
     rise). The owner decides the revision of C (section 9.5). *2026-09-28:*
     the owner chose to probe more first, and to rerun the probe on `main`
-    (below).
+    (below). *Probed on `main` (job `13996867`), scored on 2026-09-29
+    (W48):* by leave-one-out, subsidence carries every rise, and the
+    mechanism is shown cell by cell. The owner decides C's revision.
 
   - **Known issue 7: option C.** The partition tags partition the parent's
     non-negative water, `max(ρq_tot, 0)`. The follower takes that field's

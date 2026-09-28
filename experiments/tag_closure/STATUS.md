@@ -142,10 +142,14 @@ not checked, it says so.
           * WP6 confirmed;
           * OD9 to OD15, G4.3 to G4.6 and WP4b's points walked through
             later.
-      + *Where the next session starts:* the extended probe on `main`, which
-        is pre-registered as section 9.7 (`e09e0986`, amended after review)
-        and has check job `13996777` running; the two PRs from the backups;
-        WP4a-J; W21's surface flux. The
+      + *W48, 2026-09-29:* the extended probe on `main` (section 9.7). By
+        leave-one-out, subsidence carries every rise (84% to 95% of the
+        forcing's growth goes without it), and the vertical fluctuation
+        carries none. The mechanism is shown cell by cell. C's revision
+        waits on the owner, with W47 and W48.
+      + *Where the next session starts:* the owner's decision on C's
+        revision (a brief is in preparation); the two PRs from the backups
+        (#127 open, the #119 follow-ups next); WP4a-J; W21's surface flux. The
         uncommitted start of W45's investigation in `-plan2` is backed up
         as `claude/backup/plan2-2026-09-25` (`b3cd940a`). Record work now
         uses the worktree `../ClimaAtmosResiDyn-rec`, detached, pushing
@@ -522,7 +526,8 @@ to #126 were read from GitHub on 2026-09-28.
     day and passed: `13995633` for #118 and `13996629` for #126. The
     extended probe's check job, `13996777`, passed (1 h 57 min, both CSVs
     written, the per-level sums equal to the step totals). The probe itself,
-    `13996867`, was submitted at 22:22 from the run tree at `e09e0986`.
+    `13996867`, was submitted at 22:22 from the run tree at `e09e0986`. It
+    finished at 01:29 on 2026-09-29 and is W48.
 
 ## The housekeeping, H0 to H7: done
 

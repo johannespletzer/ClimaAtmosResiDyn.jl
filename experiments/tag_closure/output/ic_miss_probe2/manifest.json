@@ -1,0 +1,75 @@
+{
+  "branch": "detached",
+  "buildkite_files": {
+    "LocalPreferences.toml": null,
+    "Manifest-v1.11.toml": "d9653513f0038dddacb701ff096df93e1d2a811d87b6a5e3cb24a878560a2ed9",
+    "Project.toml": "ee8cf81147f2b886dead56c62013acde26222d9230030aa70fe4fdd2d76768b7"
+  },
+  "command": "env CONFIG=/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-ic-probe2-run/experiments/tag_closure/configs/ic_miss_probe2_s23.yml DRIVER=experiments/tag_closure/analysis/water/ic_miss_probe2.jl MANIFEST_PATH=/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/manifests/ic_miss_probe2_s23.20260928T202248Z.json sbatch --account=hpda-c --partition=hpda2_compute --time=12:00:00 --cpus-per-task=2 --mem=48G --output=/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/logs/%x-%j.out --error=/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/logs/%x-%j.err /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-ic-probe2-run/experiments/tag_closure/runscripts/phase_c.sh",
+  "config": {
+    "path": "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-ic-probe2-run/experiments/tag_closure/configs/ic_miss_probe2_s23.yml",
+    "sha256": "8bc6e3f68a229bc7e155caf450bf6f34ff5e81119dd44e49f53c17f4818bb0e6"
+  },
+  "config_paths": [
+    {
+      "exists": false,
+      "key": "external_forcing_file",
+      "mtime": null,
+      "raw": "artifact\"cfsite_gcm_forcing\"/HadGEM2-A_amip.2004-2008.07.nc",
+      "resolved": "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-ic-probe2-run/artifact\"cfsite_gcm_forcing\"/HadGEM2-A_amip.2004-2008.07.nc",
+      "sha256": null,
+      "size": null
+    },
+    {
+      "exists": true,
+      "key": "toml",
+      "mtime": "2026-09-28T18:24:51.078387+00:00",
+      "raw": "toml/prognostic_edmfx_gcmdriven.toml",
+      "resolved": "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-ic-probe2-run/toml/prognostic_edmfx_gcmdriven.toml",
+      "sha256": "3c9bb8f963ad15128e41c2e7a71f2857741ba4787eb702a9a08e97385f6a346b",
+      "size": 672
+    }
+  ],
+  "diff": "",
+  "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "driver": {
+    "path": "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-ic-probe2-run/experiments/tag_closure/analysis/water/ic_miss_probe2.jl",
+    "sha256": "e4776cd7791987c5949e9a190b56b7c206db95b1a82189e0320c4f164063ceb3"
+  },
+  "env_vars": {
+    "CLIMACOMMS_CONTEXT": null,
+    "CLIMACOMMS_DEVICE": null,
+    "JULIA_CPU_TARGET": null,
+    "JULIA_DEPOT_PATH": null,
+    "JULIA_NUM_THREADS": null,
+    "MKL_NUM_THREADS": null,
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": null
+  },
+  "extra": [],
+  "head_on_remote": [
+    "refs/remotes/origin/claude/plan-rev2"
+  ],
+  "head_sha": "e09e0986b22ecbe9b95fa96e08becc2d83388c61",
+  "hostname": "dlr-login",
+  "julia_binary": "/dss/dsshome1/0D/di38kez/.juliaup/bin/julia",
+  "julia_channel": "+1.11",
+  "julia_depot_path": "",
+  "julia_version": "julia version 1.11.9",
+  "loaded_modules": [
+    "tempdir/2.0",
+    "stack/24.4.0",
+    "dsstools/1.0",
+    "lrz_setup/1.0",
+    "python/3.12"
+  ],
+  "manifest_tool_sha256": "32a1a595c4004e5fe58e484c76599d263ba494ef563db33fdc7fdb45d75cb440",
+  "repo": "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-ic-probe2-run",
+  "status_lines": [],
+  "untracked": {
+    "count": 0,
+    "files": [],
+    "sha256": null
+  },
+  "utc_time": "2026-09-28T20:22:49.277068+00:00"
+}

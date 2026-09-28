@@ -1,0 +1,35 @@
+================================================================
+ClimaAtmos tag-closure run
+================================================================
+Run (job_id):    ic_miss_probe2_s23
+Machine:         terrabyte
+Configuration:   /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-ic-probe2-run/experiments/tag_closure/configs/ic_miss_probe2_s23.yml
+SLURM job:       13996867
+Partition:       hpda2_compute
+Nodes:           hpdar03c03s06
+CPUs per task:   2
+Tasks:           1
+Launch:          (direct)
+Repository:      /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-ic-probe2-run
+Commit:          e09e0986b22ecbe9b95fa96e08becc2d83388c61 (from git-files)
+Julia:           /dss/dsshome1/0D/di38kez/.juliaup/bin/julia +1.11
+Project:         /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-ic-probe2-run/.buildkite
+Driver:          /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-ic-probe2-run/experiments/tag_closure/analysis/water/ic_miss_probe2.jl
+Depot:           /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+Run directory:   /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure
+Output base:     /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/ic_miss_probe2_s23
+Start time:      2026-09-28T22:23:18+02:00
+
+Loaded modules:
+Currently Loaded Modulefiles:
+ 1) stack/24.4.0{arch=auto}(default) <aL>   3) gcc/13.2.0(default)           
+ 2) python/3.12                             4) openmpi/4.1.8-gcc13(default)  
+
+Key:
+{variant=value}  (symbolic-version)  <module-tag>  <aL>=auto-loaded  
+
+RESULT run=ic_miss_probe2_s23 steps=13824 csv=output/ic_miss_probe2_s23/output_0000/ic_miss_probe2_s23_steps.csv levels=output/ic_miss_probe2_s23/output_0000/ic_miss_probe2_s23_levels.csv
+
+Wrote /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/ic_miss_probe2_s23/output_0000/provenance.txt
+Driver exit status: 0
+End time:           2026-09-29T01:29:03+02:00

@@ -60,7 +60,9 @@ The twelve criteria of the plan, section 2, in short:
       + whether subsidence, whose share lies in class N, is treated with
         the local terms.
       + *Submitted 2026-09-28:* the extended probe of section 9.7, job
-        `13996867`, after check job `13996777` passed. [ ] Scored (W48).
+        `13996867`, after check job `13996777` passed. [x] Scored (W48,
+        2026-09-29): subsidence carries every rise by leave-one-out, and
+        the mechanism is shown cell by cell. C's revision waits on the owner.
       + *The owner, later on 2026-09-28:* probe more first (the fourth rise,
         cell by cell), and rerun the probe on `main` now with #118's check at
         every step. Both are pre-registered as an amendment to section 9. No

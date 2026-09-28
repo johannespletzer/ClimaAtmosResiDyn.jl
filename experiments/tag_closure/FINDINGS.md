@@ -89,7 +89,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                                   | section                                             |
 |:----------------------------------------------------- |:--------------------------------------------------- |
-| W1–W47 (W46 reserved for PX7)                         | 1. Water tags                                       |
+| W1–W48 (W46 reserved for PX7)                         | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48, E85 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11                 | 3. The energy reference and the offset              |
 | E40, E53                                              | 4. EDMF and the updrafts                            |
@@ -1767,6 +1767,80 @@ vertical fluctuation's shares lie in class N (1.00, and 1.01 in the control).
 `configs/ic_miss_probe_s23.yml`. Scored on 2026-09-28 with
 `analysis/water/ic_miss_score.py`, unchanged since `cf4f4fa9` (19 s before
 the job started); `output/ic_miss_probe/`.*
+
+**W48. Option C's miss at site 23, the extended probe on `main`. In all five
+rises, the forcing without its subsidence term loses 84% to 95% of its growth
+of the excess. So by section 9.7's leave-one-out rule subsidence carries every
+rise, the fourth included. The vertical fluctuation carries none (at most
+0.20). Leaving out horizontal advection raises the forcing's growth by 4.8 to
+7.5 times the rise, so within the forcing it works against subsidence. Cell
+by cell, the growth lies wholly where the parent stays at or below zero while
+it rises and the region tags gain water, in the forcing's probe and in the
+reference's step. Half of each rise lies in one or two levels, between 1.2
+and 1.5 km. Each share bounds a term's part. None isolates a cause.** The
+probe of `design/NEGATIVE_PARENT_WATER.md` section 9.7, amended in 9.7.7
+before the run. It is W47's probe on `main`'s code at `cfc2152c`, where #118
+checks the parent's negative water at every accepted step. It adds the
+leave-one-out probes, the mechanism cell by cell, and per-level sums.
+
+The validity checks of section 9.7.3:
+
+  - **P0a passes.** The model's twelve field files match `ic_s23_c`'s bit for
+    bit at every common output time.
+  - **P0b, reported.** 40 of the 71 tag files differ from `ic_s23_c`'s. The
+    region tags differ by up to 0.7% of their largest value (`q_tag_free`),
+    and the source tags and ledgers by up to 2.8%. `main`'s tag code has
+    changed since `e6bab0fc`. Every rise in the windows still equals the
+    first probe's to four figures.
+  - **P1 passes** for all five rises, with W47's step gaps.
+  - **P2 passes** for the four no-ledger rises. The control is 30% below
+    W42's value, as in W47.
+  - **P3 passes.** The parent's negative water at a step's end reaches 10.8%
+    of its water in the first window and 7.4% in the second. The latch reads
+    1 at every step above `1e-4`: 5,938 of 6,048 steps and 7,776 of 7,776.
+
+| rise (days)          | leave-one-out: subsidence | vertical fluctuation | horizontal advection | mechanism: reference / forcing | levels holding half | 9.4's verdict (W47) | 9.7's reading      |
+|:-------------------- |:------------------------- |:-------------------- |:-------------------- |:------------------------------ |:------------------- |:------------------- |:------------------ |
+| 30.50–30.75          | 0.865                     | 0.197                | −7.47                | 1.00 / 1.00                    | 1237, 1384 m        | candidate 5         | subsidence carries |
+| 30.75–31.00, control | 0.992                     | 0.169                | −6.19                | 1.06 / 1.01                    | 1237, 1384 m        | none                | subsidence carries |
+| 52.50–52.75          | 0.841                     | −0.120               | −5.63                | 1.00 / 1.00                    | 1544 m              | candidate 5         | subsidence carries |
+| 52.75–53.00          | 0.867                     | −0.083               | −4.76                | 1.00 / 1.00                    | 1544 m              | none                | subsidence carries |
+| 53.00–53.25          | 0.859                     | −0.008               | −5.13                | 1.00 / 1.00                    | 1384, 1544 m        | candidate 5         | subsidence carries |
+
+The nudging terms' leave-one-out shares are 0.000 in every rise. In the
+mechanism's cells the parent rises in all of the reference's and the
+forcing's growth. The forcing's per-level growth overlaps the reference's by
+0.97 to 1.00.
+
+  - **The one-term probes and leave-one-out answer differently.** 9.4's
+    one-term shares, and so its verdicts, are W47's to the digit: the
+    vertical fluctuation alone reaches 0.47 to 0.56. But the forcing without
+    it keeps at least 80% of its growth, and the forcing without subsidence
+    keeps 5% to 16%. Both measures are nonlinear, and both bound. By 9.7.4
+    the fix's scope follows leave-one-out: subsidence carries every rise, so
+    a fix must cover subsidence.
+  - **The mechanism, for the forcing's probe:** the forcing's bracket, applied
+    alone, gives region water to cells whose parent stays at or below zero
+    while it rises. That holds all of the forcing's growth in every rise.
+    For the reference's step the same cells hold the whole rise. They locate
+    it and do not show that the forcing gave it, since other processes act
+    in the step (9.7.4).
+  - **Horizontal advection works against subsidence.** That is consistent
+    with W47's untested reading that the terms offset each other. The probe
+    does not show how.
+  - **The levels** lie above the regions' boundary at 1 km. Which region tag
+    gains is not measured.
+  - **What it means, by sections 9.5 and 9.7.4:** the revision gives the
+    explicit attribution the target's treatment, and it covers subsidence.
+    Water that the forcing's bracket (subsidence included) adds where the
+    parent stays at or below zero enters the negative part, not the region
+    tags. The owner decides the fix.
+
+*`hpda2_compute`, 2026-09-28 22:22 to 2026-09-29 01:29, job `13996867` (check
+job `13996777`), run tree `../ClimaAtmosResiDyn-ic-probe2-run` at `e09e0986`,
+`analysis/water/ic_miss_probe2.jl`, `configs/ic_miss_probe2_s23.yml`. Scored
+on 2026-09-29 with `analysis/water/ic_miss_score2.py` as amended at
+`6eae646f`, before the job started; `output/ic_miss_probe2/`.*
 
 ## 2. Energy source tags: closure by transport
 
