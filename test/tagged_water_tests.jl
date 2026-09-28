@@ -2110,7 +2110,7 @@ end
     atmos = (; water_tagging_model = model, energy_source_tagging_model = nothing)
     # The gross starts from the state the cache is built from, as after a
     # restart, so the ledger's value then is not counted. `dt` is the step the
-    # parent's negative water ledger adds up.
+    # parent's negative water accumulator adds up.
     integrator = (;
         u = Y,
         p = (; tagging = CA.tag_ledger_step_cache(Y, atmos), atmos),
@@ -2460,7 +2460,7 @@ end
     written = CA.tag_ledger_checkpoint_fields(tagging)
     restored = CA.tag_ledger_checkpoint_fields(fresh)
     @test first.(written) == first.(restored)
-    # The parent's negative water ledger adds its two fields, last.
+    # The parent's negative water accumulator adds its two fields, last.
     @test length(written) == 6 + 3 * 6 + 4 + 2
     @test first.(written[(end - 1):end]) ==
           ["tag_ledger.negative_water.amount", "tag_ledger.negative_water.events"]
@@ -2468,7 +2468,7 @@ end
         @test parent(a) == parent(b)
     end
     # A checkpoint without them starts them at zero, with a warning. The
-    # negative water ledger, which came later, warns on its own.
+    # negative water accumulator, which came later, warns on its own.
     bare = joinpath(directory, "bare.hdf5")
     writer = CA.InputOutput.HDF5Writer(bare, context)
     CA.InputOutput.write!(writer, Y, "Y")
@@ -2477,7 +2477,7 @@ end
         ᶜwater_fix = keyed(zero_field),
         CA.tag_ledger_step_cache(Y, atmos)...,
     )
-    @test_logs (:warn, r"before the parent's\s+negative water ledger") (
+    @test_logs (:warn, r"before the parent's\s+negative water accumulator") (
         :warn,
         r"carries none of the tags' accumulators",
     ) CA.restore_tag_ledger_checkpoint!(zeroed, bare, context)
