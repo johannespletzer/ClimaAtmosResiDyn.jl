@@ -36,18 +36,19 @@ record; the answered and superseded entries are in the next section.
   - ~~**R2, the Newton row, on D4-W.**~~ *Answered 2026-09-25: the row is
     revised* (below).
 
-  - **WP4a's two points:**
+  - ~~**WP4a's two points:**~~ *Answered 2026-09-28: the pair behind a
+    switch, which WP4a-J measures; the copies' part after WP4a-J* (below).
 
       + known issue 4's Jacobian, either the pair of entries or the diagonal
         alone as a test;
       + where the copies' part of issue 4 goes.
 
-    [G3T](G3_TODO.md#decisions)
-
-  - **WP6's three points.** Step 3 took the conservative default for each
+  - ~~**WP6's three points.**~~ *Answered 2026-09-28: confirmed as built on
+    `main`* (below). Step 3 took the conservative default for each
     ([design/GROSS_ACCUMULATORS.md](design/GROSS_ACCUMULATORS.md), 10.6):
 
-      + whether a pre-WP6 checkpoint is refused or zero-filled (refused);
+      + whether a pre-WP6 checkpoint is refused or zero-filled (as built:
+        zero-filled with a warning, and a partial one refused);
       + whether loss and τ move to WP4a and WP4b (not in WP6);
       + whether the transfer ledgers stay as they are or go per tag (as they
         are, with the per-tag ledgers beside them).
@@ -58,9 +59,13 @@ record; the answered and superseded entries are in the next section.
     stays a failure, W35 beside it; 2026-09-24). The default itself is decided
     at M5 under the contract. [G3T](G3_TODO.md#decisions)
 
-  - **W21's surface rule in the first hour:** whether the plume's start
-    should model the surface flux (plan 4.1, review S4). Rev. 2 sets the
-    first-hour budget (OD3's provenance rows) but not this rule.
+  - ~~**W21's surface rule in the first hour:**~~ *Answered 2026-09-28:
+    model the surface flux at the plume's start* (below). Whether the
+    plume's start should model the surface flux (plan 4.1, review S4). Rev.
+    2 sets the first-hour budget (OD3's provenance rows) but not this rule.
+
+  - **Option C's revision, after W47.** Open. The owner chose on 2026-09-28
+    to probe more first (`design/NEGATIVE_PARENT_WATER.md`, section 9.7).
     [G3T](G3_TODO.md#decisions)
 
   - **G4.3 to G4.6's seven points** (raised 2026-09-25 with #120 and E86;
@@ -251,8 +256,8 @@ The list as it stood before this classification, kept as written:
     tag's.** #125 was to rename it when it took #118. The two merged 13 s
     apart, so the rename became #126. The owner chose the name
     "accumulator" (`negative_water_accumulator_cache` and the others), and
-    the checkpoint keys `tag_ledger.negative_water.*` stay. **In force**,
-    #126 open. Memory: pr125-terminology.md; PR #126.
+    the checkpoint keys `tag_ledger.negative_water.*` stay. **Done:** #126
+    merged on 2026-09-28 (`d2f119ab`). Memory: pr125-terminology.md.
 
   - **"A threshold is a tolerance" is written into the bookkeeping norm** in
     `AGENTS.md` (#125, `1ff3e8c0`). **Done.** PR #125.
@@ -273,7 +278,8 @@ The list as it stood before this classification, kept as written:
     worktrees and sessions".
 
   - **Order:** #126 first, then the housekeeping. Option C's miss probe
-    waits for the owner's go. **In force.** Memory:
+    waits for the owner's go. **Done:** both carried out, and the go was
+    given later that day (the answers above). Memory:
     housekeeping-2026-09-28.md.
 
 ## 2026-09-27
@@ -297,8 +303,8 @@ before 2026-09-28.
     #118.
   - **The probe of option C's miss runs on `main` after #118,** so that
     the site-23 runs also give the negative water at every step. **In
-    force.** The probe ran once on 2026-09-25 (job `13987196`) and is not
-    scored.
+    force.** The probe ran once on 2026-09-25 (job `13987196`). It was
+    scored on 2026-09-28 as W47, and its rerun on `main` is section 9.7.
   - **Merge order #113, #118, #120, #119; push one PR at a time.**
     **Superseded:** #120 and #119 merged before #118, on 2026-09-28.
 

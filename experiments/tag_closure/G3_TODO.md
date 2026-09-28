@@ -15,10 +15,13 @@ agents as proposed. Model code goes into draft PRs that only the owner
 merges. The parity rule of `AGENTS.md` holds for every change. GPU is outside
 G3.
 
-**Who does what.** This session runs G3, including its jobs, from the worktree
-`ClimaAtmosResiDyn-exp`, and records on branch `claude/tag-closure-record`. Model code goes on
-`claude/water-tags-edmf`. A separate session runs the energy jobs. It owned
-PR #95, which merged on 2026-09-23.
+**Who does what (2026-09-28).** Records go on `claude/plan-rev2`, committed
+from the worktree `../ClimaAtmosResiDyn-rec`. Model code goes on a branch off
+`main`, one per change, as a PR. Runs launch from detached run trees (STATUS,
+"Where the work goes"). *Until 2026-09-25:* this session worked from
+`ClimaAtmosResiDyn-exp` and recorded on `claude/tag-closure-record`, with model
+code on `claude/water-tags-edmf`. A separate session ran the energy jobs and
+owned PR #95, which merged on 2026-09-23.
 
 Marks: `[ ]` open, `[~]` under way, `[x]` done, `[!]` waiting for a decision.
 
@@ -46,7 +49,9 @@ The twelve criteria of the plan, section 2, in short:
   - [ ] **Option C's revision, after W47.** The probe supports candidate 5,
     the forcing's vertical fluctuation, in three of the four unrecorded
     rises. In the fourth no candidate is supported: the forcing as a whole
-    carries it, and that term only contributes (0.47). Section 9.5 of
+    attributes it (1.000, as in every rise), and that term only contributes
+    (0.47). Subsidence alone also attributes every rise, but maps to no
+    candidate (W47). Section 9.5 of
     `design/NEGATIVE_PARENT_WATER.md` sketches a revision: the explicit
     attribution gets the target's treatment. The owner decides:
       + the fix;
@@ -140,7 +145,7 @@ The twelve criteria of the plan, section 2, in short:
     2026-09-25, with exit status 0 (RUNS.md). *Scored 2026-09-28 (W47):*
     three of the four unrecorded rises go to candidate 5, the forcing's
     vertical fluctuation. In the fourth no candidate is supported (the
-    forcing as a whole carries it). The revision of C
+    forcing as a whole attributes it, as in every rise). The revision of C
     waits on the owner (Decisions).
     *The owner, 2026-09-25:* a persistent parent-validity flag in the
     closure tables, B and D together (the register, OD3's negative-water
@@ -155,8 +160,8 @@ The twelve criteria of the plan, section 2, in short:
     in `design/NEGATIVE_PARENT_WATER.md`, section 9; job `13987196`.
     *2026-09-28:* B and D merged into `main` as #118 (`09d66bcb`). The latch
     is checked at every accepted step, as the owner decided on 2026-09-27.
-    #126, open, renames D's total an accumulator, the owner's choice of
-    2026-09-28.
+    #126, merged on 2026-09-28 (`d2f119ab`), renamed D's total an
+    accumulator, the owner's choice.
   - [x] **R2, the Newton row, on D4-W** (W25's scoring: 4.1e-3 to 1.7e-2 at two
     iterations, against 1e-3). *The owner, 2026-09-25:* measure three and four
     iterations first (job `13944802`); then raise OD1's Newton count or revise
@@ -787,6 +792,9 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
         `q_tag_inc_negative`;
       + tests for these.
 
+    *The owner, 2026-09-28:* they go to `main` as a PR from a fresh branch
+    off `main`, and the backup stays as it is.
+
   - [ ] Stage 2: EDMF, default mode.
 
   - [ ] Stage 3: copies of the rain and snow parts.
@@ -842,6 +850,9 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     assumption. They document the missing Jacobian block. They add a test of
     the correction with the copies inside the model (#119's review, point
     5), and a test that steps a corrected run beside an uncorrected one.
+    *The owner, 2026-09-28:* they go to `main` as a PR from a fresh branch
+    off `main`, and the backup stays as it is. W45's investigation waits
+    until C's revision.
     *Scope added (provenance pathway, 2026-09-26):*
 
       + [ ] PX7's rule, a dated amendment to WP4C_CORRECTIONS section 8,

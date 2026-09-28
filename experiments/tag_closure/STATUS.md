@@ -77,14 +77,16 @@ not checked, it says so.
 ## Where things stand
 
   - **Update, 2026-09-28: PRs merged, unpushed work found, housekeeping.**
-    Written by the session that reviewed #125. `main` is at `cfc2152c`.
+    Written by the session that reviewed #125. `main` was at `cfc2152c`,
+    and is at `d2f119ab` since #126 merged that evening.
 
       + *Merged into `main` since 2026-09-26:* #104, #107, #109, #111 to
         #121, #124 and #125 (the table under "Pull requests"). #122 merged
-        into this branch on 2026-09-27. Open: #123 (draft) and #126.
-      + *#126, open.* #118 called the parent's own negative-water total "the
+        into this branch on 2026-09-27. #126 merged later that day. Open:
+        #123 (draft).
+      + *#126, merged 2026-09-28 (`d2f119ab`).* #118 called the parent's own negative-water total "the
         ledger", against #125's rule: budget is the parent's, ledger is a
-        tag's, record is a process's. #126 renames it "accumulator", the
+        tag's, record is a process's. #126 renamed it "accumulator", the
         owner's choice. The checkpoint keys stay as they are.
       + *Work of 2026-09-27 that was never pushed.* Three worktrees held
         commits or edits that no remote had. They are kept on origin as
@@ -100,12 +102,14 @@ not checked, it says so.
             #121, never committed. Not on `main` (G3_TODO, WP4b).
       + *Option C's miss probe, scored later that day: W47.* Job `13987196`
         finished on 2026-09-25 with exit status 0, and nobody had scored it.
-        By the pre-registered rules, three of the four rises that no ledger
-        recorded go to candidate 5, the forcing's vertical fluctuation, in
-        cells whose parent is negative. In the fourth no candidate is
-        supported: the forcing as a whole carries it, and that term only
-        contributes (0.47). The owner decides the revision of C, and whether the rerun on `main`
-        after #118 (the plan of 2026-09-27) is still needed.
+        By the pre-registered rules, three of the four rises in which no
+        ledger changed by half the rise go to candidate 5, the forcing's
+        vertical fluctuation, in class-N cells (parent at or below zero). In
+        the fourth no candidate is supported. The forcing as a whole
+        attributes it (1.000, as in every rise), and that term only
+        contributes (0.47). Subsidence alone also attributes every rise, but
+        maps to no candidate (W47). The owner chose to probe more first
+        (below).
       + *#118's CI: one runner shutdown.* On 2026-09-28 the Julia 1.10 job
         `tagging_water_precipitation` stopped after 52 minutes, when GitHub's
         runner received a shutdown signal during the sphere test. The rerun
@@ -126,9 +130,10 @@ not checked, it says so.
           * WP6 confirmed;
           * OD9 to OD15, G4.3 to G4.6 and WP4b's points walked through
             later.
-      + *Where the next session starts:* the amendment to section 9 for
-        the extended probe on `main`; the two PRs from the backups; WP4a-J;
-        W21's surface flux; #126. The
+      + *Where the next session starts:* the extended probe on `main`, which
+        is pre-registered as section 9.7 (`e09e0986`, amended after review)
+        and has check job `13996777` running; the two PRs from the backups;
+        WP4a-J; W21's surface flux. The
         uncommitted start of W45's investigation in `-plan2` is backed up
         as `claude/backup/plan2-2026-09-25` (`b3cd940a`). Record work now
         uses the worktree `../ClimaAtmosResiDyn-rec`, detached, pushing
@@ -423,8 +428,9 @@ The owner kept these. On origin the branches are:
   - `main` and `gh-pages`;
   - this branch, `claude/plan-rev2-g4` and `claude/tag-closure-record`;
   - `claude/review-open-prs-tasks-wxiw0k` and `claude/pr118-merge-preview`;
-  - #123's and #126's branches;
-  - the three backups `claude/backup/*-2026-09-27`.
+  - #123's branch;
+  - the four backups: `claude/backup/*-2026-09-27` and
+    `claude/backup/plan2-2026-09-25`.
 
 The 24 worktrees removed were:
 
@@ -470,7 +476,7 @@ Each is captured in the archive's `worktrees/`.
 | #123 | `claude/water-tags-substep-attribution`  | draft, against `main`, at `7fb9cabc` (per-substep attribution of the 1M microphysics)                                                                                                                                                                                                                                                                                                 |                                                                                                                                                      |
 | #124 | `claude/docs-issue7-after-116`           | merged into `main` 2026-09-28 (`283a18ec`), at `9481e412`                                                                                                                                                                                                                                                                                                                             |                                                                                                                                                      |
 | #125 | `claude/terminology-to-main`             | merged into `main` 2026-09-28 (`cfc2152c`), at `1ff3e8c0`                                                                                                                                                                                                                                                                                                                             |                                                                                                                                                      |
-| #126 | `claude/negative-water-accumulator`      | open, against `main`, at `c165ae18` (#118's negative-water total renamed an accumulator)                                                                                                                                                                                                                                                                                              |                                                                                                                                                      |
+| #126 | `claude/negative-water-accumulator`      | merged into `main` 2026-09-28 (`d2f119ab`), at `c165ae18`                                                                                                                                                                                                                                                                                                                             |                                                                                                                                                      |
 
 Only the owner merges. The token cannot mark a PR ready for review. Rows #104
 to #126 were read from GitHub on 2026-09-28.
@@ -500,8 +506,9 @@ to #126 were read from GitHub on 2026-09-28.
   - **2026-09-28, queried with Slurm:** no job of this account is queued or
     running. Option C's miss probe (`13987196`) and WP4c's V1 and V2
     (`13973348`, `13973349`) finished on 2026-09-25. V1 and V2 are W45. The
-    probe is not scored. Two test jobs for PRs ran that day and passed:
-    `13995633` for #118 and `13996629` for #126.
+    probe was scored later that day as W47. Two test jobs for PRs ran that
+    day and passed: `13995633` for #118 and `13996629` for #126. The
+    extended probe's check job, `13996777`, has run since 20:25.
 
 ## The housekeeping, H0 to H7: done
 
@@ -561,13 +568,18 @@ OD7 is the only open numbered decision. Open now, each with its entry in
     against 0.2%) and `pbl`'s per-tag row (2.03%). By the design note's
     section 8.3 the owner decides; site 23's long-run rerun, which OD7 waits
     on, is not submitted until then. *Decided 2026-09-25: probe the miss
-    first* (the register), then validate C again.
+    first* (the register), then validate C again. *2026-09-28:* scored as
+    W47. The owner chose to probe more first (section 9.7). C's revision
+    stays open.
   - ~~**Known issue 7's option among B, C and D.**~~ Decided 2026-09-25:
     option C (the register). Built; its validation is pre-registered.
-  - **WP4a's two points:** known issue 4's Jacobian, and the copies' part.
-  - **WP6's three points,** where step 3 took the conservative defaults.
+  - ~~**WP4a's two points**~~ decided 2026-09-28 (the register).
+  - ~~**WP6's three points**~~ confirmed as built, 2026-09-28 (the register).
   - **The explicit-1M water default, at M5** (W33 stays a failure).
-  - **W21's surface rule in the first hour.**
+  - ~~**W21's surface rule in the first hour**~~ decided 2026-09-28 (the
+    register).
+  - **OD9 to OD15, G4.3 to G4.6's seven points, WP4b's five points:** to be
+    walked through one at a time (the register, 2026-09-28).
 
 Not plan decisions, kept as they stood on 2026-09-23 and not rechecked:
 

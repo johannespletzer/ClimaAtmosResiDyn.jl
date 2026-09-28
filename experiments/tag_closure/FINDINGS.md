@@ -89,7 +89,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                                   | section                                             |
 |:----------------------------------------------------- |:--------------------------------------------------- |
-| W1–W47                                                | 1. Water tags                                       |
+| W1–W47 (W46 reserved for PX7)                         | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48, E85 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11                 | 3. The energy reference and the offset              |
 | E40, E53                                              | 4. EDMF and the updrafts                            |
@@ -1672,13 +1672,16 @@ same run tree otherwise; the window from 6600 s.
 `output/wp4c_corr/`.*
 
 **W47. Option C's miss at site 23, the probe. The four rises of the excess
-that no ledger recorded lie wholly in cells whose parent is negative at the
-step's start. The external forcing, applied alone at each step's start,
-reproduces each of them. By the pre-registered rules, three of the four go
-to candidate 5, the forcing's vertical fluctuation (shares 0.50 to 0.56). In
-the fourth that term only contributes (0.47), and no candidate is supported.
-Candidates 1 to 4 are supported in none. Each share bounds a term's part.
-None isolates a cause.** The probe of `design/NEGATIVE_PARENT_WATER.md`
+in which no ledger changed by half the rise (W42) lie wholly in class N,
+cells whose parent is at or below zero at the step's start. The external
+forcing's bracket, applied alone at each step's start, reproduces each of
+them (share 1.000). Within the forcing, by the pre-registered rules, three
+of the four go to candidate 5, the vertical fluctuation (shares 0.50 to
+0.56). In the fourth that term only contributes (0.47), and no candidate is
+supported. The subsidence term alone also attributes every rise (5.5 to 7.9
+times it, in class N), but section 9.4 maps it to candidate 1, which needs
+class P. Candidates 1 to 4 are supported in none. Each share bounds a term's
+part. None isolates a cause.** The probe of `design/NEGATIVE_PARENT_WATER.md`
 section 9 reruns `ic_s23_c` to day 53.3. At each of the 13,824 steps in the
 windows days 30.3–31.0 and 52.4–53.3 it records:
 
@@ -1718,34 +1721,45 @@ vertical fluctuation's shares lie in class N (1.00, and 1.01 in the control).
         needs class P.
       + *Candidates 2 and 3:* the SGS trials are near zero, and the
         `tracer` trial's share is negative.
-      + *Candidate 4:* class X holds none of any rise.
+      + *Candidate 4:* class X holds none of the four no-ledger rises
+        (0.00), and −0.04 of the control.
   - **The terms' shares do not add up to the forcing's.** Subsidence alone
     exceeds the whole forcing's share five- to eight-fold. The excess is not
-    linear in the tendency, and each term is applied alone at the step's
-    start. So terms that partly cancel within the forcing each show their
-    own share. The shares bound each term's part. They do not divide the
-    rise between the terms.
-  - **Outside the rules' mapping (reported, not scored):** subsidence is a
-    term of the forcing, and its share lies in class N. Section 9.4 lists it
-    under candidate 1 only, which needs class P. Whether it belongs with
-    candidate 5's local terms is a question this probe does not decide.
+    linear in the tendency (it takes a `max`), and each term is applied
+    alone at the step's start. One possible reading is that the terms offset
+    each other within the forcing. No term's share is negative, and the probe
+    does not test that reading. The shares bound each term's part. They do
+    not divide the rise between the terms.
+  - **Subsidence.** By 9.4's first rule its share attributes every rise
+    (5.54 to 7.92), all of it in class N. The candidate mapping lists it
+    under candidate 1 only, which needs class P, so it supports no candidate.
+    Whether it belongs with candidate 5's local terms is a question this
+    probe does not decide.
+  - **The ledgers at step scale.** In the no-ledger rises, the per-step
+    ledgers in the cells with an excess move by up to 0.49 of the rise:
+    `q_tag_inc_moved` 0.486 and `q_tag_led_inc_pbl` 0.466 at days
+    30.50–30.75, and 0.06 to 0.17 in the other three. That is below half,
+    as W42 found per 6 hours, but not zero. At least part of each rise has
+    no ledger that records it.
   - **The control:** in the rise the follower carried, the per-step ledgers
     in the cells with an excess move by 46 times the rise
-    (`q_tag_inc_negative`) and 56 times (`q_tag_inc_moved`). This matches
-    what W42 found per 6 hours. The `tracer` trial's share is −48: with the
+    (`q_tag_inc_negative`) and 56 times (`q_tag_inc_moved`). That is more
+    than the rise, as W42 found per 6 hours (35 times). The `on` trial's
+    largest step gap here is 1.6e-3, where 9.2's check found it equal bit
+    for bit near the start. P1 still passes. The `tracer` trial's share is
+    −48: with the
     follower off, the one-step trials grow the excess by about 49 times the
     rise. Section 9.2's amendment says this trial bounds the follower's part
     only loosely.
-  - **What it means, by section 9.5:** candidate 5 is an explicit process.
-    As section 9.1 describes it, the process's bracket gives a cell whose
-    parent is negative new region water. The target, zero there, does not
-    have it, and no ledger records it. The probe supports that reading for
-    three rises. It does not show it cell by cell. A revision would give the
-    explicit attribution the target's treatment. Water produced where the
-    parent stays at or below zero would enter the negative part, not the
-    region tags. The follower's negative-part entry is the pattern. The
-    owner decides the fix. The owner also decides whether the rerun on
-    `main` after #118 (the plan of 2026-09-27) is still needed.
+  - **What it means, by section 9.5.** The forcing's bracket, applied alone,
+    grows the region tags in class-N cells by the whole rise. That does not
+    separate two things: water produced in those cells (candidate 5), and
+    tag water carried into them by transport (subsidence). Section 9.5 gives
+    the same revision for candidates 5 and 1. The explicit attribution gets
+    the target's treatment, so water the forcing adds where the parent stays
+    at or below zero enters the negative part, not the region tags. The
+    follower's negative-part entry is the pattern. The owner decides the fix.
+    On 2026-09-28 the owner chose to probe more first (section 9.7).
 
 *`hpda2_compute`, 2026-09-25, job `13987196`, run tree
 `../ClimaAtmosResiDyn-ic-probe-run` at `49958c1b` (`ic_s23_c`'s code
@@ -1923,12 +1937,12 @@ test did not probe it.** `design/LEDGER_RATIO_ZERO_CROSSING.md`, pre-registered
 before the runs: two pairs, D4's EDMF column and C6's small sphere, a day
 each under `enthalpy_increment`, differing only in `energy_source_tag_repair`.
 
-| precondition                                                        | D4                            | sphere                        |
-|:------------------------------------------------------------------- |:----------------------------- |:----------------------------- |
-| `ta`, `rhoa`, `hus` bit for bit within the pair                     | yes                           | yes                           |
-| repair off: `sfc` or `rad` reaches `∫tag ≤ 0` or `∫|tag|/∫tag ≥ 10` | no (`sfc` 1.017, `rad` 1.000) | no (`sfc` 1.005, `rad` 1.001) |
-| repair on: `led_fix_sfc` or `led_fix_rad` retains more than 0       | yes                           | yes                           |
-| the pair                                                            | inconclusive                  | inconclusive                  |
+| precondition                                                        | D4                             | sphere                        |
+|:------------------------------------------------------------------- |:------------------------------ |:----------------------------- |
+| `ta`, `rhoa`, `hus` bit for bit within the pair                     | yes                            | yes                           |
+| repair off: `sfc` or `rad` reaches `∫tag ≤ 0` or `∫|tag|/∫tag ≥ 10` | no (`sfc` 1.0175, `rad` 1.000) | no (`sfc` 1.005, `rad` 1.001) |
+| repair on: `led_fix_sfc` or `led_fix_rad` retains more than 0       | yes                            | yes                           |
+| the pair                                                            | inconclusive                   | inconclusive                  |
 
   - The audit writes the ratios, not the tag's integrals, so `∫|tag|/∫tag`
     is read as `inventory_fraction / burden_fraction` from the ledgers that
