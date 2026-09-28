@@ -846,6 +846,9 @@ function default_model_callbacks(
             extra_audit = energy_source_extra_audit(
                 tagging.energy_source_tagging_model,
             ),
+            extra_closure = energy_source_extra_closure(
+                tagging.energy_source_tagging_model,
+            ),
             scheduling...,
         )...,
     )
@@ -860,17 +863,31 @@ tag_ledger_gross_callback(tagging) =
     (call_every_n_steps(accumulate_tag_ledger_gross!, 1; skip_first = true),)
 
 # The water family's own audit columns, under prognostic EDMF and under the
-# increment follower, as a function of `(Y, p, scale)`, or `nothing` without
-# the tags.
+# increment follower, as a function of `(Y, p, closure, t)`, or `nothing`
+# without the tags.
 water_extra_audit(::Nothing) = nothing
 water_extra_audit(model) =
-    (Y, p, scale) -> water_tag_extra_audit(Y, p, model, scale)
+    (Y, p, closure, t) -> water_tag_extra_audit(Y, p, model, closure.scale)
 
-# The energy source family's own audit columns, as a function of `(Y, p, scale)`,
-# or `nothing` without the tags.
+# The energy source family's own audit columns, as a function of
+# `(Y, p, closure, t)`, or `nothing` without the tags: the family's audit, then
+# the residual report (G4.4). The report's forecast needs the previous check,
+# which the `Ref` keeps; a restart builds a new one.
 energy_source_extra_audit(::Nothing) = nothing
-energy_source_extra_audit(model) =
-    (Y, p, scale) -> energy_source_audit(Y, p, model, scale)
+function energy_source_extra_audit(model)
+    previous = Ref{Any}(nothing)
+    return (Y, p, closure, t) -> merge(
+        energy_source_audit(Y, p, model, closure.scale),
+        energy_source_residual_report(Y, p, model, closure, t, previous),
+    )
+end
+
+# The energy source family's own closure columns, the offset's headroom (U9)
+# and the gross source throughput (G4.5), as a function of `(Y, p, closure)`,
+# or `nothing` without the tags.
+energy_source_extra_closure(::Nothing) = nothing
+energy_source_extra_closure(model) =
+    (Y, p, closure) -> energy_source_closure_columns(Y, p, model, closure)
 
 """
     tag_closure_callback(check, tagging_model; family, total_name, state_names,
@@ -903,6 +920,7 @@ function tag_closure_callback(
     t_end,
     checkpoint_frequency,
     extra_audit = nothing,
+    extra_closure = nothing,
     reads_negative_water = false,
 )
     isnothing(tagging_model) && error(
@@ -939,6 +957,8 @@ function tag_closure_callback(
     # carries it through a restart (`tag_closure_checkpoint.jl`).
     void_above = get(check, :void_above, nothing)
     family_key = Symbol(family)
+    # The energy source tags' second warning level, against the throughput.
+    throughput_tolerance = get(check, :throughput_tolerance, nothing)
     # The water check also reads the parent's negative water. Its flag lives in
     # the cache for the same reason, and its ledger is the tags' (WP6).
     negative_water_void_above = get(check, :negative_water_void_above, nothing)
@@ -960,8 +980,10 @@ function tag_closure_callback(
         check.audit;
         reference,
         extra_audit,
+        extra_closure,
         void_above,
         voided = tag_closure_voided(integrator.p, family_key),
+        throughput_tolerance,
         negative_water = negative_water(integrator.p),
     )
     periodic = call_every_dt(affect!, period)

@@ -1867,7 +1867,12 @@ end
         )
         fix_names = (:e_src_led_fix_strat, :e_src_led_fix_tropo, :e_src_led_fix_sfc)
         inc_names = (:e_src_led_inc_strat, :e_src_led_inc_tropo, :e_src_led_inc_sfc)
-        src_names = (:e_src_led_src_strat, :e_src_led_src_tropo, :e_src_led_src_sfc)
+        src_names = (
+            :e_src_led_src_strat,
+            :e_src_led_src_tropo,
+            :e_src_led_src_sfc,
+            :e_src_led_src_res,
+        )
         @test CA.energy_source_per_tag_ledger_names(plain) == ()
         @test CA.energy_source_per_tag_ledger_names(per_tag) ==
               (fix_names..., src_names...)
@@ -1877,7 +1882,7 @@ end
         @test CA.has_energy_source_ledger_per_tag(increment)
         @test !CA.has_energy_source_ledger_per_tag(nothing)
         @test CA.energy_source_per_tag_ledger_variables(FT(1), per_tag) ==
-              NamedTuple{(fix_names..., src_names...)}(ntuple(_ -> FT(0), 6))
+              NamedTuple{(fix_names..., src_names...)}(ntuple(_ -> FT(0), 7))
 
         # The repair writes each tag's change into its own ledger: from zero,
         # the cache ledger bit for bit.
@@ -2010,6 +2015,7 @@ end
             :e_src_led_src_tropo,
             :e_src_led_src_sfc,
             :e_src_led_src_rad_low,
+            :e_src_led_src_res,
         )
         @test CA.energy_source_ledger_src_names(per_tag) == src_names
         @test CA.energy_source_ledger_src_names(plain) == ()
@@ -2106,6 +2112,534 @@ end
         @test CA.energy_source_throughput(nothing, p, per_tag) == 10.0
         @test isnothing(CA.energy_source_throughput(nothing, p, plain))
         @test isnothing(CA.energy_source_throughput(nothing, (; tagging = (;)), per_tag))
+    end
+end
+
+# G4.4: the residual's source ledger, and the residual report of the closure
+# check (design/RESIDUAL_REPORT.md on the record branch).
+@testset "The residual's source ledger and the residual report (G4.4)" begin
+    for FT in (Float32, Float64)
+        region(above) = CA.TanhAltitudeRegion(FT(750), FT(100), above)
+        strat = CA.EnergySourceTag{:strat}(region(true))
+        tropo = CA.EnergySourceTag{:tropo}(region(false))
+        sfc = CA.EnergySourceTag{:sfc}(nothing, :surface_flux)
+        tags = (strat, tropo, sfc)
+        c = FT(50000)
+        plain = CA.EnergySourceTaggingModel(tags, c)
+        per_tag = CA.EnergySourceTaggingModel(tags, c; ledger_per_tag = true)
+        @test last(CA.energy_source_ledger_src_names(per_tag)) ==
+              CA.ENERGY_SOURCE_RESIDUAL_LEDGER
+
+        # The ledger takes what the partition did not: the increment less the
+        # partition's changes, bit for bit in the tags' order, and with
+        # complementary masks the loss rule's flush, -(R/E) Δ⁻.
+        tropo_mask = FT[1, 0.9, 0.5, 0.1, 0]
+        masks = (; ρe_src_tropo = tropo_mask, ρe_src_strat = 1 .- tropo_mask)
+        ᶜparent = FT[3e5, 2.9e5, 2.8e5, 2.7e5, 2.6e5]
+        share = FT[0, 0.1, 0.3, 0.9, 1]
+        missing_part = FT[0, 1e3, -2e3, 5e2, 0]
+        ᶜY = (;
+            ρe_tot = ᶜparent .- c,
+            ρe_src_strat = share .* (ᶜparent .- missing_part),
+            ρe_src_tropo = (1 .- share) .* (ᶜparent .- missing_part),
+            ρe_src_sfc = FT(0.05) .* ᶜparent,
+        )
+        ᶜΔ = FT[8, -8, 3, -2, 0.5]
+        φ(name) = CA.energy_source_fraction.(getproperty(ᶜY, name), ᶜparent)
+        change(name) =
+            getproperty(masks, name) .* max.(ᶜΔ, 0) .+ min.(ᶜΔ, 0) .* φ(name)
+        ᶜYₜ = (; e_src_led_src_res = zeros(FT, 5))
+        CA.accumulate_energy_source_residual_source!(
+            CA.TagLedgerView{:src}(ᶜYₜ),
+            ᶜY,
+            masks,
+            ᶜΔ,
+            tags,
+            ᶜparent,
+        )
+        by_hand = zeros(FT, 5) .+ ᶜΔ .- change(:ρe_src_strat) .- change(:ρe_src_tropo)
+        @test ᶜYₜ.e_src_led_src_res == by_hand
+        ᶜR = ᶜparent .- ᶜY.ρe_src_strat .- ᶜY.ρe_src_tropo
+        @test ᶜYₜ.e_src_led_src_res ≈ min.(ᶜΔ, 0) .* ᶜR ./ ᶜparent atol =
+            100 * eps(FT) * maximum(abs, ᶜΔ)
+        # Where nothing is missing, a loss flushes nothing, and a gain goes
+        # wholly to the partition.
+        @test abs(ᶜYₜ.e_src_led_src_res[1]) <= 100 * eps(FT) * abs(ᶜΔ[1])
+        # Without the ledger per tag nothing is written.
+        @test isnothing(
+            CA.accumulate_energy_source_residual_source!(
+                CA.energy_source_src_ledger_view((; c = (;)), plain),
+                ᶜY,
+                masks,
+                ᶜΔ,
+                tags,
+                ᶜparent,
+            ),
+        )
+
+        # The forecast from two checks, by hand: G from 10 to 14 J in a day,
+        # with 2 J flushed. λ = 2/12 a day, P = 6 J a day, G* = 36 J.
+        forecast = CA.energy_source_forecast(10.0, 0.0, 0.0, 14.0, 2.0, 86400.0)
+        @test forecast.flush_rate ≈ 1 / 6
+        @test forecast.production_rate ≈ 6
+        @test forecast.settling_level ≈ 36
+        @test forecast.settling_ratio ≈ 36 / 14
+        @test forecast.forecast_defined == 1
+        # Nothing flushed, or no interval: no rate.
+        @test isnan(CA.energy_source_forecast(10.0, 2.0, 0.0, 14.0, 2.0, 3600.0).flush_rate)
+        @test isnan(CA.energy_source_forecast(10.0, 0.0, 0.0, 14.0, 2.0, 0.0).flush_rate)
+        # The review of #120, finding 3: a settling level only where the rest
+        # of the run adds to the residual. Steady: G stays at 10 J while 2 J
+        # are flushed, so P = 2 J a day and G* = G.
+        steady = CA.energy_source_forecast(10.0, 0.0, 0.0, 10.0, 2.0, 86400.0)
+        @test steady.production_rate ≈ 2
+        @test steady.settling_level ≈ 10
+        @test steady.settling_ratio ≈ 1
+        @test steady.forecast_defined == 1
+        # Decaying: G falls from 10 to 6 J with 2 J flushed, so P = -2 J a day.
+        # There is no positive balance, so no level, and no negative one.
+        decaying = CA.energy_source_forecast(10.0, 0.0, 0.0, 6.0, 2.0, 86400.0)
+        @test decaying.flush_rate ≈ 2 / 8
+        @test decaying.production_rate ≈ -2
+        @test isnan(decaying.settling_level)
+        @test isnan(decaying.settling_ratio)
+        @test decaying.forecast_defined == 0
+        # The flush alone explains the fall: P = 0, still no level.
+        flushed_only = CA.energy_source_forecast(10.0, 0.0, 0.0, 8.0, 2.0, 86400.0)
+        @test flushed_only.production_rate == 0
+        @test isnan(flushed_only.settling_level)
+        @test flushed_only.forecast_defined == 0
+        # Nothing flushed over a day: P is known, the rate and the level not.
+        no_flush = CA.energy_source_forecast(10.0, 2.0, 0.0, 14.0, 2.0, 86400.0)
+        @test no_flush.production_rate ≈ 4
+        @test isnan(no_flush.flush_rate)
+        @test isnan(no_flush.settling_level)
+        @test no_flush.forecast_defined == 0
+        # No residual at either check.
+        no_residual = CA.energy_source_forecast(0.0, 0.0, 0.0, 0.0, 0.0, 86400.0)
+        @test isnan(no_residual.flush_rate)
+        @test isnan(no_residual.settling_level)
+        @test isnan(no_residual.settling_ratio)
+        @test no_residual.forecast_defined == 0
+
+        # The report on a column of four 250 m layers with set fields.
+        space = ClimaCore.CommonSpaces.ColumnSpace(
+            FT;
+            z_min = 0,
+            z_max = 1000,
+            z_elem = 4,
+            staggering = ClimaCore.CommonSpaces.CellCenter(),
+        )
+        names = (:ρ, :ρe_tot, :ρe_src_strat, :ρe_src_tropo, :ρe_src_sfc)
+        Y = ClimaCore.Fields.FieldVector(;
+            c = similar(
+                ClimaCore.Fields.coordinate_field(space),
+                NamedTuple{names, NTuple{5, FT}},
+            ),
+        )
+        ρ = FT[2, 1, 1, 0.5]
+        E = FT[4e5, 3e5, 2e5, 1e5]
+        R = FT[0, 10, -30, 5]
+        tropo_values = FT[1e5, 1e5, 1e5, 5e4]
+        parent(Y.c.ρ) .= ρ
+        parent(Y.c.ρe_tot) .= E .- c .* ρ
+        parent(Y.c.ρe_src_tropo) .= tropo_values
+        parent(Y.c.ρe_src_strat) .= E .- R .- tropo_values
+        # The overlay is negative in the first layer and above the partition's
+        # sum in the last.
+        parent(Y.c.ρe_src_sfc) .= FT[-1, 2, 0, 1e6]
+        scratch = (;
+            ᶜtemp_scalar = zero(Y.c.ρ),
+            ᶜtemp_scalar_2 = zero(Y.c.ρ),
+        )
+        p = (; scratch, tagging = (;))
+        closure = (; gross_residual = FT(45 * 250))
+        previous = Ref{Any}(nothing)
+        report = CA.energy_source_residual_report(Y, p, per_tag, closure, 0.0, previous)
+        @test report.residual_max == 30
+        @test report.residual_max_z == 625
+        @test report.residual_peak_level == 3
+        @test report.residual_peak_fraction ≈ 30 / 45
+        @test report.residual_peak_z ≈ 625
+        mass = sum(ρ) * 250
+        @test report.overlay_negative_mass_fraction ≈ 2 * 250 / mass
+        @test report.overlay_excess ≈ (1e6 - (1e5 - 5)) * 250 rtol = 10 * eps(FT)
+        @test report.overlay_excess_mass_fraction ≈ 0.5 * 250 / mass
+        # The review of #120, finding 4: a residual that is zero everywhere has
+        # no peak level and no height of its maximum. Every value here is
+        # exact, so `R` is zero to the bit.
+        parent(Y.c.ρe_src_strat) .= E .- tropo_values
+        zero_report = CA.energy_source_residual_report(
+            Y,
+            p,
+            per_tag,
+            (; gross_residual = FT(0)),
+            0.0,
+            Ref{Any}(nothing),
+        )
+        @test zero_report.residual_max == 0
+        @test isnan(zero_report.residual_max_z)
+        @test isnan(zero_report.residual_peak_level)
+        @test isnan(zero_report.residual_peak_fraction)
+        @test isnan(zero_report.residual_peak_z)
+        parent(Y.c.ρe_src_strat) .= E .- R .- tropo_values
+        # Without the tags' ledgers per tag there is no forecast.
+        @test !hasproperty(report, :flush_rate)
+        # The headroom: E/ρ is smallest, 2e5 J/kg, in three layers; the highest
+        # of them is reported.
+        headroom = CA.energy_source_headroom(Y, p, per_tag)
+        @test headroom.headroom_min == 2e5
+        @test headroom.headroom_min_z == 875
+
+        # With the residual's ledger, the forecast needs a previous check.
+        # A Float64 field on a Float32 space holds each value in two slots of
+        # its storage, so it is set by broadcast, not through `parent`.
+        ᶜgross = ClimaCore.Fields.Field(Float64, space)
+        ᶜgross .= 0.004
+        steps = (; ledgers = (; e_src_led_src_res = (; ᶜgross)))
+        # The two region tags' masks are complementary: a verified partition.
+        tagging = (; tag_ledger_steps = steps, energy_source_partition_deviation = FT(0))
+        p_steps = (; scratch, tagging)
+        first_row =
+            CA.energy_source_residual_report(Y, p_steps, per_tag, closure, 0.0, previous)
+        @test first_row.flush_gross ≈ 4
+        @test isnan(first_row.flush_rate)
+        @test first_row.forecast_defined == 0
+        @test previous[].F ≈ 4
+        ᶜgross .= 0.006
+        second_row = CA.energy_source_residual_report(
+            Y,
+            p_steps,
+            per_tag,
+            closure,
+            86400.0,
+            previous,
+        )
+        @test second_row.flush_rate ≈ 2 / (45 * 250)
+        @test second_row.production_rate ≈ 2
+        @test second_row.settling_level ≈ 45 * 250
+        @test second_row.settling_ratio ≈ 1
+        @test second_row.forecast_defined == 1
+    end
+
+    # The closure table: the family's columns go after the spin-up columns and
+    # before `closure_void`, so both keep their places.
+    dir = mktempdir()
+    closure = (;
+        total = 3.0,
+        tagged = 2.0,
+        residual = 1.0,
+        relative = 1 / 3,
+        gross_residual = 5.0,
+        gross_relative = 5 / 3,
+        scale = 3.0,
+        nonpositive_fraction = 0.0,
+    )
+    CA.write_tag_closure!(
+        dir,
+        0.0,
+        "energy_source",
+        closure;
+        reference = Ref{Any}(0.5),
+        extra = (; headroom_min = 2e5, headroom_min_z = 875.0),
+        closure_void = false,
+    )
+    rows = readlines(CA.tag_closure_path(dir, "energy_source"))
+    @test endswith(
+        rows[1],
+        ",relative_since_spin_up,headroom_min,headroom_min_z,closure_void",
+    )
+    values = split(rows[2], ",")
+    @test length(values) == 15
+    @test parse(Float64, values[10]) == 0.5
+    @test parse(Float64, values[13]) == 2e5
+    @test last(values) == "0"
+
+    # With the ledgers per tag, the partition's flag, the throughput and the
+    # ratio follow the headroom, in the order `energy_source_closure_columns`
+    # returns them, and `closure_void` stays last (the review of #120).
+    ledger_dir = mktempdir()
+    CA.write_tag_closure!(
+        ledger_dir,
+        0.0,
+        "energy_source",
+        closure;
+        reference = Ref{Any}(0.5),
+        extra = (;
+            headroom_min = 2e5,
+            headroom_min_z = 875.0,
+            source_partition_valid = 0,
+            source_throughput = NaN,
+            gross_over_throughput = NaN,
+        ),
+        closure_void = true,
+    )
+    rows = readlines(CA.tag_closure_path(ledger_dir, "energy_source"))
+    @test endswith(
+        rows[1],
+        ",relative_since_spin_up,headroom_min,headroom_min_z," *
+        "source_partition_valid,source_throughput,gross_over_throughput," *
+        "closure_void",
+    )
+    values = split(rows[2], ",")
+    @test length(values) == 18
+    @test parse(Float64, values[10]) == 0.5
+    @test parse(Float64, values[13]) == 2e5
+    @test values[15] == "0"
+    @test isnan(parse(Float64, values[16]))
+    @test last(values) == "1"
+
+    # The audit table: the forecast's flag ends the report's columns, and
+    # `closure_void` stays last there too.
+    audit = NamedTuple{(
+        :untagged,
+        :untagged_relative,
+        :overclaimed,
+        :overclaimed_relative,
+        :orphaned,
+        :orphaned_relative,
+        :orphaned_volume_fraction,
+        :nonpositive_mass,
+        :nonpositive_mass_fraction,
+    )}(
+        ntuple(_ -> 0.0, 9),
+    )
+    audit_dir = mktempdir()
+    CA.write_tag_audit!(
+        audit_dir,
+        0.0,
+        "energy_source",
+        audit;
+        extra = (;
+            source_partition_valid = 1,
+            source_throughput = 10.0,
+            flush_gross = 4.0,
+            flush_rate = 0.5,
+            production_rate = -2.0,
+            settling_level = NaN,
+            settling_ratio = NaN,
+            forecast_defined = 0,
+        ),
+        closure_void = false,
+    )
+    rows = readlines(CA.tag_audit_path(audit_dir, "energy_source"))
+    @test endswith(rows[1], ",settling_ratio,forecast_defined,closure_void")
+    values = split(rows[2], ",")
+    @test length(values) == 19
+    @test values[end - 1] == "0"
+    @test last(values) == "0"
+end
+
+# The review of #120, finding 2: the throughput and the flush count each source
+# increment once only where the pure region tags' masks sum to 1. A strict
+# subset, an overlap and source tags alone are not a verified partition. There
+# the throughput, its ratio, the flush and the forecast are `NaN`, and a
+# throughput warning level is refused.
+@testset "Throughput and flush only on a verified partition (#120)" begin
+    for FT in (Float32, Float64)
+        space = ClimaCore.CommonSpaces.ColumnSpace(
+            FT;
+            z_min = 0,
+            z_max = 1000,
+            z_elem = 4,
+            staggering = ClimaCore.CommonSpaces.CellCenter(),
+        )
+        coords = ClimaCore.Fields.coordinate_field(space)
+        altitude(above, z_center = FT(500)) =
+            CA.TanhAltitudeRegion(z_center, FT(100), above)
+        sfc = CA.EnergySourceTag{:sfc}(nothing, :surface_flux)
+        cases = (;
+            complementary = (
+                CA.EnergySourceTag{:up}(altitude(true)),
+                CA.EnergySourceTag{:down}(altitude(false)),
+                sfc,
+            ),
+            subset = (CA.EnergySourceTag{:up}(altitude(true)), sfc),
+            # Both hold the layer between 500 and 800 m.
+            overlap = (
+                CA.EnergySourceTag{:up}(altitude(true)),
+                CA.EnergySourceTag{:down}(altitude(false, FT(800))),
+                sfc,
+            ),
+            sources_only = (sfc, CA.EnergySourceTag{:rad}(nothing, :radiation)),
+        )
+        for (case, tags) in pairs(cases)
+            model = CA.EnergySourceTaggingModel(tags, FT(50000); ledger_per_tag = true)
+            region_names = CA.energy_source_region_tag_state_names(model)
+            masks = CA._tag_masks(coords, tags)
+            state_names = (:ρ, :ρe_tot, CA.energy_source_tag_state_names(model)...)
+            Y = ClimaCore.Fields.FieldVector(;
+                c = similar(
+                    coords,
+                    NamedTuple{state_names, NTuple{length(state_names), FT}},
+                ),
+            )
+            parent(Y.c) .= 0
+            Y.c.ρ .= 1
+            Y.c.ρe_tot .= 2e5
+            deviation = CA.energy_source_partition_deviation(masks, region_names, Y.c.ρ)
+            @test deviation isa FT
+            valid = CA.energy_source_partition_verified(deviation)
+            @test valid == (case == :complementary)
+            if case == :complementary
+                @test deviation <= CA.energy_source_partition_tolerance(FT)
+            else
+                # A gap or an overlap of most of a layer, or no partition.
+                @test deviation > FT(0.5)
+            end
+
+            # Every source ledger holds a gross of 2.5 J per cell, so each
+            # partition tag's throughput is 10 J and the flush is 10 J.
+            ledger_names = CA.energy_source_ledger_src_names(model)
+            ledgers = NamedTuple{ledger_names}(
+                ntuple(_ -> (; ᶜgross = fill(2.5, 4)), length(ledger_names)),
+            )
+            tagging = (;
+                tag_ledger_steps = (; ledgers),
+                energy_source_partition_deviation = deviation,
+            )
+            scratch = (; ᶜtemp_scalar = zero(Y.c.ρ), ᶜtemp_scalar_2 = zero(Y.c.ρ))
+            p = (; scratch, tagging)
+            closure = (; gross_residual = FT(5))
+            columns = CA.energy_source_closure_columns(Y, p, model, closure)
+            @test keys(columns) == (
+                :headroom_min,
+                :headroom_min_z,
+                :source_partition_valid,
+                :source_throughput,
+                :gross_over_throughput,
+            )
+            @test columns.source_partition_valid == Int(valid)
+            previous = Ref{Any}(nothing)
+            first_row =
+                CA.energy_source_residual_report(Y, p, model, closure, 0.0, previous)
+            ledgers.e_src_led_src_res.ᶜgross .= 5.0
+            second_row =
+                CA.energy_source_residual_report(Y, p, model, closure, 86400.0, previous)
+            # The forecast's columns close the report, the flag last.
+            @test keys(second_row)[(end - 5):end] == (
+                :flush_gross,
+                :flush_rate,
+                :production_rate,
+                :settling_level,
+                :settling_ratio,
+                :forecast_defined,
+            )
+            if valid
+                @test columns.source_throughput == 10 * length(region_names)
+                @test columns.gross_over_throughput ≈ 5 / 20
+                @test first_row.flush_gross == 10
+                @test second_row.flush_gross == 20
+                # The same gross at both checks, with 10 J flushed in a day:
+                # it settles where it is.
+                @test second_row.flush_rate ≈ 2
+                @test second_row.settling_level ≈ 5
+                @test second_row.forecast_defined == 1
+            else
+                @test isnan(columns.source_throughput)
+                @test isnan(columns.gross_over_throughput)
+                for row in (first_row, second_row),
+                    name in (
+                        :flush_gross,
+                        :flush_rate,
+                        :production_rate,
+                        :settling_level,
+                        :settling_ratio,
+                    )
+
+                    @test isnan(getproperty(row, name))
+                end
+                @test second_row.forecast_defined == 0
+            end
+
+            # The warning level on the ratio is refused without a verified
+            # partition, with the deviation in the message.
+            check = (; throughput_tolerance = FT(0.05))
+            if valid
+                @test isnothing(CA.check_energy_source_throughput_partition(tagging, check))
+            else
+                err = try
+                    CA.check_energy_source_throughput_partition(tagging, check)
+                catch e
+                    e
+                end
+                @test err isa ErrorException
+                @test occursin(string(deviation), err.msg)
+                @test occursin("throughput_tolerance", err.msg)
+            end
+            # Without the level, without the check or without the tags, nothing
+            # is refused.
+            @test isnothing(
+                CA.check_energy_source_throughput_partition(
+                    tagging,
+                    (; throughput_tolerance = nothing),
+                ),
+            )
+            @test isnothing(CA.check_energy_source_throughput_partition(tagging, nothing))
+            @test isnothing(CA.check_energy_source_throughput_partition(nothing, check))
+        end
+    end
+end
+
+# The review of #120: `overlay_excess` compares each source tag with the
+# partition's sum on its own, the owner's reading of A5. Every valid
+# configuration keeps each overlay within that sum, duplicate tags included.
+# Their sum has no such bound unless the overlays are disjoint, so it is not
+# checked.
+@testset "overlay_excess is per tag (#120)" begin
+    for FT in (Float32, Float64)
+        region(above) = CA.TanhAltitudeRegion(FT(500), FT(100), above)
+        tags = (
+            CA.EnergySourceTag{:up}(region(true)),
+            CA.EnergySourceTag{:down}(region(false)),
+            CA.EnergySourceTag{:rad}(nothing, :radiation),
+            CA.EnergySourceTag{:rad_again}(nothing, :radiation),
+        )
+        c = FT(50000)
+        model = CA.EnergySourceTaggingModel(tags, c)
+        space = ClimaCore.CommonSpaces.ColumnSpace(
+            FT;
+            z_min = 0,
+            z_max = 1000,
+            z_elem = 4,
+            staggering = ClimaCore.CommonSpaces.CellCenter(),
+        )
+        names = (:ρ, :ρe_tot, CA.energy_source_tag_state_names(model)...)
+        Y = ClimaCore.Fields.FieldVector(;
+            c = similar(
+                ClimaCore.Fields.coordinate_field(space),
+                NamedTuple{names, NTuple{length(names), FT}},
+            ),
+        )
+        E = FT[4e5, 3e5, 2e5, 1e5]
+        parent(Y.c.ρ) .= 1
+        parent(Y.c.ρe_tot) .= E .- c
+        parent(Y.c.ρe_src_up) .= E ./ 4
+        parent(Y.c.ρe_src_down) .= 3 .* E ./ 4
+        # Two tags of the same source hold the same energy, 60% of the
+        # partition's sum each: 120% together, and each within the bound.
+        parent(Y.c.ρe_src_rad) .= FT(0.6) .* E
+        parent(Y.c.ρe_src_rad_again) .= FT(0.6) .* E
+        scratch = (; ᶜtemp_scalar = zero(Y.c.ρ), ᶜtemp_scalar_2 = zero(Y.c.ρ))
+        p = (; scratch, tagging = (;))
+        report(Y) = CA.energy_source_residual_report(
+            Y,
+            p,
+            model,
+            (; gross_residual = FT(0)),
+            0.0,
+            Ref{Any}(nothing),
+        )
+        duplicates = report(Y)
+        @test duplicates.overlay_excess == 0
+        @test duplicates.overlay_excess_mass_fraction == 0
+        @test duplicates.overlay_negative_mass_fraction == 0
+        # One of them past the partition's sum, by 10% of it in the top
+        # layer: that alone is the excess.
+        parent(Y.c.ρe_src_rad_again) .= FT[0.6, 0.6, 0.6, 1.1] .* E
+        past = report(Y)
+        @test past.overlay_excess ≈ FT(0.1) * E[4] * 250 rtol = 10 * eps(FT)
+        @test past.overlay_excess_mass_fraction ≈ 1 / 4
     end
 end
 
@@ -2218,6 +2752,8 @@ end
                 ᶜenergy_source_fix_count = keyed(() -> CA._throughput_field(Y.c.ρ)),
                 ᶜenergy_source_pos = zeros(ᶜspace),
                 ᶜenergy_source_neg = zeros(ᶜspace),
+                # `strat` and `tropo` are a region and its complement.
+                energy_source_partition_deviation = FT(0),
                 CA.tag_ledger_step_cache(Y, atmos)...,
             ),
         )
@@ -2248,6 +2784,21 @@ end
     @test CA.energy_source_ledger_parent_scale(Y, nothing) == interim
     audit = CA.energy_source_audit(Y, p, p.atmos.energy_source_tagging_model, FT(1))
     @test audit.ledger_parent_scale == parent_scale
+    @test audit.source_partition_valid == 1
+    @test audit.source_throughput == parent_scale
+    # The flag goes just before the throughput it qualifies.
+    flag = findfirst(==(:source_partition_valid), keys(audit))
+    @test keys(audit)[flag + 1] == :source_throughput
+    # Without a verified partition the throughput is not written, and the
+    # ledgers keep the partition's gross as their scale.
+    gap = merge(
+        p,
+        (; tagging = merge(p.tagging, (; energy_source_partition_deviation = FT(0.5)))),
+    )
+    gap_audit = CA.energy_source_audit(Y, gap, p.atmos.energy_source_tagging_model, FT(1))
+    @test gap_audit.source_partition_valid == 0
+    @test isnan(gap_audit.source_throughput)
+    @test gap_audit.ledger_parent_scale == parent_scale
     @test audit.led_fix_heat_retained == 2
     @test isnan(audit.led_fix_heat_inventory_fraction)
     @test isnan(audit.led_fix_heat_burden_fraction)

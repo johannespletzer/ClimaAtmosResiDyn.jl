@@ -556,7 +556,8 @@ tag_closure_path(output_dir, family) =
 
 """
     write_tag_closure!(output_dir, t, family, closure; reference = nothing,
-                       closure_void = nothing, negative_water = nothing)
+                       extra = nothing, closure_void = nothing,
+                       negative_water = nothing)
 
 Append one row to the closure table of `family`, creating it with a header if
 it does not exist yet. Called on the root process only.
@@ -565,6 +566,11 @@ A check with a spin-up reference passes `reference`, a `Ref` that holds the
 residual at the spin-up once it is taken, and `nothing` before. The row then
 carries three more columns: that residual, the residual since, and the residual
 since relative to the scale. Before the reference is taken, they are `NaN`.
+
+`extra` is a `NamedTuple` of a family's own columns, such as the energy source
+tags' headroom and throughput ([`energy_source_closure_columns`](@ref)), or
+`nothing`. They go after the spin-up columns and before `closure_void`, so the spin-up
+columns keep their positions and `closure_void` stays last.
 
 A check with a void level passes `closure_void`, a `Bool`: whether its residual
 has passed that level at this row or before, in this run or before the
@@ -587,6 +593,7 @@ function write_tag_closure!(
     family,
     closure;
     reference = nothing,
+    extra = nothing,
     closure_void = nothing,
     negative_water = nothing,
 )
@@ -614,6 +621,10 @@ function write_tag_closure!(
         relative_since =
             iszero(closure.scale) ? zero(since) : since / closure.scale
         values = (values..., at_spin_up, since, relative_since)
+    end
+    if !isnothing(extra)
+        header *= "," * join(string.(keys(extra)), ",")
+        values = (values..., Base.values(extra)...)
     end
     if !isnothing(closure_void)
         header *= ",closure_void"
@@ -856,7 +867,8 @@ end
     tag_closure_callback!(integrator, output_dir, family, total_name,
                           tag_state_names, tolerance, abort_above, audit;
                           reference = nothing, extra_audit = nothing,
-                          void_above = nothing, voided = nothing,
+                          extra_closure = nothing, void_above = nothing,
+                          voided = nothing, throughput_tolerance = nothing,
                           negative_water = nothing)
 
 Record the closure of one tag family, warn when it has drifted past `tolerance`,
@@ -916,9 +928,26 @@ inside [`tag_audit`](@ref) are entered by all of them or by none.
 
 A `tolerance` of `nothing` means the check only reports. `reference` is the
 spin-up reference of the check, a `Ref`, or `nothing` for a check without one;
-see [`write_tag_closure!`](@ref). `extra_audit`, a function of `(Y, p, scale)`,
-gives a family's own audit columns, such as [`energy_source_audit`](@ref), when
-`audit` is on.
+see [`write_tag_closure!`](@ref). `extra_audit`, a function of
+`(Y, p, closure, t)`, gives a family's own audit columns, such as
+[`energy_source_audit`](@ref) and [`energy_source_residual_report`](@ref), when
+`audit` is on. `extra_closure`, a function of `(Y, p, closure)`, gives a
+family's own closure columns on every row, such as the energy source tags'
+[`energy_source_closure_columns`](@ref). Both reduce across processes, so every
+process calls them.
+
+The check's levels are kept apart from each other and from acceptance
+(G4.5):
+
+  - `tolerance` warns, and so does `throughput_tolerance`, the energy source
+    tags' level against the gross source throughput, compared with the
+    `gross_over_throughput` column where the family writes one;
+  - `void_above` marks this row and every later one void;
+  - `abort_above` ends the run, only where a user sets it.
+
+None of them is an acceptance threshold. A run's verdicts are scored
+afterwards, from these tables, against the thresholds its experiment fixes in
+advance, over the windows it fixes.
 """
 function tag_closure_callback!(
     integrator,
@@ -931,12 +960,18 @@ function tag_closure_callback!(
     audit;
     reference = nothing,
     extra_audit = nothing,
+    extra_closure = nothing,
     void_above = nothing,
     voided = nothing,
+    throughput_tolerance = nothing,
     negative_water = nothing,
 )
     Y = integrator.u
+    t = Float64(integrator.t)
     closure = tag_closure(Y, integrator.p, total_name, tag_state_names)
+    extra_columns =
+        isnothing(extra_closure) ? nothing :
+        extra_closure(Y, integrator.p, closure)
     # Every process computes the same `closure`, so every process keeps the
     # same flag.
     passed_void = !isnothing(void_above) && closure.gross_relative > void_above
@@ -953,8 +988,7 @@ function tag_closure_callback!(
         nothing
     extra_row =
         (audit && !isnothing(extra_audit)) ?
-        extra_audit(Y, integrator.p, closure.scale) : nothing
-    t = Float64(integrator.t)
+        extra_audit(Y, integrator.p, closure, t) : nothing
     # Collective too, and the same on every process, as the flag above.
     negative_row = negative_water_rows(Y, integrator.p, negative_water, t, audit)
     if ClimaComms.iamroot(ClimaComms.context(Y.c))
@@ -964,6 +998,7 @@ function tag_closure_callback!(
             family,
             closure;
             reference,
+            extra = extra_columns,
             closure_void,
             negative_water = negative_row.closure,
         )
@@ -996,8 +1031,17 @@ function tag_closure_callback!(
         !isnothing(tolerance) && closure.gross_relative > tolerance &&
             @warn(
                 "$family tag closure residual $(closure.gross_relative) exceeds \
-                the configured tolerance $tolerance at t = $t s. The tags no \
-                longer account for the field they partition; see \
+                the warning tolerance $tolerance at t = $t s: the residual has \
+                drifted past the level set for this check. A warning level is \
+                not an acceptance threshold; see \
+                $(tag_closure_path(output_dir, family))."
+            )
+        _passed_throughput_tolerance(extra_columns, throughput_tolerance) &&
+            @warn(
+                "$family tag gross residual over the gross source throughput, \
+                $(extra_columns.gross_over_throughput), exceeds the warning \
+                level $throughput_tolerance at t = $t s. A warning level is \
+                not an acceptance threshold; see \
                 $(tag_closure_path(output_dir, family))."
             )
         # Reported separately because closure cannot reveal it: complementary
@@ -1022,6 +1066,13 @@ function tag_closure_callback!(
     end
     return nothing
 end
+
+# Whether a family's `gross_over_throughput` column passed its warning level.
+_passed_throughput_tolerance(extra_columns, ::Nothing) = false
+_passed_throughput_tolerance(extra_columns, level) =
+    !isnothing(extra_columns) &&
+    hasproperty(extra_columns, :gross_over_throughput) &&
+    extra_columns.gross_over_throughput > level
 
 """
     negative_water_rows(Y, p, negative_water, t, audit)
