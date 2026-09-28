@@ -818,9 +818,10 @@ end
 # Whether a state variable is one the split may solve apart: a tag of any of the
 # three families, the water tags' rain and snow parts among them, a process
 # record, the ledger of the energy source tags' or the water tags' increment
-# correction, a ledger per mechanism of either family (WP6), a tag's own ledger
-# (WP6, step 3), or a record of the water tags' microphysics audit (WP4b). All
-# live directly in `Y.c`.
+# correction, a ledger per mechanism of either family (WP6), a ledger of the
+# water tags' leak correction (WP4c), a tag's own ledger (WP6, step 3), or a
+# record of the water tags' microphysics audit (WP4b). All live directly in
+# `Y.c`.
 function is_splittable_jacobian_field(name::MatrixFields.FieldName)
     chain = jacobian_name_chain(name)
     (length(chain) == 2 && chain[1] === :c && chain[2] isa Symbol) ||
@@ -830,6 +831,7 @@ function is_splittable_jacobian_field(name::MatrixFields.FieldName)
            is_energy_source_ledger_name(chain[2]) ||
            is_water_tag_ledger_name(chain[2]) ||
            is_tag_mechanism_ledger_name(chain[2]) ||
+           is_water_tag_leak_mechanism_name(chain[2]) ||
            is_tag_per_tag_ledger_name(chain[2]) ||
            is_water_tag_audit_name(chain[2])
 end

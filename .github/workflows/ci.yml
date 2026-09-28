@@ -215,6 +215,7 @@ jobs:
           - tagging_water_edmf_0m_explicit
           - tagging_water_increment
           - tagging_water_increment_explicit
+          - tagging_water_leak
           - tagging_water_precipitation
           - parameterizations
           - restarts

@@ -371,6 +371,9 @@ output time for `pr_tag` ([`update_water_tag_rainouts!`](@ref)), and
 `water_tag_precipitation: true`, which needs 1M,
 `_water_tag_precipitation_scratch` adds the rain and snow parts' share
 denominators and snapshots.
+`ᶜtagging_q_leak_correction`, under `water_tag_leak_correction: true` only,
+holds one tag's correction of the diffusion's leak at a time
+([`correct_water_tag_diffusion_leak!`](@ref)).
 """
 tagging_scratch(Y, atmos::AtmosModel) = (;
     (
@@ -383,6 +386,10 @@ tagging_scratch(Y, atmos::AtmosModel) = (;
             ᶜtagging_q_snapshot = similar(Y.c.ρ),
             ᶜtagging_q_share_norm = similar(Y.c.ρ),
             water_tag_edmf_scratch(Y, atmos.water_tagging_model, atmos)...,
+            (
+                has_water_tag_leak_correction(atmos.water_tagging_model) ?
+                (; ᶜtagging_q_leak_correction = similar(Y.c.ρ)) : (;)
+            )...,
             _water_tag_precipitation_scratch(Y, atmos.water_tagging_model)...,
             # Each tag's part of the 0M rain-out, for `pr_tag` (WP4a).
             (
