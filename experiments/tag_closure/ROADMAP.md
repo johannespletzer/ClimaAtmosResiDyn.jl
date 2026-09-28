@@ -474,7 +474,8 @@ changes an approved row.
     Kept C over dropping it or accepting it as is.
     *Probed (job `13987196`), scored on 2026-09-28 (W47):* three of the four
     unrecorded rises go to candidate 5, the forcing's vertical fluctuation,
-    in cells whose parent is negative. The fourth is unattributed. The owner
+    in cells whose parent is negative. In the fourth no candidate is
+    supported; the forcing as a whole carries it. The owner
     decides the revision of C (section 9.5), and whether the rerun on `main`
     is still needed.
 

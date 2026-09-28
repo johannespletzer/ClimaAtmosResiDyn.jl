@@ -102,8 +102,9 @@ not checked, it says so.
         finished on 2026-09-25 with exit status 0, and nobody had scored it.
         By the pre-registered rules, three of the four rises that no ledger
         recorded go to candidate 5, the forcing's vertical fluctuation, in
-        cells whose parent is negative. The fourth is unattributed. The
-        owner decides the revision of C, and whether the rerun on `main`
+        cells whose parent is negative. In the fourth no candidate is
+        supported: the forcing as a whole carries it, and that term only
+        contributes (0.47). The owner decides the revision of C, and whether the rerun on `main`
         after #118 (the plan of 2026-09-27) is still needed.
       + *#118's CI: one runner shutdown.* On 2026-09-28 the Julia 1.10 job
         `tagging_water_precipitation` stopped after 52 minutes, when GitHub's

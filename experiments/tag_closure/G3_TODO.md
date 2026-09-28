@@ -45,7 +45,8 @@ The twelve criteria of the plan, section 2, in short:
 
   - [ ] **Option C's revision, after W47.** The probe supports candidate 5,
     the forcing's vertical fluctuation, in three of the four unrecorded
-    rises. The fourth is unattributed. Section 9.5 of
+    rises. In the fourth no candidate is supported: the forcing as a whole
+    carries it, and that term only contributes (0.47). Section 9.5 of
     `design/NEGATIVE_PARENT_WATER.md` sketches a revision: the explicit
     attribution gets the target's treatment. The owner decides:
       + the fix;
@@ -138,7 +139,8 @@ The twelve criteria of the plan, section 2, in short:
     validation again. *2026-09-28:* the probe ran as job `13987196` on
     2026-09-25, with exit status 0 (RUNS.md). *Scored 2026-09-28 (W47):*
     three of the four unrecorded rises go to candidate 5, the forcing's
-    vertical fluctuation, and the fourth is unattributed. The revision of C
+    vertical fluctuation. In the fourth no candidate is supported (the
+    forcing as a whole carries it). The revision of C
     waits on the owner (Decisions).
     *The owner, 2026-09-25:* a persistent parent-validity flag in the
     closure tables, B and D together (the register, OD3's negative-water

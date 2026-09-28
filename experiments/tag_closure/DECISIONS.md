@@ -219,7 +219,7 @@ The list as it stood before this classification, kept as written:
     (asked with a short background, options and a recommendation each):
 
       + **Option C after W47: probe more before any fix.** Look at the
-        fourth, unattributed rise and check cell by cell. The pre-registered
+        fourth rise, where no candidate is supported, and check cell by cell. The pre-registered
         design's section 9.5 revision is not chosen yet. **In force.**
       + **Rerun the probe on `main` now,** with #118's check at every step
         on. **In force.** It is to be pre-registered as an amendment to the
