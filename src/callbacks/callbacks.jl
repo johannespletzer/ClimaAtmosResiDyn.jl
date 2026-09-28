@@ -289,7 +289,8 @@ attached as well, and a restart that changes one is refused (see
 definitions are, for the same reason (see
 [`write_water_tag_checkpoint_attributes!`](@ref)). With any tags, the closure
 checks' void flags are attached, so that a restarted run keeps marking its rows
-(see [`write_tag_closure_void_attributes!`](@ref)).
+(see [`write_tag_closure_void_attributes!`](@ref)), and with water tags the
+negative water flag (see [`write_negative_water_void_attributes!`](@ref)).
 
 Returns `nothing`. Installed by `checkpoint_callback` when `checkpoint_frequency` is
 finite.
@@ -326,8 +327,10 @@ NVTX.@annotate function save_state_to_disk_func(integrator, output_dir)
         hdfwriter.file,
         p.atmos.water_tagging_model,
     )
-    # The closure checks' void flags, which a restart reads back.
+    # The closure checks' void flags and the water check's negative water
+    # flag, which a restart reads back.
     write_tag_closure_void_attributes!(hdfwriter.file, p.tagging)
+    write_negative_water_void_attributes!(hdfwriter.file, p.tagging)
     InputOutput.write!(hdfwriter, Y, "Y")
     # The tags' accumulators, which live in the cache, so that a restart
     # continues them (WP6, step 3). Nothing without tags.

@@ -355,6 +355,80 @@ function water_closure_parent(Y, p)
     return ᶜparent
 end
 
+# The closure's `nonpositive_fraction` and the audit's `nonpositive_mass` read
+# the raw parent, since the partition's target is never negative.
+closure_signed_parent(Y, p, ::typeof(water_closure_parent)) = Y.c.ρq_tot
+
+"""
+    DEFAULT_NEGATIVE_WATER_VOID_ABOVE
+
+Default `negative_water_void_above` of the water closure check: `1e-4`. Past
+it, the parent's negative water, `∫max(-ρq_tot, 0) dV`, is more than this
+fraction of the parent's water, `∫ρq_tot dV`. The check compares the two at
+each of its rows and at the end of every accepted step. Once the ratio passes
+the level, every later row is marked `negative_water_void`. It is the
+tag-closure contract's row "Parent validity: negative water" (the record
+branch's ROADMAP, approved 2026-09-24): above it a run's water results are not
+scored.
+"""
+const DEFAULT_NEGATIVE_WATER_VOID_ABOVE = 1.0e-4
+
+"""
+    parent_negative_water(Y)
+
+The parent's negative water, from the raw `ρq_tot` (known issue 7):
+
+  - `negative = ∫max(-ρq_tot, 0) dV`, which is `Σ ρ max(-q_tot, 0) dV`, in kg;
+  - `total = ∫ρq_tot dV`, in kg;
+  - `relative = negative / total` ([`negative_water_relative`](@ref)).
+
+Not the partition's target `max(ρq_tot, 0)`, whose negative part is zero by
+construction. `negative` is the integral of `ρ q_tag_negative` up to sign.
+It writes no field, not even scratch. So the check at every accepted step
+([`check_negative_water_step!`](@ref)), which takes the same sums, writes none
+either. `Base.sum` reduces across processes, so this is collective: every
+process must call it.
+"""
+function parent_negative_water(Y)
+    ᶜρq_tot = Y.c.ρq_tot
+    negative = sum(negative_water_integrand, ᶜρq_tot)
+    total = sum(ᶜρq_tot)
+    return (; negative, total, relative = negative_water_relative(negative, total))
+end
+
+# The parent's negative water per volume, `max(-ρq_tot, 0)`, in the parent's
+# float type. It uses the partition's split, so `-0.0` is not negative water.
+@inline negative_water_integrand(ρq_tot) = -water_tag_negative_part(ρq_tot)
+
+"""
+    negative_water_step_relative(ᶜρq_tot)
+
+The ratio that [`parent_negative_water`](@ref) gives,
+`∫max(-ρq_tot, 0) dV / ∫ρq_tot dV`, for the check at every accepted step. It
+takes the same two sums, so the same state gives the same ratio, bit for bit.
+Where no cell is negative it stops after the first sum, and the ratio is 0.
+
+Both sums are collective. The first adds terms that are not negative, so it is
+zero on every process or on none. So every process takes the same branch.
+"""
+function negative_water_step_relative(ᶜρq_tot)
+    negative = sum(negative_water_integrand, ᶜρq_tot)
+    iszero(negative) && return zero(negative)
+    return negative_water_relative(negative, sum(ᶜρq_tot))
+end
+
+"""
+    negative_water_relative(negative, total)
+
+`negative / total`, guarded: `0` where `negative` is zero, whatever `total` is,
+and `Inf` where `negative` is positive and `total` is not. A parent whose
+water is zero or less in all has no scale to measure its negative part
+against, and a run in that state is past any level.
+"""
+negative_water_relative(negative, total) =
+    iszero(negative) ? zero(negative) :
+    total > zero(total) ? negative / total : oftype(negative, Inf)
+
 """
     snapshot_tagged_ρq_tot!(p, Yₜ)
 

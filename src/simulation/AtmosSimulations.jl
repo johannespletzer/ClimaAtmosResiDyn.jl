@@ -456,10 +456,13 @@ function AtmosSimulation(
     set_tag_ledger_cadence!(p, update_constrain_state_every)
     isnothing(restart_file) ||
         restore_tag_ledger_checkpoint!(p.tagging, restart_file, context)
-    # A restarted run reads the tag closure checks' void flags back from its
-    # checkpoint. The first check runs when the integrator starts, below.
+    # A restarted run reads the tag closure checks' void flags and the water
+    # check's negative water flag back from its checkpoint. The first check
+    # runs when the integrator starts, below.
     isnothing(restart_file) ||
         restore_tag_closure_void!(p.tagging, restart_file, context)
+    isnothing(restart_file) ||
+        restore_negative_water_void!(p.tagging, restart_file, context)
     # The energy source tags' throughput level needs a verified partition. Only
     # the cache's masks show whether there is one, so it is checked here.
     default_callbacks &&

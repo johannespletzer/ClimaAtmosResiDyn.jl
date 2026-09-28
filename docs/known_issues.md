@@ -290,7 +290,8 @@ untagged twin bit for bit, and site 26's tags are unchanged bit for bit. But
 at site 23 the region tags overshoot the target by up to 2.2% of the water,
 against a budget of 0.2%. What follows is the owner's decision.
 
-A diagnostic must never end a run that upstream completes. This one does.
+A diagnostic must never end a run that upstream completes. This one did,
+until option A below.
 The tag-closure long runs (the record branch's
 `design/INCREMENT_RULE_LONG_RUNS.md`, second submission, jobs `13917157` to
 `13917199`) ran the GCM-driven column for 90 days at site 23. They ran
@@ -349,3 +350,29 @@ part is a named remainder, `q_tag_negative`.
     the parts of each tag partition the non-negative parts of the
     non-precipitating water, of rain and of snow, and `q_tag_negative` is the
     sum of the three negative parts (docs/src/tagged_water_precipitation.md).
+
+**The parent's negative water, flagged** (the owner's choice of 2026-09-25,
+on `claude/water-tags-negative-water-flag`, stacked on option C). Under C the
+closure can pass while the parent itself is negative, so `closure_void` stays
+0. The water closure check now also reads the parent's own negative water,
+from the raw `ρq_tot`:
+
+  - `negative_water_relative`, on every closure row, is
+    `∫max(-ρq_tot, 0) dV / ∫ρq_tot dV`. It is the tag-closure contract's row
+    "Parent validity: negative water", read at the row.
+  - `negative_water_void` latches at 1 once that ratio passes
+    `negative_water_void_above`, `1e-4` by default, the contract's level. The
+    ratio is compared with the level at every row and at the end of every
+    accepted step (the owner's decision on #118's review). So an excursion
+    that passes the level and ends between two rows marks the next row. The
+    flag stays 1 after the parent recovers, and the checkpoint carries it
+    through a restart.
+  - A ledger in the cache adds `max(-ρq_tot, 0) Δt` after every accepted
+    step, and counts the negative cells. The water audit reports its change
+    per interval. An interval whose event count is 0 had no negative water at
+    the end of any step.
+  - The audit's `nonpositive_mass` had read the target `max(ρq_tot, 0)` under
+    C, and so was 0 by construction. It reads the raw `ρq_tot` again.
+
+The flag and the ledger live in the cache, never in the model's state. See
+`docs/src/tracer_configuration.md`, "The parent's negative water".

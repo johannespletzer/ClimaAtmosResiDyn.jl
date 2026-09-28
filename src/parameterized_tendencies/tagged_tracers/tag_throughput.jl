@@ -289,6 +289,9 @@ takes the same changes. Under `water_tag_precipitation: true` the gross twin
 also counts the moves between a tag's own parts, which leave the tag's own
 ledger unchanged. So a water tag's `attempted` exceeds its retained gross by
 those moves too.
+
+With water tags, also `negative_water`, the parent's negative water ledger (see
+[`negative_water_ledger_cache`](@ref)), and `nothing` without them.
 """
 function tag_ledger_step_cache(Y, atmos)
     names = tag_state_ledger_names(atmos)
@@ -329,8 +332,139 @@ function tag_ledger_step_cache(Y, atmos)
             attempted,
             before,
             cadence = Ref(:step),
+            negative_water = negative_water_ledger_cache(
+                Y,
+                atmos.water_tagging_model,
+            ),
         ),
     )
+end
+
+#####
+##### The parent's negative water, over time (known issue 7)
+#####
+##### The water closure check writes the parent's negative water at its rows
+##### only. So after every accepted step this ledger adds it up, and
+##### `check_negative_water_step!` compares it with the check's level. A
+##### negative excursion between two rows is then counted, and it sets the
+##### flag if it passes the level.
+
+"""
+    negative_water_ledger_cache(Y, water_tagging_model)
+
+The parent's negative water ledger, in Float64, or `nothing` without water tags:
+
+  - `ᶜamount`: per cell, the sum over the accepted steps of
+    `max(-ρq_tot, 0) Δt`, in kg s m⁻³. It is `ρ max(-q_tot, 0)` without the
+    division. Its volume integral is in kg s: the time integral of the
+    parent's negative water since the start of the run.
+  - `ᶜevents`: per cell, the number of accepted steps whose end state has
+    `ρq_tot < 0` there.
+  - `last_row`: the time, the integral of `ᶜamount` and the event count at the
+    last audit row, `NaN` before the first row of a run or of a restarted
+    segment. The audit reports the change since then.
+
+Each accepted step adds the value of its end state
+([`accumulate_negative_water!`](@ref)). A step whose end state has no negative
+water anywhere leaves both fields bit for bit as they were. So their change
+over an interval is exactly zero when no accepted step in it had negative
+water. The converse holds for `ᶜevents`, which counts in whole steps: it
+grows by 1 in each cell and step with any. A small amount can round away
+against a large `ᶜamount` in the same cell. So the event count, not the
+amount, is the exact test.
+
+`ᶜamount` and `ᶜevents` live in the cache, never in the state, so the model's
+fields cannot depend on them. The checkpoint carries them
+(`tag_ledger_checkpoint_fields`). `last_row` is not carried: the first
+row after a restart is at the checkpoint's time, where the run before wrote
+its last row.
+"""
+negative_water_ledger_cache(Y, ::Nothing) = nothing
+negative_water_ledger_cache(Y, model) = (;
+    ᶜamount = _throughput_field(Y.c.ρ),
+    ᶜevents = _throughput_field(Y.c.ρ),
+    last_row = Ref((NaN, NaN, NaN)),
+)
+
+# The ledger in `p.tagging`, or `nothing` without it.
+negative_water_ledger(tagging) =
+    _negative_water_ledger(_tag_ledger_steps(tagging))
+_negative_water_ledger(::Nothing) = nothing
+_negative_water_ledger(steps) = steps.negative_water
+
+"""
+    accumulate_negative_water!(ledger, ᶜρq_tot, dt)
+
+Add one accepted step to the parent's negative water ledger `ledger` (see
+[`negative_water_ledger_cache`](@ref)): `max(-ρq_tot, 0) dt` to `ᶜamount`, and
+1 to `ᶜevents` where `ρq_tot < 0`. `dt` is the length of the step just
+accepted, in seconds. Where `ρq_tot` is not negative, including `-0.0`, it
+adds `-0.0` and `0.0`, which leave the ledger bit for bit. A no-op without the
+ledger.
+"""
+accumulate_negative_water!(::Nothing, ᶜρq_tot, dt) = nothing
+function accumulate_negative_water!(ledger, ᶜρq_tot, dt)
+    (; ᶜamount, ᶜevents) = ledger
+    @. ᶜamount += negative_water_density(ᶜρq_tot) * dt
+    @. ᶜevents += ifelse(ᶜρq_tot < zero(ᶜρq_tot), 1.0, 0.0)
+    return nothing
+end
+
+# The parent's negative water per volume, `max(-ρq_tot, 0)`, in Float64. The
+# same split as the partition's (`water_tag_negative_part`), so `-0.0` is not
+# negative water.
+@inline negative_water_density(ρq_tot) =
+    Float64(-water_tag_negative_part(ρq_tot))
+
+"""
+    check_negative_water_step!(integrator, void_above)
+
+The tag-closure contract's row "Parent validity: negative water" at the end of
+every accepted step (the owner's decision on #118's review). Above
+`void_above` of `∫ρq_tot`, a run's water results are not scored, whether or
+not a row of the water closure check sees it.
+
+It takes [`negative_water_step_relative`](@ref) of the step's end state. Where
+that passes `void_above`, it sets the water check's flag in
+`p.tagging.negative_water_void` (see [`negative_water_void_flags`](@ref)),
+which the next row of both tables writes as `negative_water_void = 1`. The
+first time, the root process warns once. The flag then stays set, through a
+restart too. A row of the check that sees the same state later in the step
+does not warn again.
+
+A crossing after the run's last row reaches no row. The water check's rows fall
+every `period` from the start, so where `t_end` is not a multiple of the period,
+or after a graceful exit, the last steps have no row after them. A step past the
+level there still sets the flag and warns. A checkpoint written after it carries
+the flag, and the next segment's rows are marked. But no row of this run's
+tables shows it.
+
+`void_above` is the water check's `negative_water_void_above`. `nothing`, for
+`~` or without a water check, does no work at all. Otherwise every process
+takes the first sum on every accepted step, and the second after a step with
+negative water, since both are collective. It writes only the flag, never a
+field, so the model's fields cannot depend on it.
+"""
+check_negative_water_step!(integrator, ::Nothing) = nothing
+function check_negative_water_step!(integrator, void_above)
+    Y = integrator.u
+    relative = negative_water_step_relative(Y.c.ρq_tot)
+    relative > void_above || return nothing
+    voided = negative_water_voided(integrator.p, :water)
+    first_void = !voided[]
+    voided[] = true
+    first_void && ClimaComms.iamroot(ClimaComms.context(Y.c)) &&
+        @warn(
+            "The water tags' parent has negative water $relative of its water at \
+            the end of the step to t = $(Float64(integrator.t)) s, above \
+            `negative_water_void_above` = $void_above. The tags partition only \
+            its non-negative part, and `q_tag_negative` holds the rest. The run \
+            goes on. Every later row of the water closure and audit tables is \
+            marked `negative_water_void`, also after a restart. If the run ends \
+            before its next row, no row shows this crossing: only this warning \
+            and a checkpoint written after it record it."
+        )
+    return nothing
 end
 
 """
@@ -393,16 +527,24 @@ _tag_ledger_steps(tagging, ::Val{false}) = nothing
 
 
 """
-    accumulate_tag_ledger_gross!(integrator)
+    accumulate_tag_ledger_gross!(integrator, negative_water_void_above = nothing)
 
 After an accepted step, add each state ledger's change over the step to its
-gross, per cell and per column, and remember the ledger. It reads the state and
-writes only its own cache.
+gross, per cell and per column, and remember the ledger. With water tags, also
+add the step to the parent's negative water ledger
+([`accumulate_negative_water!`](@ref)). Where the water check sets
+`negative_water_void_above`, also compare the parent's negative water with it
+([`check_negative_water_step!`](@ref)). It reads the state and writes only its
+own cache.
 """
-function accumulate_tag_ledger_gross!(integrator)
+function accumulate_tag_ledger_gross!(
+    integrator,
+    negative_water_void_above = nothing,
+)
     Y = integrator.u
     (; atmos) = integrator.p
-    (; ledgers, ᶜdiff, coldiff) = integrator.p.tagging.tag_ledger_steps
+    (; ledgers, ᶜdiff, coldiff, negative_water) =
+        integrator.p.tagging.tag_ledger_steps
     _accumulate_ledger_gross!(
         Y,
         ledgers,
@@ -412,6 +554,22 @@ function accumulate_tag_ledger_gross!(integrator)
         _energy_ledger_total(Y, atmos.energy_source_tagging_model),
         Val(keys(ledgers)),
     )
+    # The parent's negative water, from the step's end state (known issue 7).
+    # It is weighted by the length of the step just accepted. ClimaTimeSteppers'
+    # `__step!` (0.10.6 to 1.0.1) sets `integrator.dt` to
+    # `min(_dt, first(tstops) - t)` before it steps, moves `t` by that, and
+    # only then runs the callbacks. So here `integrator.dt` is that step,
+    # shortened where it met a stop. ClimaAtmos keeps time as `ITime`, whose
+    # sum is exact, so `t` moved by exactly `dt`. `tagged_water_integration.jl`
+    # checks the ledger against the elapsed times over shortened steps.
+    isnothing(negative_water) || accumulate_negative_water!(
+        negative_water,
+        Y.c.ρq_tot,
+        Float64(float(integrator.dt)),
+    )
+    # The contract's level, at the end of every accepted step. A no-op for
+    # `negative_water_void_above: ~`.
+    check_negative_water_step!(integrator, negative_water_void_above)
     return nothing
 end
 # The total a change of each family's ledger counts as an event against: the
@@ -421,10 +579,14 @@ _water_ledger_total(Y, model) = Y.c.ρq_tot
 _energy_ledger_total(Y, ::Nothing) = nothing
 _energy_ledger_total(Y, model) = _energy_source_parent_field(Y, model.offset)
 # The names are type parameters, and each field is named by a literal, so the
-# callback needs no run-time symbol and allocates nothing on a column. The one
-# call that has allocated, about 200 bytes, in some measurements is ClimaCore's
-# `column_integral_definite!`, which the model's surface precipitation calls
-# every step too.
+# ledgers' part of the callback needs no run-time symbol and allocates nothing
+# on a column. The one call that has allocated, about 200 bytes, in some
+# measurements is ClimaCore's `column_integral_definite!`, which the model's
+# surface precipitation calls every step too. The check of the parent's
+# negative water, where the water check has a level, does allocate: ClimaCore's
+# `sum` wraps each global sum in a one-element array for the allreduce. That is
+# 48 bytes a sum on Julia 1.11 and 288 on Julia 1.10, measured on a column, with
+# one sum on a clean parent and two after a step with negative water.
 @generated function _accumulate_ledger_gross!(
     Y,
     ledgers,
@@ -1003,7 +1165,10 @@ The tags' accumulators a checkpoint carries (WP6, step 3), as a vector of
 `name => field`: the cache ledgers `ᶜwater_fix`, `ᶜwater_upfix` and
 `ᶜenergy_source_fix` with their gross twins and counts, and, per state ledger,
 the per-step gross, column gross, events and attempted. `ᶜprev` is not carried:
-it is the ledger itself, which the state carries. Empty without tags.
+it is the ledger itself, which the state carries. With water tags, last, the
+parent's negative water ledger, `tag_ledger.negative_water.amount` and
+`tag_ledger.negative_water.events` (see [`negative_water_ledger_cache`](@ref)).
+Empty without tags.
 """
 function tag_ledger_checkpoint_fields(tagging)
     fields = Pair{String, Any}[]
@@ -1035,8 +1200,20 @@ function tag_ledger_checkpoint_fields(tagging)
     for (name, ᶜattempted) in pairs(steps.attempted)
         push!(fields, "tag_ledger.attempted.$name" => ᶜattempted)
     end
+    append!(fields, negative_water_checkpoint_fields(steps.negative_water))
     return fields
 end
+
+# The negative water ledger's fields in a checkpoint. A checkpoint written
+# before they were carried lacks only these, so a restart treats them apart
+# (`restore_tag_ledger_checkpoint!`).
+negative_water_checkpoint_fields(::Nothing) = Pair{String, Any}[]
+negative_water_checkpoint_fields(ledger) = Pair{String, Any}[
+    "tag_ledger.negative_water.amount" => ledger.ᶜamount,
+    "tag_ledger.negative_water.events" => ledger.ᶜevents,
+]
+is_negative_water_checkpoint_field(name) =
+    startswith(name, "tag_ledger.negative_water.")
 
 """
     write_tag_ledger_checkpoint!(writer, tagging)
@@ -1067,12 +1244,21 @@ The policy for a checkpoint without the accumulators:
     them, cover that segment only. They are not whole-run totals.
   - It holds some but not all of them: it is refused. Another configuration of
     the tags' ledgers wrote it.
+
+The parent's negative water ledger came later than the others, so a checkpoint
+may lack only it. Then it starts at zero, with its own warning, and the
+audit's `negative_water_*` columns cover only this segment. The other
+accumulators are read as above.
 """
 function restore_tag_ledger_checkpoint!(tagging, restart_file, context)
-    fields = tag_ledger_checkpoint_fields(tagging)
-    isempty(fields) && return nothing
+    all_fields = tag_ledger_checkpoint_fields(tagging)
+    isempty(all_fields) && return nothing
+    fields = filter(f -> !is_negative_water_checkpoint_field(first(f)), all_fields)
+    later = filter(f -> is_negative_water_checkpoint_field(first(f)), all_fields)
     reader = InputOutput.HDF5Reader(restart_file, context)
     try
+        restore_negative_water_ledger!(reader, later, restart_file)
+        isempty(fields) && return nothing
         present = map(fields) do (name, _)
             haskey(reader.file, "fields/$name")
         end
@@ -1102,6 +1288,32 @@ function restore_tag_ledger_checkpoint!(tagging, restart_file, context)
         end
     finally
         Base.close(reader)
+    end
+    return nothing
+end
+
+# Read the negative water ledger's fields, or warn and keep the zeros where the
+# checkpoint has none of them. Some but not all is refused, as for the others.
+function restore_negative_water_ledger!(reader, fields, restart_file)
+    isempty(fields) && return nothing
+    present = map(((name, _),) -> haskey(reader.file, "fields/$name"), fields)
+    if !any(present)
+        @warn(
+            "The restart file $restart_file was written before the parent's \
+            negative water ledger was carried in a checkpoint. It starts at \
+            zero for this segment, so the water audit's `negative_water_*` \
+            columns cover only this segment.",
+        )
+        return nothing
+    end
+    all(present) || error(
+        "The restart file $restart_file carries only part of the parent's \
+        negative water ledger. It was written by another version of the \
+        ledger. Start a new run.",
+    )
+    for (name, field) in fields
+        restored = InputOutput.read_field(reader, name)
+        parent(field) .= parent(restored)
     end
     return nothing
 end
