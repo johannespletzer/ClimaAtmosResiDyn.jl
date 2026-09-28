@@ -1330,7 +1330,7 @@ end
             names,
             model,
         )
-        # A uniform gap of half a percent, 2.5 times the closure budget, is
+        # A uniform gap of half a percent, 2.5 times the closure tolerance, is
         # refused too (the owner's review of #102).
         @test_throws r"sum to 1 only to within" CA._check_water_increment_partition(
             masks([0.5, 0.5, 0.5], [0.495, 0.495, 0.495]),

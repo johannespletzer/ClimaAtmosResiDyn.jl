@@ -238,7 +238,7 @@ if TEST_GROUP in ("tagging_source_updraft", "all")
 end
 
 # The water tags under prognostic EDMF. Each file builds the EDMF column twice,
-# with the tags and without them, and two builds fill a job's budget, as they
+# with the tags and without them, and two builds fill a job's time limit, as they
 # do for the energy source tags. So each has a group of its own: the default
 # mode under 1M, the copies under 1M with the microphysics explicit, and the
 # copies under 0M with the microphysics implicit, the default.

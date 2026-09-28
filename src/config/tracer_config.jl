@@ -1695,7 +1695,7 @@ end
 The transport the water tags take when `water_tag_transport` is not set.
 
 G3_PLAN 4.3 fixed the rule before V-W3 ran. If the default mode's one-iteration
-part of the closure residual exceeds a quarter of the 0.2% budget, the follower
+part of the closure residual exceeds a quarter of the 0.2% tolerance, the follower
 becomes the default under EDMF. V-W3 measured twelve times that (FINDINGS W21
 on the record branch). So `increment` is the default in the default mode under
 `turbconv: prognostic_edmfx`, where the configuration shows it is supported:

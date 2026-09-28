@@ -200,7 +200,7 @@ end
     # 3. The partition closes, and the copies' repair finds only a small
     # residual. This column with ten Newton iterations gave -4.3e-7 net,
     # 7.5e-4 gross and a copies' residual of 9.3e-5 after an hour (a probe
-    # run of the WP3 branch). The copies' bound is G3_PLAN 6.1's budget for
+    # run of the WP3 branch). The copies' bound is G3_PLAN 6.1's tolerance for
     # it. What the repair moves is printed, not bounded here: it bounds a sum
     # of several parts (`docs/src/tagged_water.md`).
     @testset "The partition and the copies stay closed" begin

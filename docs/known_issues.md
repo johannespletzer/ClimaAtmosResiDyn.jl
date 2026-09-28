@@ -289,7 +289,7 @@ was the record branch's pre-registered validation
 record's FINDINGS W42). Site 23 now runs 90 days, the model fields match the
 untagged twin bit for bit, and site 26's tags are unchanged bit for bit. But
 at site 23 the region tags overshoot the target by up to 2.2% of the water,
-against a budget of 0.2%. What follows is the owner's decision.
+against a tolerance of 0.2%. What follows is the owner's decision.
 
 A diagnostic must never end a run that upstream completes. This one does.
 The tag-closure long runs (the record branch's

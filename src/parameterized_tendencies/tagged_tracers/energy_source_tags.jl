@@ -425,7 +425,7 @@ function _check_increment_partition(ᶜmasks, names, model)
     )
     # 100 rounding units, as the water tags' follower allows
     # (`water_increment_partition_tolerance`): a region and its complement sum
-    # to 1 within a few; a gap the size of the closure budget does not pass.
+    # to 1 within a few; a gap the size of the closure tolerance does not pass.
     deviation > energy_source_partition_tolerance(eltype(mask_sum)) && error(
         "`energy_source_tag_transport: enthalpy_increment` needs region tags \
         that partition the domain, and the masks of these sum to 1 only to \

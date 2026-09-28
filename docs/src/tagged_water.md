@@ -351,7 +351,7 @@ implicit increment. It is the default in the default mode under
 `turbconv: prognostic_edmfx`, where the configuration supports it (below).
 G3_PLAN 4.3 fixed that rule before the runs: the follower becomes the default
 under EDMF if the default mode's one-iteration part of the closure residual
-exceeds a quarter of the 0.2% budget. V-W3 measured twelve times that. With
+exceeds a quarter of the 0.2% tolerance. V-W3 measured twelve times that. With
 copies, without prognostic EDMF, and with 1M microphysics stepped explicitly,
 the default is `tracer`.
 ``\rho q_\mathrm{tot}`` is advected vertically in the implicit step, and its
