@@ -53,11 +53,12 @@ Always read the ClimaAtmos-specific guide before working in this repository:
   separate feature and keeps its name. See [the glossary](docs/src/glossary.md).
 - Do not touch upstream naming conventions. Fork rules such as the
   bookkeeping words apply only to names and text the fork added. Upstream
-  ClimaAtmos identifiers, file names, config keys and wording stay as
-  upstream has them, even where a fork rule would name them differently.
+  ClimaAtmos identifiers, file names and config keys stay as upstream has
+  them, and upstream lines keep their wording, even where a fork rule would
+  name them differently.
 - Restarts and existing simulation output do not constrain renames yet. The
-  runs so far were tests and can be redone, so a checkpoint key, output name
-  or config key may change when a naming rule calls for it.
+  runs so far were tests and can be redone, so a fork-owned checkpoint key,
+  output name or config key may change when a naming rule calls for it.
 
 ## Self-correction
 
