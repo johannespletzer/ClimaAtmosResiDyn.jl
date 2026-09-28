@@ -76,6 +76,18 @@ not checked, it says so.
 
 ## Where things stand
 
+  - **The session goal of 2026-09-28** (the owner). It is met when:
+
+     1. the extended probe of section 9.7 has run and is scored and
+        recorded as W48;
+     2. the owner has a decision brief on C's revision, drawn from W47 and
+        W48, with options and a recommendation;
+     3. two PRs against `main` are open, with the #119 and the #121
+        follow-ups from the backups, and both pass the tests locally and in
+        CI.
+
+    WP4a-J, W21's surface flux and the walk-throughs come later.
+
   - **Update, 2026-09-28: PRs merged, unpushed work found, housekeeping.**
     Written by the session that reviewed #125. `main` was at `cfc2152c`,
     and is at `d2f119ab` since #126 merged that evening.
