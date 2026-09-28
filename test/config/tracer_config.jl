@@ -1594,12 +1594,15 @@ end
     positive = FT[1, 1, 1, 1]
     one_negative = FT[1, 1, -0.5, 1]
     set_parent!(values) = (parent(Y.c.ρq_tot) .= values; Y)
+    # `water_closure_parent` asks the model whether rain and snow carry their
+    # own tags (#121). `nothing` answers no, as for this column's one tag.
     p = (;
         scratch = (;
             ᶜtemp_scalar = zero(Y.c.ρ),
             ᶜtemp_scalar_2 = zero(Y.c.ρ),
         ),
         tagging = (; ᶜwater_parent = zero(Y.c.ρ)),
+        atmos = (; water_tagging_model = nothing),
     )
 
     # The ratio: 0 on a positive column, and N / ∫ρq_tot with one negative
