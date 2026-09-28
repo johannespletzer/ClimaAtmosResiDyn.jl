@@ -51,6 +51,10 @@ Always read the ClimaAtmos-specific guide before working in this repository:
   its timestepper pin is `TimestepperPin`. Tag-side names that say "ledger"
   already follow the rule. The stratospheric tracers' tracer budget is a
   separate feature and keeps its name. See [the glossary](docs/src/glossary.md).
+- Do not touch upstream naming conventions. Fork rules such as the
+  bookkeeping words apply only to names and text the fork added. Upstream
+  ClimaAtmos identifiers, file names, config keys and wording stay as
+  upstream has them, even where a fork rule would name them differently.
 - Restarts and existing simulation output do not constrain renames yet. The
   runs so far were tests and can be redone, so a checkpoint key, output name
   or config key may change when a naming rule calls for it.
