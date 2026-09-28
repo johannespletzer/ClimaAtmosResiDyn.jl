@@ -44,11 +44,27 @@ These are accessed through the integrator after a run, e.g.
   - **Diagnostics**: derived output variables, as opposed to the prognostic state
     `Y`. See [Computing and saving diagnostics](@ref) and the catalog of
     [available diagnostic variables](@ref "Available diagnostic variables").
-  - **Parent-budget ledger**: the internal accounting that checks whether air
+
+Three families of bookkeeping words: budget is the parent's, ledger is a tag's,
+record is a process's.
+
+  - **Parent budget**: the internal accounting that checks whether air
     mass, total water and total energy changed by exactly what the accepted
     time step applied. Its terms, from *reservoir* to *reported*, are explained
-    in plain language on the [ledger vocabulary](parent_budget/vocabulary.md)
-    page.
+    in plain language on the
+    [parent-budget vocabulary](parent_budget/vocabulary.md) page.
+  - **Tag ledger**: a running total that a tag correction keeps of what it
+    moved. The word is used on the tag side only. It comes in three kinds. A
+    *repair ledger* is `q_tag_fix_*` or `e_src_fix_*`, held in the cache as
+    `ᶜwater_fix` or `ᶜenergy_source_fix`. An *increment ledger* is
+    `e_src_inc_left`, `e_src_inc_moved` or `q_tag_inc_*`. A *mechanism
+    ledger* is `q_tag_led_*` or `e_src_led_*`. `q_tag_inc_*`, `q_tag_led_*`
+    and `e_src_led_*` are not defined in this version of the code. See
+    [Tagged Water Tracers](tagged_water.md) and
+    [Energy Source Tags](energy_source_tags.md).
+  - **Process record**: one process's signed history of the parent tendency,
+    kept as `prc_e_<process>` or `prc_q_<process>` and written out as
+    `e_prc_*` and `q_prc_*`. See [Process-Change Records](process_record.md).
 
 For the mapping between the symbols used in the equations pages and the
 names used in the code (the `ᶜ`/`ᶠ` prefixes, subdomain superscripts, and

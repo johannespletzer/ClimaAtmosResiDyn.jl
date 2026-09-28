@@ -1,16 +1,16 @@
-# Parent-Budget Ledger: Architecture
+# Parent Budget: Architecture
 
-How the parent-budget ledger is put together. The [contract](contract.md) fixes
+How the parent budget is put together. The [contract](contract.md) fixes
 what it claims; this page fixes the shapes that make those claims affordable,
 reproducible, and localizable. The [coverage registry](coverage.md) lists the
 paths, and the [implementation plan](plan.md) sequences the work.
 
 Three constraints drive every choice here. Accounting must not change the
 trajectory. A global integral is a collective, and a four-stage IMEX method with
-dozens of instrumented paths cannot afford one collective per leg. And when a
-budget fails to close, the output has to say *where*, which means evidence
-survives long enough to distinguish a missing leg from a duplicated one from a
-mismatched pair.
+dozens of instrumented paths cannot afford one collective per leg. And when the
+parent budget fails to close, the output has to say *where*, which means
+evidence survives long enough to distinguish a missing leg from a duplicated one
+from a mismatched pair.
 
 ## Data flow
 
@@ -56,34 +56,34 @@ take part, which exterior counterparties carry no numerical state, which legs ar
 required, and which components are expected to be provably zero.
 
 The journal records what happened. Reconciliation compares the two, in both
-directions: a declared term that no record covers blocks, and a record the schema
+directions: a declared term that no entry covers blocks, and an entry the schema
 does not declare is refused rather than absorbed.
 
-Deriving the expected set from the records instead would let a process that never
-reported remove itself from its own audit, and the report would then close over
-whatever happened to arrive. The [contract](contract.md) states the invariant; the
-architecture's job is to make the schema available early enough to be useful, which
-means before collection rather than during it.
+Deriving the expected set from the entries instead would let a process that
+never reported remove itself from its own audit, and the report would then close
+over whatever happened to arrive. The [contract](contract.md) states the
+invariant; the architecture's job is to make the schema available early enough
+to be useful, which means before collection rather than during it.
 
 Two later shapes depend on that timing. The packet layout is computed from the
 schema, so it exists before any event is recorded. And a slot's applicability comes
 from the schema, so a rank can tell an inapplicable slot from an unwritten one
 without asking any other rank.
 
-## One journal, three budgets
+## One journal, three parent quantities
 
 A single event journal holds every leg of an accepted step. A leg carries a
-mass, a water, and an energy component together, because the three budgets have
-to stay coordinated across a coupled exchange: the same deposition event moves
-water out of the atmosphere, mass with it, and the energy the water carried.
-Splitting them into three journals would make that one event three, and nothing
-would keep the three in step.
+mass, a water, and an energy component together, because the three parent
+quantities have to stay coordinated across a coupled exchange: the same
+deposition event moves water out of the atmosphere, mass with it, and the energy
+the water carried. Splitting them into three journals would make that one event
+three, and nothing would keep the three in step.
 
 **Status and evidence are per component, never per leg.** One event routinely
 measures energy, proves a mass zero, and has nothing to say about water. A
 per-leg status would have to pick one of the three, and whichever it picked
 would misdescribe the others. Each component therefore carries its own status
-and its own evidence record, which names the collection or proof method, the
+and its own evidence, which names the collection or proof method, the
 adapter or registry entry it came from, and the precision and reduction route
 where those matter.
 
@@ -115,7 +115,7 @@ the geometric weight, and the accumulator follows.
 production endpoint interface that calls it once per quantity per reservoir
 issues a handful of collectives every time it is used.
 
-The ledger splits the two:
+The parent budget splits the two:
 
   - **Local accumulation** produces one number per slot on each rank, with no
     communication. On a device this is a device-side reduction.
@@ -143,8 +143,8 @@ those dispositions is the point. **Unset** means nothing has written the slot ye
 **Not applicable** means the configuration says there is nothing to write, as when a
 model with no surface reservoir has no surface water to measure. A single "no value"
 flag would make a forgotten measurement indistinguishable from a deliberate
-omission, and the ledger would then report a configuration fact where a defect
-belongs.
+omission, and the parent budget would then report a configuration fact where a
+defect belongs.
 
 The rules follow from that separation:
 
@@ -206,8 +206,8 @@ something mutating `Y` between the two readings. That comparison is what turns a
 callback that quietly writes state into an error rather than a silent gap in the
 cumulative total. Reuse is therefore sound exactly while no supported callback
 mutates `Y`, which is a property of the model established by the coverage
-registry, not a property of the ledger. Both paths exist and the report records
-which one was used.
+registry, not a property of the parent budget. Both paths exist and the report
+records which one was used.
 
 ## Transactions
 
@@ -215,10 +215,10 @@ One transaction per accepted step. It opens on the finalized endpoint of step
 `n`, collects legs, and closes on the finalized endpoint of step `n+1`.
 
 **The commit is atomic.** Every reconciliation is computed into temporaries and
-validated before the ledger is touched, and only then are the cumulative totals
-advanced and the transaction closed. A failure part way through a commit
-otherwise leaves a ledger that has half-counted a step it never committed, with
-nothing in its own state to say so.
+validated before the parent budget is touched, and only then are the cumulative
+totals advanced and the transaction closed. A failure part way through a commit
+otherwise leaves a parent budget that has half-counted a step it never
+committed, with nothing in its own state to say so.
 
 **Ordering is deterministic.** Events are recorded against stable identifiers,
 and each recording carries an execution identity — reservoir, channel, event,
@@ -245,29 +245,29 @@ them, exactly, before it opens. A difference is a change nobody accounted for.
 Silently absorbing a restart into the next step's residual is not allowed.
 Carrying cumulative totals across a boundary is a later extension. It needs no
 checkpoint change beyond those attributes, and until it exists the report says
-the record is segmented. Decided on 2026-09-08.
+the history is segmented. Decided on 2026-09-08.
 
 This is `src/parent_budget/checkpoint.jl`. The checkpoint callback runs after
-the ledger's, so the endpoint the open transaction opened on is the endpoint
-of the state being written, and `save_state_to_disk_func` writes it as
-attributes beside the model hash. A restarted run reads them before the
+the parent budget's, so the endpoint the open transaction opened on is the
+endpoint of the state being written, and `save_state_to_disk_func` writes it
+as attributes beside the model hash. A restarted run reads them before the
 adapter is built, and `initialize_ledger!` compares the measured endpoint
 with them component by component: the amounts are the same integrals of the
 same state in the same arithmetic, so they are equal or the state changed on
-the way. A checkpoint without them, written with the ledger off, restarts the
-record as unverified rather than refusing to.
+the way. A checkpoint without them, written with the parent budget off,
+restarts the history as unverified rather than refusing to.
 
 ## Custom callbacks
 
 A discrete callback runs on the accepted state between two transactions, so
-one that writes `Y` is a change nothing accounts for. With the ledger on, a
-custom callback is accepted only inside a `ReadOnlyCallback` declaration, and
-audit mode holds it to the declaration: the parent integrals of the state are
-read before and after every firing, locally and without a collective, and a
-firing that moved them is an error. Summary mode trusts the declaration, and
-a callback that breaks it fails the next step's parent identity instead. A
-callback that supplies its own accounting is not supported yet and is
-refused.
+one that writes `Y` is a change nothing accounts for. With the parent budget
+on, a custom callback is accepted only inside a `ReadOnlyCallback`
+declaration, and audit mode holds it to the declaration: the parent integrals
+of the state are read before and after every firing, locally and without a
+collective, and a firing that moved them is an error. Summary mode trusts the
+declaration, and a callback that breaks it fails the next step's parent
+identity instead. A callback that supplies its own accounting is not
+supported yet and is refused.
 
 ## The timestepper adapter
 
@@ -328,10 +328,10 @@ parent field with a net integral the registry does not prove zero is wrapped
 in `open_applied_update!` and `close_applied_update!` under the label the
 registry names for it, in `src/prognostic_equations/applied_update.jl`. The
 same bracket feeds the tagging families and the process records for the
-labels they know, and feeds the ledger for every label, so there is one place
-in the tendency code where a process is delimited and every consumer reads
-it. A process added without a bracket lands in the attribution residual,
-which is how the omission is found.
+labels they know, and feeds the parent budget for every label, so there is
+one place in the tendency code where a process is delimited and every
+consumer reads it. A process added without a bracket lands in the
+attribution residual, which is how the omission is found.
 
 The explicit tendency sits behind a meter of its own, so the adapter knows
 which stage's tendency is being evaluated. In audit mode it meters the
@@ -372,12 +372,12 @@ registry, which the documentation table is generated from or checked against.
 
 ## Rules the design enforces
 
-  - Nothing in the ledger writes to authoritative state. A run with accounting
-    enabled produces the same trajectory as one without it, bitwise, and that is
-    tested rather than asserted.
+  - Nothing in the parent budget writes to authoritative state. A run with
+    accounting enabled produces the same trajectory as one without it,
+    bitwise, and that is tested rather than asserted.
   - A residual is a subtraction and has no representation as a leg.
-  - The schema declares what is expected and records never define it. A declared
-    term with no record blocks, and a record with no declaration is refused.
+  - The schema declares what is expected and entries never define it. A declared
+    term with no entry blocks, and an entry with no declaration is refused.
   - An exterior crossing records its modeled leg only. No numerical counter-leg is
     fabricated for a reservoir the model does not carry.
   - A final-state map is a term in the parent identity, never an attribution
@@ -386,8 +386,8 @@ registry, which the documentation table is generated from or checked against.
     as the third.
   - An aggregate envelope and its own decomposition are never both summed.
   - An unknown component blocks its claim and contributes zero to nothing.
-  - No hidden global mutable state: a ledger is an ordinary value threaded
-    through the integrator's cache.
+  - No hidden global mutable state: the parent budget is an ordinary value
+    threaded through the integrator's cache.
   - Unsupported configurations and undeclared state-mutating callbacks fail at
     setup, before a long simulation starts.
 
@@ -395,14 +395,14 @@ registry, which the documentation table is generated from or checked against.
 
 A successful run ends by writing `parent_budget_report.yaml` into its output
 directory, from `src/parent_budget/report.jl`, and logging a concise summary.
-The certificate is versioned, and it carries the configuration the ledger
-ran under, the backend, the rank count, the state and accounting float
+The certificate is versioned, and it carries the configuration the parent
+budget ran under, the backend, the rank count, the state and accounting float
 types, the timestepper and adapter versions, the supported-scope
 classification, the tolerances and where they came from, the restart
 segmentation, and for every control volume and quantity the parent verdict
 with its cumulative totals and the attribution and transfer verdicts of the
 last accepted step, each with what blocks or fails it. It is read from the
-last commit and the ledger's cumulative totals and adds nothing to them.
+last commit and the parent budget's cumulative totals and adds nothing to them.
 
 The tolerances come from the committed κ calibration table,
 `src/parent_budget/kappa_calibration.yaml`, read by

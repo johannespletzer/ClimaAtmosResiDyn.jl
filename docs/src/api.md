@@ -497,7 +497,7 @@ ClimaAtmos.parallel_lu_factorize!
 ClimaAtmos.parallel_lu_solve!
 ```
 
-### Parent-budget ledger
+### Parent budget
 
 The accounting layer that reconciles mass, total water, and total energy against
 the accepted discrete update. It is described in the Developer Guide: [the
@@ -514,7 +514,7 @@ writes the claim certificate `parent_budget_report.yaml` to its output directory
 and logs a summary. Two `AtmosSimulation` inputs do name types from inside. The
 keyword `parent_budget_tolerances` takes `BudgetTolerance` values. When the
 parent budget is on, a custom callback must be wrapped in `ReadOnlyCallback`.
-The types, the mutable ledger operations and the helpers stay internal.
+The types, the mutable journal operations and the helpers stay internal.
 Publishing them would freeze a compatibility surface around an implementation
 that is still expected to move.
 
@@ -527,7 +527,7 @@ ClimaAtmos.Internals.ParentBudget
 
 The one bracket in the tendency code around every process that writes a parent
 field. The tag families and the process records read it for the labels they
-know, the parent-budget ledger for every label. These are internal functions of
+know, the parent budget for every label. These are internal functions of
 the tendency code, rendered so their cross-references resolve; they are not a
 compatibility surface.
 

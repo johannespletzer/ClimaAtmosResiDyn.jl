@@ -26,7 +26,7 @@ tolerance. Tag closure and the turbulence closures are out of scope.
 
 ### Implementation by quantity
 
-| Aspect           | `main`: `check_conservation` in `src/simulation/solve.jl`                                                                                                                                                    | Tip: the ledger in `src/parent_budget/`                                                                                                                                                        |
+| Aspect           | `main`: `check_conservation` in `src/simulation/solve.jl`                                                                                                                                                    | Tip: the parent budget in `src/parent_budget/`                                                                                                                                                 |
 |:---------------- |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Measures         | `sum(sol.u[end].c.X) - sum(sol.u[1].c.X)` for `ρ`, `ρq_tot`, `ρe_tot`, first and last saved state only (lines 216 to 265)                                                                                    | Per accepted step: the endpoint change from `Fields.local_sum` of the widened field (`integrals.jl` 111 to 112), reduced once (`reduction.jl` 364 to 373, `integrals.jl` 161 to 168)           |
 | Compares against | `E`: the radiative flux the callback accumulated as `dt` times one sample (`callbacks.jl` 32 to 49); `M`, `W`: slab water change only. No reference for a non-slab `M` or `W`.                               | Envelopes, the tableau-weighted stage tendencies read from the stepper cache `T_exp`, `T_lim`, `T_imp` (`adapter.jl` 1653 to 1694), plus the final maps (`transaction.jl` 1497 to 1510)        |
@@ -98,19 +98,19 @@ cell.
 **(A) Bitwise, `R === 0`.** This needs exact accumulation of both endpoints
 and every leg, then an exact subtraction. With legs read from `Yₜ` it is
 unreachable: the state update `Y += dt Σ b T` rounds per cell in the state
-type before the ledger sees `Y`, so `Σ ΔY ≠ Σ dt b T` however the sums are
-done. Reading the applied update as the per-cell difference `Yⁿ⁺¹ − Yⁿ` and
+type before the parent budget sees `Y`, so `Σ ΔY ≠ Σ dt b T` however the sums
+are done. Reading the applied update as the per-cell difference `Yⁿ⁺¹ − Yⁿ` and
 summing it with the same exact accumulator gives `R === 0` identically, but
 then both sides read the same array and the identity is a tautology. That
 contradicts the contract's rule that the endpoint reading "shares no
-arithmetic" with the ledger, drops claim level 2, and cannot detect a
+arithmetic" with the legs, drops claim level 2, and cannot detect a
 state-writing callback as an unaccounted transfer. It raises no claim level,
 adds no state and no collectives, and leaves the trajectory unchanged. It is
 not compatible with the contract as written.
 
 **(B) A provable `κ`.** The residual has two sources of rounding: the
-ledger's reductions, which can be fixed, and the model's own state-update
-rounding, which the ledger cannot fix. For the first:
+parent budget's reductions, which can be fixed, and the model's own state-update
+rounding, which the parent budget cannot fix. For the first:
 
   - A fixed-order tree within a rank replaces `Fields.local_sum`, a mapreduce
     whose order differs between a serial CPU and a CUDA block reduction, with
@@ -145,8 +145,8 @@ implicit tendency evaluation and one Jacobian solve per implicit stage, so
 the implicit stages cost roughly `max_iters` times more. With
 `ManualSparseJacobian(approximate_solve_iters = 1)` convergence is linear and
 the defect never reaches rounding level. This is a change to the model, which
-the ledger's "not a fixer" rule forbids, and it does not change the ledger
-identity: the defect is already booked with weight `−b/γ`, and the parent
+the parent budget's "not a fixer" rule forbids, and it does not change the
+parent identity: the defect is already booked with weight `−b/γ`, and the parent
 residual already sits at arithmetic level with the defect present. The
 cheaper improvement is the missing ratio assertion in the sweep, so that the
 contract's "arithmetic level throughout" is tested rather than asserted. That
@@ -175,9 +175,9 @@ certified at all for the default float type.
 
 ## Part 3. Is it worth it
 
-The ledger exists to certify claim levels 1 to 4 for the accepted discrete
-update and to detect an unaccounted transfer above tolerance. The measured
-serial ratio 1.38 and the column and sphere residuals show that level 1
+The parent budget exists to certify claim levels 1 to 4 for the accepted
+discrete update and to detect an unaccounted transfer above tolerance. The
+measured serial ratio 1.38 and the column and sphere residuals show that level 1
 already holds at arithmetic level in `Float64`, and the envelope test shows
 the tolerance is far below the smallest leg (`envelope_tests.jl` 169 to 172:
 the envelope exceeds `1e3 · ε · |ΔB|`).

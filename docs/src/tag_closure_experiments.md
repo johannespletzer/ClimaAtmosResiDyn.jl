@@ -3,7 +3,7 @@
 !!! note "Historical"
 
     This page is the preparation plan of early September 2026 for the
-    tag-closure experiments. It is kept as a record and will move to the
+    tag-closure experiments. It is kept for reference and will move to the
     experiments' archive. It is not updated. The goals, findings and runs since
     then are in
     [`experiments/tag_closure/`](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/tree/claude/tag-closure-record/experiments/tag_closure)
@@ -32,8 +32,8 @@ plan marks the items that need it.
 
 ## Motivation and what we want to learn
 
-The energy source tags are the key goal. The water and energy budgets are the
-first step toward them, not an end in themselves. The purpose of the whole
+The energy source tags are the key goal. The water and energy tag closures are
+the first step toward them, not an end in themselves. The purpose of the whole
 series is to learn which practical barriers stop the source-tag method in a
 real simulation, so that the decision named in `energy_source_tags.md`,
 whether to use energy source tracing at all or to combine water source tracing
@@ -65,8 +65,8 @@ The barriers the memo predicts, to be confirmed or refuted:
 ## One branch
 
 All of it lives on a single experiment branch, kept separate from this page
-and not merged into `main`: the configurations, output and analysis are a
-working record rather than part of the package. The paths named below are
+and not merged into `main`: the configurations, output and analysis are
+working material rather than part of the package. The paths named below are
 paths on that branch, so they do not resolve in a checkout of `main`. If a
 step needs a second branch, for example a code change that should be reviewed
 on its own, that branch is proposed and discussed rather than simply created.
@@ -127,16 +127,16 @@ Rules for the layout:
   - Those diagnostics are not automatic in the form this series needs, so
     every config writes its own `diagnostics:` block and sets
     `output_default_diagnostics: false`. Two reasons. The default tag block
-    never registers `q_tag_fix_<name>` at all, so the ledger would simply be
-    absent. And it puts the tag list through `frequency_averages`, a time
+    never registers `q_tag_fix_<name>` at all, so the repair ledger would simply
+    be absent. And it puts the tag list through `frequency_averages`, a time
     mean, which `tagged_water.md` says is not a meaningful operation on a
     cumulative field. List each name with no `reduction_time` key, which
     resolves to an instantaneous sample.
   - The operator residual is the pointwise field
     `q_tag_res + Σᵢ q_tag_fix_i`, reduced with `max abs` afterwards. The `i`
     runs over the pure region tags only, the same set `q_tag_res` sums, never
-    a tag that carries a `source`. Including a source tag's ledger breaks the
-    identity, because the residual it would cancel was never in `q_tag_res`.
+    a tag that carries a `source`. Including a source tag's repair ledger breaks
+    the identity, because the residual it would cancel was never in `q_tag_res`.
     The order and the sign both matter. Reducing each term on its own and
     subtracting the two scalars is a different number. The ledger holds the
     signed change applied to the tag, `new - old`, so adding it back undoes
@@ -146,13 +146,13 @@ Rules for the layout:
     correction's contribution to the residual and not the ledger value
     itself.
   - Do not expect the operator residual to be the smaller of the two. Summed
-    over the partition, the repair's ledger is never negative. It is zero on
-    the sum-preserving branch, and where a cell is zeroed it is minus that
-    cell's tag sum, which was negative for the branch to fire at all. So the
-    operator residual is usually the larger number, and a check that assumed
-    otherwise would reject correct output. The identity above is the
-    invariant worth asserting; the direction is not.
-  - That decomposition is clean only while every ledger entry comes from
+    over the partition, the repair's share of the repair ledger is never
+    negative. It is zero on the sum-preserving branch, and where a cell is
+    zeroed it is minus that cell's tag sum, which was negative for the branch to
+    fire at all. So the operator residual is usually the larger number, and a
+    check that assumed otherwise would reject correct output. The identity above
+    is the invariant worth asserting; the direction is not.
+  - That decomposition is clean only while every repair-ledger entry comes from
     `repair_water_tag_partition!`. The repair moves the tags and leaves
     `ρq_tot` alone. A rescale follows a parent that moved too, so removing it
     is not a counterfactual. Give A1 to A4 no tracer limiter and no
@@ -164,8 +164,8 @@ Rules for the layout:
   - The `q_tag_fix_<name>` docstring also says the field is identically zero
     unless a tracer limiter or a nonnegativity constraint is configured. That
     sentence is stale on `main`. `repair_water_tag_partition!` runs
-    unconditionally from `constrain_state!` and writes the ledger, so keep
-    the diagnostic in a run that configures neither.
+    unconditionally from `constrain_state!` and writes the repair ledger, so
+    keep the diagnostic in a run that configures neither.
   - A control run without tags accompanies the first run of every phase, so
     the cost of the tags is measured from the `sypd` and
     `wall_time_per_timestep` lines of the log.
@@ -351,8 +351,8 @@ here.
  5. Reduce before copying. The run's `output_dir` holds the closure CSV, the
     NetCDF diagnostics, the config snapshot and the checkpoints. The NetCDF
     stays on scratch, and the number phase A turns on is not in the closure
-    CSV. `gross_relative` is a volume integral of the residual with no ledger
-    subtracted, while the operator residual is a pointwise maximum of
+    CSV. `gross_relative` is a volume integral of the residual with no repair
+    ledger subtracted, while the operator residual is a pointwise maximum of
     `q_tag_res + Σᵢ q_tag_fix_i`. Run `analysis/reduce_run.jl` against
     `output_dir` on Levante to turn the diagnostics into one small CSV.
 
@@ -371,7 +371,7 @@ What each run's directory holds:
     closure check wrote, one row per firing.
   - `operator_residual.csv`, from step 5. One row per diagnostic time with
     the maximum absolute operator residual, and beside it the maximum
-    absolute `q_tag_res` and the summed ledger on their own, so the
+    absolute `q_tag_res` and the summed repair ledger on their own, so the
     decomposition can be checked rather than trusted.
   - `<run>.yml`, the merged configuration snapshot the run writes next to its
     output. This pins what actually ran, including every default in force at
