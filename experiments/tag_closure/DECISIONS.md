@@ -215,26 +215,63 @@ The list as it stood before this classification, kept as written:
 
 ## 2026-09-28
 
+  - **The owner's answers to the open decisions, later on 2026-09-28**
+    (asked with a short background, options and a recommendation each):
+
+      + **Option C after W47: probe more before any fix.** Look at the
+        fourth, unattributed rise and check cell by cell. The pre-registered
+        design's section 9.5 revision is not chosen yet. **In force.**
+      + **Rerun the probe on `main` now,** with #118's check at every step
+        on. **In force.** It is to be pre-registered as an amendment to the
+        design's section 9 before it runs.
+      + **The #119 and #121 follow-ups on the backups go to `main` as two
+        PRs,** from fresh branches off `main`. The backups stay as they
+        are. **In force.**
+      + **W45's investigation waits until C's revision.** **In force.**
+      + **OD7 stays deferred** until C is fixed and site 23's long runs are
+        scored. **In force.**
+      + **OD9 to OD15:** walk through them later, one at a time. **Waiting.**
+      + **WP4a, known issue 4's Jacobian: build the pair,** the diagonal and
+        the cross term with the split solver's back-substitution, behind a
+        switch. WP4a-J's experiment measures it. **In force.**
+      + **WP4a, the copies' part of issue 4: a follow-up after WP4a-J.**
+        **In force.**
+      + **W21, the first hour: model the surface flux at the plume's
+        start,** then measure the first hour again. **In force.**
+      + **WP6's three points: confirmed as built on `main`.** An old
+        checkpoint without the accumulators restarts them at zero with a
+        warning, and a partial one is refused. Loss and τ stay out of WP6.
+        The transfer ledgers stay as they are, with the per-tag ledgers
+        beside them. **Done.**
+      + **G4.3 to G4.6's seven points and WP4b stage 1's five points:**
+        walk through them later, one at a time. WP4b's points go with OD15
+        when WP4b moves toward validation. **Waiting.**
+
   - **#125's review: #118's negative-water total is the parent's, not a
     tag's.** #125 was to rename it when it took #118. The two merged 13 s
     apart, so the rename became #126. The owner chose the name
     "accumulator" (`negative_water_accumulator_cache` and the others), and
     the checkpoint keys `tag_ledger.negative_water.*` stay. **In force**,
     #126 open. Memory: pr125-terminology.md; PR #126.
+
   - **"A threshold is a tolerance" is written into the bookkeeping norm** in
     `AGENTS.md` (#125, `1ff3e8c0`). **Done.** PR #125.
+
   - **The seven commits of 2026-09-27 found only in the worktree `-negflag`
     are folded into #118.** They carry the latch at every accepted step.
     **Done:** `2115426f`, merged with #118. PR #118.
+
   - **Unpushed work is backed up, and the backups stay as they are:**
     `claude/backup/{negflag,wp4c,wp4b}-2026-09-27`. **In force.**
     [STATUS.md](STATUS.md), "Update, 2026-09-28". Memory:
     housekeeping-2026-09-28.md.
+
   - **Housekeeping.** Worktrees and local branches of merged PRs are
     removed, after an archive capture. Remote branches merged into `main`
     are deleted. The run trees, the long runs' branches, `-exp` and
     `-plan2g4` are kept. **Done.** [STATUS.md](STATUS.md), "Branches,
     worktrees and sessions".
+
   - **Order:** #126 first, then the housekeeping. Option C's miss probe
     waits for the owner's go. **In force.** Memory:
     housekeeping-2026-09-28.md.

@@ -53,6 +53,10 @@ The twelve criteria of the plan, section 2, in short:
         still needed;
       + whether subsidence, whose share lies in class N, is treated with
         the local terms.
+      + *The owner, later on 2026-09-28:* probe more first (the fourth rise,
+        cell by cell), and rerun the probe on `main` now with #118's check at
+        every step. Both are pre-registered as an amendment to section 9. No
+        fix is chosen yet. W45's investigation waits until C's revision.
   - [ ] **OD9 to OD14, proposed by the provenance pathway.** *Scope added
     (provenance pathway, 2026-09-26):*
     [PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), section 9. They are in [the
@@ -174,7 +178,9 @@ The twelve criteria of the plan, section 2, in short:
     comparator eligibility (OD3's comparator rows, [the register](ROADMAP.md#the-decision-register)): over its repair row
     the copies are not eligible, and provenance is not assessable. W25's
     scoring applied it on 2026-09-25 (`output/w25i/`).*
-  - [ ] **The surface rule in the first hour.** A surface-layer tag differs
+  - [x] **The surface rule in the first hour.** *Decided 2026-09-28
+    (DECISIONS.md): model the surface flux at the plume's start, then
+    measure the first hour again.* A surface-layer tag differs
     between the modes by 14% (L1) at 1 h, against a 1% budget, and meets it
     from 6 h (W21). Whether the plume's start should model the surface flux
     (plan 4.1, review S4) is the owner's. *Open (DECISIONS.md, "Waiting for
@@ -191,15 +197,18 @@ The twelve criteria of the plan, section 2, in short:
     `ρq_tag_<name>` holding the non-precipitating water under the key; the
     microphysics attribution, net-flow rule or gross flows; and 4.2's rule
     restated to measure a leak's imprint.
-  - [ ] **WP4a's two points** *Open (DECISIONS.md, "Waiting for the owner").*
+  - [x] **WP4a's two points** *Decided 2026-09-28 (DECISIONS.md): build the
+    pair behind a switch, which WP4a-J measures; the copies' part is a
+    follow-up after WP4a-J.* ~~Open.~~
     ([design/ZERO_M_SPLIT.md](design/ZERO_M_SPLIT.md), section 8, after its
     xhigh review): known issue 4's Jacobian, the pair (diagonal and cross
     term, with the split solver's back-substitution) or the diagonal alone as
     a test; the review showed the diagonal alone makes one Newton iteration
     worse and today's missing entry costs nothing for the pure sink. And the
     copies' part of issue 4, a follow-up or in WP4a.
-  - [ ] **WP6's three points** *Open (DECISIONS.md, "Waiting for the
-    owner"); step 3 took the conservative defaults (the note's 10.6).*
+  - [x] **WP6's three points** *Confirmed as built on `main`, 2026-09-28
+    (DECISIONS.md). Step 3 had taken the conservative defaults (the note's
+    10.6).*
     ([design/GROSS_ACCUMULATORS.md](design/GROSS_ACCUMULATORS.md), section 8):
     a pre-WP6 checkpoint refused or zero-filled; loss and residence time moved
     to WP4a and WP4b; and, after the code review, the transfer ledgers as they

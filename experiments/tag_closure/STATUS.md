@@ -116,8 +116,18 @@ not checked, it says so.
         into the archive and removed, and 22 merged remote branches were deleted
         ("Branches, worktrees and sessions"). The archive's
         `scratch_tag_closure/` was synced first.
-      + *Where the next session starts:* the owner's decision on C after
-        W47; what becomes of the wp4b and wp4c follow-ups; #126. The
+      + *The owner's answers, later on 2026-09-28* (DECISIONS.md):
+          * C: probe more first, and rerun the probe on `main` now;
+          * two PRs from the backups;
+          * W45 after C's revision; OD7 deferred;
+          * WP4a: the pair, then the copies;
+          * W21: model the surface flux;
+          * WP6 confirmed;
+          * OD9 to OD15, G4.3 to G4.6 and WP4b's points walked through
+            later.
+      + *Where the next session starts:* the amendment to section 9 for
+        the extended probe on `main`; the two PRs from the backups; WP4a-J;
+        W21's surface flux; #126. The
         uncommitted start of W45's investigation in `-plan2` is backed up
         as `claude/backup/plan2-2026-09-25` (`b3cd940a`). Record work now
         uses the worktree `../ClimaAtmosResiDyn-rec`, detached, pushing
