@@ -191,8 +191,8 @@ import ClimaAtmos as CA
 
     # The repair keeps every tag non-negative wherever `E = ρe_tot + c·ρ` is
     # positive, after each state update, so the state after the last step
-    # holds no negative tag there. The ledger alone cannot show this, since
-    # it is zero when the repair never acted.
+    # holds no negative tag there. The repair ledger alone cannot show this,
+    # since it is zero when the repair never acted.
     ᶜE = @. Y.c.ρe_tot + FT(c) * Y.c.ρ
     positive = parent(ᶜE) .> 0
     @test any(positive)
@@ -210,7 +210,7 @@ import ClimaAtmos as CA
     # makes on the same field in Float64.
     @test maximum(abs.(parent(Y.c.prc_e_radiation))) > 0
 
-    # The repair's ledger is a diagnostic. Computing it once in Float32 shows
+    # The repair ledger is a diagnostic. Computing it once in Float32 shows
     # the function behind `e_src_fix_<name>` runs and stays finite; a source
     # tag is only ever clipped upward, so its ledger cannot be negative.
     ledger = CA.Diagnostics.compute_e_src_fix!(nothing, Y, p, t, :ρe_src_rad)

@@ -1,5 +1,5 @@
 #####
-##### Parent-budget ledger: transfer legs from their own quadratures
+##### Parent budget: transfer legs from their own quadratures
 #####
 ##### A transfer event moves a quantity across a boundary. Each modeled side of
 ##### it is measured on its own, inside the applied-update event that applied

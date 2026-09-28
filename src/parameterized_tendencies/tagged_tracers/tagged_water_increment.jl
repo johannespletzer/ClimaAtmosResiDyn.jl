@@ -20,7 +20,7 @@
 ##### terms, which are their species' by construction (the design note WP4b-D,
 ##### section 6).
 
-# The names of the correction's ledger, in the state's order.
+# The names of the increment ledger, in the state's order.
 const WATER_TAG_LEDGER_NAMES =
     (:q_tag_inc_left, :q_tag_inc_moved, :q_tag_inc_negative)
 
@@ -73,7 +73,7 @@ water_tag_increment_ledger_variables(ρq_tot, model::WaterTaggingModel) =
 """
     water_tag_increment_ledger_names(model)
 
-`Tuple` of the state-field `Symbol`s of the correction's ledger:
+`Tuple` of the state-field `Symbol`s of the increment ledger:
 `(:q_tag_inc_left, :q_tag_inc_moved, :q_tag_inc_negative)` under
 `water_tag_transport: increment`,
 and `()` otherwise. See [`water_tag_increment_ledger_variables`](@ref).
@@ -138,8 +138,8 @@ _water_tag_increment_cache(Y, model) =
 How far the region masks' sum may stray from 1 under `water_tag_transport: increment`: 100 rounding units of `FT`, 2.2e-14 in Float64 and 1.2e-5 in
 Float32. A region and its complement (`above: false`, `inside: false`) sum to
 1 within a few units, so they pass. A gap or overlap the size of the closure
-budget does not: a mask sum of 0.995 would leave the partition 0.5% short of
-`ρq_tot` before the run starts, 2.5 times the 0.2% budget, and the follower
+tolerance does not: a mask sum of 0.995 would leave the partition 0.5% short
+of `ρq_tot` before the run starts, 2.5 times the 0.2% tolerance, and the follower
 tracks increments only, so it never closes that gap.
 """
 water_increment_partition_tolerance(::Type{FT}) where {FT} = 100 * eps(FT)

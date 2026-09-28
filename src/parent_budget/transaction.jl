@@ -1,5 +1,5 @@
 #####
-##### Parent-budget ledger: transactions and the three reconciliations
+##### Parent budget: transactions and the three reconciliations
 #####
 ##### One transaction per accepted timestep. It opens on the finalized endpoint
 ##### of step `n`, collects legs, and closes on the finalized endpoint of step
@@ -13,7 +13,7 @@
 #####   R_transfer(q, e)    = Σ_{r ∈ modeled(e)} Q(q, e, r)
 #####
 ##### Every one of them is a subtraction or a sum of recorded amounts. No
-##### function here creates a leg, so the ledger cannot close a budget it has not
+##### function here creates a leg, so the journal cannot close a budget it has not
 ##### accounted for, and nothing in this file knows what a ClimaAtmos process is
 ##### or how a collective is issued.
 #####
@@ -184,7 +184,7 @@ control volume is skipped entirely, so it can neither contribute nor block.
 
 `applicable` is false when no reservoir in the view owns the quantity at all,
 which is not the same as a total of zero. Water in a dry model would otherwise
-be reported as an ordinary closed budget at zero. The ledger never made that
+be reported as an ordinary closed budget at zero. The parent budget never made that
 claim.
 
 `magnitude` is the sum of absolute endpoint values, which the tolerance needs
@@ -313,7 +313,7 @@ The tolerance one quantity's residual is judged against.
   - `relative` is dimensionless.
   - `scale` is a positive scale for the relative term. It is **never** a signed
     total: a signed scale can pass through zero, and it hides the sign the
-    ledger exists to expose.
+    parent budget exists to expose.
   - `kappa` covers reduction order and rank dependence.
 
 Every field must be finite, and `scale` must be strictly positive. A `NaN`
@@ -416,22 +416,22 @@ end
 const UNCALIBRATED_TOLERANCE_BLOCKER = "tolerance not declared; kappa is uncalibrated"
 
 # ============================================================================
-# The ledger
+# The journal
 # ============================================================================
 
 """
-    BudgetLedger{FT}(schema)
+    BudgetJournal{FT}(schema)
 
 The declared expectations, the open transaction, and the running cumulative
 totals.
 
-A ledger is opened on an endpoint, collects legs, and is committed on the next
+A journal is opened on an endpoint, collects legs, and is committed on the next
 endpoint. Its `schema` is fixed at construction and never changes: it is what
 every recording is checked against and what every reconciliation is enumerated
 from, so a channel or event that recorded nothing still produces a row.
 
 Three cumulative residuals are kept per quantity and control volume, not one,
-because a signed sum cancels the very failure the ledger exists to expose: `+δ`
+because a signed sum cancels the very failure the parent budget exists to expose: `+δ`
 on one step and `−δ` on the next sums to zero and reports a perfectly closed run
 that closed on neither step. `cumulative_residual` is the signed drift.
 `cumulative_abs_residual` cannot cancel and bounds the total unaccounted
@@ -439,10 +439,10 @@ transfer. `max_abs_residual` names the worst single step. Closure quality is
 decided by the last two; the signed sum is reported and never passes a test on
 its own.
 
-The ledger is a diagnostic. Nothing in it writes to the state, and a run with it
+The journal is a diagnostic. Nothing in it writes to the state, and a run with it
 enabled must produce the same trajectory as one without it.
 """
-mutable struct BudgetLedger{FT}
+mutable struct BudgetJournal{FT}
     schema::BudgetSchema
     step::Int
     is_open::Bool
@@ -461,7 +461,7 @@ mutable struct BudgetLedger{FT}
     committed_steps::Int
 end
 
-BudgetLedger{FT}(schema::BudgetSchema) where {FT} = BudgetLedger{FT}(
+BudgetJournal{FT}(schema::BudgetSchema) where {FT} = BudgetJournal{FT}(
     schema,
     0,
     false,
@@ -481,7 +481,7 @@ BudgetLedger{FT}(schema::BudgetSchema) where {FT} = BudgetLedger{FT}(
 )
 
 """
-    clear_open_transaction!(ledger)
+    clear_open_transaction!(journal)
 
 Drop everything belonging to the open transaction.
 
@@ -489,17 +489,17 @@ Per-step storage is bounded because this runs on every commit and every abort. A
 long run keeps the fixed set of cumulative totals and nothing that grows with
 the number of steps.
 """
-function clear_open_transaction!(ledger::BudgetLedger)
-    empty!(ledger.legs)
-    empty!(ledger.observations)
-    empty!(ledger.recorded_keys)
-    empty!(ledger.envelope_keys)
-    empty!(ledger.event_levels)
+function clear_open_transaction!(journal::BudgetJournal)
+    empty!(journal.legs)
+    empty!(journal.observations)
+    empty!(journal.recorded_keys)
+    empty!(journal.envelope_keys)
+    empty!(journal.event_levels)
     return nothing
 end
 
 """
-    check_endpoint_continuity(ledger, opening)
+    check_endpoint_continuity(journal, opening)
 
 Verify that `opening` is the endpoint the previous transaction closed on.
 
@@ -518,10 +518,10 @@ is not supported, so a status change is a defect until it is deliberately
 represented.
 """
 function check_endpoint_continuity(
-    ledger::BudgetLedger{FT},
+    journal::BudgetJournal{FT},
     opening::BudgetEndpoints{FT},
 ) where {FT}
-    previous = ledger.last_closing
+    previous = journal.last_closing
     isnothing(previous) && return nothing
     previous.step == opening.step || error(
         "Budget transaction opens on step $(opening.step) but the previous " *
@@ -561,7 +561,7 @@ function check_endpoint_continuity(
 end
 
 """
-    open_transaction!(ledger, endpoints)
+    open_transaction!(journal, endpoints)
 
 Begin the transaction for the step `endpoints.step + 1`.
 
@@ -580,25 +580,25 @@ can later be read directly rather than telescoped out of the per-step
 differences.
 """
 function open_transaction!(
-    ledger::BudgetLedger{FT},
+    journal::BudgetJournal{FT},
     endpoints::BudgetEndpoints{FT},
 ) where {FT}
-    ledger.is_open && error(
-        "A budget transaction for step $(ledger.step) is already open. " *
+    journal.is_open && error(
+        "A budget transaction for step $(journal.step) is already open. " *
         "Commit or abort it before opening another.",
     )
-    check_schema_endpoints(ledger.schema, endpoints, "opening")
-    check_endpoint_continuity(ledger, endpoints)
-    ledger.step = endpoints.step + 1
-    ledger.is_open = true
-    ledger.opening = endpoints
-    isnothing(ledger.initial) && (ledger.initial = endpoints)
-    clear_open_transaction!(ledger)
+    check_schema_endpoints(journal.schema, endpoints, "opening")
+    check_endpoint_continuity(journal, endpoints)
+    journal.step = endpoints.step + 1
+    journal.is_open = true
+    journal.opening = endpoints
+    isnothing(journal.initial) && (journal.initial = endpoints)
+    clear_open_transaction!(journal)
     return nothing
 end
 
 """
-    open_transaction!(ledger)
+    open_transaction!(journal)
 
 Open the next transaction on the endpoint the previous one closed, without
 measuring the state again.
@@ -614,19 +614,19 @@ callbacks in between, and comparing them is what turns a callback that quietly
 mutates `Y` into an error instead of a silent gap in the cumulative total. Reuse
 makes that comparison compare a value with itself.
 
-Nothing in the ledger chooses between the two openings. The caller takes the
+Nothing in the journal chooses between the two openings. The caller takes the
 trade, and it is sound exactly while no callback mutates the state. That premise
-is a property of the model the coverage registry establishes, not of the ledger.
+is a property of the model the coverage registry establishes, not of the journal.
 
 Errors when there is no previous closing endpoint, which is the first step.
 """
-function open_transaction!(ledger::BudgetLedger)
-    previous = ledger.last_closing
+function open_transaction!(journal::BudgetJournal)
+    previous = journal.last_closing
     isnothing(previous) && error(
         "No previous closing endpoint to reuse; the first transaction has to " *
         "measure its opening endpoint.",
     )
-    return open_transaction!(ledger, previous)
+    return open_transaction!(journal, previous)
 end
 
 # ============================================================================
@@ -641,7 +641,7 @@ end
 #
 # A disposition describes what a path does to a quantity where the reservoir
 # owns it. Where the schema says the reservoir does not own the quantity, the
-# only honest record is `NotApplicable`, whatever the row declares: a slab in a
+# only honest status is `NotApplicable`, whatever the row declares: a slab in a
 # dry run has no water to measure, and a channel that names both reservoirs
 # declares one disposition for the atmosphere's water and none for the slab's.
 function check_leg_dispositions(schema::BudgetSchema, spec, leg::BudgetLeg)
@@ -661,15 +661,15 @@ function check_leg_dispositions(schema::BudgetSchema, spec, leg::BudgetLeg)
         disposition_permits(expected, status) || error(
             "Leg $(leg_label(leg)) records $quantity as " *
             "$(status_name(status)), but the schema declares it $expected. A " *
-            "declared disposition is a proof obligation about the code, so a " *
-            "record that contradicts it is a disagreement between the registry " *
+            "declared disposition is a proof obligation about the code, so an " *
+            "entry that contradicts it is a disagreement between the registry " *
             "and the implementation rather than a residual.",
         )
     end
     return nothing
 end
 
-# Every leg is checked against the schema before it is stored. A record the
+# Every leg is checked against the schema before it is stored. An entry the
 # schema does not declare is refused rather than becoming a new row, because a
 # row nothing expected is a row nothing will check.
 function check_leg_declared(schema::BudgetSchema, leg::BudgetLeg)
@@ -740,7 +740,7 @@ function check_leg_declared(schema::BudgetSchema, leg::BudgetLeg)
 end
 
 """
-    record_leg!(ledger, leg)
+    record_leg!(journal, leg)
 
 Add `leg` to the open transaction.
 
@@ -752,7 +752,7 @@ Refused, loudly, in these cases.
   - The schema does not declare the leg's reservoir, channel, final map, or
     transfer event, or declares the event with different legs or in a different
     channel, or does not name the leg's process among the channel's declared
-    decomposition rows. Expectations come from the configuration, so a record
+    decomposition rows. Expectations come from the configuration, so an entry
     nothing declared fails closed.
   - A component contradicts the disposition its declaration gave it, such as a
     measurement on a quantity the registry says the path leaves provably zero.
@@ -779,18 +779,18 @@ amount happens to be zero, which genuinely would pass every closure test. And it
 forces each firing of a repeating path to carry a distinct execution identity,
 which is what makes a per-stage correction legible at all.
 """
-function record_leg!(ledger::BudgetLedger{FT}, leg::BudgetLeg{FT}) where {FT}
-    ledger.is_open || error(
+function record_leg!(journal::BudgetJournal{FT}, leg::BudgetLeg{FT}) where {FT}
+    journal.is_open || error(
         "No open budget transaction; cannot record leg $(leg.event)/$(leg.leg).",
     )
-    leg.step == ledger.step || error(
+    leg.step == journal.step || error(
         "Leg $(leg.event)/$(leg.leg) is for step $(leg.step), but the open " *
-        "transaction is step $(ledger.step).",
+        "transaction is step $(journal.step).",
     )
-    check_leg_declared(ledger.schema, leg)
+    check_leg_declared(journal.schema, leg)
 
     key = execution_identity(leg)
-    key in ledger.recorded_keys && error(
+    key in journal.recorded_keys && error(
         "Leg $(leg_label(leg)) is already recorded. A leg is recorded once; " *
         "control-volume totals are projections of it. A path that legitimately " *
         "fires more than once in a step distinguishes its firings with `stage` " *
@@ -799,7 +799,7 @@ function record_leg!(ledger::BudgetLedger{FT}, leg::BudgetLeg{FT}) where {FT}
 
     event_key = (leg.event, leg.step)
     level = level_name(leg.level)
-    recorded_level = get(ledger.event_levels, event_key, level)
+    recorded_level = get(journal.event_levels, event_key, level)
     recorded_level === level || error(
         "Leg $(leg_label(leg)) records event $(leg.event) at level $level, but " *
         "it is already recorded at level $recorded_level in this step. An " *
@@ -809,23 +809,23 @@ function record_leg!(ledger::BudgetLedger{FT}, leg::BudgetLeg{FT}) where {FT}
 
     if leg.level isa ChannelEnvelope
         envelope_key = (leg.channel, reservoir_name(leg.reservoir), leg.step)
-        envelope_key in ledger.envelope_keys && error(
+        envelope_key in journal.envelope_keys && error(
             "Leg $(leg_label(leg)) is a second envelope for channel " *
             "$(leg.channel) in $(reservoir_name(leg.reservoir)) at step " *
             "$(leg.step). A channel applies one accepted update to one " *
             "reservoir, so a second envelope for it double-counts that update.",
         )
-        push!(ledger.envelope_keys, envelope_key)
+        push!(journal.envelope_keys, envelope_key)
     end
 
-    ledger.event_levels[event_key] = level
-    push!(ledger.recorded_keys, key)
-    push!(ledger.legs, leg)
+    journal.event_levels[event_key] = level
+    push!(journal.recorded_keys, key)
+    push!(journal.legs, leg)
     return nothing
 end
 
 """
-    record_observation!(ledger, observation)
+    record_observation!(journal, observation)
 
 Add a `StageObservation` to the open transaction's audit trail.
 
@@ -840,24 +840,24 @@ Unlike a leg, an observation is not deduplicated. Observing the same map at the
 same stage twice is a reading, not a double count.
 """
 function record_observation!(
-    ledger::BudgetLedger{FT},
+    journal::BudgetJournal{FT},
     observation::StageObservation{FT},
 ) where {FT}
-    ledger.is_open || error(
+    journal.is_open || error(
         "No open budget transaction; cannot record observation " *
         "$(observation.event)/$(observation.observation).",
     )
-    observation.step == ledger.step || error(
+    observation.step == journal.step || error(
         "Observation $(observation.event)/$(observation.observation) is for " *
         "step $(observation.step), but the open transaction is step " *
-        "$(ledger.step).",
+        "$(journal.step).",
     )
-    push!(ledger.observations, observation)
+    push!(journal.observations, observation)
     return nothing
 end
 
 """
-    abort_transaction!(ledger)
+    abort_transaction!(journal)
 
 Discard the open transaction without committing anything.
 
@@ -868,10 +868,10 @@ added, this is the hook that keeps a rejected attempt from committing, and the
 rollback of the *state* becomes real work that the contract does not currently
 cover.
 """
-function abort_transaction!(ledger::BudgetLedger)
-    ledger.is_open = false
-    ledger.opening = nothing
-    clear_open_transaction!(ledger)
+function abort_transaction!(journal::BudgetJournal)
+    journal.is_open = false
+    journal.opening = nothing
+    clear_open_transaction!(journal)
     return nothing
 end
 
@@ -880,7 +880,7 @@ end
 # ============================================================================
 
 """
-    project_parent(ledger, quantity, control_volume)
+    project_parent(journal, quantity, control_volume)
 
 Sum the primary identity's recorded terms for one quantity over one control
 volume.
@@ -899,7 +899,7 @@ exchange a boundary crossing in one view and an internal transfer in another
 without recording it twice.
 """
 function project_parent(
-    ledger::BudgetLedger{FT},
+    journal::BudgetJournal{FT},
     quantity::Symbol,
     cv::ControlVolume,
 ) where {FT}
@@ -907,7 +907,7 @@ function project_parent(
     final_maps = zero(FT)
     magnitude = zero(FT)
     blocked_by = String[]
-    for leg in ledger.legs
+    for leg in journal.legs
         is_inside(cv, leg.reservoir) || continue
         enters_parent_identity(leg.level) || continue
         c = budget_component(leg, quantity)
@@ -925,7 +925,7 @@ function project_parent(
 end
 
 """
-    missing_parent_terms(ledger, control_volume) -> Vector{String}
+    missing_parent_terms(journal, control_volume) -> Vector{String}
 
 Return every term the schema declares for the primary identity in this view that
 no leg recorded.
@@ -935,15 +935,15 @@ report. The list is built by walking the schema's declarations, so a term that
 was expected and never arrived is named here whether or not anything else in the
 step referred to it.
 """
-function missing_parent_terms(ledger::BudgetLedger, cv::ControlVolume)
+function missing_parent_terms(journal::BudgetJournal, cv::ControlVolume)
     missing_terms = String[]
-    for spec in ledger.schema.channels
-        append!(missing_terms, missing_channel_envelopes(ledger, spec, cv))
+    for spec in journal.schema.channels
+        append!(missing_terms, missing_channel_envelopes(journal, spec, cv))
     end
-    for spec in ledger.schema.final_maps
+    for spec in journal.schema.final_maps
         for reservoir in spec.reservoirs
             is_inside(cv, reservoir) || continue
-            has_final_map_leg(ledger, spec.name, reservoir) && continue
+            has_final_map_leg(journal, spec.name, reservoir) && continue
             push!(
                 missing_terms,
                 "expected final map $(spec.name) in $reservoir was not recorded",
@@ -954,7 +954,7 @@ function missing_parent_terms(ledger::BudgetLedger, cv::ControlVolume)
 end
 
 """
-    missing_channel_envelopes(ledger, spec, control_volume) -> Vector{String}
+    missing_channel_envelopes(journal, spec, control_volume) -> Vector{String}
 
 Return the envelopes `spec` requires in this view that no leg recorded, one per
 reservoir the channel writes.
@@ -965,7 +965,7 @@ attribution reconciliations read the same list, so they cannot disagree about
 whether a channel reported.
 """
 function missing_channel_envelopes(
-    ledger::BudgetLedger,
+    journal::BudgetJournal,
     spec::ChannelSpec,
     cv::ControlVolume,
 )
@@ -973,7 +973,7 @@ function missing_channel_envelopes(
     spec.requires_envelope || return missing_envelopes
     for reservoir in spec.reservoirs
         is_inside(cv, reservoir) || continue
-        has_envelope(ledger, spec.name, reservoir) && continue
+        has_envelope(journal, spec.name, reservoir) && continue
         push!(
             missing_envelopes,
             "expected envelope for channel $(spec.name) in $reservoir was not " *
@@ -985,16 +985,16 @@ end
 
 # Whether an envelope for this channel and reservoir was recorded in the open
 # transaction.
-has_envelope(ledger::BudgetLedger, channel::Symbol, reservoir::Symbol) =
-    (channel, reservoir, ledger.step) in ledger.envelope_keys
+has_envelope(journal::BudgetJournal, channel::Symbol, reservoir::Symbol) =
+    (channel, reservoir, journal.step) in journal.envelope_keys
 
 # Whether a final-map leg for this map and reservoir was recorded.
 function has_final_map_leg(
-    ledger::BudgetLedger,
+    journal::BudgetJournal,
     name::Symbol,
     reservoir::Symbol,
 )
-    for leg in ledger.legs
+    for leg in journal.legs
         leg.level isa FinalMap || continue
         leg.channel === name || continue
         reservoir_name(leg.reservoir) === reservoir && return true
@@ -1003,7 +1003,7 @@ function has_final_map_leg(
 end
 
 """
-    missing_processes(ledger, spec, control_volume) -> Vector{String}
+    missing_processes(journal, spec, control_volume) -> Vector{String}
 
 Return the decomposition rows `spec` declares in this view that no leg recorded,
 one per `(process, reservoir)` in the channel's roster.
@@ -1016,14 +1016,14 @@ channel that recorded some of its processes is short by the rest and says
 which.
 """
 function missing_processes(
-    ledger::BudgetLedger,
+    journal::BudgetJournal,
     spec::ChannelSpec,
     cv::ControlVolume,
 )
     missing_rows = String[]
     for row in spec.processes
         is_inside(cv, row.reservoir) || continue
-        has_process_leg(ledger, spec.name, row.process, row.reservoir) && continue
+        has_process_leg(journal, spec.name, row.process, row.reservoir) && continue
         push!(
             missing_rows,
             "expected process $(row.process) of channel $(spec.name) in " *
@@ -1034,7 +1034,7 @@ function missing_processes(
 end
 
 """
-    missing_transfer_legs(ledger, spec, control_volume) -> Vector{String}
+    missing_transfer_legs(journal, spec, control_volume) -> Vector{String}
 
 Return the modeled legs that were not recorded, as blockers. A leg counts when
 its event is applied through channel `spec` and its reservoir is inside
@@ -1047,16 +1047,16 @@ honest answer is blocked, naming the legs, rather than a residual the size of
 the flux. Read from the specification, like `missing_processes`.
 """
 function missing_transfer_legs(
-    ledger::BudgetLedger,
+    journal::BudgetJournal,
     spec::ChannelSpec,
     cv::ControlVolume,
 )
     missing_legs = String[]
-    for event in ledger.schema.transfer_events
+    for event in journal.schema.transfer_events
         for (reservoir, name) in event.modeled_legs
             leg_channel(event, reservoir, name) === spec.name || continue
             is_inside(cv, reservoir) || continue
-            recorded_leg(ledger, event.name, reservoir, name) && continue
+            recorded_leg(journal, event.name, reservoir, name) && continue
             push!(
                 missing_legs,
                 "expected leg $name of transfer event $(event.name) in " *
@@ -1069,14 +1069,14 @@ end
 
 # Whether a decomposition leg for this channel, process and reservoir was
 # recorded in the open transaction. Any status counts: a row recorded as not
-# applicable is a record, and an unknown one blocks on its own.
+# applicable is an entry, and an unknown one blocks on its own.
 function has_process_leg(
-    ledger::BudgetLedger,
+    journal::BudgetJournal,
     channel::Symbol,
     process::Symbol,
     reservoir::Symbol,
 )
-    for leg in ledger.legs
+    for leg in journal.legs
         leg.level isa ProcessDecomposition || continue
         leg.channel === channel || continue
         leg.process === process || continue
@@ -1092,7 +1092,7 @@ Return every declaration in `specs` that touches `control_volume` and whose
 disposition for `quantity` is still `:open`, as blockers.
 
 An open row is one the coverage registry has not established from the code. It
-demands nothing of a record, so a leg on it is accepted, but the claim it feeds
+demands nothing of an entry, so a leg on it is accepted, but the claim it feeds
 cannot be evaluated: the registry does not know what the path writes, so no sum
 that includes it proves anything. A zero residual over an open row is a
 coincidence and not a closure, and the row blocks until it is declared. This is
@@ -1139,7 +1139,7 @@ Return whether the configuration says any of `reservoirs` inside
 Applicability is read from the schema and never from whether a leg arrived. An
 expected channel or event that recorded nothing is a **blocked** claim, not a
 claim the configuration never made. Those are different answers and only one of
-them is a defect, so deriving one from the absence of records would report every
+them is a defect, so deriving one from the absence of entries would report every
 silent gap as a quantity nobody has.
 """
 function declared_applicable(
@@ -1156,7 +1156,7 @@ function declared_applicable(
 end
 
 """
-    project_attribution(ledger, quantity, control_volume, channel)
+    project_attribution(journal, quantity, control_volume, channel)
 
 Sum one channel's envelope and its explaining legs for one quantity over one
 control volume.
@@ -1171,7 +1171,7 @@ informational; a count is satisfied by whichever rows arrive, so nothing is
 decided by it.
 """
 function project_attribution(
-    ledger::BudgetLedger{FT},
+    journal::BudgetJournal{FT},
     quantity::Symbol,
     cv::ControlVolume,
     channel::Symbol,
@@ -1181,7 +1181,7 @@ function project_attribution(
     magnitude = zero(FT)
     explaining_count = 0
     blocked_by = String[]
-    for leg in ledger.legs
+    for leg in journal.legs
         leg.channel === channel || continue
         is_inside(cv, leg.reservoir) || continue
         c = budget_component(leg, quantity)
@@ -1201,7 +1201,7 @@ function project_attribution(
 end
 
 """
-    project_transfer(ledger, spec, quantity, control_volume)
+    project_transfer(journal, spec, quantity, control_volume)
 
 Sum the recorded legs of one declared event for one quantity over one control
 volume.
@@ -1224,7 +1224,7 @@ that was declared and never recorded blocks the event rather than being read as
 a zero.
 """
 function project_transfer(
-    ledger::BudgetLedger{FT},
+    journal::BudgetJournal{FT},
     spec::TransferEventSpec,
     quantity::Symbol,
     cv::ControlVolume,
@@ -1239,7 +1239,7 @@ function project_transfer(
         :unknown => 0,
     )
     blocked_by = String[]
-    for leg in ledger.legs
+    for leg in journal.legs
         leg.event === spec.name || continue
         is_inside(cv, leg.reservoir) || continue
         leg_count += 1
@@ -1253,7 +1253,7 @@ function project_transfer(
     missing_legs = String[]
     for (reservoir, name) in spec.modeled_legs
         is_inside(cv, reservoir) || continue
-        recorded_leg(ledger, spec.name, reservoir, name) && continue
+        recorded_leg(journal, spec.name, reservoir, name) && continue
         push!(
             missing_legs,
             "expected leg $(spec.name)/$name in $reservoir was not recorded",
@@ -1271,12 +1271,12 @@ end
 
 # Whether one declared leg of an event was recorded in the open transaction.
 function recorded_leg(
-    ledger::BudgetLedger,
+    journal::BudgetJournal,
     event::Symbol,
     reservoir::Symbol,
     name::Symbol,
 )
-    for leg in ledger.legs
+    for leg in journal.legs
         leg.event === event || continue
         leg.leg === name || continue
         reservoir_name(leg.reservoir) === reservoir && return true
@@ -1489,33 +1489,33 @@ function resolve_tolerance(tolerance, blocked_by, opening, closing, magnitude)
 end
 
 """
-    reconcile_parent(ledger, closing, quantity, control_volume; tolerances)
+    reconcile_parent(journal, closing, quantity, control_volume; tolerances)
 
 Compute one `ParentReconciliation` from the open transaction and the closing
-endpoints. Pure; it does not mutate the ledger.
+endpoints. Pure; it does not mutate the journal.
 """
 function reconcile_parent(
-    ledger::BudgetLedger{FT},
+    journal::BudgetJournal{FT},
     closing::BudgetEndpoints{FT},
     quantity::Symbol,
     cv::ControlVolume;
     tolerances = nothing,
 ) where {FT}
-    opening = ledger.opening
+    opening = journal.opening
     isnothing(opening) && error("No open budget transaction to reconcile.")
 
     before = endpoint_total(opening, quantity, cv)
     after = endpoint_total(closing, quantity, cv)
     endpoint_change = after.total - before.total
 
-    projected = project_parent(ledger, quantity, cv)
+    projected = project_parent(journal, quantity, cv)
     residual = endpoint_change - projected.recorded
 
     key = (quantity, cv.name)
     cumulative_change =
-        get(ledger.cumulative_change, key, zero(FT)) + endpoint_change
+        get(journal.cumulative_change, key, zero(FT)) + endpoint_change
 
-    initial = ledger.initial
+    initial = journal.initial
     from_initial = if isnothing(initial)
         endpoint_change
     else
@@ -1523,8 +1523,8 @@ function reconcile_parent(
     end
 
     applicable = before.applicable || after.applicable
-    missing_expectations = missing_parent_terms(ledger, cv)
-    schema = ledger.schema
+    missing_expectations = missing_parent_terms(journal, cv)
+    schema = journal.schema
     blocked_by = vcat(
         before.blocked_by,
         after.blocked_by,
@@ -1533,9 +1533,9 @@ function reconcile_parent(
         open_dispositions(schema.channels, quantity, cv),
         open_dispositions(schema.final_maps, quantity, cv),
     )
-    cumulative_residual = get(ledger.cumulative_residual, key, zero(FT)) + residual
-    previous_abs = get(ledger.cumulative_abs_residual, key, zero(FT))
-    previous_max = get(ledger.max_abs_residual, key, zero(FT))
+    cumulative_residual = get(journal.cumulative_residual, key, zero(FT)) + residual
+    previous_abs = get(journal.cumulative_abs_residual, key, zero(FT))
+    previous_max = get(journal.max_abs_residual, key, zero(FT))
     tolerance, blocked_by = resolve_tolerance(
         quantity_tolerance(tolerances, quantity),
         blocked_by,
@@ -1547,7 +1547,7 @@ function reconcile_parent(
     return ParentReconciliation{FT}(;
         quantity,
         control_volume = cv.name,
-        step = ledger.step,
+        step = journal.step,
         status = claim_status(applicable, blocked_by, residual, tolerance),
         applicable,
         endpoint_change,
@@ -1568,7 +1568,7 @@ function reconcile_parent(
 end
 
 """
-    reconcile_attribution(ledger, quantity, control_volume, spec; tolerances)
+    reconcile_attribution(journal, quantity, control_volume, spec; tolerances)
 
 Compute one `AttributionReconciliation` for a declared channel. Pure.
 
@@ -1580,21 +1580,21 @@ reported nothing at all is a blocked row naming it, and a channel that
 reported some of its processes is blocked by the rest.
 """
 function reconcile_attribution(
-    ledger::BudgetLedger{FT},
+    journal::BudgetJournal{FT},
     quantity::Symbol,
     cv::ControlVolume,
     spec::ChannelSpec;
     tolerances = nothing,
 ) where {FT}
-    projected = project_attribution(ledger, quantity, cv, spec.name)
+    projected = project_attribution(journal, quantity, cv, spec.name)
     applicable =
-        declared_applicable(ledger.schema, spec.reservoirs, quantity, cv)
+        declared_applicable(journal.schema, spec.reservoirs, quantity, cv)
     residual = projected.envelope - projected.attributed
     blocked_by = vcat(
         projected.blocked_by,
-        missing_channel_envelopes(ledger, spec, cv),
-        missing_processes(ledger, spec, cv),
-        missing_transfer_legs(ledger, spec, cv),
+        missing_channel_envelopes(journal, spec, cv),
+        missing_processes(journal, spec, cv),
+        missing_transfer_legs(journal, spec, cv),
         open_dispositions((spec,), quantity, cv),
         open_dispositions(spec.processes, quantity, cv),
     )
@@ -1609,7 +1609,7 @@ function reconcile_attribution(
         quantity,
         control_volume = cv.name,
         channel = spec.name,
-        step = ledger.step,
+        step = journal.step,
         status = claim_status(applicable, blocked_by, residual, tolerance),
         applicable,
         envelope = projected.envelope,
@@ -1621,7 +1621,7 @@ function reconcile_attribution(
 end
 
 """
-    reconcile_transfer(ledger, spec, quantity, control_volume; tolerances)
+    reconcile_transfer(journal, spec, quantity, control_volume; tolerances)
 
 Compute one `TransferReconciliation` for a declared event. Pure.
 
@@ -1633,17 +1633,17 @@ broken budget, and fabricating a counter-leg to make it vanish would measure
 nothing at all.
 """
 function reconcile_transfer(
-    ledger::BudgetLedger{FT},
+    journal::BudgetJournal{FT},
     spec::TransferEventSpec,
     quantity::Symbol,
     cv::ControlVolume;
     tolerances = nothing,
 ) where {FT}
-    projected = project_transfer(ledger, spec, quantity, cv)
+    projected = project_transfer(journal, spec, quantity, cv)
     expectation = transfer_expectation(spec, cv)
     topology = topology_name(spec.topology)
     applicable = declared_applicable(
-        ledger.schema,
+        journal.schema,
         event_reservoir_names(spec),
         quantity,
         cv,
@@ -1669,7 +1669,7 @@ function reconcile_transfer(
             quantity,
             event = spec.name,
             control_volume = cv.name,
-            step = ledger.step,
+            step = journal.step,
             status,
             topology,
             expectation,
@@ -1695,7 +1695,7 @@ function reconcile_transfer(
         quantity,
         event = spec.name,
         control_volume = cv.name,
-        step = ledger.step,
+        step = journal.step,
         status = claim_status(
             applicable,
             blocked_by,
@@ -1727,7 +1727,7 @@ function event_in_view(spec::TransferEventSpec, cv::ControlVolume)
 end
 
 """
-    commit_transaction!(ledger, closing; tolerances)
+    commit_transaction!(journal, closing; tolerances)
 
 Close the transaction and return a `BudgetCommit` holding the parent,
 attribution and transfer reconciliations for every quantity, every declared
@@ -1737,74 +1737,74 @@ The closing endpoints must be for the step the transaction opened, which is the
 check that catches a missed or a doubled step, and they must describe the
 configuration the schema declares.
 
-Every row comes from a declaration rather than from a record, so a channel or
+Every row comes from a declaration rather than from an entry, so a channel or
 event that reported nothing produces a blocked row naming it instead of
 vanishing. Cumulative totals are updated here and only here, so an aborted
 transaction contributes nothing to them.
 
 The commit is **atomic**. Every check and every reconciliation is computed into
-a temporary first, and the ledger is not touched until all of them have
+a temporary first, and the journal is not touched until all of them have
 succeeded. Updating the cumulative totals inside the loop would leave an error
 raised part way through with some quantities already advanced in a transaction
-that was still open. The ledger would have half-counted a step it never
+that was still open. The journal would have half-counted a step it never
 committed, with no way to tell from its own state.
 """
 function commit_transaction!(
-    ledger::BudgetLedger{FT},
+    journal::BudgetJournal{FT},
     closing::BudgetEndpoints{FT};
     tolerances = nothing,
 ) where {FT}
-    ledger.is_open || error("No open budget transaction to commit.")
-    closing.step == ledger.step || error(
+    journal.is_open || error("No open budget transaction to commit.")
+    closing.step == journal.step || error(
         "Closing endpoints are for step $(closing.step), but the open " *
-        "transaction is step $(ledger.step).",
+        "transaction is step $(journal.step).",
     )
 
-    check_schema_endpoints(ledger.schema, closing, "closing")
-    check_endpoint_layout(ledger.opening, closing)
+    check_schema_endpoints(journal.schema, closing, "closing")
+    check_endpoint_layout(journal.opening, closing)
 
     # Compute everything before changing anything. The reconcile functions read
     # the cumulative dictionaries but never write them, so this section is free
     # of side effects and may fail part way through without consequence.
-    schema = ledger.schema
+    schema = journal.schema
     parent = ParentReconciliation{FT}[]
     attribution = AttributionReconciliation{FT}[]
     transfer = TransferReconciliation{FT}[]
     for cv in schema.control_volumes, quantity in BUDGET_QUANTITIES
         push!(
             parent,
-            reconcile_parent(ledger, closing, quantity, cv; tolerances),
+            reconcile_parent(journal, closing, quantity, cv; tolerances),
         )
         for spec in schema.channels
             any(r -> is_inside(cv, r), spec.reservoirs) || continue
             push!(
                 attribution,
-                reconcile_attribution(ledger, quantity, cv, spec; tolerances),
+                reconcile_attribution(journal, quantity, cv, spec; tolerances),
             )
         end
         for spec in schema.transfer_events
             event_in_view(spec, cv) || continue
             push!(
                 transfer,
-                reconcile_transfer(ledger, spec, quantity, cv; tolerances),
+                reconcile_transfer(journal, spec, quantity, cv; tolerances),
             )
         end
     end
 
-    # Past here nothing can fail, so the ledger may be advanced.
+    # Past here nothing can fail, so the journal may be advanced.
     for r in parent
         key = (r.quantity, r.control_volume)
-        ledger.cumulative_change[key] = r.cumulative_endpoint_change
-        ledger.cumulative_residual[key] = r.cumulative_residual
-        ledger.cumulative_abs_residual[key] = r.cumulative_abs_residual
-        ledger.max_abs_residual[key] = r.max_abs_residual
+        journal.cumulative_change[key] = r.cumulative_endpoint_change
+        journal.cumulative_residual[key] = r.cumulative_residual
+        journal.cumulative_abs_residual[key] = r.cumulative_abs_residual
+        journal.max_abs_residual[key] = r.max_abs_residual
     end
 
-    commit = BudgetCommit{FT}(; step = ledger.step, parent, attribution, transfer)
-    ledger.is_open = false
-    ledger.opening = nothing
-    ledger.last_closing = closing
-    ledger.committed_steps += 1
-    clear_open_transaction!(ledger)
+    commit = BudgetCommit{FT}(; step = journal.step, parent, attribution, transfer)
+    journal.is_open = false
+    journal.opening = nothing
+    journal.last_closing = closing
+    journal.committed_steps += 1
+    clear_open_transaction!(journal)
     return commit
 end

@@ -30,7 +30,7 @@ Register the diagnostics of the energy source tags:
     so the residual is `(ρe_tot + c·ρ - Σᵢ ρe_src_i) / ρ`;
   - `e_src_inc_left` and `e_src_inc_moved`, under
     `energy_source_tag_transport: enthalpy_increment` only: the increment
-    correction's ledger per unit mass, cumulative since the start of the run.
+    ledger per unit mass, cumulative since the start of the run.
     See `energy_source_increment_ledger_variables`.
 
 A no-op when energy source tagging is disabled. Per-tag entries already in the
@@ -71,7 +71,7 @@ function register_energy_source_tagging_diagnostics!(
                            "`energy_source_tag_offset`. Elsewhere it is a " *
                            "signed attribution with no amount " *
                            "interpretation. Distinct from `e_tag_$name`, " *
-                           "which is a signed record of what a process did " *
+                           "which is a signed total of what a process did " *
                            "rather than an amount present. Moist total " *
                            "energy has no physical zero, so this value and " *
                            "its share of the total both depend on the " *
@@ -91,7 +91,7 @@ function register_energy_source_tagging_diagnostics!(
                            "keeps the energy source tags non-negative where " *
                            "their total is positive, per unit mass of moist " *
                            "air. Cumulative since the start of the run and " *
-                           "carried through a restart, so a budget over an " *
+                           "carried through a restart, so the change over an " *
                            "interval is the difference of two outputs, and a " *
                            "time average is not meaningful. Zero when " *
                            "energy_source_tag_repair is false. Each increment " *
@@ -187,7 +187,7 @@ function register_energy_source_tagging_diagnostics!(
     return nothing
 end
 
-# The increment correction's ledger. Its entries are keyed by field name alone,
+# The increment ledger. Its entries are keyed by field name alone,
 # so an entry already in the catalog is kept.
 function register_energy_source_ledger_diagnostics!(model)
     follows_implicit_increment(model) || return nothing
@@ -258,7 +258,7 @@ function compute_e_src_copy_res!(out, state, cache, time)
     end
 end
 
-# `e_src_fix_<name>`: the repair's ledger for one tag, per unit mass, as the
+# `e_src_fix_<name>`: the repair ledger for one tag, per unit mass, as the
 # water tags' `q_tag_fix_<name>` is computed.
 function compute_e_src_fix!(out, state, cache, time, ρe_src_name)
     ᶜfix = getproperty(cache.tagging.ᶜenergy_source_fix, ρe_src_name)

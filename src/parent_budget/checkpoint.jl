@@ -1,8 +1,8 @@
 #####
-##### Parent-budget ledger: the restart transition and the callback rules
+##### Parent budget: the restart transition and the callback rules
 #####
 ##### A restart restores a state that no transaction produced. The checkpoint
-##### carries the closing endpoints of the last step the ledger committed, and
+##### carries the closing endpoints of the last step the parent budget committed, and
 ##### the first transaction after the restart measures the restored state and
 ##### compares it against them exactly before it opens. A difference is a
 ##### change nobody accounted for. A custom callback runs between two
@@ -12,7 +12,7 @@
 """
     CheckpointEndpoints
 
-The parent-budget endpoints a checkpoint carries: the step the ledger had
+The parent-budget endpoints a checkpoint carries: the step the parent budget had
 committed when the state was written, and one amount and status per declared
 reservoir and quantity, as `(reservoir, quantity) => (amount, status)`.
 """
@@ -32,24 +32,24 @@ checkpoint_status_key(reservoir::Symbol, quantity::Symbol) =
     checkpoint_amount_key(reservoir, quantity) * "_status"
 
 """
-    write_checkpoint_attributes!(file, ledger)
+    write_checkpoint_attributes!(file, parent_budget)
 
-Write the ledger's current endpoint into the checkpoint's attributes. The
+Write the parent budget's current endpoint into the checkpoint's attributes. The
 current endpoint is the one the open transaction opened on. After a commit
 that is the closing endpoint of the committed step. Before the first commit
 it is the opening endpoint of the run. Either way it is the state being
-written, because the checkpoint callback runs after the ledger's. A
-checkpoint saved from the crash handler may hold a state the ledger has not
+written, because the checkpoint callback runs after the parent budget's. A
+checkpoint saved from the crash handler may hold a state the parent budget has not
 committed; a restart from it is refused by the exact comparison. Nothing is
-written for a run without a ledger. A checkpoint written that way restarts a
-ledger as unverified rather than refusing to.
+written for a run without a parent budget. A checkpoint written that way restarts a
+parent budget as unverified rather than refusing to.
 """
 write_checkpoint_attributes!(file, ::Nothing) = nothing
 function write_checkpoint_attributes!(file, adapter)
-    endpoints = adapter.ledger.opening
+    endpoints = adapter.journal.opening
     isnothing(endpoints) && error(
-        "The parent-budget ledger has no endpoint to checkpoint: the checkpoint " *
-        "callback ran before the ledger initialised.",
+        "The parent budget has no endpoint to checkpoint: the checkpoint " *
+        "callback ran before the parent budget initialised.",
     )
     InputOutput.HDF5.write_attribute(file, CHECKPOINT_STEP_KEY, endpoints.step)
     names = [String(reservoir_name(e.reservoir)) for e in endpoints.reservoirs]
@@ -77,7 +77,7 @@ end
     read_checkpoint_endpoints(restart_file, context) -> Union{Nothing, CheckpointEndpoints}
 
 Read the endpoints a checkpoint carries, or return `nothing` when the
-checkpoint was written without a ledger.
+checkpoint was written without a parent budget.
 """
 function read_checkpoint_endpoints(restart_file, context)
     reader = InputOutput.HDF5Reader(restart_file, context)
@@ -112,12 +112,12 @@ end
 """
     RestartTransition
 
-What the ledger found when it opened on a restored state. The status is
+What the parent budget found when it opened on a restored state. The status is
 `:verified` when the checkpoint carried endpoints and the restored state
 reproduced every one of them exactly, and `:unverified` when the checkpoint
 carried none. A restored state that differs from its checkpoint is refused at
-initialisation instead of becoming a record. `checkpoint_step` is the step
-the ledger had committed when the checkpoint was written. The record after
+initialisation instead of entering the history. `checkpoint_step` is the step
+the parent budget had committed when the checkpoint was written. The history after
 the restart is a new segment, starting from the restored endpoint.
 """
 struct RestartTransition
@@ -183,7 +183,7 @@ end
 """
     ReadOnlyCallback(callback)
 
-A user callback declared not to write the state. With the ledger on, a custom
+A user callback declared not to write the state. With the parent budget on, a custom
 callback is accepted only inside this declaration, because a callback that
 writes `Y` between two transactions is a change nothing accounts for. In
 `AuditMode` the declaration is held to. The parent integrals of the state are

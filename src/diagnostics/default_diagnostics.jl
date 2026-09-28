@@ -271,7 +271,7 @@ reduction is applied in time: each output is the value at that instant.
 This is what a cumulative field needs. Averaging one destroys the information
 it carries. A record holds a running total, so the mean of a window says only
 where the total happened to sit mid-window, and a variable-rate history cannot
-be recovered from a sequence of such means. A budget over an interval is the
+be recovered from a sequence of such means. The change over an interval is the
 difference of two instantaneous outputs, which requires the endpoints
 themselves.
 
@@ -718,7 +718,7 @@ function default_diagnostics(
     end
     # The records are scheduled separately, as instantaneous samples. They hold
     # a running total from the start of the simulation, so a window mean is not
-    # a meaningful quantity and a budget over an interval is the difference of
+    # a meaningful quantity and the change over an interval is the difference of
     # two outputs. Both need the endpoint values, which an average discards.
     record_diagnostics = String[]
     energy_process_record = atmos_tagging.energy_process_record
@@ -741,7 +741,7 @@ function default_diagnostics(
             ],
         )
     end
-    # The repair's ledgers are running totals too, so they are sampled like the
+    # The repair ledgers are running totals too, so they are sampled like the
     # records. Without them a run with the repair on cannot say how much energy
     # the repair moved between the tags, or where. With the repair off they are
     # zero, so they are left out.

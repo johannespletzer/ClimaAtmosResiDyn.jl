@@ -1,11 +1,11 @@
 using Test
 import ClimaAtmos.Internals.ParentBudget as PB
 
-# Journal, schema and transaction rules for the parent-budget ledger.
+# Journal, schema and transaction rules for the parent budget.
 #
-# These tests are deliberately state-free. They exercise the rules the ledger
+# These tests are deliberately state-free. They exercise the rules the parent budget
 # enforces rather than the physics it will later measure: expectations come from
-# the schema and never from the records, a leg is recorded once, an unknown
+# the schema and never from the legs, a leg is recorded once, an unknown
 # component blocks rather than reading as zero, an envelope and its
 # decomposition never land in one sum, a final accepted-state map is a term of
 # the primary identity and not an attribution channel, an exterior crossing is
@@ -76,7 +76,7 @@ function test_leg(
 end
 
 # A configuration's declarations. The schema and the endpoints below have to
-# agree about applicability, because the ledger checks that they do.
+# agree about applicability, because the journal checks that they do.
 function test_schema(;
     slab = false,
     atmosphere_water = true,
@@ -136,10 +136,10 @@ function test_endpoints(FT, step; m, w, e, sfc_w = nothing, sfc_e = nothing)
     return PB.BudgetEndpoints{FT}(reservoirs, step)
 end
 
-function open_ledger(FT, schema, endpoints)
-    ledger = PB.BudgetLedger{FT}(schema)
-    PB.open_transaction!(ledger, endpoints)
-    return ledger
+function open_journal(FT, schema, endpoints)
+    journal = PB.BudgetJournal{FT}(schema)
+    PB.open_transaction!(journal, endpoints)
+    return journal
 end
 
 # A tolerance loose enough that only a real discrepancy fails it, so a test that
@@ -187,7 +187,7 @@ transfer_result(commit, event, quantity, cv) = only(
     FT = Float64
 
     @testset "Evidence invariants hold at direct construction" begin
-        # The rules live in the inner constructor, so a record built straight
+        # The rules live in the inner constructor, so a component built straight
         # from BudgetComponent obeys them as much as one built through a helper.
         @test_throws ErrorException PB.BudgetComponent{FT}(
             1.0,
@@ -360,38 +360,38 @@ transfer_result(commit, event, quantity, cv) = only(
         )
     end
 
-    @testset "A record the schema does not declare is refused" begin
+    @testset "A leg the schema does not declare is refused" begin
         schema = test_schema(;
             channels = [PB.ChannelSpec(:explicit_main, ATMOS)],
             final_maps = [PB.FinalMapSpec(:dss!, ATMOS)],
         )
-        ledger = open_ledger(FT, schema, test_endpoints(FT, 0; m = 1, w = 1, e = 1))
+        journal = open_journal(FT, schema, test_endpoints(FT, 0; m = 1, w = 1, e = 1))
 
         # A channel this schema does not declare belongs to no attribution
         # identity, so it fails closed rather than becoming a row nothing checks.
         @test_throws ErrorException PB.record_leg!(
-            ledger,
+            journal,
             test_leg(FT; channel = :implicit, mass = mval(FT, 1)),
         )
         # An undeclared reservoir has no endpoint to reconcile against.
         @test_throws ErrorException PB.record_leg!(
-            ledger,
+            journal,
             test_leg(FT; reservoir = PB.SlabSurfaceReservoir()),
         )
         # An undeclared final map, and a declared one in the wrong reservoir.
         @test_throws ErrorException PB.record_leg!(
-            ledger,
+            journal,
             test_leg(FT; level = PB.FinalMap(), channel = :lim!),
         )
         # An undeclared transfer event has no topology, so nothing knows which
         # test would apply to it.
         @test_throws ErrorException PB.record_leg!(
-            ledger,
+            journal,
             test_leg(FT; level = PB.ReservoirTransfer(), event = :xfer_unknown),
         )
         # A channel the schema declares is accepted.
-        PB.record_leg!(ledger, test_leg(FT; mass = mval(FT, 1)))
-        @test length(ledger.legs) == 1
+        PB.record_leg!(journal, test_leg(FT; mass = mval(FT, 1)))
+        @test length(journal.legs) == 1
     end
 
     @testset "A declared event only accepts the legs it declares" begin
@@ -414,7 +414,7 @@ transfer_result(commit, event, quantity, cv) = only(
             ],
             events = [coupled],
         )
-        ledger = open_ledger(
+        journal = open_journal(
             FT,
             schema,
             test_endpoints(FT, 0; m = 1, w = 1, e = 1, sfc_w = 1, sfc_e = 1),
@@ -429,28 +429,28 @@ transfer_result(commit, event, quantity, cv) = only(
         # A modeled leg the specification did not declare would take part in a
         # cancellation nobody expected.
         @test_throws ErrorException PB.record_leg!(
-            ledger,
+            journal,
             transfer_leg(; leg = :invented),
         )
         # A declared leg in the wrong channel.
         @test_throws ErrorException PB.record_leg!(
-            ledger,
+            journal,
             transfer_leg(; leg = :atmosphere, channel = :explicit_main),
         )
         # The event declares water measured, so the legs it accepts record it.
         PB.record_leg!(
-            ledger,
+            journal,
             transfer_leg(; leg = :atmosphere, water = mval(FT, 1)),
         )
         PB.record_leg!(
-            ledger,
+            journal,
             transfer_leg(;
                 leg = :surface,
                 reservoir = PB.SlabSurfaceReservoir(),
                 water = mval(FT, -1),
             ),
         )
-        @test length(ledger.legs) == 2
+        @test length(journal.legs) == 2
     end
 
     @testset "A declared disposition is a proof obligation" begin
@@ -475,7 +475,7 @@ transfer_result(commit, event, quantity, cv) = only(
             ],
             events = [exterior],
         )
-        ledger = open_ledger(FT, schema, test_endpoints(FT, 0; m = 10, w = 5, e = 3))
+        journal = open_journal(FT, schema, test_endpoints(FT, 0; m = 10, w = 5, e = 3))
         function toa_leg(; mass = zval(FT), occurrence = 1)
             return test_leg(
                 FT;
@@ -489,22 +489,22 @@ transfer_result(commit, event, quantity, cv) = only(
             )
         end
 
-        PB.record_leg!(ledger, toa_leg())
-        @test length(ledger.legs) == 1
+        PB.record_leg!(journal, toa_leg())
+        @test length(journal.legs) == 1
 
         # A measurement where the registry declared a proof is a disagreement
         # between the registry and the code, not a residual for a later
         # reconciliation to absorb, so it is refused where it happens.
         @test_throws ErrorException PB.record_leg!(
-            ledger,
+            journal,
             toa_leg(; occurrence = 2, mass = mval(FT, 1)),
         )
-        @test length(ledger.legs) == 1
+        @test length(journal.legs) == 1
 
-        # A proof that has not been established yet is an honest record. It is
+        # A proof that has not been established yet is an honest entry. It is
         # accepted, and it blocks.
-        PB.record_leg!(ledger, toa_leg(; occurrence = 3, mass = unkval(FT)))
-        @test length(ledger.legs) == 2
+        PB.record_leg!(journal, toa_leg(; occurrence = 3, mass = unkval(FT)))
+        @test length(journal.legs) == 2
 
         @test PB.expected_disposition(exterior, :energy) === :measured
         @test PB.expected_disposition(exterior, :mass) === :invariant_zero
@@ -515,7 +515,7 @@ transfer_result(commit, event, quantity, cv) = only(
             ATMOS;
             dispositions = (:measured, :zero, :measured),
         )
-        # An open disposition demands nothing of a record. It blocks the claim
+        # An open disposition demands nothing of a leg. It blocks the claim
         # the declaration feeds at reconciliation instead, tested below.
         @test PB.OPEN_DISPOSITIONS ==
               ntuple(_ -> :open, length(PB.BUDGET_QUANTITIES))
@@ -539,25 +539,25 @@ transfer_result(commit, event, quantity, cv) = only(
         schema = test_schema(;
             channels = [PB.ChannelSpec(:explicit_main, ATMOS; dispositions = MASS)],
         )
-        ledger = open_ledger(FT, schema, test_endpoints(FT, 0; m = 1, w = 1, e = 1))
-        PB.record_leg!(ledger, test_leg(FT; mass = mval(FT, 2)))
+        journal = open_journal(FT, schema, test_endpoints(FT, 0; m = 1, w = 1, e = 1))
+        PB.record_leg!(journal, test_leg(FT; mass = mval(FT, 2)))
         # The identity the journal builds is the type its set of recorded keys
         # is declared with; a mismatch would refuse every recording.
-        @test PB.execution_identity(only(ledger.legs)) isa
-              eltype(ledger.recorded_keys)
+        @test PB.execution_identity(only(journal.legs)) isa
+              eltype(journal.recorded_keys)
         # A duplicated leg is caught at the second recording rather than as a
         # residual a whole step later, and a duplicate whose amount is zero
         # would otherwise pass every closure test.
         @test_throws ErrorException PB.record_leg!(
-            ledger,
+            journal,
             test_leg(FT; mass = mval(FT, 2)),
         )
-        @test length(ledger.legs) == 1
+        @test length(journal.legs) == 1
     end
 
     @testset "A repeating path distinguishes its firings" begin
         schema = test_schema(; final_maps = [PB.FinalMapSpec(:constrain_state!, ATMOS)])
-        ledger = open_ledger(FT, schema, test_endpoints(FT, 0; m = 1, w = 1, e = 1))
+        journal = open_journal(FT, schema, test_endpoints(FT, 0; m = 1, w = 1, e = 1))
         firing(stage; occurrence = 1) = test_leg(
             FT;
             event = :map_constrain,
@@ -572,12 +572,12 @@ transfer_result(commit, event, quantity, cv) = only(
         # per ARS343 stage. Without a stage index three of the four would be
         # refused as duplicates.
         for stage in 1:4
-            PB.record_leg!(ledger, firing(stage))
+            PB.record_leg!(journal, firing(stage))
         end
-        @test length(ledger.legs) == 4
-        @test_throws ErrorException PB.record_leg!(ledger, firing(2))
-        PB.record_leg!(ledger, firing(2; occurrence = 2))
-        @test length(ledger.legs) == 5
+        @test length(journal.legs) == 4
+        @test_throws ErrorException PB.record_leg!(journal, firing(2))
+        PB.record_leg!(journal, firing(2; occurrence = 2))
+        @test length(journal.legs) == 5
     end
 
     @testset "An event is one kind of thing" begin
@@ -585,17 +585,17 @@ transfer_result(commit, event, quantity, cv) = only(
             channels = [PB.ChannelSpec(:explicit_main, ATMOS)],
             final_maps = [PB.FinalMapSpec(:dss!, ATMOS)],
         )
-        ledger = open_ledger(FT, schema, test_endpoints(FT, 0; m = 1, w = 1, e = 1))
-        PB.record_leg!(ledger, test_leg(FT; mass = mval(FT, 1)))
+        journal = open_journal(FT, schema, test_endpoints(FT, 0; m = 1, w = 1, e = 1))
+        PB.record_leg!(journal, test_leg(FT; mass = mval(FT, 1)))
         # The same event recorded at two levels would make both identities wrong.
         @test_throws ErrorException PB.record_leg!(
-            ledger,
+            journal,
             test_leg(FT; leg = :other, level = PB.FinalMap(), channel = :dss!),
         )
         # A channel applies one accepted update to one reservoir, so a second
         # envelope for it double-counts that update.
         @test_throws ErrorException PB.record_leg!(
-            ledger,
+            journal,
             test_leg(FT; event = :ev2, leg = :again, mass = mval(FT, 1)),
         )
     end
@@ -647,13 +647,13 @@ transfer_result(commit, event, quantity, cv) = only(
             channels = [PB.ChannelSpec(:explicit_main, ATMOS; dispositions = MASS)],
             final_maps = [PB.FinalMapSpec(:dss!, ATMOS; dispositions = MASS)],
         )
-        ledger = open_ledger(FT, schema, test_endpoints(FT, 0; m = 10, w = 5, e = 3))
+        journal = open_journal(FT, schema, test_endpoints(FT, 0; m = 10, w = 5, e = 3))
         PB.record_leg!(
-            ledger,
+            journal,
             test_leg(FT; event = :env_main, mass = mval(FT, 2)),
         )
         PB.record_leg!(
-            ledger,
+            journal,
             test_leg(
                 FT;
                 event = :map_dss,
@@ -664,7 +664,7 @@ transfer_result(commit, event, quantity, cv) = only(
             ),
         )
         commit = PB.commit_transaction!(
-            ledger,
+            journal,
             test_endpoints(FT, 1; m = 13, w = 5, e = 3);
             tolerances = loose_tolerance(FT),
         )
@@ -688,9 +688,9 @@ transfer_result(commit, event, quantity, cv) = only(
         schema = test_schema(;
             channels = [PB.ChannelSpec(:implicit, ATMOS; dispositions = MASS)],
         )
-        ledger = open_ledger(FT, schema, test_endpoints(FT, 0; m = 10, w = 5, e = 3))
+        journal = open_journal(FT, schema, test_endpoints(FT, 0; m = 10, w = 5, e = 3))
         commit = PB.commit_transaction!(
-            ledger,
+            journal,
             test_endpoints(FT, 1; m = 10, w = 5, e = 3);
             tolerances = loose_tolerance(FT),
         )
@@ -712,9 +712,9 @@ transfer_result(commit, event, quantity, cv) = only(
         schema = test_schema(;
             final_maps = [PB.FinalMapSpec(:lim!, ATMOS; dispositions = MASS)],
         )
-        ledger = open_ledger(FT, schema, test_endpoints(FT, 0; m = 10, w = 5, e = 3))
+        journal = open_journal(FT, schema, test_endpoints(FT, 0; m = 10, w = 5, e = 3))
         commit = PB.commit_transaction!(
-            ledger,
+            journal,
             test_endpoints(FT, 1; m = 10, w = 5, e = 3);
             tolerances = loose_tolerance(FT),
         )
@@ -734,14 +734,14 @@ transfer_result(commit, event, quantity, cv) = only(
                 ),
             ],
         )
-        ledger = open_ledger(FT, schema, test_endpoints(FT, 0; m = 10, w = 5, e = 3))
+        journal = open_journal(FT, schema, test_endpoints(FT, 0; m = 10, w = 5, e = 3))
         PB.record_leg!(
-            ledger,
+            journal,
             test_leg(FT; event = :env_main, mass = mval(FT, 4)),
         )
         for (i, amount) in enumerate((3, 1))
             PB.record_leg!(
-                ledger,
+                journal,
                 test_leg(
                     FT;
                     event = Symbol("proc_", i),
@@ -753,7 +753,7 @@ transfer_result(commit, event, quantity, cv) = only(
             )
         end
         commit = PB.commit_transaction!(
-            ledger,
+            journal,
             test_endpoints(FT, 1; m = 14, w = 5, e = 3);
             tolerances = loose_tolerance(FT),
         )
@@ -809,13 +809,13 @@ transfer_result(commit, event, quantity, cv) = only(
                 ],
             )
         end
-        function record_all!(ledger)
+        function record_all!(journal)
             PB.record_leg!(
-                ledger,
+                journal,
                 test_leg(FT; event = :env_main, mass = mval(FT, 4)),
             )
             PB.record_leg!(
-                ledger,
+                journal,
                 test_leg(
                     FT;
                     event = :proc_p1,
@@ -826,7 +826,7 @@ transfer_result(commit, event, quantity, cv) = only(
                 ),
             )
             PB.record_leg!(
-                ledger,
+                journal,
                 test_leg(
                     FT;
                     event = :map_dss,
@@ -841,7 +841,7 @@ transfer_result(commit, event, quantity, cv) = only(
                 (PB.SlabSurfaceReservoir(), :surface, 2),
             )
                 PB.record_leg!(
-                    ledger,
+                    journal,
                     test_leg(
                         FT;
                         event = :xfer_surface,
@@ -858,10 +858,10 @@ transfer_result(commit, event, quantity, cv) = only(
         opening = test_endpoints(FT, 0; m = 10, w = 5, e = 3, sfc_w = 1, sfc_e = 2)
         closing = test_endpoints(FT, 1; m = 15, w = 5, e = 3, sfc_w = 1, sfc_e = 2)
 
-        ledger = open_ledger(FT, test_schema(; declarations()...), opening)
-        record_all!(ledger)
+        journal = open_journal(FT, test_schema(; declarations()...), opening)
+        record_all!(journal)
         commit =
-            PB.commit_transaction!(ledger, closing; tolerances = loose_tolerance(FT))
+            PB.commit_transaction!(journal, closing; tolerances = loose_tolerance(FT))
 
         parent = parent_result(commit, :mass, :atmosphere_only)
         @test parent.residual == 0
@@ -893,10 +893,10 @@ transfer_result(commit, event, quantity, cv) = only(
             final_map = (; dispositions = MASS),
             event = (; dispositions = WATER),
         )
-        ledger = open_ledger(FT, test_schema(; declared...), opening)
-        record_all!(ledger)
+        journal = open_journal(FT, test_schema(; declared...), opening)
+        record_all!(journal)
         commit =
-            PB.commit_transaction!(ledger, closing; tolerances = loose_tolerance(FT))
+            PB.commit_transaction!(journal, closing; tolerances = loose_tolerance(FT))
         @test parent_result(commit, :mass, :atmosphere_only).status === :pass
         @test attribution_result(
             commit,
@@ -936,8 +936,8 @@ transfer_result(commit, event, quantity, cv) = only(
         )
 
         schema = test_schema(; channels = [roster])
-        ledger = open_ledger(FT, schema, test_endpoints(FT, 0; m = 10, w = 5, e = 3))
-        PB.record_leg!(ledger, test_leg(FT; event = :env_main, mass = mval(FT, 4)))
+        journal = open_journal(FT, schema, test_endpoints(FT, 0; m = 10, w = 5, e = 3))
+        PB.record_leg!(journal, test_leg(FT; event = :env_main, mass = mval(FT, 4)))
         decomposition(process, amount) = test_leg(
             FT;
             event = Symbol("proc_", process),
@@ -947,13 +947,13 @@ transfer_result(commit, event, quantity, cv) = only(
             mass = mval(FT, amount),
         )
         # A process the roster does not declare has no row to satisfy.
-        @test_throws ErrorException PB.record_leg!(ledger, decomposition(:p9, 4))
+        @test_throws ErrorException PB.record_leg!(journal, decomposition(:p9, 4))
         # One declared row carrying the whole envelope. The residual is zero and
         # the claim is still blocked, naming the row that never arrived: the row
         # present cannot vouch for the one that is missing.
-        PB.record_leg!(ledger, decomposition(:p1, 4))
+        PB.record_leg!(journal, decomposition(:p1, 4))
         commit = PB.commit_transaction!(
-            ledger,
+            journal,
             test_endpoints(FT, 1; m = 14, w = 5, e = 3);
             tolerances = loose_tolerance(FT),
         )
@@ -968,13 +968,13 @@ transfer_result(commit, event, quantity, cv) = only(
 
         # A decomposition leg in a reservoir the channel does not write is
         # refused, envelope or not.
-        slab_ledger = open_ledger(
+        slab_journal = open_journal(
             FT,
             test_schema(; slab = true, channels = [roster]),
             test_endpoints(FT, 0; m = 10, w = 5, e = 3, sfc_w = 1, sfc_e = 2),
         )
         @test_throws ErrorException PB.record_leg!(
-            slab_ledger,
+            slab_journal,
             test_leg(
                 FT;
                 event = :proc_p1,
@@ -1010,7 +1010,7 @@ transfer_result(commit, event, quantity, cv) = only(
             ],
             events = [shared],
         )
-        ledger = open_ledger(
+        journal = open_journal(
             FT,
             schema,
             test_endpoints(FT, 0; m = 10, w = 5, e = 3, sfc_w = 1, sfc_e = 2),
@@ -1024,16 +1024,16 @@ transfer_result(commit, event, quantity, cv) = only(
             channel = :implicit,
             water = mval(FT, amount),
         )
-        PB.record_leg!(ledger, flux(PB.AtmosphereReservoir(), -2))
-        PB.record_leg!(ledger, flux(PB.SlabSurfaceReservoir(), 2))
-        @test length(ledger.legs) == 2
+        PB.record_leg!(journal, flux(PB.AtmosphereReservoir(), -2))
+        PB.record_leg!(journal, flux(PB.SlabSurfaceReservoir(), 2))
+        @test length(journal.legs) == 2
         # The same side twice is still a duplicate.
         @test_throws ErrorException PB.record_leg!(
-            ledger,
+            journal,
             flux(PB.SlabSurfaceReservoir(), 2),
         )
         commit = PB.commit_transaction!(
-            ledger,
+            journal,
             test_endpoints(FT, 1; m = 10, w = 3, e = 3, sfc_w = 3, sfc_e = 2);
             tolerances = loose_tolerance(FT),
         )
@@ -1064,7 +1064,7 @@ transfer_result(commit, event, quantity, cv) = only(
             ],
             events = [coupled],
         )
-        ledger = open_ledger(
+        journal = open_journal(
             FT,
             schema,
             test_endpoints(FT, 0; m = 10, w = 5, e = 3, sfc_w = 1, sfc_e = 2),
@@ -1077,11 +1077,11 @@ transfer_result(commit, event, quantity, cv) = only(
             kwargs...,
         )
         PB.record_leg!(
-            ledger,
+            journal,
             transfer_leg(; leg = :atmosphere, water = mval(FT, -2)),
         )
         PB.record_leg!(
-            ledger,
+            journal,
             transfer_leg(;
                 leg = :surface,
                 reservoir = PB.SlabSurfaceReservoir(),
@@ -1089,7 +1089,7 @@ transfer_result(commit, event, quantity, cv) = only(
             ),
         )
         commit = PB.commit_transaction!(
-            ledger,
+            journal,
             test_endpoints(FT, 1; m = 10, w = 3, e = 3, sfc_w = 3, sfc_e = 2);
             tolerances = loose_tolerance(FT),
         )
@@ -1136,13 +1136,13 @@ transfer_result(commit, event, quantity, cv) = only(
             ],
             events = [coupled],
         )
-        ledger = open_ledger(
+        journal = open_journal(
             FT,
             schema,
             test_endpoints(FT, 0; m = 10, w = 5, e = 3, sfc_w = 1, sfc_e = 2),
         )
         PB.record_leg!(
-            ledger,
+            journal,
             test_leg(
                 FT;
                 event = :xfer_surface,
@@ -1153,7 +1153,7 @@ transfer_result(commit, event, quantity, cv) = only(
             ),
         )
         commit = PB.commit_transaction!(
-            ledger,
+            journal,
             test_endpoints(FT, 1; m = 10, w = 3, e = 3, sfc_w = 3, sfc_e = 2);
             tolerances = loose_tolerance(FT),
         )
@@ -1187,13 +1187,13 @@ transfer_result(commit, event, quantity, cv) = only(
             ],
             events = [coupled],
         )
-        ledger = open_ledger(
+        journal = open_journal(
             FT,
             schema,
             test_endpoints(FT, 0; m = 10, w = 5, e = 3, sfc_w = 1, sfc_e = 2),
         )
         commit = PB.commit_transaction!(
-            ledger,
+            journal,
             test_endpoints(FT, 1; m = 10, w = 5, e = 3, sfc_w = 1, sfc_e = 2);
             tolerances = loose_tolerance(FT),
         )
@@ -1226,9 +1226,9 @@ transfer_result(commit, event, quantity, cv) = only(
             ],
             events = [exterior],
         )
-        ledger = open_ledger(FT, schema, test_endpoints(FT, 0; m = 10, w = 5, e = 3))
+        journal = open_journal(FT, schema, test_endpoints(FT, 0; m = 10, w = 5, e = 3))
         PB.record_leg!(
-            ledger,
+            journal,
             test_leg(
                 FT;
                 event = :xfer_toa,
@@ -1238,7 +1238,7 @@ transfer_result(commit, event, quantity, cv) = only(
             ),
         )
         commit = PB.commit_transaction!(
-            ledger,
+            journal,
             test_endpoints(FT, 1; m = 10, w = 5, e = -4);
             tolerances = loose_tolerance(FT),
         )
@@ -1276,11 +1276,11 @@ transfer_result(commit, event, quantity, cv) = only(
                 ),
             ],
         )
-        ledger = open_ledger(FT, schema, test_endpoints(FT, 0; m = 10, w = 5, e = 3))
+        journal = open_journal(FT, schema, test_endpoints(FT, 0; m = 10, w = 5, e = 3))
         # One event measures energy, proves a mass zero, and has nothing to say
         # about water. A per-leg status would misdescribe two of the three.
         PB.record_leg!(
-            ledger,
+            journal,
             test_leg(
                 FT;
                 event = :env_main,
@@ -1290,7 +1290,7 @@ transfer_result(commit, event, quantity, cv) = only(
             ),
         )
         commit = PB.commit_transaction!(
-            ledger,
+            journal,
             test_endpoints(FT, 1; m = 10, w = 5, e = 7);
             tolerances = loose_tolerance(FT),
         )
@@ -1303,10 +1303,10 @@ transfer_result(commit, event, quantity, cv) = only(
 
     @testset "A dry configuration's water is not a closed budget" begin
         schema = test_schema(; atmosphere_water = false)
-        ledger =
-            open_ledger(FT, schema, test_endpoints(FT, 0; m = 10, w = nothing, e = 3))
+        journal =
+            open_journal(FT, schema, test_endpoints(FT, 0; m = 10, w = nothing, e = 3))
         commit = PB.commit_transaction!(
-            ledger,
+            journal,
             test_endpoints(FT, 1; m = 10, w = nothing, e = 3);
             tolerances = loose_tolerance(FT),
         )
@@ -1317,75 +1317,75 @@ transfer_result(commit, event, quantity, cv) = only(
         @test !water.applicable
     end
 
-    @testset "A late failure leaves the ledger untouched" begin
+    @testset "A late failure leaves the journal untouched" begin
         schema = test_schema(;
             channels = [PB.ChannelSpec(:explicit_main, ATMOS; dispositions = MASS)],
         )
-        ledger = open_ledger(FT, schema, test_endpoints(FT, 0; m = 10, w = 5, e = 3))
-        PB.record_leg!(ledger, test_leg(FT; mass = mval(FT, 1)))
+        journal = open_journal(FT, schema, test_endpoints(FT, 0; m = 10, w = 5, e = 3))
+        PB.record_leg!(journal, test_leg(FT; mass = mval(FT, 1)))
 
         # Closing endpoints that describe a different configuration from the one
         # the schema declares. The failure comes after every leg is in, which is
         # the case a non-atomic commit would half-count.
         @test_throws ErrorException PB.commit_transaction!(
-            ledger,
+            journal,
             test_endpoints(FT, 1; m = 11, w = nothing, e = 3);
             tolerances = loose_tolerance(FT),
         )
-        @test ledger.is_open
-        @test ledger.committed_steps == 0
-        @test length(ledger.legs) == 1
-        @test isempty(ledger.cumulative_residual)
-        @test isempty(ledger.cumulative_change)
-        @test isnothing(ledger.last_closing)
+        @test journal.is_open
+        @test journal.committed_steps == 0
+        @test length(journal.legs) == 1
+        @test isempty(journal.cumulative_residual)
+        @test isempty(journal.cumulative_change)
+        @test isnothing(journal.last_closing)
 
         # The same transaction still commits once it is given endpoints that
         # match the configuration.
         commit = PB.commit_transaction!(
-            ledger,
+            journal,
             test_endpoints(FT, 1; m = 11, w = 5, e = 3);
             tolerances = loose_tolerance(FT),
         )
         @test commit.step == 1
-        @test ledger.committed_steps == 1
-        @test !ledger.is_open
+        @test journal.committed_steps == 1
+        @test !journal.is_open
     end
 
     @testset "Transactions are bounded and continuous" begin
         schema = test_schema(;
             channels = [PB.ChannelSpec(:explicit_main, ATMOS; dispositions = MASS)],
         )
-        ledger = PB.BudgetLedger{FT}(schema)
+        journal = PB.BudgetJournal{FT}(schema)
         opening = test_endpoints(FT, 0; m = 10, w = 5, e = 3)
-        PB.open_transaction!(ledger, opening)
-        PB.record_leg!(ledger, test_leg(FT; mass = mval(FT, 1)))
+        PB.open_transaction!(journal, opening)
+        PB.record_leg!(journal, test_leg(FT; mass = mval(FT, 1)))
         closing = test_endpoints(FT, 1; m = 11, w = 5, e = 3)
-        PB.commit_transaction!(ledger, closing; tolerances = loose_tolerance(FT))
+        PB.commit_transaction!(journal, closing; tolerances = loose_tolerance(FT))
 
         # Per-step storage is cleared on commit, so a long run keeps the fixed
         # set of cumulative totals and nothing that grows with the step count.
-        @test isempty(ledger.legs)
-        @test isempty(ledger.recorded_keys)
-        @test isempty(ledger.envelope_keys)
+        @test isempty(journal.legs)
+        @test isempty(journal.recorded_keys)
+        @test isempty(journal.envelope_keys)
 
         # The next transaction has to open on the endpoint this one closed. A
         # gap between them is a change nothing accounted for.
         @test_throws ErrorException PB.open_transaction!(
-            ledger,
+            journal,
             test_endpoints(FT, 1; m = 12, w = 5, e = 3),
         )
-        PB.open_transaction!(ledger)
-        @test ledger.step == 2
-        PB.abort_transaction!(ledger)
-        @test !ledger.is_open
-        @test ledger.committed_steps == 1
+        PB.open_transaction!(journal)
+        @test journal.step == 2
+        PB.abort_transaction!(journal)
+        @test !journal.is_open
+        @test journal.committed_steps == 1
     end
 
     @testset "Cumulative residuals cannot cancel each other away" begin
         schema = test_schema(;
             channels = [PB.ChannelSpec(:explicit_main, ATMOS; dispositions = MASS)],
         )
-        ledger = PB.BudgetLedger{FT}(schema)
+        journal = PB.BudgetJournal{FT}(schema)
         # Two steps whose residuals are +1 and -1. The signed sum is zero and
         # reports a perfectly closed run that closed on neither step, which is
         # why it is reported as drift and never passes a test on its own.
@@ -1394,23 +1394,23 @@ transfer_result(commit, event, quantity, cv) = only(
         ]
         residuals = (1, -1)
         for (i, residual) in enumerate(residuals)
-            PB.open_transaction!(ledger, endpoints[i])
+            PB.open_transaction!(journal, endpoints[i])
             PB.record_leg!(
-                ledger,
+                journal,
                 test_leg(FT; step = i, mass = mval(FT, 1 - residual)),
             )
             PB.commit_transaction!(
-                ledger,
+                journal,
                 endpoints[i + 1];
                 tolerances = loose_tolerance(FT),
             )
         end
         key = (:mass, :atmosphere_only)
-        @test ledger.cumulative_residual[key] == 0
-        @test ledger.cumulative_abs_residual[key] == 2
-        @test ledger.max_abs_residual[key] == 1
-        @test ledger.cumulative_change[key] == 2
-        @test ledger.committed_steps == 2
+        @test journal.cumulative_residual[key] == 0
+        @test journal.cumulative_abs_residual[key] == 2
+        @test journal.max_abs_residual[key] == 1
+        @test journal.cumulative_change[key] == 2
+        @test journal.committed_steps == 2
     end
 
     @testset "A residual has no representation as a leg" begin
@@ -1432,8 +1432,8 @@ transfer_result(commit, event, quantity, cv) = only(
         schema = test_schema(;
             channels = [PB.ChannelSpec(:explicit_main, ATMOS; dispositions = MASS)],
         )
-        ledger = open_ledger(FT, schema, test_endpoints(FT, 0; m = 10, w = 5, e = 3))
-        PB.record_leg!(ledger, test_leg(FT; mass = mval(FT, 1)))
+        journal = open_journal(FT, schema, test_endpoints(FT, 0; m = 10, w = 5, e = 3))
+        PB.record_leg!(journal, test_leg(FT; mass = mval(FT, 1)))
         observation = PB.StageObservation{FT}(;
             event = :map_constrain,
             observation = :raw_stage_difference,
@@ -1445,14 +1445,14 @@ transfer_result(commit, event, quantity, cv) = only(
             step = 1,
             stage = 2,
         )
-        PB.record_observation!(ledger, observation)
+        PB.record_observation!(journal, observation)
         # Observing the same map at the same stage twice is a reading, not a
         # double count, so observations are not deduplicated.
-        PB.record_observation!(ledger, observation)
-        @test length(ledger.observations) == 2
+        PB.record_observation!(journal, observation)
+        @test length(journal.observations) == 2
 
         commit = PB.commit_transaction!(
-            ledger,
+            journal,
             test_endpoints(FT, 1; m = 11, w = 5, e = 3);
             tolerances = loose_tolerance(FT),
         )

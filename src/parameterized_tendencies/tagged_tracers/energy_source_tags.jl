@@ -215,14 +215,14 @@ sedimenting_energy_source_tag_names(Y) =
     isempty(sedimenting_mass_names(Y)) ? () :
     unrolled_filter(is_energy_source_tag_name, gs_tracer_names(Y))
 
-# The names of the increment correction's ledger, in the state's order.
+# The names of the increment ledger, in the state's order.
 const ENERGY_SOURCE_LEDGER_NAMES = (:e_src_inc_left, :e_src_inc_moved)
 
 """
     energy_source_increment_ledger_variables(ρe_parent, model)
 
-The ledger of [`correct_energy_source_increment!`](@ref), for a single grid
-point, as zeros of the type of `ρe_parent`. Only under
+The increment ledger of [`correct_energy_source_increment!`](@ref), for a single
+grid point, as zeros of the type of `ρe_parent`. Only under
 `energy_source_tag_transport: enthalpy_increment`, and `(;)` otherwise:
 
   - `e_src_inc_left`: the energy the correction has left out of the tags, in
@@ -258,7 +258,7 @@ energy_source_increment_ledger_variables(
 """
     energy_source_increment_ledger_names(model)
 
-`Tuple` of the state-field `Symbol`s of the increment correction's ledger:
+`Tuple` of the state-field `Symbol`s of the increment ledger:
 `(:e_src_inc_left, :e_src_inc_moved)` under `enthalpy_increment`, and `()`
 otherwise. See [`energy_source_increment_ledger_variables`](@ref).
 """
@@ -268,7 +268,7 @@ energy_source_increment_ledger_names(model) =
 """
     is_energy_source_ledger_name(name)
 
-Whether `name`, a `Symbol`, is a field of the increment correction's ledger.
+Whether `name`, a `Symbol`, is a field of the increment ledger.
 """
 is_energy_source_ledger_name(name::Symbol) =
     name in ENERGY_SOURCE_LEDGER_NAMES
@@ -289,8 +289,8 @@ when they are disabled. Contains:
     per-timestep broadcast.
   - `ᶜenergy_source_fix`: one center `Field` per tag, accumulating the energy
     that `repair_energy_source_tags!` has moved into or out of it. It is
-    reported as `e_src_fix_<name>`. It lives in the cache, so it restarts at
-    zero, as the water tags' ledger does.
+    reported as `e_src_fix_<name>`. It lives in the cache, and a checkpoint
+    carries it, as it carries the water tags' repair ledger (WP6, step 3).
   - `ᶜenergy_source_pos` and `ᶜenergy_source_neg`: the positive and negative
     parts of the partition's sum, which the repair fills itself.
   - `ᶠenergy_source_interior`: one on every face but the bottom one, where it
@@ -328,7 +328,7 @@ function _energy_source_tagging_cache(Y, model::EnergySourceTaggingModel)
     )
     _check_parent_positivity(Y, model)
     _check_sedimentation_offset(Y, model)
-    # The ledger exists whether or not the repair is on, so that
+    # The repair ledger exists whether or not the repair is on, so that
     # `e_src_fix_<name>` reads zero rather than failing when it is off.
     ᶜenergy_source_fix = _energy_source_fix_fields(Y.c.ρ, model.tags)
     # Its gross twin and count, in Float64 (`tag_throughput.jl`).
@@ -425,7 +425,7 @@ function _check_increment_partition(ᶜmasks, names, model)
     )
     # 100 rounding units, as the water tags' follower allows
     # (`water_increment_partition_tolerance`): a region and its complement sum
-    # to 1 within a few; a gap the size of the closure budget does not pass.
+    # to 1 within a few; a gap the size of the closure tolerance does not pass.
     deviation > energy_source_partition_tolerance(eltype(mask_sum)) && error(
         "`energy_source_tag_transport: enthalpy_increment` needs region tags \
         that partition the domain, and the masks of these sum to 1 only to \
@@ -614,10 +614,10 @@ The energy source family's own columns of the audit table, beside those
   - `repair_gross`, `repair_gross_relative`, `repair_events`: the same from the
     ledger's gross twin, gross over time too, and the number of cell-events
     (`tag_throughput.jl`). Zero with the repair off. At
-    `update_constrain_state_every: stage` or `dss` the ledger also counts the
-    in-step repairs the stepper discards; see `repair_energy_source_tags!`.
+    `update_constrain_state_every: stage` or `dss` the repair ledger also counts
+    the in-step repairs the stepper discards; see `repair_energy_source_tags!`.
   - under `energy_source_tag_transport: enthalpy_increment` only, the integrals
-    of the increment correction's ledger since the start of the run, in J:
+    of the increment ledger since the start of the run, in J:
     `increment_left`, what it left out of the tags, which is signed and lands
     in the closure residual; `increment_left_net_abs`, the sum over the cells of
     the absolute value of each cell's ledger; and `increment_moved_net_abs`, the
@@ -1241,7 +1241,7 @@ zero; elsewhere the tag is left alone, for the reason
 `energy_source_partition_repair` gives.
 
 There is no sum to keep, so the energy the clip adds comes from nowhere within
-the tags. The ledger records it.
+the tags. The repair ledger records it.
 """
 @inline energy_source_overlay_repair(ρe_src, parent) =
     parent > zero(parent) ? max(ρe_src, zero(ρe_src)) : ρe_src
@@ -1273,11 +1273,11 @@ Every change is added to `p.tagging.ᶜenergy_source_fix` and reported as
 `e_src_fix_<name>`, so what the repair did stays distinguishable from what the
 rule and the transport did. For the partition tags these changes sum to zero in
 each cell, except where the negatives outweighed the positives and every tag was
-zeroed. The ledger equals what the repair changed in the accepted state only at
-the default `update_constrain_state_every: step`. At `stage` or `dss` the repair
-also runs inside the step, where the stepper rescales or discards what it
-changes, as it does for the water tags' `q_tag_fix`. The tags end each step
-repaired either way.
+zeroed. The repair ledger equals what the repair changed in the accepted state
+only at the default `update_constrain_state_every: step`. At `stage` or `dss`
+the repair also runs inside the step, where the stepper rescales or discards
+what it changes, as it does for the water tags' `q_tag_fix`. The tags end each
+step repaired either way.
 
 On by default. `energy_source_tag_repair: false` switches it off, and leaves the
 tags exactly as the rule and their transport make them, negative values
@@ -1354,7 +1354,8 @@ end
 
 # `ᶜpos` and `ᶜneg` come from the state before the repair and are only read
 # here, so each tag can be rewritten in place and a later tag's factor still
-# holds. The ledger is written first, so it records the correction itself.
+# holds. The repair ledger is written first, so it records the correction
+# itself.
 _apply_energy_source_repair!(ᶜY, ledger, ᶜpos, ᶜneg, ᶜparent, ::Tuple{}) =
     nothing
 function _apply_energy_source_repair!(
@@ -2628,7 +2629,7 @@ flux, and the flux is added to `dY` divided by `dtγ`. The partition's shares ad
 up to one, so the partition then follows the parent's increment, up to the part
 left in place. A tag that carries a source takes its own share of the flux.
 
-The part left in place and the part moved are added to the ledger,
+The part left in place and the part moved are added to the increment ledger,
 `e_src_inc_left` and `e_src_inc_moved` (see
 [`energy_source_increment_ledger_variables`](@ref)).
 """
@@ -2703,8 +2704,9 @@ function correct_energy_source_increment!(dY, U, p)
         model.tags,
     )
     add_attempted_per_tag!(p, dY, dtγ, ledger_view, model.tags)
-    # The ledger. What is left in place stays out of the tags, and the rest is
-    # what the flux moved. The stepper adds `dtγ·dY`, as it does for the tags.
+    # The increment ledger. What is left in place stays out of the tags, and the
+    # rest is what the flux moved. The stepper adds `dtγ·dY`, as it does for the
+    # tags.
     @. ᶜe_src_abs_mismatch *= ifelse(
         e_src_abs_mismatch_total > 0,
         e_src_mismatch_total / e_src_abs_mismatch_total,

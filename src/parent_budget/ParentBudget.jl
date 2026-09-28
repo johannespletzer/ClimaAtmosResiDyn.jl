@@ -1,13 +1,13 @@
 """
     ClimaAtmos.Internals.ParentBudget
 
-The parent-budget ledger: the accounting that decides whether an accepted
+The parent budget: the accounting that decides whether an accepted
 timestep's change in atmospheric mass, total water, and total energy is
 explained by what the model recorded.
 
 **Unstable internal machinery.** Nothing here is exported, public, or covered by
-any compatibility promise. A simulation constructs a ledger only when
-`parent_budget_mode` is not `off`, and the ledger never writes the state, so a
+any compatibility promise. A simulation constructs a parent budget only when
+`parent_budget_mode` is not `off`, and the parent budget never writes the state, so a
 run with it off is the run without it. See
 `docs/src/parent_budget/` for the contract these types implement.
 
@@ -74,11 +74,11 @@ import ...TracerNonnegativityElementConstraint
 import ...TracerNonnegativityVerticalWaterBorrowing
 # The adapter asks the space whether it performs DSS.
 import ...do_dss
-# The ledger half of the applied-update event. The functions are declared in
+# The parent-budget half of the applied-update event. The functions are declared in
 # the main module, next to the tag half, so the tendency code calls one API
-# whether the ledger is on or off; the adapter adds its methods here.
-import ...open_ledger_event!
-import ...close_ledger_event!
+# whether the parent budget is on or off; the adapter adds its methods here.
+import ...open_parent_budget_event!
+import ...close_parent_budget_event!
 # The slab's prescribed Q-flux, read for its leg through the same function the
 # slab tendency applies it with.
 import ...slab_q_flux

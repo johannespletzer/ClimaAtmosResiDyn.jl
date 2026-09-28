@@ -120,7 +120,7 @@ Two consequences worth stating:
     That allocation is a numerical closure convention, not a physical path
     of water. It keeps the partition on its target, but it can move
     provenance between cells that no water moved between. It does not yet
-    keep the tags within their budget at site 23 (known issue 7).
+    keep the tags within the 0.2% tolerance at site 23 (known issue 7).
 
     The closure can pass while the parent is negative. So the water closure
     check also reads the parent's own negative water, from the raw
@@ -166,9 +166,9 @@ construction. For the prescribed forcings it is an assumption.
 
   - **Phase changes**: condensation, evaporation, freezing and melting conserve
     ``q_t``, so they are invisible to a total-water tag by construction. This is
-    why no per-transfer ledger is needed — and why a vapor-only passive tracer
-    would be the wrong design, since it would lose provenance at every phase
-    change.
+    why no per-transfer bookkeeping is needed — and why a vapor-only passive
+    tracer would be the wrong design, since it would lose provenance at every
+    phase change.
 
   - **Precipitation sedimentation**: with 0-moment microphysics there are no
     prognostic condensate species to sediment, so the term does not exist. With
@@ -346,7 +346,7 @@ Where a subdomain's share is not defined, the grid mean's applies. The split
 applies to both signs, since a subdomain's area can go negative in the Newton
 iterates. Where it does, the subdomain's rain-out is a gain, and the split
 attributes that gain too. So the split, and `pr_tag` below, are signed
-attributions, which close with the sink, not a record of physical rain-out
+attributions, which close with the sink, not a measure of physical rain-out
 alone. In the default mode without the SGS mass flux there is no
 exchange, and the grid mean's share applies to all the rain-out, as it does
 without EDMF. The model's fields do not change.
@@ -367,7 +367,7 @@ implicit increment. It is the default in the default mode under
 `turbconv: prognostic_edmfx`, where the configuration supports it (below).
 G3_PLAN 4.3 fixed that rule before the runs: the follower becomes the default
 under EDMF if the default mode's one-iteration part of the closure residual
-exceeds a quarter of the 0.2% budget. V-W3 measured twelve times that. With
+exceeds a quarter of the 0.2% tolerance. V-W3 measured twelve times that. With
 copies, without prognostic EDMF, and with 1M microphysics stepped explicitly,
 the default is `tracer`.
 ``\rho q_\mathrm{tot}`` is advected vertically in the implicit step, and its
@@ -455,7 +455,7 @@ is neither rain nor snow, the rain and the snow. They have a page of their own,
   - `q_tag_negative_integral` and `q_tag_negative_events`: the parent's negative water ledger, the sum over the accepted steps of ``\max(-\rho q_\mathrm{tot}, 0) \, \Delta t`` in kg s m⁻³, and the number of steps with ``\rho q_\mathrm{tot} < 0``, per cell, since the start of the run and carried through a restart. Neither is in any default output;
   - `q_tag_fix_<name>`: water moved into or out of the tag by the limiters and
     state constraints, cumulative since the start of the run and carried
-    through a restart, so a budget over an interval is the difference of two
+    through a restart, so the change over an interval is the difference of two
     outputs, and a time *average* of it is not meaningful;
   - `q_tag_upfix_<name>` and `q_tag_copy_res`: with updraft copies, the copies'
     repair, cumulative as `q_tag_fix` is, and the residual it found;
@@ -595,10 +595,10 @@ A checkpoint written before the `q_tag_led_*` fields existed is refused.
 
 !!! note "What `q_tag_fix` includes"
 
-    Two mechanisms write to the ledger. `repair_water_tag_partition!` runs every
-    step and contributes wherever transport drove a partition tag negative, so
-    `q_tag_fix_<name>` is generally nonzero even under stock settings — it is a
-    useful direct measure of how much the tags are drifting.
+    Two mechanisms write to the repair ledger. `repair_water_tag_partition!`
+    runs every step and contributes wherever transport drove a partition tag
+    negative, so `q_tag_fix_<name>` is generally nonzero even under stock
+    settings — it is a useful direct measure of how much the tags are drifting.
     `rescale_water_tags!` contributes only when something actually corrects
     ``\rho q_\mathrm{tot}``: `apply_sem_quasimonotone_limiter: true`,
     `tracer_nonnegativity_method: vertical_water_borrowing`, an elementwise
@@ -721,7 +721,7 @@ its records are not transported.
   - Tagged state is carried through restarts like any other prognostic field.
     The masks are rebuilt from the configuration, so the `water_tracers` block
     must match the one used to write the checkpoint, and the restart guard
-    refuses one that does not. The `q_tag_fix` and `q_tag_upfix` ledgers and
+    refuses one that does not. The `q_tag_fix` and `q_tag_upfix` repair ledgers and
     the grosses, counts and attempted totals live in the cache, and the
     checkpoint carries them beside the state. A checkpoint written before it
     carried them starts them at zero, with a warning, and the audit's grosses

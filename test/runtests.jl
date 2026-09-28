@@ -90,16 +90,16 @@ if TEST_GROUP in ("infrastructure", "all")
 end
 
 # ============================================================================
-# Parent budget: the ledger driven by real simulations. Every file here builds
+# Parent budget: the parent budget driven by real simulations. Every file here builds
 # several `AtmosSimulation`s and compiles the tendency pipeline for each, which
-# is why they are not in `infrastructure` with the ledger's unit tests.
+# is why they are not in `infrastructure` with the parent budget's unit tests.
 # ============================================================================
 if TEST_GROUP in ("parent_budget", "all")
     @safetestset "Parent-budget envelopes" begin @time include("parent_budget/envelope_tests.jl") end
     @safetestset "Parent-budget implicit attribution" begin @time include("parent_budget/implicit_attribution_tests.jl") end
     @safetestset "Parent-budget explicit attribution" begin @time include("parent_budget/explicit_attribution_tests.jl") end
     @safetestset "Parent-budget transfers" begin @time include("parent_budget/transfer_tests.jl") end
-    @safetestset "Parent-budget restarts" begin @time include("parent_budget/restart_ledger_tests.jl") end
+    @safetestset "Parent-budget restarts" begin @time include("parent_budget/restart_tests.jl") end
     @safetestset "Parent-budget report" begin @time include("parent_budget/report_tests.jl") end
 end
 
@@ -202,8 +202,8 @@ end
 # together, which is a type neither of those two files' models share, so it
 # costs its own compile wherever it lives. Keeping it in its own group leaves
 # the other two groups' CI time exactly as measured, rather than adding an
-# unmeasured compile (1-moment microphysics included) on top of budgets this
-# change has no data on.
+# unmeasured compile (1-moment microphysics included) on top of time limits
+# this change has no data on.
 if TEST_GROUP in ("tagging_source_float32", "all")
     @safetestset "Energy source tags and process records (Float32) integration" begin
         @time include("energy_source_tags_float32_integration.jl")
@@ -212,7 +212,7 @@ end
 
 # The EDMF column is the most expensive model in the suite to build, and this
 # file builds it twice, with the tags and without them. A group of its own
-# keeps that out of the other groups' budgets.
+# keeps that out of the other groups' time limits.
 if TEST_GROUP in ("tagging_source_edmf", "all")
     @safetestset "Energy source tags under EDMF integration" begin
         @time include("energy_source_tags_edmf_integration.jl")
@@ -230,7 +230,7 @@ end
 
 # The tags' updraft copies are a model type of their own, and the check against
 # the column without tags needs a second. With the increment's two builds in one
-# group, the three overran the job's budget, so this file has a group of its own.
+# group, the three overran the timeout, so this file has a group of its own.
 if TEST_GROUP in ("tagging_source_updraft", "all")
     @safetestset "Energy source tags with updraft copies" begin
         @time include("energy_source_tags_updraft_integration.jl")
@@ -238,7 +238,7 @@ if TEST_GROUP in ("tagging_source_updraft", "all")
 end
 
 # The water tags under prognostic EDMF. Each file builds the EDMF column twice,
-# with the tags and without them, and two builds fill a job's budget, as they
+# with the tags and without them, and two builds fill a job's time limit, as they
 # do for the energy source tags. So each has a group of its own: the default
 # mode under 1M, the copies under 1M with the microphysics explicit, and the
 # copies under 0M with the microphysics implicit, the default.

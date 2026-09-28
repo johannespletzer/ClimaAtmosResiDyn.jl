@@ -21,7 +21,7 @@
 ##### Records are prognostic but not transported. The timestepper advances them
 ##### and nothing else touches them: no advection, no limiter, no Jacobian block
 ##### beyond the fallback identity. They accumulate from the start of the run
-##### and are carried through a restart, so a budget over an interval is the
+##### and are carried through a restart, so the change over an interval is the
 ##### difference of two outputs. `q_tag_fix_<name>` lives in the cache, and a
 ##### checkpoint carries it separately (WP6, step 3).
 #####
@@ -174,8 +174,10 @@ Record the current `Yₜ.c.ρe_tot` and `Yₜ.c.ρq_tot` in `p.scratch`, opening
 process-record bracket. A no-op for a process no record lists, and when neither
 record is configured.
 
-Paired with [`accumulate_process_record!`](@ref). Called from `snapshot_tags!`
-alongside the tag snapshots, so a record needs no bracket of its own.
+Paired with [`accumulate_process_record!`](@ref). On the explicit path it is
+called from `snapshot_tags!` alongside the tag snapshots. On the implicit path
+`implicit_tendency.jl` calls it directly, around the microphysics sink and
+precipitation sedimentation.
 """
 function snapshot_process_record!(p, Yₜ, source::Symbol)
     _snapshot_energy_record!(p, Yₜ, source, p.atmos.energy_process_record)

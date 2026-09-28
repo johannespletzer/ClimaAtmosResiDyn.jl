@@ -21,11 +21,11 @@ import ClimaTimeSteppers as CTS
 # unattributed: the subsidence of total enthalpy is a genuine energy source,
 # and the explicit channel is otherwise the dynamics, which the registry proves
 # integrate to zero. The three faults the plan names are injected into the
-# adapter's half of the bracket, so the ledger's answer to each is on record.
+# adapter's half of the bracket, so the parent budget's answer to each is tested.
 
 const FT = Float64
 
-# The ledger's column. `AtmosModel` takes the grid, and `AtmosSimulation` takes
+# The parent budget's column. `AtmosModel` takes the grid, and `AtmosSimulation` takes
 # the model. The parameters follow the model's microphysics, as the removed
 # `AtmosSimulation{FT}` constructor chose them.
 function column_model(; kwargs...)
@@ -258,24 +258,34 @@ status(component) = PB.component_status(component)
         # Outside a metered evaluation every bracket is a no-op, whatever it
         # names: this is every Newton iteration and every summary-mode step.
         @test adapter.evaluation === :none
-        PB.open_ledger_event!(adapter, Yₜ, :not_a_process)
-        PB.close_ledger_event!(adapter, Yₜ, Y, p, :not_a_process)
+        PB.open_parent_budget_event!(adapter, Yₜ, :not_a_process)
+        PB.close_parent_budget_event!(adapter, Yₜ, Y, p, :not_a_process)
         @test isempty(adapter.parts)
         PB.begin_evaluation!(adapter, :explicit, 2)
-        PB.open_ledger_event!(adapter, Yₜ, :subsidence)
-        PB.close_ledger_event!(adapter, Yₜ, Y, p, :subsidence)
+        PB.open_parent_budget_event!(adapter, Yₜ, :subsidence)
+        PB.close_parent_budget_event!(adapter, Yₜ, Y, p, :subsidence)
         @test haskey(adapter.parts, (:explicit, :subsidence, 2))
         # Duplicated.
-        @test_throws ErrorException PB.open_ledger_event!(adapter, Yₜ, :subsidence)
+        @test_throws ErrorException PB.open_parent_budget_event!(adapter, Yₜ, :subsidence)
         # Nested, and closed out of order.
-        PB.open_ledger_event!(adapter, Yₜ, :radiation)
-        @test_throws ErrorException PB.open_ledger_event!(adapter, Yₜ, :surface_flux)
-        @test_throws ErrorException PB.close_ledger_event!(adapter, Yₜ, Y, p, :surface_flux)
-        PB.close_ledger_event!(adapter, Yₜ, Y, p, :radiation)
+        PB.open_parent_budget_event!(adapter, Yₜ, :radiation)
+        @test_throws ErrorException PB.open_parent_budget_event!(adapter, Yₜ, :surface_flux)
+        @test_throws ErrorException PB.close_parent_budget_event!(
+            adapter,
+            Yₜ,
+            Y,
+            p,
+            :surface_flux,
+        )
+        PB.close_parent_budget_event!(adapter, Yₜ, Y, p, :radiation)
         # Unknown to the registry.
-        @test_throws ErrorException PB.open_ledger_event!(adapter, Yₜ, :not_a_process)
+        @test_throws ErrorException PB.open_parent_budget_event!(
+            adapter,
+            Yₜ,
+            :not_a_process,
+        )
         # Left open at the end of the evaluation.
-        PB.open_ledger_event!(adapter, Yₜ, :viscous_sponge)
+        PB.open_parent_budget_event!(adapter, Yₜ, :viscous_sponge)
         @test_throws ErrorException PB.end_evaluation!(adapter)
         PB.clear_step_state!(adapter)
         @test adapter.evaluation === :none
@@ -287,21 +297,21 @@ status(component) = PB.component_status(component)
         step!(net, 2)
         step!(gross, 2)
         @test isempty(PB.latest_gross(adapter_of(net)))
-        records = PB.latest_gross(adapter_of(gross))
+        all_parts = PB.latest_gross(adapter_of(gross))
         legs = legs_of(adapter_of(gross), :subsidence)
-        @test length(records) == length(legs) == 3
+        @test length(all_parts) == length(legs) == 3
         for leg in legs
-            record = only(filter(g -> g.stage == leg.stage, records))
-            @test record.event === :subsidence
-            @test record.weight == leg.weight
-            @test all(>=(0), record.positive)
-            @test all(<=(0), record.negative)
+            parts = only(filter(g -> g.stage == leg.stage, all_parts))
+            @test parts.event === :subsidence
+            @test parts.weight == leg.weight
+            @test all(>=(0), parts.positive)
+            @test all(<=(0), parts.negative)
             # The parts sum to the net and differ by the magnitude.
-            @test record.positive[3] + record.negative[3] ≈ leg.energy.amount
-            @test record.positive[3] - record.negative[3] ≈ leg.energy.magnitude
+            @test parts.positive[3] + parts.negative[3] ≈ leg.energy.amount
+            @test parts.positive[3] - parts.negative[3] ≈ leg.energy.magnitude
         end
         # A negative stage weight puts the whole update in the negative part.
-        stage_3 = only(filter(g -> g.stage == 3, records))
+        stage_3 = only(filter(g -> g.stage == 3, all_parts))
         @test stage_3.weight < 0
         @test stage_3.positive[3] == 0
         @test stage_3.negative[3] < 0

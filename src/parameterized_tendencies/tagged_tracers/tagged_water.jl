@@ -227,8 +227,8 @@ when water tagging is disabled. Contains:
     [`rescale_water_tags!`](@ref) and [`repair_water_tag_partition!`](@ref)).
     Cumulative since the start of the run, and carried through a restart by
     the checkpoint (WP6, step 3; a checkpoint written before that starts it at
-    zero, with a warning), so a budget over an interval is the difference of
-    two outputs.
+    zero, with a warning), so the change over an interval is the difference
+    of two outputs.
   - `ᶜwater_fix_gross`, `ᶜwater_fix_count`: the gross twin and the count of
     `ᶜwater_fix`, in Float64: the absolute value of every change, and one per
     cell-event above rounding (`tag_event`). What was attempted, including
@@ -899,8 +899,8 @@ water-tagged run nothing.
 
 This is the tag half of the applied-update event. The tendency code calls
 [`open_applied_update!`](@ref) and `close_applied_update!`, which reach
-here only for a `source` in `KNOWN_TAG_SOURCES` and feed the parent-budget
-ledger for every label.
+here only for a `source` in `KNOWN_TAG_SOURCES` and feed the parent budget
+for every label.
 
 Each half is a no-op when its own model is `nothing`, so a run with only one
 family enabled pays only for that family.
@@ -1009,10 +1009,10 @@ case it is written for is a nonnegativity constraint clipping a negative
 `ρq_tot` up, where the tags of such a cell are themselves negative — the donor
 rule scaled them by the same negative parent.
 Leaving them alone would leave them negative while the parent became zero, and
-would record nothing in `q_tag_fix_<name>`, so the ledger would report that the
-limiter had done nothing — exactly the conflation the ledger exists to prevent.
-Emptying the tags along with the parent keeps `Σᵢ ρq_tag_i = ρq_tot` exact when
-the parent is clipped to zero, and logs the removal honestly.
+would record nothing in `q_tag_fix_<name>`, so the repair ledger would report
+that the limiter had done nothing — exactly the conflation the ledger exists to
+prevent. Emptying the tags along with the parent keeps `Σᵢ ρq_tag_i = ρq_tot`
+exact when the parent is clipped to zero, and logs the removal honestly.
 """
 @inline function water_tag_rescale_shift(
     ρq_tag,
@@ -1188,11 +1188,11 @@ function _apply_water_tag_rescale!(
     tag = first(tags)
     ᶜρq_tag = tag_field(ᶜY, tag)
     (ᶜfix, ᶜgross, ᶜcount) = tag_ledger_fields(ledger, tag)
-    # Accumulate the signed change before applying it, so the ledger records the
-    # correction itself and not its effect on an already-corrected tag. The
-    # shift is recomputed on the spot. A few comparisons and a divide cost less
-    # than a scratch field per tag, and this stays allocation free. The gross
-    # twin and the count take the same shift.
+    # Accumulate the signed change before applying it, so the repair ledger
+    # records the correction itself and not its effect on an already-corrected
+    # tag. The shift is recomputed on the spot. A few comparisons and a divide
+    # cost less than a scratch field per tag, and this stays allocation free.
+    # The gross twin and the count take the same shift.
     if _is_partition_tag(tag)
         # The state ledgers per mechanism take the partition's shift: the
         # rescale where the parent held water, the emptying where it did not
@@ -1414,11 +1414,12 @@ function _apply_partition_repair!(ᶜY, ledger, ᶜpos, ᶜneg, tags::Tuple, par
     if _is_partition_tag(tag)
         ᶜρq_tag = water_tag_part_field(ᶜY, tag, part)
         (ᶜfix, ᶜgross, ᶜcount) = tag_ledger_fields(ledger, tag)
-        # Ledger first, so it records the correction itself and not its effect
-        # on an already-corrected tag. This matches `rescale_water_tags!`. The
-        # repair moves water between the tags, so the gross twin counts each
-        # transfer twice, once out and once in (design/GROSS_ACCUMULATORS.md,
-        # 3.3). The state ledger takes half of it, the water moved (WP6).
+        # Repair ledger first, so it records the correction itself and not its
+        # effect on an already-corrected tag. This matches
+        # `rescale_water_tags!`. The repair moves water between the tags, so the
+        # gross twin counts each transfer twice, once out and once in
+        # (design/GROSS_ACCUMULATORS.md, 3.3). The state ledger takes half of
+        # it, the water moved (WP6).
         @. ᶜY.q_tag_led_repair +=
             abs(
                 max(ᶜρq_tag, 0) * water_tag_repair_factor(ᶜpos, ᶜneg) -

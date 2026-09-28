@@ -44,11 +44,37 @@ These are accessed through the integrator after a run, e.g.
   - **Diagnostics**: derived output variables, as opposed to the prognostic state
     `Y`. See [Computing and saving diagnostics](@ref) and the catalog of
     [available diagnostic variables](@ref "Available diagnostic variables").
-  - **Parent-budget ledger**: the internal accounting that checks whether air
+
+Three families of bookkeeping words: budget is the parent's, ledger is a tag's,
+record is a process's.
+
+  - **Parent budget**: the internal accounting that checks whether air
     mass, total water and total energy changed by exactly what the accepted
     time step applied. Its terms, from *reservoir* to *reported*, are explained
-    in plain language on the [ledger vocabulary](parent_budget/vocabulary.md)
-    page.
+    in plain language on the
+    [parent-budget vocabulary](parent_budget/vocabulary.md) page. In the code
+    its per-step store is `BudgetJournal`, and the tendency code reaches it
+    through `open_parent_budget_event!` and `close_parent_budget_event!`.
+  - **Tag ledger**: a running total that a tag correction keeps of what it
+    moved. The word is used on the tag side only. It comes in three kinds. A
+    *repair ledger* is `q_tag_fix_*`, `q_tag_upfix_*` for the updraft copies,
+    or `e_src_fix_*`, held in the cache as `ᶜwater_fix`, `ᶜwater_upfix` or
+    `ᶜenergy_source_fix`. An *increment ledger* is
+    `e_src_inc_left`, `e_src_inc_moved` or `q_tag_inc_*`. A *mechanism
+    ledger* is `q_tag_led_<mechanism>` or `e_src_led_<mechanism>`, such as
+    `q_tag_led_rescale` or `e_src_led_repair`: what one mechanism moved,
+    summed over the tags. With `water_tag_ledger_per_tag` or
+    `energy_source_tag_ledger_per_tag`, each tag also keeps its own repair
+    ledger, `q_tag_led_fix_<name>` or `e_src_led_fix_<name>`, and under the
+    increment transports its own increment ledger, `q_tag_led_inc_<name>` or
+    `e_src_led_inc_<name>`. Each energy source tag then keeps its source
+    ledger `e_src_led_src_<name>` too. With `water_tag_leak_correction` also
+    on, each water tag has `q_tag_led_leak_<name>` and, with updraft copies,
+    `q_tag_led_upleak_<name>`. See [Tagged Water Tracers](tagged_water.md)
+    and [Energy Source Tags](energy_source_tags.md).
+  - **Process record**: one process's signed history of the parent tendency,
+    kept as `prc_e_<process>` or `prc_q_<process>` and written out as
+    `e_prc_*` and `q_prc_*`. See [Process-Change Records](process_record.md).
 
 For the mapping between the symbols used in the equations pages and the
 names used in the code (the `ᶜ`/`ᶠ` prefixes, subdomain superscripts, and

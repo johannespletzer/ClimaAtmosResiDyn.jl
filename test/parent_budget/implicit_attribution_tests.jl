@@ -19,7 +19,7 @@ import ClimaTimeSteppers as CTS
 
 const FT = Float64
 
-# The ledger's column. `AtmosModel` takes the grid, and `AtmosSimulation` takes
+# The parent budget's column. `AtmosModel` takes the grid, and `AtmosSimulation` takes
 # the model. The parameters follow the model's microphysics, as the removed
 # `AtmosSimulation{FT}` constructor chose them.
 function column_model(; kwargs...)
@@ -74,7 +74,7 @@ end
 # shipped DYCOMS configs use; the default 30 km column extrapolates the profile
 # into negative pressure. Its idealized radiation forces the energy so the water
 # and energy identities carry real updates, and its slab ocean makes every
-# reservoir the ledger knows part of the run.
+# reservoir the parent budget knows part of the run.
 #
 # Taking it from there rather than writing it out again shares one compiled
 # model with `explicit_attribution_tests.jl`, `transfer_tests.jl` and

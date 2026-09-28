@@ -26,8 +26,9 @@ tag and its two region-restricted halves, and asserts:
 
 The column trips no limiter, so a second setup — a coarse moist sphere with the
 SEM quasimonotone limiter on — covers `rescale_water_tags!` and the
-`q_tag_fix_<name>` ledger, which are otherwise never exercised. Its tolerances
-are much looser than the column's for reasons documented at that testset.
+`q_tag_fix_<name>` repair ledger, which are otherwise never exercised. Its
+tolerances are much looser than the column's for reasons documented at that
+testset.
 
 A third setup runs the same column with 1-moment microphysics and checks the
 mirrored sedimentation flux, the one process 1M adds. It asserts exact closure of
@@ -179,7 +180,7 @@ base_config(tags; extra = Dict{String, Any}()) = merge(
     @test scale > 0  # non-vacuous: the surface flux actually moved water
     @test maximum(abs.(evap_split .- evap)) / scale < 1e-10
 
-    # The numerical-correction ledger exists and is finite for every tag. It is
+    # The repair ledger exists and is finite for every tag. It is
     # identically zero in this column — no limiter or state constraint fires
     # here, so `rescale_water_tags!` is a no-op. The sphere testset below is what
     # actually exercises it.
@@ -260,8 +261,9 @@ end
     scale = maximum(abs.(ρq_tot))
 
     # The point of this testset: the limiter really did move water, so the
-    # rescale path and its ledger are covered rather than merely present. A
-    # regression that stopped calling `rescale_water_tags!` would zero these.
+    # rescale path and its repair ledger are covered rather than merely
+    # present. A regression that stopped calling `rescale_water_tags!` would
+    # zero these.
     for name in tag_names
         fix = parent(getproperty(ᶜwater_fix, name))
         @test all(isfinite, fix)
@@ -278,7 +280,7 @@ end
     end
 
     # The bounds above are against `scale`, the *global* maximum of `ρq_tot`.
-    # That is the right yardstick for the drift budget and the wrong one for
+    # That is the right yardstick for the drift tolerance and the wrong one for
     # asking whether a tag still means "this much of the water in this cell". In
     # a cell holding a thousandth of the domain maximum, an excursion of
     # 1e-2 * scale is ten times the cell's own water and the bound above still
@@ -288,7 +290,7 @@ end
     # So bound the excursion against the *local* parent as well, over the cells
     # where the local parent is a meaningful yardstick. The cells are filtered
     # rather than the bound loosened because below a fifth of the domain maximum
-    # the ratio says more about the drift budget above than about the tag. On
+    # the ratio says more about the drift tolerance above than about the tag. On
     # the cells that are kept, the bounds asserted above already imply a ratio
     # inside 1 + 1e-1/2e-1 = 1.5 and -0.5, so 2 and -1 leave margin without
     # letting anything through that a runaway could hide in.
@@ -302,7 +304,7 @@ end
 
     # The partition closes more tightly than any single tag is bounded, because
     # the compensating excursions cancel. It stays a monitor rather than an
-    # identity, and its budget is set by what leaves the partition rather than
+    # identity, and its tolerance is set by what leaves the partition rather than
     # by roundoff. `repair_water_tag_partition!` zeroes the tags of a cell whose
     # negatives outweigh its positives, and that removed water surfaces here by
     # design. See the repair's docstring. `ci 1.10` measured 1.2e-3 before the

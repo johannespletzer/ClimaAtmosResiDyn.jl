@@ -18,7 +18,7 @@ import YAML
 
 const FT = Float64
 
-# The ledger's column. `AtmosModel` takes the grid, and `AtmosSimulation` takes
+# The parent budget's column. `AtmosModel` takes the grid, and `AtmosSimulation` takes
 # the model. The parameters follow the model's microphysics, as the removed
 # `AtmosSimulation{FT}` constructor chose them.
 function column_model(; kwargs...)
@@ -62,7 +62,7 @@ function parent_row(adapter, quantity)
 end
 
 # The explicit acceptable overhead of summary mode on the dry column, per
-# accepted step, beside a run without the ledger. Allocations are gated;
+# accepted step, beside a run without the parent budget. Allocations are gated;
 # walltime is measured and logged, because a wall-clock comparison on a shared
 # runner is decided by scheduling noise rather than by the code under test.
 const SUMMARY_ALLOCATION_OVERHEAD = 256 * 1024
@@ -244,18 +244,18 @@ const SUMMARY_ALLOCATION_OVERHEAD = 256 * 1024
         )
     end
 
-    @testset "The ledger and check_conservation agree as independent checks" begin
+    @testset "The parent budget and check_conservation agree as independent checks" begin
         # The existing conservation check reads the two saved endpoints with
         # ClimaCore's own sums and the radiative fluxes its callback
-        # accumulated, so it shares no arithmetic with the ledger. The endpoint
+        # accumulated, so it shares no arithmetic with the parent budget. The endpoint
         # changes are the same integrals summed in a different order. The
         # radiation crossings are the same fluxes under two time quadratures,
-        # the callback's end-of-step rectangle against the ledger's
+        # the callback's end-of-step rectangle against the parent budget's
         # tableau-weighted stages. The check omits the turbulent surface flux
         # and precipitation, which the limitations register says, and the
-        # ledger's legs are its residual. Neither is used to close the other.
+        # parent budget's legs are its residual. Neither is used to close the other.
         # The check integrates an extruded space only, so this is a small moist
-        # sphere, which also takes the ledger through DSS and the horizontal
+        # sphere, which also takes the parent budget through DSS and the horizontal
         # dynamics the columns never run.
         config = CA.AtmosConfig(
             Dict(
@@ -324,7 +324,7 @@ const SUMMARY_ALLOCATION_OVERHEAD = 256 * 1024
         @test toa < 0
         @test toa ≈ -p.net_energy_flux_toa[][] rtol = 1e-3
         @test cumulative("xfer.radiation_surface") ≈ p.net_energy_flux_sfc[][] rtol = 1e-6
-        # The check's residual is what its callback omits, as the ledger says.
+        # The check's residual is what its callback omits, as the parent budget says.
         conservation = CA.check_conservation(results)
         omitted =
             cumulative("xfer.surface_turbulent_flux") + cumulative("xfer.precipitation_0m")
@@ -348,7 +348,7 @@ const SUMMARY_ALLOCATION_OVERHEAD = 256 * 1024
         adapter = adapter_of(summary)
         size_before = Base.summarysize(adapter)
         # Every accepted step allocates the same amount, and no more than the
-        # explicit overhead beside a run without the ledger.
+        # explicit overhead beside a run without the parent budget.
         allocations(simulation) =
             [(@allocated CTS.step!(simulation.integrator)) for _ in 1:4]
         off_allocations = allocations(off)
@@ -360,9 +360,9 @@ const SUMMARY_ALLOCATION_OVERHEAD = 256 * 1024
         @test Base.summarysize(adapter) == size_before
         @test isempty(adapter.commits)
         @test adapter.steps_committed == 17
-        # Walltime per step is reported beside the run without the ledger. It is
+        # Walltime per step is reported beside the run without the parent budget. It is
         # not asserted: two one-second windows on a shared runner differ by more
-        # than the ledger costs, and a gate on them fails on scheduling alone.
+        # than the parent budget costs, and a gate on them fails on scheduling alone.
         walltime(simulation) = (@elapsed step!(simulation, 10)) / 10
         off_walltime = walltime(off)
         summary_walltime = walltime(summary)

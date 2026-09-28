@@ -8,7 +8,7 @@ include("../test_helpers.jl")
 
 # Endpoint integrals against real ClimaCore state.
 #
-# `journal_tests.jl` exercises the ledger's rules on synthetic scalars. Nothing
+# `journal_tests.jl` exercises the parent budget's rules on synthetic scalars. Nothing
 # there ever builds a state, so nothing there can check the one thing only a
 # state can answer: that applicability comes from the configuration and not from
 # which fields happen to exist. A slab carries `Y.sfc.water` even in a dry run,
@@ -82,7 +82,7 @@ function test_state(
     return Fields.FieldVector(; c, sfc)
 end
 
-# A slab that counts how often the ledger reduces `Y.sfc.water`. The counter is
+# A slab that counts how often the parent budget reduces `Y.sfc.water`. The counter is
 # what pins the single reduction: the slab's water and its mass are two
 # projections of one endpoint, so reading the field twice would pay for a second
 # device reduction to learn a number it already had.
@@ -305,7 +305,7 @@ control_volume_names(schema) = [cv.name for cv in schema.control_volumes]
         @testset "Accounting stays Float64 whatever the state is ($FT)" begin
             # The residual is what survives subtracting two large global totals.
             # Carrying it in the state's type would destroy it for a Float32
-            # run, so the ledger's own arithmetic is always Float64.
+            # run, so the parent budget's own arithmetic is always Float64.
             for config in configurations(FT)
                 endpoints = endpoints_for(spaces, FT, config)
                 @test endpoints isa PB.BudgetEndpoints{Float64}
@@ -324,9 +324,9 @@ control_volume_names(schema) = [cv.name for cv in schema.control_volumes]
             atmosphere = atmosphere_endpoint(endpoints)
 
             # `sum` is ClimaCore's own reduction: it accumulates in the state's
-            # type and then reduces across ranks. The ledger accumulates in the
+            # type and then reduces across ranks. The parent budget accumulates in the
             # accounting type instead, so the two agree to the state's precision
-            # and not beyond it. Anything worse than that would mean the ledger
+            # and not beyond it. Anything worse than that would mean the parent budget
             # is integrating something else.
             tol = 10 * sqrt(eps(FT))
             @test amount(atmosphere, :mass) ≈ sum(Y.c.ρ) rtol = tol
@@ -431,19 +431,19 @@ control_volume_names(schema) = [cv.name for cv in schema.control_volumes]
         @testset "A transaction runs on measured endpoints ($FT)" begin
             config = configurations(FT)[4]
             schema = schema_for(config)
-            ledger = PB.BudgetLedger{PB.BUDGET_ACCOUNTING_TYPE}(schema)
+            journal = PB.BudgetJournal{PB.BUDGET_ACCOUNTING_TYPE}(schema)
 
             opening = endpoints_for(spaces, FT, config)
-            PB.open_transaction!(ledger, opening)
+            PB.open_transaction!(journal, opening)
             closing = PB.budget_endpoints(
                 state_for(spaces, FT, config; ρ = ρ_VAL * (1 + Δρ_REL)),
                 schema,
                 config.surface,
                 1,
             )
-            commit = PB.commit_transaction!(ledger, closing)
+            commit = PB.commit_transaction!(journal, closing)
             @test commit.step == 1
-            @test ledger.committed_steps == 1
+            @test journal.committed_steps == 1
 
             # Nothing was recorded, and the schema declares no channel yet, so
             # there is no expectation to miss. The endpoint change is real and

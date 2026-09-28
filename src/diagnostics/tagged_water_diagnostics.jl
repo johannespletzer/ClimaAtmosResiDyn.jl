@@ -241,7 +241,7 @@ during simulation setup rather than at package load time:
     negative parts. So `q_tag_res`, `q_tag_negative` and the region tags add
     up to `q_tot`;
 
-  - `q_tag_inc_left`, `q_tag_inc_moved` and `q_tag_inc_negative`, under `water_tag_transport: increment` only: the increment correction's ledger per unit mass,
+  - `q_tag_inc_left`, `q_tag_inc_moved` and `q_tag_inc_negative`, under `water_tag_transport: increment` only: the increment ledger per unit mass,
     cumulative since the start of the run. See
     `water_tag_increment_ledger_variables`.
 
@@ -497,13 +497,17 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
                 long_name = "Cumulative Tagged Water Numerical Correction ($name)",
                 comments = "Water moved into (positive) or out of (negative) " *
                            "the tag `$name` by the tracer limiters and state " *
-                           "constraints, following the parent `ρq_tot` " *
-                           "correction. Cumulative since the start of the " *
-                           "run and carried through a restart, so a " *
-                           "budget over an interval is the difference of two " *
+                           "constraints. Cumulative since the start of the " *
+                           "run and carried through a restart, so the " *
+                           "change over an interval is the difference of two " *
                            "outputs, and a time average of this variable is " *
-                           "not meaningful. Identically zero unless a tracer " *
-                           "limiter or nonnegativity constraint is configured " *
+                           "not meaningful. For a partition tag (a region, no " *
+                           "source), partition repair writes here whenever " *
+                           "transport has driven any partition tag negative, " *
+                           "even with no limiter configured. A source tag gets " *
+                           "only the rescale that follows a limiter, " *
+                           "nonnegativity constraint or prescribed flow " *
+                           "correcting `ρq_tot`, so it stays zero without one " *
                            "(see `register_water_tagging_diagnostics!`). Each " *
                            "increment is accumulated at its own step's density " *
                            "and divided by the current density here, so this " *

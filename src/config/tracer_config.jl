@@ -468,7 +468,7 @@ end
     RESERVED_WATER_TAG_PREFIXES
 
 Name prefixes that a `water_tracers` tag may not take. A tag's diagnostic is
-`q_tag_<name>`. `fix_` starts the ledger `q_tag_fix_<name>` of the limiters
+`q_tag_<name>`. `fix_` starts the repair ledger `q_tag_fix_<name>` of the limiters
 and constraints, so a tag named `fix_a` would take the name of tag `a`'s
 ledger, and the first registered diagnostic would win silently. `upfix_` is
 held for the updraft copies' repair ledger, which collides the same way.
@@ -503,10 +503,10 @@ const RESERVED_WATER_TAG_PREFIXES = (
 
 Name prefixes that an `energy_source_tags` tag may not take, for the reason
 `RESERVED_WATER_TAG_PREFIXES` gives. A tag's diagnostic is
-`e_src_<name>`, and `fix_` starts the repair's ledger `e_src_fix_<name>`,
+`e_src_<name>`, and `fix_` starts the repair ledger `e_src_fix_<name>`,
 `fixgross_` and `fixcount_` its gross twin and count, `inc_` the
-increment correction's ledger `e_src_inc_left` and `e_src_inc_moved`, and
-`led_` the repair's ledger per mechanism `e_src_led_repair`.
+increment ledger `e_src_inc_left` and `e_src_inc_moved`, and
+`led_` the repair's mechanism ledger `e_src_led_repair`.
 """
 const RESERVED_ENERGY_SOURCE_TAG_PREFIXES =
     ("fix_", "fixgross_", "fixcount_", "inc_", "led_")
@@ -1759,7 +1759,7 @@ end
 The transport the water tags take when `water_tag_transport` is not set.
 
 G3_PLAN 4.3 fixed the rule before V-W3 ran. If the default mode's one-iteration
-part of the closure residual exceeds a quarter of the 0.2% budget, the follower
+part of the closure residual exceeds a quarter of the 0.2% tolerance, the follower
 becomes the default under EDMF. V-W3 measured twelve times that (FINDINGS W21
 on the record branch). So `increment` is the default in the default mode under
 `turbconv: prognostic_edmfx`, where the configuration shows it is supported:
