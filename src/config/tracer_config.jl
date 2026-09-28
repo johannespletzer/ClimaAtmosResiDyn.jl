@@ -1917,7 +1917,8 @@ end
 
 Assemble the `AtmosTagging` group from the `energy_tracers`, `water_tracers`
 (with `water_tag_updraft_copy`, `water_tag_transport`,
-`water_tag_precipitation` and `water_tag_ledger_per_tag`),
+`water_tag_precipitation`, `water_tag_ledger_per_tag` and
+`water_tag_leak_correction`),
 `energy_source_tags` (with `energy_source_tag_offset`, `energy_source_tag_repair`,
 `energy_source_tag_transport`, `energy_source_tag_updraft_copy` and
 `energy_source_tag_increment_allow_explicit_microphysics`),
@@ -2025,7 +2026,10 @@ function AtmosTagging(config::AtmosConfig)
             config.parsed_args,
             microphysics_model,
         )
-        # The two keys work together. Each tag keeps one ledger of each kind.
+        # `water_tag_leak_correction` needs EDMF, which `water_tag_precipitation`
+        # refuses, so the two are never on together. `water_tag_precipitation`
+        # and `water_tag_ledger_per_tag` work together. Each tag keeps one
+        # ledger of each kind.
         # The corrections of its rain and snow parts go to that ledger too, and
         # a move between its own parts leaves it unchanged, as it leaves
         # `q_tag_fix_<name>` unchanged.

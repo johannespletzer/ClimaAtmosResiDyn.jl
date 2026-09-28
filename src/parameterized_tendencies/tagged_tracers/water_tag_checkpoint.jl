@@ -79,7 +79,8 @@ It checks, in this order, and stops at the first mismatch:
     the microphysics audit, against what `model` configures. A checkpoint
     written before the ledgers per mechanism is refused here. A changed
     `water_tag_precipitation`, `water_tag_transport`,
-    `water_tag_updraft_copy` or `water_tag_ledger_per_tag` fails here,
+    `water_tag_updraft_copy`, `water_tag_ledger_per_tag` or
+    `water_tag_leak_correction` fails here,
     because the parts, the ledgers or the copies are in the file or are not.
     This needs no attribute, so it covers every checkpoint.
  2. The version attribute. A checkpoint without it predates this guard. Then
@@ -96,7 +97,7 @@ the cache is built, so a refused restart fails in seconds.
 What continues through a restart:
 
   - The state ledgers: the ledgers per mechanism, the increment follower's
-    ledger and each tag's own ledgers. They are fields of the state, so they
+    ledger, the leak correction's ledgers and each tag's own ledgers. They are fields of the state, so they
     continue from the checkpoint. A checkpoint without the configured ones is
     refused, in step 1. Under `water_tag_precipitation: true` the records of
     the microphysics audit are state fields too, and continue the same way.
