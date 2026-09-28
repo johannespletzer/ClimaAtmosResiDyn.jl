@@ -45,12 +45,16 @@ Always read the ClimaAtmos-specific guide before working in this repository:
 - Bookkeeping words: budget is the parent's, ledger is a tag's, record is a
   process's. Say "the parent budget" for `src/parent_budget`, name a tag
   ledger's kind (repair, increment or mechanism), and keep the noun "record"
-  for process records. The code follows the rule too. The parent budget's
-  per-step store is `BudgetJournal`, held in `adapter.journal`. Its event
-  hooks are `open_parent_budget_event!` and `close_parent_budget_event!`, and
-  its timestepper pin is `TimestepperPin`. Tag-side names that say "ledger"
-  already follow the rule. The stratospheric tracers' tracer budget is a
-  separate feature and keeps its name. See [the glossary](docs/src/glossary.md).
+  for process records. A threshold is a tolerance. The level a residual is
+  judged against, such as the tag closure's 0.2%, is its tolerance, never its
+  budget. A CI job's limit is its time limit. A budget in the physical sense,
+  such as the energy, water or TKE budget, keeps the word. The code follows
+  the rule too. The parent budget's per-step store is `BudgetJournal`, held
+  in `adapter.journal`. Its event hooks are `open_parent_budget_event!` and
+  `close_parent_budget_event!`, and its timestepper pin is `TimestepperPin`.
+  Tag-side names that say "ledger" already follow the rule. The stratospheric
+  tracers' tracer budget is a separate feature and keeps its name. See
+  [the glossary](docs/src/glossary.md).
 - Do not touch upstream naming conventions. Fork rules such as the
   bookkeeping words apply only to names and text the fork added. Upstream
   ClimaAtmos identifiers, file names and config keys stay as upstream has
