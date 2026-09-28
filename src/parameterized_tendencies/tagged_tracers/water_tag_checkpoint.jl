@@ -75,11 +75,12 @@ It checks, in this order, and stops at the first mismatch:
 
  1. The water tag fields in `Y`, the rain and snow parts, the increment's
     ledger, the tags' copies in the first updraft, then the ledgers per
-    mechanism, each tag's own ledgers, then the records of the microphysics
-    audit, against what `model` configures. A checkpoint written before the
-    ledgers per mechanism is refused here. A changed
+    mechanism, the leak correction's and each tag's own, then the records of
+    the microphysics audit, against what `model` configures. A checkpoint
+    written before the ledgers per mechanism is refused here. A changed
     `water_tag_precipitation`, `water_tag_transport`,
-    `water_tag_updraft_copy` or `water_tag_ledger_per_tag` fails here,
+    `water_tag_updraft_copy`, `water_tag_ledger_per_tag` or
+    `water_tag_leak_correction` fails here,
     because the parts, the ledgers or the copies are in the file or are not.
     This needs no attribute, so it covers every checkpoint.
  2. The version attribute. A checkpoint without it predates this guard. Then
@@ -96,7 +97,7 @@ the cache is built, so a refused restart fails in seconds.
 What continues through a restart:
 
   - The state ledgers: the ledgers per mechanism, the increment follower's
-    ledger and each tag's own ledgers. They are fields of the state, so they
+    ledger, the leak correction's ledgers and each tag's own ledgers. They are fields of the state, so they
     continue from the checkpoint. A checkpoint without the configured ones is
     refused, in step 1. Under `water_tag_precipitation: true` the records of
     the microphysics audit are state fields too, and continue the same way.
@@ -165,8 +166,20 @@ function check_water_tag_checkpoint(restart_file, model, Y, context)
         "q_tag_",
         "water_tag_updraft_copy",
     )
+    # The leak correction's ledgers (WP4c) are in the file or are not, so a
+    # changed `water_tag_leak_correction` fails here.
+    check_restart_fields(
+        restart_file,
+        Y,
+        is_water_tag_leak_mechanism_name,
+        water_tag_leak_mechanism_names(water_model),
+        "water tags' leak correction ledgers",
+        "water_tag_leak_correction",
+        "q_tag_led_",
+    )
     # Each tag's own ledgers (WP6, step 3) are in the file or are not, so a
-    # changed `water_tag_ledger_per_tag` fails here.
+    # changed `water_tag_ledger_per_tag` fails here. Those of the leak
+    # correction depend on `water_tag_leak_correction` too.
     check_restart_fields(
         restart_file,
         Y,
@@ -175,7 +188,7 @@ function check_water_tag_checkpoint(restart_file, model, Y, context)
             startswith(string(name), "q_tag_"),
         water_tag_per_tag_ledger_names(water_model),
         "water tags' own ledgers",
-        "water_tag_ledger_per_tag",
+        "water_tag_ledger_per_tag` and `water_tag_leak_correction",
         "q_tag_led_",
     )
     # The microphysics audit's records come with the rain and snow parts.

@@ -1870,11 +1870,55 @@ function tag_ledger_per_tag_from_config(value, key)
 end
 
 """
+    check_water_tag_leak_correction_supported(parsed_args, microphysics_model)
+
+Refuse `water_tag_leak_correction: true` where it has no leak to correct or
+where the leak is only partly corrected (WP4c).
+
+The leak is the diffusion of the rain and snow, which the tags diffuse and the
+parent does not. So it needs 1-moment microphysics, whose diffusing water
+`q_tot_eff` excludes rain and snow. Under 0-moment there is none, and the water
+tags support no other scheme (`check_water_tagging_supported`). The correction is built for the EDMF
+vertical diffusive flux, the path that WP4c's gate measured and retained, and
+its updrafts' mirror (FINDINGS W40 on the record branch). So it needs
+`turbconv: prognostic_edmfx` or `edonly_edmfx`. With
+`edmfx_sgs_diffusive_flux: false` there is no flux and no leak, and the key does
+nothing; it is accepted, so that a run with that flux switched off, such as
+WP4c's gate trials, keeps the rest of its configuration. The boundary-layer
+diffusion (`vert_diff`) leaks the same way, but the gate did not measure it, so
+the key is refused with it rather than leaving that part uncorrected.
+"""
+function check_water_tag_leak_correction_supported(parsed_args, microphysics_model)
+    microphysics_model isa NonEquilibriumMicrophysics1M || error(
+        "`water_tag_leak_correction: true` needs `microphysics_model: 1M`, got \
+        $(nameof(typeof(microphysics_model))). The leak it corrects is the \
+        diffusion of rain and snow, which the parent does not diffuse and the \
+        tags do. Without prognostic rain and snow there is no leak. Drop the \
+        key.",
+    )
+    get(parsed_args, "turbconv", nothing) in ("prognostic_edmfx", "edonly_edmfx") ||
+        error(
+            "`water_tag_leak_correction: true` needs `turbconv: \
+            prognostic_edmfx` or `edonly_edmfx`. It corrects the EDMF vertical \
+            diffusive flux and its updrafts' mirror, the paths WP4c's gate \
+            measured, and nothing else. Drop the key.",
+        )
+    isnothing(get(parsed_args, "vert_diff", nothing)) || error(
+        "`water_tag_leak_correction: true` is refused with `vert_diff: \
+        $(parsed_args["vert_diff"])`. The boundary-layer diffusion leaks the \
+        rain and snow as the EDMF flux does, but the correction is not built \
+        for it, so part of the leak would stay. Drop one of the two keys.",
+    )
+    return nothing
+end
+
+"""
     AtmosTagging(config::AtmosConfig)
 
 Assemble the `AtmosTagging` group from the `energy_tracers`, `water_tracers`
 (with `water_tag_updraft_copy`, `water_tag_transport`,
-`water_tag_precipitation` and `water_tag_ledger_per_tag`),
+`water_tag_precipitation`, `water_tag_ledger_per_tag` and
+`water_tag_leak_correction`),
 `energy_source_tags` (with `energy_source_tag_offset`, `energy_source_tag_repair`,
 `energy_source_tag_transport`, `energy_source_tag_updraft_copy` and
 `energy_source_tag_increment_allow_explicit_microphysics`),
@@ -1918,11 +1962,20 @@ function AtmosTagging(config::AtmosConfig)
         get(config.parsed_args, "water_tag_ledger_per_tag", false),
         "water_tag_ledger_per_tag",
     )
+    water_leak_correction = tag_ledger_per_tag_from_config(
+        get(config.parsed_args, "water_tag_leak_correction", false),
+        "water_tag_leak_correction",
+    )
     water_tagging_model = if isnothing(water_entries) || isempty(water_entries)
         water_precipitation && error(
             "`water_tag_precipitation: true` is set but `water_tracers` is \
             not, so there are no tags to split. Configure `water_tracers`, or \
             drop the key.",
+        )
+        water_leak_correction && error(
+            "`water_tag_leak_correction: true` is set but `water_tracers` is \
+            not, so there are no tags to correct. Configure `water_tracers`, \
+            or drop the key.",
         )
         water_ledger_per_tag && error(
             "`water_tag_ledger_per_tag: true` is set but `water_tracers` is \
@@ -1969,7 +2022,14 @@ function AtmosTagging(config::AtmosConfig)
         water_transport isa IncrementWaterTagTransport &&
             _explicit_one_moment_without_cross_blocks(config.parsed_args) &&
             error(_EXPLICIT_ONE_MOMENT_INCREMENT_MESSAGE)
-        # The two keys work together. Each tag keeps one ledger of each kind.
+        water_leak_correction && check_water_tag_leak_correction_supported(
+            config.parsed_args,
+            microphysics_model,
+        )
+        # `water_tag_leak_correction` needs EDMF, which `water_tag_precipitation`
+        # refuses, so the two are never on together. `water_tag_precipitation`
+        # and `water_tag_ledger_per_tag` work together. Each tag keeps one
+        # ledger of each kind.
         # The corrections of its rain and snow parts go to that ledger too, and
         # a move between its own parts leaves it unchanged, as it leaves
         # `q_tag_fix_<name>` unchanged.
@@ -1979,6 +2039,7 @@ function AtmosTagging(config::AtmosConfig)
             transport = water_transport,
             precipitation = water_precipitation,
             ledger_per_tag = water_ledger_per_tag,
+            leak_correction = water_leak_correction,
         )
     end
     source_entries = config.parsed_args["energy_source_tags"]

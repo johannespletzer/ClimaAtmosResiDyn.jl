@@ -2406,7 +2406,8 @@ struct IncrementWaterTagTransport <: AbstractWaterTagTransport end
 """
     WaterTaggingModel(tags::Tuple; updraft_copies = false,
                       transport = TracerWaterTagTransport(),
-                      ledger_per_tag = false, precipitation = false)
+                      ledger_per_tag = false, precipitation = false,
+                      leak_correction = false)
 
 Model component holding a `Tuple` of [`WaterTag`](@ref)s. Constructed from the
 `water_tracers` config entry; see `AtmosTagging(::AtmosConfig)` in
@@ -2436,6 +2437,11 @@ parts: `ρq_tag_<name>` holds the water that is neither rain nor snow,
 parameter too. It needs 1-moment microphysics, which the configuration checks,
 and it is refused here with updraft copies. See
 [`has_water_tag_precipitation`](@ref).
+
+`leak_correction`, from `water_tag_leak_correction`, charges each tag the EDMF
+vertical diffusion of its share of the rain and snow, which the parent does not
+diffuse, on the grid mean and on the copies (WP4c). Off by default. A type
+parameter too. See [`correct_water_tag_diffusion_leak!`](@ref).
 """
 struct WaterTaggingModel{
     T <: Tuple,
@@ -2443,6 +2449,7 @@ struct WaterTaggingModel{
     TR <: AbstractWaterTagTransport,
     LedgerPerTag,
     Precipitation,
+    LeakCorrection,
 }
     tags::T
     transport::TR
@@ -2453,6 +2460,7 @@ function WaterTaggingModel(
     transport::AbstractWaterTagTransport = TracerWaterTagTransport(),
     ledger_per_tag::Bool = false,
     precipitation::Bool = false,
+    leak_correction::Bool = false,
 )
     # The copies of the rain and snow parts are stage 3 of the design note
     # (design/RAIN_SNOW_TAGS.md on the record branch, section 13). Their build
@@ -2485,6 +2493,7 @@ function WaterTaggingModel(
         typeof(transport),
         ledger_per_tag,
         precipitation,
+        leak_correction,
     }(
         tags,
         transport,
@@ -2536,6 +2545,18 @@ has_water_tag_precipitation(::Nothing) = false
 has_water_tag_precipitation(
     ::WaterTaggingModel{T, U, TR, L, Precipitation},
 ) where {T, U, TR, L, Precipitation} = Precipitation
+
+"""
+    has_water_tag_leak_correction(model)
+
+Whether the water tags of `model` are charged the EDMF vertical diffusion of
+their share of the rain and snow, from the `water_tag_leak_correction` config
+key (WP4c). `false` without water tags.
+"""
+has_water_tag_leak_correction(::Nothing) = false
+has_water_tag_leak_correction(
+    ::WaterTaggingModel{T, U, TR, L, P, LeakCorrection},
+) where {T, U, TR, L, P, LeakCorrection} = LeakCorrection
 
 """
     EnergySourceTag{name}(region, source = :none)

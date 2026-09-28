@@ -418,6 +418,12 @@ function edmfx_sgs_diffusive_flux_tendency!(
             end
         end
 
+        # The loop has diffused each water tag's whole value at `K_h + K_e`.
+        # Under `water_tag_leak_correction` each tag takes back the `K_h`
+        # diffusion of its share of the rain and snow, which the parent does
+        # not diffuse, and so does each copy (WP4c). A no-op otherwise.
+        correct_water_tag_diffusion_leak!(Yₜ, Y, p, ᶠρK_h, apply_sgs_updraft)
+
         # Momentum diffusion
         ᶠstrain_rate = compute_strain_rate_face_vertical(ᶜu)
         @. Yₜ.c.uₕ -= C12(ᶜdivᵥ(-(2 * ᶠρaK_u * ᶠstrain_rate)) / Y.c.ρ)
