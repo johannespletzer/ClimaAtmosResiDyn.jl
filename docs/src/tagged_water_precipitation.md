@@ -57,11 +57,17 @@ What moves the parts:
   - **Diffusion.** Rain and snow take no vertical diffusion, hyperdiffusion or
     viscous sponge, so neither do their parts. The non-precipitating parts
     diffuse as the parent's diffusing water ``q_\mathrm{tot,eff}``, so the
-    paths `q_tag_leak_<path>` measures leak nothing, and those diagnostics
-    read zero. The hyperdiffusion takes each non-precipitating part as
+    paths `q_tag_leak_<path>` measures are designed to leak nothing through
+    the rain and snow. The hyperdiffusion takes each non-precipitating part as
     ``\nabla^2(\rho q_{\mathrm{tag},i}/\rho - \varphi_i q_\mathrm{tot,r})``,
     with ``\varphi_i`` its share of the compartment, as the parent takes
-    ``q_\mathrm{tot,eff} - q_\mathrm{tot,r}``.
+    ``q_\mathrm{tot,eff} - q_\mathrm{tot,r}``. One gap remains there. Where
+    the partition holds none of the non-precipitating water, because it is
+    not positive or every tag's part of it is at or below zero, every share is
+    zero. There the tags take no part of the reference profile
+    ``q_\mathrm{tot,r}``, and their sum does not follow the parent's
+    hyperdiffusion. `q_tag_leak_hyperdiff` reports that rate under the key.
+    It is not yet measured in a run. The other leak diagnostics read zero.
 
   - **Microphysics.** The 1-moment scheme moves water between the
     compartments. `water_tag_1m_flows` repeats the model's linearized
@@ -72,6 +78,18 @@ What moves the parts:
     net is the model's tendency to rounding. The rounding remainder moves by
     the net-flow rule. Where the flows are not available, that rule moves all
     of it.
+
+    The flows are summed over the substeps, and the tags are moved once per
+    model step. That is this key's definition of provenance over one step. It
+    is coarser than moving the tags after every substep, and it is a choice,
+    not an approximation that converges. A test compares the two on the
+    1-moment scheme. There, the largest difference over random states is about
+    1% of the water the flows move at steps of 30 to 120 s, and 5% at 15 s.
+    The mean is 0.1% to 0.2%. The difference does not fall as the step
+    shrinks, and it is not rounding: where it is largest it is at least 10⁷
+    times the test's rounding cut-off. Moving the tags per substep would cost
+    one composition solve per substep. Whether that is needed is to be decided
+    from runs that report this difference.
 
     The donor's composition is taken over the step, not only at its start
     (`water_tag_pool_shares`): the compartment's water at the start, mixed
@@ -135,9 +153,13 @@ the non-precipitating water changes by more than the rain or snow parts can
 give or take. The non-precipitating parts then also take the change of that
 compartment's negative part, by their composition, into the rescale's ledgers.
 So the tags' totals change by it.
-`q_tag_negative` is the sum of the three compartments' negative parts. So
-`q_tag_res`, `q_tag_negative` and the partition's parts add up to
-``q_\mathrm{tot}``, to rounding. `q_tag_res` and the closure check compare the
+This is a numerical convention, as option C is without the key, not a
+physical pathway. `q_tag_negative` is the sum of the three compartments'
+negative parts. So it can be non-zero where ``\rho q_\mathrm{tot}`` is
+positive, for example where rain is slightly negative. Without the key it is
+the negative part of ``\rho q_\mathrm{tot}`` alone, so its values with and
+without the key do not compare. `q_tag_res`, `q_tag_negative` and the
+partition's parts add up to ``q_\mathrm{tot}``, to rounding. `q_tag_res` and the closure check compare the
 parts with the sum of the three targets, and `q_ntag_res`, `q_rtag_res` and
 `q_stag_res` compare each compartment's parts with its own target. Under
 `water_tag_transport: increment` the follower takes the increment of the

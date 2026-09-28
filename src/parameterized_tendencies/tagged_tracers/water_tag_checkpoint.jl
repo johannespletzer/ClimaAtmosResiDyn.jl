@@ -67,6 +67,27 @@ function write_water_tag_checkpoint_attributes!(file, model::WaterTaggingModel)
     return nothing
 end
 
+# A checkpoint written under `water_tag_transport: increment` before known
+# issue 7's option C (#116) holds the follower's ledger without
+# `q_tag_inc_negative`. Its tags partition `ρq_tot`, not `max(ρq_tot, 0)`. The
+# field check that follows would say only that the ledger's fields differ, and
+# suggest a changed `water_tag_transport`. This names the real cause.
+check_restart_before_option_c(restart_file, Y, ::Nothing) = nothing
+function check_restart_before_option_c(restart_file, Y, water_model)
+    :q_tag_inc_negative in water_tag_increment_ledger_names(water_model) ||
+        return nothing
+    found = filter(is_water_tag_ledger_name, propertynames(Y.c))
+    (isempty(found) || :q_tag_inc_negative in found) && return nothing
+    error(
+        "The restart file $restart_file holds the water tags' increment \
+        ledger without `q_tag_inc_negative`. It was written before known \
+        issue 7's option C (#116), under which the tags partition the \
+        parent's non-negative water, `max(ρq_tot, 0)`, and the follower keeps \
+        that ledger. The tags in the file partition `ρq_tot` itself. Restart \
+        from a checkpoint written by this version, or start a new run.",
+    )
+end
+
 """
     check_water_tag_checkpoint(restart_file, model, Y, context)
 
@@ -81,7 +102,9 @@ It checks, in this order, and stops at the first mismatch:
     `water_tag_precipitation`, `water_tag_transport`,
     `water_tag_updraft_copy` or `water_tag_ledger_per_tag` fails here,
     because the parts, the ledgers or the copies are in the file or are not.
-    This needs no attribute, so it covers every checkpoint.
+    This needs no attribute, so it covers every checkpoint. A checkpoint
+    written under `increment` before known issue 7's option C (#116) lacks
+    `q_tag_inc_negative`, and the error says so.
  2. The version attribute. A checkpoint without it predates this guard. Then
     it warns that the tags' regions and sources cannot be checked, and lets
     the restart go on. A checkpoint with a version this guard does not read
@@ -133,6 +156,10 @@ function check_water_tag_checkpoint(restart_file, model, Y, context)
         "water_tag_precipitation",
         "ρq_",
     )
+    # A checkpoint from before option C lacks one of the increment's ledger
+    # fields. Name that cause before the check below suggests a changed
+    # transport.
+    check_restart_before_option_c(restart_file, Y, water_model)
     # The increment's ledger is in the file or is not, so a changed
     # `water_tag_transport` fails here, as a changed energy transport does.
     check_restart_fields(

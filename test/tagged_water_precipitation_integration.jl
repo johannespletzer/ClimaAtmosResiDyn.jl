@@ -651,4 +651,30 @@ sphere_part_sum(x, prefix) =
             @info "The non-precipitating parts' residual under $label" before after
         end
     end
+
+    # Where the partition holds none of `N`, the tags take no share of
+    # `q_tot_r`, and their sum does not follow the parent's hyperdiffusion.
+    # `q_tag_leak_hyperdiff` reports that rate. On the test state the
+    # partition holds water everywhere, so it is rounding there. With every
+    # tag's non-precipitating part emptied, it is the whole reference term.
+    @testset "The hyperdiffusion leak where the partition holds no water" begin
+        leak(Y) = parent(CA.water_tag_leak!(similar(Y.c.ρ), Y, p, Val(:hyperdiff)))
+        Y_empty = copy(Y_test)
+        for name in (:ρq_tag_tropics, :ρq_tag_extratropics)
+            parent(getproperty(Y_empty.c, name)) .= 0
+        end
+        (held, emptied) = (leak(Y_test), leak(Y_empty))
+        @test all(isfinite, held)
+        @test maximum(abs, emptied) > 0
+        @test maximum(abs, held) <= 1e-6 * maximum(abs, emptied)
+        # The other paths read zero under the key.
+        for path in (:vdiff, :hdiff, :sponge)
+            @test all(
+                iszero,
+                parent(CA.water_tag_leak!(similar(Y_empty.c.ρ), Y_empty, p, Val(path))),
+            )
+        end
+        @info "The hyperdiffusion leak, largest" held = maximum(abs, held) emptied =
+            maximum(abs, emptied)
+    end
 end
