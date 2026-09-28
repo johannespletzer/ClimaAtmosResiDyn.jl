@@ -185,6 +185,28 @@ function check_energy_source_checkpoint(restart_file, model, Y, context)
         "water_process_record",
         "prc_q_",
     )
+    # The ledger per mechanism (WP6), present whenever the tags are.
+    check_tag_mechanism_ledgers(
+        restart_file,
+        Y,
+        energy_source_mechanism_names(source_model),
+        "energy source",
+        "e_src_",
+        "energy_source_tags",
+    )
+    # Each tag's own ledgers (WP6, step 3) are in the file or are not, so a
+    # changed `energy_source_tag_ledger_per_tag` fails here.
+    check_restart_fields(
+        restart_file,
+        Y,
+        name ->
+            is_tag_per_tag_ledger_name(name) &&
+            startswith(string(name), "e_src_"),
+        energy_source_per_tag_ledger_names(source_model),
+        "energy source tags' own ledgers",
+        "energy_source_tag_ledger_per_tag",
+        "e_src_led_",
+    )
     # The fields match, so a file without tags goes with a model without them.
     isnothing(source_model) && return nothing
 

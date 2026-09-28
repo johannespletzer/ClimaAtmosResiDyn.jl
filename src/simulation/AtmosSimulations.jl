@@ -81,6 +81,7 @@ function setup_diagnostics_and_writers(
     CAD.register_tagging_diagnostics!(model)
     CAD.register_water_tagging_diagnostics!(model)
     CAD.register_energy_source_tagging_diagnostics!(model)
+    CAD.register_tag_ledger_diagnostics!(model)
     CAD.register_process_record_diagnostics!(model)
     CAD.register_stratospheric_tracer_diagnostics!(model)
 
@@ -449,6 +450,23 @@ function AtmosSimulation(
         Y, model, params, dt, start_date, resolved_steady_state_velocity;
         parent_budget,
     )
+    # The tags' ledgers: the cadence their audit reports, and, on a restart,
+    # the accumulators the checkpoint carried (WP6, step 3). Both write only
+    # the tags' own cache.
+    set_tag_ledger_cadence!(p, update_constrain_state_every)
+    isnothing(restart_file) ||
+        restore_tag_ledger_checkpoint!(p.tagging, restart_file, context)
+    # A restarted run reads the tag closure checks' void flags and the water
+    # check's negative water flag back from its checkpoint. The first check
+    # runs when the integrator starts, below.
+    isnothing(restart_file) ||
+        restore_tag_closure_void!(p.tagging, restart_file, context)
+    isnothing(restart_file) ||
+        restore_negative_water_void!(p.tagging, restart_file, context)
+    # The energy source tags' throughput level needs a verified partition. Only
+    # the cache's masks show whether there is one, so it is checked here.
+    default_callbacks &&
+        check_energy_source_throughput_setup(p.tagging, callback_kwargs)
 
     # Combine all callbacks. The parent budget's callback goes first: it reads the
     # accepted state and the stepper cache before any other callback runs.

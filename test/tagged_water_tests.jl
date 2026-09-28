@@ -1,4 +1,5 @@
 using Test
+import Random
 import ClimaAtmos as CA
 import ClimaCore.MatrixFields: @name
 
@@ -324,13 +325,29 @@ column_atmos_model(; kwargs...) =
                 ρq_tot = FT[4, 8, 12, 2, 0, 14, 14, 2, 12],
                 ρq_tag_tropics = FT[6, 4, 2, 0, -1, 3, 7, 1, -1],
                 ρq_tag_extratropics = FT[2, 4, 6, 0, -1, 3, 5, 1, 5],
+                q_tag_led_rescale = zeros(FT, 9),
+                q_tag_led_empty = zeros(FT, 9),
             )
             ᶜfix = (;
                 ρq_tag_tropics = zeros(FT, 9),
                 ρq_tag_extratropics = zeros(FT, 9),
             )
+            # The gross twin and the count are Float64 whatever `FT` is.
+            ᶜgross = (;
+                ρq_tag_tropics = zeros(9),
+                ρq_tag_extratropics = zeros(9),
+            )
+            ᶜcount = (;
+                ρq_tag_tropics = zeros(9),
+                ρq_tag_extratropics = zeros(9),
+            )
             p = (;
-                tagging = (; ᶜwater_fix = ᶜfix, ᶜwater_pos = zeros(FT, 9)),
+                tagging = (;
+                    ᶜwater_fix = ᶜfix,
+                    ᶜwater_fix_gross = ᶜgross,
+                    ᶜwater_fix_count = ᶜcount,
+                    ᶜwater_pos = zeros(FT, 9),
+                ),
             )
             model = CA.WaterTaggingModel(tags)
             before_tropics = copy(ᶜY.ρq_tag_tropics)
@@ -345,6 +362,15 @@ column_atmos_model(; kwargs...) =
             before_residual = ᶜρq_tot_before .- tagged(ᶜY)
 
             CA._rescale_water_tags!((; c = ᶜY), p, ᶜρq_tot_before, model)
+
+            # After one call the gross twin is the ledger's absolute value, and
+            # the count marks every cell the correction changed.
+            for name in (:ρq_tag_tropics, :ρq_tag_extratropics)
+                @test getproperty(ᶜgross, name) ≈ abs.(getproperty(ᶜfix, name))
+                @test getproperty(ᶜcount, name) ==
+                      Float64.(getproperty(ᶜfix, name) .!= 0)
+                @test eltype(getproperty(ᶜgross, name)) == Float64
+            end
 
             # Handing the parent's increment out in proportion to what each tag
             # holds preserves the partition wherever it was already closed
@@ -417,6 +443,15 @@ column_atmos_model(; kwargs...) =
             @test ᶜfix.ρq_tag_tropics[2] == 0 # untouched
             @test ᶜfix.ρq_tag_tropics[3] > 0  # borrowed up
 
+            # The state ledgers per mechanism (WP6) take the partition's
+            # change: the rescale where the parent held water, the emptying
+            # where it did not (cell 5, whose negative tags are removed).
+            ᶜpartition_fix = ᶜfix.ρq_tag_tropics .+ ᶜfix.ρq_tag_extratropics
+            held = ᶜρq_tot_before .> 0
+            @test ᶜY.q_tag_led_rescale ≈ ifelse.(held, ᶜpartition_fix, FT(0))
+            @test ᶜY.q_tag_led_empty ≈ ifelse.(held, FT(0), ᶜpartition_fix)
+            @test ᶜY.q_tag_led_empty[5] ≈ FT(2)
+
             # The repair ledger accumulates across calls rather than being overwritten
             CA._rescale_water_tags!((; c = ᶜY), p, copy(ᶜY.ρq_tot), model)
             @test ᶜfix.ρq_tag_tropics ≈ ᶜY.ρq_tag_tropics .- before_tropics
@@ -443,12 +478,22 @@ column_atmos_model(; kwargs...) =
                 ρq_tot = FT[10],
                 ρq_tag_tropics = FT[3],
                 ρq_tag_extratropics = FT[3],
+                q_tag_led_rescale = zeros(FT, 1),
+                q_tag_led_empty = zeros(FT, 1),
             )
             p = (;
                 tagging = (;
                     ᶜwater_fix = (;
                         ρq_tag_tropics = zeros(FT, 1),
                         ρq_tag_extratropics = zeros(FT, 1),
+                    ),
+                    ᶜwater_fix_gross = (;
+                        ρq_tag_tropics = zeros(1),
+                        ρq_tag_extratropics = zeros(1),
+                    ),
+                    ᶜwater_fix_count = (;
+                        ρq_tag_tropics = zeros(1),
+                        ρq_tag_extratropics = zeros(1),
                     ),
                     ᶜwater_pos = zeros(FT, 1),
                 ),
@@ -500,6 +545,8 @@ column_atmos_model(; kwargs...) =
                 ρq_tag_tropics = FT[6, 1, 2],
                 ρq_tag_extratropics = FT[-2, -3, 2],
                 ρq_tag_evap = FT[-1, 3, 1],
+                q_tag_led_repair = zeros(FT, 3),
+                q_tag_led_repairnet = zeros(FT, 3),
             )
             ᶜwater_fix = (;
                 ρq_tag_tropics = fill(FT(0.5), 3),
@@ -509,9 +556,21 @@ column_atmos_model(; kwargs...) =
             before_tropics = copy(ᶜY.ρq_tag_tropics)
             before_extra = copy(ᶜY.ρq_tag_extratropics)
             before_evap = copy(ᶜY.ρq_tag_evap)
+            ᶜwater_fix_gross = (;
+                ρq_tag_tropics = zeros(3),
+                ρq_tag_extratropics = zeros(3),
+                ρq_tag_evap = zeros(3),
+            )
+            ᶜwater_fix_count = (;
+                ρq_tag_tropics = zeros(3),
+                ρq_tag_extratropics = zeros(3),
+                ρq_tag_evap = zeros(3),
+            )
             p = (;
                 tagging = (;
                     ᶜwater_fix,
+                    ᶜwater_fix_gross,
+                    ᶜwater_fix_count,
                     ᶜwater_pos = zeros(FT, 3),
                     ᶜwater_neg = zeros(FT, 3),
                 ),
@@ -539,6 +598,27 @@ column_atmos_model(; kwargs...) =
                   fill(FT(0.5), 3) .+ ᶜY.ρq_tag_tropics .- before_tropics
             @test ᶜwater_fix.ρq_tag_extratropics ≈
                   fill(FT(0.5), 3) .+ ᶜY.ρq_tag_extratropics .- before_extra
+            # The gross twin takes the change, not the ledger's prior value;
+            # the source tag's stays at zero, since the repair leaves it.
+            @test ᶜwater_fix_gross.ρq_tag_tropics ≈
+                  abs.(ᶜY.ρq_tag_tropics .- before_tropics)
+            @test ᶜwater_fix_gross.ρq_tag_extratropics ≈
+                  abs.(ᶜY.ρq_tag_extratropics .- before_extra)
+            @test all(iszero, ᶜwater_fix_gross.ρq_tag_evap)
+            @test ᶜwater_fix_count.ρq_tag_extratropics == [1.0, 1.0, 0.0]
+            # The state ledgers (WP6): the water moved between the partition's
+            # tags, half the sum of their changes less their net, and the net
+            # apart. In cell 2 every tag is zeroed: tropics gives 1 to
+            # extratropics, and 2 more is added.
+            Δ = (
+                ᶜY.ρq_tag_tropics .- before_tropics,
+                ᶜY.ρq_tag_extratropics .- before_extra,
+            )
+            @test ᶜY.q_tag_led_repair ≈
+                  (abs.(Δ[1]) .+ abs.(Δ[2]) .- abs.(Δ[1] .+ Δ[2])) ./ 2
+            @test ᶜY.q_tag_led_repairnet ≈ Δ[1] .+ Δ[2]
+            @test ᶜY.q_tag_led_repair ≈ FT[2, 1, 0]
+            @test ᶜY.q_tag_led_repairnet ≈ FT[0, 2, 0]
         end
 
         @testset "Sedimentation shares ($FT)" begin
@@ -723,6 +803,9 @@ column_atmos_model(; kwargs...) =
         # Residual sums only the region tag, so the source tag is left out
         @test q_res.compute!(nothing, state, cache, 0.0) == [0.006, 0.008]
         @test q_fix.compute!(nothing, state, cache, 0.0) == [-0.001, 0.0]
+        # Beside each ledger, its gross twin and its count.
+        @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "q_tag_fixgross_tropics")
+        @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "q_tag_fixcount_evap")
 
         # Vapor share: all vapor in the first column, half condensed in the
         # second (ρq_liq = 2 * 0.0025 = 0.005 of ρq_tot = 0.02)
@@ -747,12 +830,33 @@ column_atmos_model(; kwargs...) =
         # closure.
         source_only_tags =
             (CA.WaterTag{:forced}(nothing, :external_forcing),)
+        # The copies' residual and the leaks describe a partition too, so a
+        # region model with copies registers them first, and the source-only
+        # model with copies must clear them.
         CA.Diagnostics.register_water_tagging_diagnostics!(
-            CA.WaterTaggingModel(source_only_tags),
+            CA.WaterTaggingModel(tags; updraft_copies = true),
         )
-        @test_throws ErrorException CA.Diagnostics.get_diagnostic_variable(
+        @test !isnothing(CA.Diagnostics.get_diagnostic_variable("q_tag_copy_res"))
+        @test !isnothing(CA.Diagnostics.get_diagnostic_variable("q_tag_leak_vdiff"))
+        # The residual's metadata no longer says the operators are identical.
+        @test !occursin(
+            "identical",
+            CA.Diagnostics.get_diagnostic_variable("q_tag_res").comments,
+        )
+        CA.Diagnostics.register_water_tagging_diagnostics!(
+            CA.WaterTaggingModel(source_only_tags; updraft_copies = true),
+        )
+        for short_name in (
             "q_tag_res",
+            "q_tag_copy_res",
+            "q_tag_leak_vdiff",
+            "q_tag_leak_diffusion_up",
+            "q_tag_upfix_forced",
         )
+            @test_throws ErrorException CA.Diagnostics.get_diagnostic_variable(
+                short_name,
+            )
+        end
 
         # A later region model installs a fresh residual over its own tags.
         # The earlier field stays in the state with a large value, so this
@@ -800,5 +904,1970 @@ column_atmos_model(; kwargs...) =
             CA.sedimentation_velocity_name(@name(ρq_tag_tropics)),
         )
         @test isnothing(CA.condensate_phase(@name(ρq_tag_tropics)))
+    end
+end
+
+# The water tags' restart guard. As the energy source tags' guard, it needs no
+# simulation: a small checkpoint, and a model and a state that carry only what
+# the check reads.
+@testset "The water tags' restart guard" begin
+    context = CA.ClimaComms.context()
+    HDF5 = CA.InputOutput.HDF5
+    tags(width = 100.0; sources = (:surface_flux,)) = (
+        CA.WaterTag{:tropo}(CA.TanhAltitudeRegion(750.0, width, false)),
+        CA.WaterTag{:strat}(CA.TanhAltitudeRegion(750.0, width, true)),
+        CA.WaterTag{:evap}(nothing, sources),
+    )
+    water_model(; width = 100.0, sources = (:surface_flux,), copies = false) =
+        CA.WaterTaggingModel(tags(width; sources); updraft_copies = copies)
+    atmos(model) = (; water_tagging_model = model)
+    names = (:ρq_tag_tropo, :ρq_tag_strat, :ρq_tag_evap)
+    copy_names = (:q_tag_tropo, :q_tag_strat, :q_tag_evap)
+    updraft(names...) = NamedTuple{(:ρa, names...)}(Tuple(zeros(1 + length(names))))
+    # A state written with WP6 holds the ledgers per mechanism, the copies'
+    # two among them when the updraft holds copies.
+    ledgers(copies) = map(
+        _ -> 0.0,
+        NamedTuple{CA.water_tag_mechanism_names(water_model(; copies))}(
+            CA.water_tag_mechanism_names(water_model(; copies)),
+        ),
+    )
+    state(
+        names...;
+        updrafts = (),
+        copies = !isempty(updrafts) && length(first(updrafts)) > 1,
+        with_ledgers = true,
+    ) = (;
+        c = (;
+            NamedTuple{(:ρ, :ρq_tot, names...)}(Tuple(zeros(2 + length(names))))...,
+            (with_ledgers ? ledgers(copies) : (;))...,
+            (isempty(updrafts) ? (;) : (; sgsʲs = updrafts))...,
+        ),
+    )
+    tagged = state(names...)
+    directory = mktempdir()
+    function checkpoint(model, name; record = true, edit = file -> nothing)
+        path = joinpath(directory, "$name.hdf5")
+        writer = CA.InputOutput.HDF5Writer(path, context)
+        record && CA.write_water_tag_checkpoint_attributes!(writer.file, model)
+        edit(writer.file)
+        Base.close(writer)
+        return path
+    end
+    check(path, model, Y = tagged) =
+        CA.check_water_tag_checkpoint(path, atmos(model), Y, context)
+
+    written = checkpoint(water_model(), "written")
+    # The same tags restart.
+    @test isnothing(check(written, water_model()))
+    # A changed region or source is refused, and the error names both.
+    @test_throws r"water tag `tropo`.*width = 100\.0.*width = 200\.0" check(
+        written,
+        water_model(; width = 200.0),
+    )
+    @test_throws r"water tag `evap`.*sources `surface_flux`.*sources `none`" check(
+        written,
+        water_model(; sources = ()),
+    )
+    # A tag field missing from the file, or one the run does not configure.
+    @test_throws r"water tags tropo, strat, and this run.*Missing from the file: evap" check(
+        written,
+        water_model(),
+        state(:ρq_tag_tropo, :ρq_tag_strat),
+    )
+    @test_throws r"Not configured: tropo, strat, evap.*`water_tracers`" check(
+        written,
+        nothing,
+    )
+    # The copies: a changed `water_tag_updraft_copy` is refused either way.
+    with_copies = state(names...; updrafts = (updraft(copy_names...),))
+    without_copies = state(names...; updrafts = (updraft(),))
+    @test isnothing(check(written, water_model(; copies = true), with_copies))
+    @test isnothing(check(written, water_model(), without_copies))
+    @test_throws r"updraft copies of the water tags none.*`water_tag_updraft_copy`" check(
+        written,
+        water_model(; copies = true),
+        without_copies,
+    )
+    @test_throws r"Not configured: tropo, strat, evap.*`water_tag_updraft_copy`" check(
+        written,
+        water_model(),
+        with_copies,
+    )
+    # A file with no updrafts does not pass a run with copies.
+    @test_throws r"updraft copies of the water tags none" check(
+        written,
+        water_model(; copies = true),
+    )
+    # The increment's ledger: a changed `water_tag_transport` is refused either
+    # way, since the ledger is in the file or is not.
+    increment_model = CA.WaterTaggingModel(
+        tags();
+        transport = CA.IncrementWaterTagTransport(),
+    )
+    with_ledger = (;
+        c = (;
+            tagged.c...,
+            q_tag_inc_left = 0.0,
+            q_tag_inc_moved = 0.0,
+            q_tag_inc_negative = 0.0,
+        ),
+    )
+    @test isnothing(check(written, increment_model, with_ledger))
+    @test_throws r"water_tag_transport" check(written, increment_model)
+    @test_throws r"water_tag_transport" check(
+        written,
+        water_model(),
+        with_ledger,
+    )
+
+    # A checkpoint from before the ledgers per mechanism is refused (WP6).
+    @test_throws r"before the water tags kept their ledgers per mechanism" check(
+        written,
+        water_model(),
+        state(names...; with_ledgers = false),
+    )
+
+    # Each tag's own ledgers (WP6, step 3) are in the file or are not, so a
+    # changed `water_tag_ledger_per_tag` is refused either way.
+    per_tag_model = CA.WaterTaggingModel(tags(); ledger_per_tag = true)
+    with_per_tag = (;
+        c = (;
+            tagged.c...,
+            q_tag_led_fix_tropo = 0.0,
+            q_tag_led_fix_strat = 0.0,
+            q_tag_led_fix_evap = 0.0,
+        ),
+    )
+    @test isnothing(check(written, per_tag_model, with_per_tag))
+    @test_throws r"water tags' own ledgers none.*`water_tag_ledger_per_tag`" check(
+        written,
+        per_tag_model,
+    )
+    @test_throws r"Not configured: fix_tropo.*`water_tag_ledger_per_tag`" check(
+        written,
+        water_model(),
+        with_per_tag,
+    )
+
+    # The leak correction's ledgers (WP4c) are in the file or are not, so a
+    # changed `water_tag_leak_correction` is refused either way.
+    leak_model = CA.WaterTaggingModel(tags(); leak_correction = true)
+    with_leak = (; c = (; tagged.c..., q_tag_led_leaknet = 0.0))
+    @test isnothing(check(written, leak_model, with_leak))
+    @test_throws r"leak correction ledgers none.*`water_tag_leak_correction`" check(
+        written,
+        leak_model,
+    )
+    @test_throws r"Not configured: leaknet.*`water_tag_leak_correction`" check(
+        written,
+        water_model(),
+        with_leak,
+    )
+    # With each tag's ledgers, the correction's own per tag are checked with
+    # them, and the error names both keys.
+    leak_per_tag_model =
+        CA.WaterTaggingModel(tags(); leak_correction = true, ledger_per_tag = true)
+    with_leak_per_tag = (;
+        c = (;
+            with_leak.c...,
+            with_per_tag.c...,
+            q_tag_led_leak_tropo = 0.0,
+            q_tag_led_leak_strat = 0.0,
+            q_tag_led_leak_evap = 0.0,
+        ),
+    )
+    @test isnothing(check(written, leak_per_tag_model, with_leak_per_tag))
+    @test_throws r"Missing from the file: leak_tropo.*`water_tag_leak_correction`" check(
+        written,
+        leak_per_tag_model,
+        (; c = (; with_leak.c..., with_per_tag.c...)),
+    )
+
+    # A checkpoint from before the guard is checked by its fields, with a
+    # warning, and restarts.
+    unrecorded = checkpoint(water_model(), "unrecorded"; record = false)
+    @test_logs (:warn, r"written before") check(unrecorded, water_model())
+    # A checkpoint in a version of the format this guard does not read is
+    # refused. Version 2 added `water_tag_precipitation`.
+    newer = checkpoint(
+        water_model(),
+        "newer";
+        edit = file -> begin
+            HDF5.delete_attribute(file, "water_tag_checkpoint")
+            HDF5.write_attribute(file, "water_tag_checkpoint", 3)
+        end,
+    )
+    @test_throws r"version 3 of the checkpoint format.*reads version 2" check(
+        newer,
+        water_model(),
+    )
+    # A tag the file holds but records no definition for is refused.
+    undefined = checkpoint(
+        water_model(),
+        "undefined";
+        edit = file -> HDF5.delete_attribute(file, "water_tag.evap"),
+    )
+    @test_throws r"no definition for the water tag `evap`" check(
+        undefined,
+        water_model(),
+    )
+end
+
+# The default mode's plume and the audit's blend factors, point by point. The
+# EDMF column in `tagged_water_edmf_integration.jl` checks them in the model.
+@testset "The water plume and the exchange's bound" begin
+    partition = Val((true, true, false))
+    step = CA.WaterPlumeStep(partition)
+    # tropo, strat, and the source tag evap; the partition holds 0.008.
+    ε̄ = (0.006, 0.002, 0.001)
+    # The lowest level starts from the grid mean's composition, scaled so the
+    # partition holds the updraft's water. The source tag keeps its share.
+    start = step((NaN, NaN, NaN), (ε̄, 0.0, false, 0.010))
+    @test start[1] + start[2] ≈ 0.010
+    @test start[1] / start[2] ≈ 3
+    @test start[3] / (start[1] + start[2]) ≈ ε̄[3] / (ε̄[1] + ε̄[2])
+    # A level that mixes nothing keeps the composition and takes the new water.
+    kept = step(start, ((0.001, 0.003, 0.0), 0.0, false, 0.012))
+    @test kept[1] + kept[2] ≈ 0.012
+    @test kept[1] / kept[2] ≈ 3
+    # Full mixing takes the grid mean's composition.
+    mixed = step(start, ((0.001, 0.003, 0.0), 1.0, false, 0.008))
+    @test mixed[1] / mixed[2] ≈ 1 / 3
+    @test mixed[1] + mixed[2] ≈ 0.008
+    # Where the plume starts again, it takes the grid mean's composition.
+    restarted = step(start, (ε̄, 0.5, true, 0.010))
+    @test collect(restarted) ≈ collect(ε̄ .* (0.010 / 0.008))
+    # Without water in the updraft the values are left as mixed.
+    @test step(start, (ε̄, 0.5, false, 0.0)) ==
+          CA._plume_step(start, (ε̄, 0.5, false))
+    # A partition that holds a denormal amount is still scaled to finite
+    # values: the share is taken before the water.
+    tiny = step((NaN, NaN, NaN), ((1e-322, 1e-322, 0.0), 0.0, false, 0.010))
+    @test all(isfinite, tiny)
+    @test tiny[1] + tiny[2] ≈ 0.010
+
+    # The audit's factors are those the exchange applies, and `-1` where it
+    # does not run.
+    factors = CA.WaterBlendFactors(partition)
+    differences = CA.ShareDifferences(partition, false)
+    @test factors(start, ε̄, -1.0, 1.0) == (-1.0, -1.0, -1.0)
+    @test factors(start, ε̄, 1.0, 0.0) == (-1.0, -1.0, -1.0)
+    # The same composition leaves nothing to bound.
+    @test factors(ε̄ .* 2, ε̄, 0.5, 1.0) == (1.0, 1.0, 1.0)
+    @test all(abs.(differences(ε̄ .* 2, ε̄, 0.5, 1.0)) .< 1e-16)
+    # A plume far richer in `tropo` than the grid mean, with little room,
+    # binds the partition's common factor below one.
+    rich = (0.0099, 0.0001, 0.001)
+    θ = factors(rich, ε̄, 0.05, 1.0)
+    @test 0 <= θ[1] < 1
+    @test θ[1] == θ[2]
+    unbound = differences(rich, ε̄, Inf, 1.0)
+    bound = differences(rich, ε̄, 0.05, 1.0)
+    @test bound[1] ≈ θ[1] * unbound[1]
+
+    # The copies' sedimentation Jacobian: the falling share's derivative.
+    @test CA.water_tag_copy_fall_share_derivative(0.002, 0.010) ≈ 0.2
+    @test CA.water_tag_copy_fall_share_derivative(0.002, 0.0) == 0
+end
+
+# The default mode's exchange needs region tags that partition the domain. It
+# reads only the masks, so plain vectors stand in for the fields.
+@testset "The exchange needs a region partition" begin
+    edmf = CA.PrognosticEDMFX{1, true}(1e-5)
+    region(above) = CA.TanhAltitudeRegion(750.0, 100.0, above)
+    tags = (
+        CA.WaterTag{:tropo}(region(false)),
+        CA.WaterTag{:strat}(region(true)),
+        CA.WaterTag{:evap}(nothing, (:surface_flux,)),
+    )
+    atmos(model; sgs_mass_flux = true) = (;
+        water_tagging_model = model,
+        turbconv_model = edmf,
+        edmfx_model = (; sgs_mass_flux),
+    )
+    masks(tropo, strat) = (; ᶜwater_masks = (; ρq_tag_tropo = tropo, ρq_tag_strat = strat))
+    closed = masks([1.0, 0.5, 0.0], [0.0, 0.5, 1.0])
+    gap = masks([1.0, 0.3, 0.0], [0.0, 0.5, 1.0])
+    model = CA.WaterTaggingModel(tags)
+    @test isnothing(CA.check_water_tag_exchange_partition(closed, atmos(model)))
+    @test_throws r"masks sum to 1\s+only to within" CA.check_water_tag_exchange_partition(
+        gap,
+        atmos(model),
+    )
+    # Without region tags there is nothing to exchange.
+    sources_only = CA.WaterTaggingModel((tags[3],))
+    @test_throws r"These tags have\s+none" CA.check_water_tag_exchange_partition(
+        (; ᶜwater_masks = (;)),
+        atmos(sources_only),
+    )
+    # The copies, and a run without the SGS mass flux, need no partition.
+    copies = CA.WaterTaggingModel(tags; updraft_copies = true)
+    @test isnothing(CA.check_water_tag_exchange_partition(gap, atmos(copies)))
+    @test isnothing(
+        CA.check_water_tag_exchange_partition(
+            gap,
+            atmos(model; sgs_mass_flux = false),
+        ),
+    )
+end
+
+# The copies' names come from the model's type. The Jacobian asks for them in
+# every update of every EDMF run, so the call must infer and not allocate.
+@testset "The copies' names are a constant" begin
+    tags = (
+        CA.WaterTag{:tropo}(CA.TanhAltitudeRegion(750.0, 100.0, false)),
+        CA.WaterTag{:evap}(nothing, (:surface_flux,)),
+    )
+    copies = CA.WaterTaggingModel(tags; updraft_copies = true)
+    plain = CA.WaterTaggingModel(tags)
+    names = @inferred CA.water_tag_copy_sgs_names(copies)
+    @test names == (
+        CA.MatrixFields.FieldName(:q_tag_tropo),
+        CA.MatrixFields.FieldName(:q_tag_evap),
+    )
+    @test (@inferred CA.water_tag_copy_sgs_names(plain)) == ()
+    @test (@inferred CA.water_tag_copy_sgs_names(nothing)) == ()
+    CA.water_tag_copy_sgs_names(copies)
+    @test (@allocated CA.water_tag_copy_sgs_names(copies)) == 0
+end
+
+# `water_tag_transport: increment`: the key, the model's refusals, the stepper
+# check it shares with the energy source tags, and the one hook both families'
+# corrections run in. The correction itself runs in
+# `tagged_water_increment_integration.jl`.
+@testset "The water tags following the implicit increment" begin
+    CTS = CA.CTS
+    region(above) = CA.TanhAltitudeRegion(750.0, 100.0, above)
+    tags = (
+        CA.WaterTag{:tropo}(region(false)),
+        CA.WaterTag{:strat}(region(true)),
+        CA.WaterTag{:evap}(nothing, (:surface_flux,)),
+    )
+
+    @testset "The key" begin
+        @test CA.water_tag_transport_from_config("tracer") isa
+              CA.TracerWaterTagTransport
+        @test CA.water_tag_transport_from_config(nothing) isa
+              CA.TracerWaterTagTransport
+        @test CA.water_tag_transport_from_config("increment") isa
+              CA.IncrementWaterTagTransport
+        @test_throws r"must be `tracer` or `increment`" CA.water_tag_transport_from_config(
+            "enthalpy",
+        )
+        increment = CA.WaterTaggingModel(
+            tags;
+            transport = CA.IncrementWaterTagTransport(),
+        )
+        @test CA.follows_water_increment(increment)
+        @test !CA.follows_water_increment(CA.WaterTaggingModel(tags))
+        @test !CA.follows_water_increment(nothing)
+        @test CA.water_tag_increment_ledger_names(increment) ==
+              (:q_tag_inc_left, :q_tag_inc_moved, :q_tag_inc_negative)
+        @test CA.water_tag_increment_ledger_names(CA.WaterTaggingModel(tags)) ==
+              ()
+        @test CA.water_tag_increment_ledger_variables(1.0, increment) ==
+              (; q_tag_inc_left = 0.0, q_tag_inc_moved = 0.0, q_tag_inc_negative = 0.0)
+        @test CA.water_tag_increment_ledger_variables(1.0, nothing) == (;)
+        # The ledger's names are not tracers, so no transport reaches them,
+        # and the reserved tag names keep the diagnostics apart.
+        @test !CA.is_tracer_var(:q_tag_inc_left)
+        @test CA.is_water_tag_ledger_name(:q_tag_inc_moved)
+        @test !CA.is_water_tag_ledger_name(:ρq_tag_tropo)
+        # The copies and the increment go together.
+        @test CA.follows_water_increment(
+            CA.WaterTaggingModel(
+                tags;
+                updraft_copies = true,
+                transport = CA.IncrementWaterTagTransport(),
+            ),
+        )
+    end
+
+    # The owner's review of #102, point 4: on two equal cells with mismatch
+    # (1, -0.1), spreading the column's total by |m| leaves out (0.818,
+    # 0.082) and moves (0.182, -0.182), more than the second cell's mismatch.
+    # By the same-sign rule it leaves out (0.9, 0) and moves (0.1, -0.1).
+    @testset "The part left out goes where the mismatch has its sign" begin
+        for m in ([1.0, -0.1], [-1.0, 0.1], [0.3, 0.3], [0.5, -0.5])
+            M = sum(m)
+            weight = CA.water_increment_left_weight.(m, M)
+            left = sum(weight) > 0 ? M .* weight ./ sum(weight) : zero(m)
+            moved = m .- left
+            @test sum(left) ≈ M atol = 1e-15
+            @test abs(sum(moved)) < 1e-15
+            @test all(abs.(moved) .<= abs.(m) .+ 1e-15)
+            @test all(left .* m .>= 0)
+        end
+        m = [1.0, -0.1]
+        weight = CA.water_increment_left_weight.(m, sum(m))
+        @test sum(m) .* weight ./ sum(weight) ≈ [0.9, 0.0]
+    end
+
+    @testset "The model's refusals" begin
+        # Without a partition the source tags would take the parent's whole
+        # implicit transport.
+        @test_throws r"needs region tags without\s+sources" CA.WaterTaggingModel(
+            (tags[3],);
+            transport = CA.IncrementWaterTagTransport(),
+        )
+        model = CA.WaterTaggingModel(
+            tags;
+            transport = CA.IncrementWaterTagTransport(),
+        )
+        masks(tropo, strat) =
+            (; ρq_tag_tropo = tropo, ρq_tag_strat = strat)
+        names = CA.water_region_tag_state_names(model)
+        @test isnothing(
+            CA._check_water_increment_partition(
+                masks([1.0, 0.5, 0.0], [0.0, 0.5, 1.0]),
+                names,
+                model,
+            ),
+        )
+        @test_throws r"sum to 1 only to within" CA._check_water_increment_partition(
+            masks([1.0, 0.3, 0.0], [0.0, 0.5, 1.0]),
+            names,
+            model,
+        )
+        # A uniform gap of half a percent, 2.5 times the closure tolerance, is
+        # refused too (the owner's review of #102).
+        @test_throws r"sum to 1 only to within" CA._check_water_increment_partition(
+            masks([0.5, 0.5, 0.5], [0.495, 0.495, 0.495]),
+            names,
+            model,
+        )
+        # A region and its complement, as the model builds them on a column,
+        # pass in both float types.
+        for FT in (Float32, Float64)
+            column_region(above) =
+                CA.TanhAltitudeRegion(FT(750), FT(100), above)
+            column_tags = (
+                CA.WaterTag{:tropo}(column_region(false)),
+                CA.WaterTag{:strat}(column_region(true)),
+            )
+            column_model = CA.WaterTaggingModel(
+                column_tags;
+                transport = CA.IncrementWaterTagTransport(),
+            )
+            ᶜcoordinates = CA.Fields.coordinate_field(
+                CA.ClimaCore.CommonSpaces.ColumnSpace(
+                    FT;
+                    z_min = 0,
+                    z_max = 1500,
+                    z_elem = 64,
+                    staggering = CA.ClimaCore.CommonSpaces.CellCenter(),
+                ),
+            )
+            column_masks = CA._tag_masks(ᶜcoordinates, column_tags)
+            @test isnothing(
+                CA._check_water_increment_partition(
+                    column_masks,
+                    CA.water_region_tag_state_names(column_model),
+                    column_model,
+                ),
+            )
+            @test CA.water_increment_partition_tolerance(FT) == 100 * eps(FT)
+        end
+        # The default transport only warns about a gap, elsewhere.
+        @test isnothing(
+            CA._check_water_increment_partition(
+                masks([1.0, 0.3, 0.0], [0.0, 0.5, 1.0]),
+                names,
+                CA.WaterTaggingModel(tags),
+            ),
+        )
+    end
+
+    @testset "The stepper check, shared with the energy source tags" begin
+        # 0M, stepped implicitly: the explicit-1M refusal does not apply.
+        atmos(transport) = (;
+            water_tagging_model = CA.WaterTaggingModel(tags; transport),
+            microphysics_model = CA.EquilibriumMicrophysics0M(),
+            microphysics_tendency_timestepping = CA.Implicit(),
+        )
+        increment = atmos(CA.IncrementWaterTagTransport())
+        newton = CTS.NewtonsMethod()
+        imex(tableau) = CTS.IMEXAlgorithm(tableau, newton)
+        T_imp! = (Yₜ, Y, p, t) -> nothing
+        post = (dY, U, p, t) -> nothing
+        check = CA.check_water_tag_increment_supported
+        # ARS222, which the tagging experiments run, and ARS343, the default,
+        # solve every stage they use.
+        for tableau in (CTS.ARS222(), CTS.ARS343(), CTS.SSP222())
+            @test isnothing(CA.implicit_increment_gap(imex(tableau), T_imp!))
+            @test isnothing(check(increment, imex(tableau), T_imp!, post))
+        end
+        @test_throws r"implicit tendency without a solve" check(
+            increment,
+            imex(CTS.SSP333()),
+            T_imp!,
+            post,
+        )
+        @test_throws r"flow is prescribed" check(
+            increment,
+            imex(CTS.ARS343()),
+            nothing,
+            nothing,
+        )
+        @test_throws r"not an IMEX algorithm with a Newton method" check(
+            increment,
+            CTS.ExplicitAlgorithm(CTS.SSP33ShuOsher()),
+            T_imp!,
+            post,
+        )
+        # Without the parent's own post-solve correction the hook would
+        # change the model.
+        @test_throws r"no post-solve correction of its own" check(
+            increment,
+            imex(CTS.ARS343()),
+            T_imp!,
+            nothing,
+        )
+        # The default transport is never refused.
+        @test isnothing(
+            check(
+                atmos(CA.TracerWaterTagTransport()),
+                imex(CTS.SSP333()),
+                T_imp!,
+                nothing,
+            ),
+        )
+        @test isnothing(
+            check((; water_tagging_model = nothing), imex(CTS.SSP333()), T_imp!, nothing),
+        )
+    end
+
+    @testset "One hook for both families" begin
+        post = (dY, U, p, t) -> nothing
+        water = CA.WaterTaggingModel(
+            tags;
+            transport = CA.IncrementWaterTagTransport(),
+        )
+        energy_tags = (
+            CA.EnergySourceTag{:strat}(region(true)),
+            CA.EnergySourceTag{:tropo}(region(false)),
+        )
+        energy = CA.EnergySourceTaggingModel(
+            energy_tags,
+            50000.0;
+            transport = CA.EnthalpyIncrementEnergySourceTransport(),
+        )
+        both = CA.tag_post_implicit(
+            post,
+            (; energy_source_tagging_model = energy, water_tagging_model = water),
+        )
+        @test both isa CA.WaterTagIncrementCorrection{
+            <:CA.EnergySourceIncrementCorrection{typeof(post)},
+        }
+        @test CA.tag_post_implicit(
+            post,
+            (; energy_source_tagging_model = nothing, water_tagging_model = water),
+        ) isa CA.WaterTagIncrementCorrection{typeof(post)}
+        # Without either family the parent's correction is the hook, as it is.
+        @test CA.tag_post_implicit(
+            post,
+            (;
+                energy_source_tagging_model = nothing,
+                water_tagging_model = CA.WaterTaggingModel(tags),
+            ),
+        ) === post
+        @test isnothing(
+            CA.tag_post_implicit(
+                nothing,
+                (; energy_source_tagging_model = nothing, water_tagging_model = nothing),
+            ),
+        )
+    end
+end
+
+# WP4a: the 0M rain-out split's shares, on the kernel itself. The partition's
+# shares in a subdomain are its normalized grid shares plus the exchange's
+# differences, which sum to zero over the partition, times `S`.
+@testset "The rain-out split's shares" begin
+    partition = (true, true, false)
+    flags = Val(partition)
+    share(i) = CA.SplitShare(flags, Val(i))
+    # Grid compositions, and bounded differences that sum to zero over the
+    # partition, including an empty tag and a clamp that binds.
+    rng_values = [
+        (0.3, 0.6, 0.2),
+        (0.0, 0.9, 0.5),
+        (1e-3, 0.5, 0.0),
+        (0.45, 0.45, 0.9),
+    ]
+    for ε̄ in rng_values, δ in (0.0, 0.1, -0.2), S in (1.0, 0.98)
+        total = ε̄[1] + ε̄[2]
+        # Differences as the exchange's bound keeps them: a share stays in
+        # [0, 1], and the partition's sum is zero.
+        d = clamp(δ, -ε̄[1] / total, ε̄[2] / total)
+        Δφ = (d, -d, 0.5)
+        φ = map(i -> share(i)(ε̄, Δφ, S, -1.0), (1, 2, 3))
+        @test all(isfinite, φ)
+        @test 0 <= φ[1] <= 1 && 0 <= φ[2] <= 1
+        @test φ[1] + φ[2] ≈ S
+        # A source tag is clamped to [0, 1] whatever its difference.
+        @test 0 <= φ[3] <= 1
+    end
+    # Where the partition holds nothing, the grid mean's share, the fallback.
+    @test share(1)((0.0, 0.0, 0.3), (0.1, -0.1, 0.0), 1.0, 0.25) == 0.25
+    # A value that is not finite falls back too.
+    @test share(1)((0.3, 0.6, 0.2), (NaN, 0.0, 0.0), 1.0, 0.25) == 0.25
+    # Without an exchange the split is the grid rule: the normalized share
+    # times `S` is the clamped grid share where no clamp binds.
+    ε̄ = (0.3, 0.6, 0.2)
+    S = 0.3 / 1.0 + 0.6 / 1.0
+    @test share(1)(ε̄, (0.0, 0.0, 0.0), S, -1.0) ≈ 0.3
+    # Where a clamp binds it is not: a partition tag above the parent.
+    ε̄ = (1.5, 0.5, 0.2)
+    S = CA.water_tag_fraction(1.5, 1.0) + CA.water_tag_fraction(0.5, 1.0)
+    @test share(1)(ε̄, (0.0, 0.0, 0.0), S, -1.0) ≈ 1.125
+    @test share(3)(ε̄, (0.0, 0.0, 0.0), S, -1.0) ≈ 0.15
+
+    # Random cells through the exchange's own kernels, as the model holds them:
+    # the shares are finite and sum to `S` in each subdomain, and a source
+    # tag's lies in [0, 1], with a drifted partition and with a subdomain's
+    # area negative, in both float types.
+    rng = Random.MersenneTwister(1)
+    function random_cell(FT; drift = 0.0, negative_environment = false,
+        negative_updraft = false)
+        ρ = FT(1 + 0.2 * rand(rng))
+        ρq_tot = FT(1e-2 * rand(rng) + 1e-6)
+        f1 = rand(rng)
+        f2 = 1 - f1
+        f1 *= 1 + drift * (2 * rand(rng) - 1)
+        f2 *= 1 + drift * (2 * rand(rng) - 1)
+        rand(rng) < 0.1 && (f1 = -0.01 * rand(rng))
+        ρq_tags = FT.((f1, f2, 1.5 * rand(rng)) .* ρq_tot)
+        ρaʲ = FT(negative_updraft ? -0.01 * ρ * rand(rng) : 0.3 * rand(rng) * ρ)
+        ρa⁰ = negative_environment ? FT(-0.01 * ρ * rand(rng)) : ρ - ρaʲ
+        q_totʲ = FT(ρq_tot / ρ * (0.5 + rand(rng)))
+        q_tot⁰ =
+            ρa⁰ > eps(FT) ? max((ρq_tot - ρaʲ * q_totʲ) / ρa⁰, FT(0)) :
+            ρq_tot / ρ
+        ε̄ = map(x -> max(x, FT(0)) / ρ, ρq_tags)
+        w = (rand(rng), rand(rng), rand(rng))
+        εʲ = map(x -> FT(x / (w[1] + w[2]) * q_totʲ), w)
+        room = CA._exchange_room(ρ, ρaʲ, ρa⁰, ρq_tot / ρ, q_totʲ, q_tot⁰)
+        ratio = CA._exchange_energy_ratio(ρaʲ, ρa⁰, q_totʲ, q_tot⁰)
+        S =
+            CA.water_tag_fraction(ρq_tags[1], ρq_tot) +
+            CA.water_tag_fraction(ρq_tags[2], ρq_tot)
+        fallbacks = map(x -> CA.water_tag_fraction(x, ρq_tot), ρq_tags)
+        return (; ε̄, εʲ, room, ratio, S, fallbacks)
+    end
+    for FT in (Float64, Float32),
+        kwargs in (
+            (;),
+            (; drift = 0.05),
+            (; negative_environment = true),
+            (; negative_updraft = true),
+        )
+
+        (finite, sums, sources) = (true, true, true)
+        for _ in 1:2000, environment in (true, false)
+            cell = random_cell(FT; kwargs...)
+            Δφ = CA.ShareDifferences(flags, environment)(
+                cell.εʲ,
+                cell.ε̄,
+                cell.room,
+                cell.ratio,
+            )
+            φ = map(
+                i -> share(i)(cell.ε̄, Δφ, cell.S, cell.fallbacks[i]),
+                (1, 2, 3),
+            )
+            finite &= all(isfinite, φ)
+            sums &= isapprox(φ[1] + φ[2], cell.S; atol = 100 * eps(FT))
+            sources &= 0 <= φ[3] <= 1
+        end
+        @test finite
+        @test sums
+        @test sources
+    end
+
+    # The split applies under 0M with prognostic EDMF only. Elsewhere,
+    # including EDOnly, the grid rule applies as before.
+    model = CA.WaterTaggingModel((
+        CA.WaterTag{:tropo}(CA.TanhAltitudeRegion(750.0, 100.0, false)),
+        CA.WaterTag{:strat}(CA.TanhAltitudeRegion(750.0, 100.0, true)),
+    ))
+    zero_moment = CA.EquilibriumMicrophysics0M()
+    @test !CA._splits_rainout(zero_moment, nothing, model, nothing)
+    @test !CA._splits_rainout(zero_moment, CA.EDOnlyEDMFX(), model, nothing)
+end
+
+# WP5b: a water tag's sedimentation cross blocks to a falling species. The tag
+# stays uncoupled, is solved after the coupled fields by back-substitution, and
+# the coupled fields' increments do not change.
+@testset "The split solver back-substitutes a tag's cross block" begin
+    CC = CA.ClimaCore
+    MF = CA.MatrixFields
+    for FT in (Float32, Float64)
+        column(staggering) = CC.CommonSpaces.ColumnSpace(
+            FT;
+            z_min = 0,
+            z_max = 1000,
+            z_elem = 12,
+            staggering,
+        )
+        ᶜspace = column(CC.CommonSpaces.CellCenter())
+        ᶠspace = column(CC.CommonSpaces.CellFace())
+        ᶜnames = (:ρ, :ρe_tot, :ρq_rai, :ρq_tag_tropo)
+        Y = CC.Fields.FieldVector(;
+            c = similar(
+                CC.Fields.coordinate_field(ᶜspace),
+                NamedTuple{ᶜnames, NTuple{4, FT}},
+            ),
+            f = similar(
+                CC.Fields.coordinate_field(ᶠspace),
+                NamedTuple{(:u₃,), Tuple{FT}},
+            ),
+        )
+        fill_pattern!(values, shift) =
+            values .=
+                sin.(shift .+ FT(0.7) .* reshape(1:length(values), size(values)))
+        R = similar(Y)
+        fill_pattern!(parent(R.c), 0)
+        fill_pattern!(parent(R.f), 1)
+        function band_block(space, row_type, diagonal, shift)
+            block = fill(zero(row_type), space)
+            n_levels = size(parent(block), 1)
+            values = reshape(parent(block), n_levels, :)
+            fill_pattern!(values, shift)
+            values .*= FT(0.1)
+            n_entries = size(values, 2)
+            isodd(n_entries) && (values[:, (n_entries + 1) ÷ 2] .+= diagonal)
+            if n_entries > 1
+                values[1, 1] = 0
+                values[end, end] = 0
+            end
+            return block
+        end
+        ᶜdiagonal(shift) =
+            band_block(ᶜspace, MF.DiagonalMatrixRow{FT}, -1, shift)
+        ᶜtridiagonal(shift, diagonal = -1) =
+            band_block(ᶜspace, MF.TridiagonalMatrixRow{FT}, diagonal, shift)
+        ᶠtridiagonal(shift) =
+            band_block(ᶠspace, MF.TridiagonalMatrixRow{FT}, -1, shift)
+        ᶜᶠbidiagonal(shift) =
+            band_block(ᶜspace, MF.BidiagonalMatrixRow{FT}, 0, shift)
+        ᶠᶜbidiagonal(shift) =
+            band_block(ᶠspace, MF.BidiagonalMatrixRow{FT}, 0, shift)
+        c(n) = MF.FieldName(:c, n)
+        u₃ = CA.MatrixFields.@name(f.u₃)
+        plain_pairs = (
+            (c(:ρ), c(:ρ)) => ᶜdiagonal(2),
+            (c(:ρe_tot), c(:ρe_tot)) => ᶜdiagonal(3),
+            # Diagonal, as the direct arrowhead solve needs for its first group.
+            (c(:ρq_rai), c(:ρq_rai)) => ᶜdiagonal(4),
+            (c(:ρ), u₃) => ᶜᶠbidiagonal(5),
+            (c(:ρe_tot), u₃) => ᶜᶠbidiagonal(6),
+            (u₃, c(:ρ)) => ᶠᶜbidiagonal(7),
+            (u₃, c(:ρe_tot)) => ᶠᶜbidiagonal(8),
+            (u₃, u₃) => ᶠtridiagonal(9),
+            (c(:ρq_tag_tropo), c(:ρq_tag_tropo)) => ᶜtridiagonal(10),
+        )
+        # Under prognostic EDMF a species' row names `u₃` too.
+        model_pairs = (plain_pairs..., (c(:ρq_rai), u₃) => ᶜᶠbidiagonal(13))
+        cross = (c(:ρq_tag_tropo), c(:ρq_rai)) => ᶜtridiagonal(11, 0)
+        with_cross = (model_pairs..., cross)
+        # The tag stays uncoupled with a block to a coupled column in its own
+        # row.
+        @test CA.uncoupled_jacobian_names(with_cross) == (c(:ρq_tag_tropo),)
+        # A block that names the tag in another row, or a column block to
+        # another splittable field, makes it coupled. So does a column that
+        # contains the tag, such as `@name(c)`.
+        @test isempty(
+            CA.uncoupled_jacobian_names((
+                with_cross...,
+                (c(:ρq_rai), c(:ρq_tag_tropo)) => ᶜtridiagonal(12, 0),
+            )),
+        )
+        @test isempty(
+            CA.uncoupled_jacobian_names((
+                with_cross...,
+                (c(:ρq_tag_tropo), MF.FieldName(:c)) => ᶜtridiagonal(12, 0),
+            )),
+        )
+
+        velocity_alg = MF.BlockLowerTriangularSolve(u₃)
+        iterative_alg(n_iters) = MF.ApproximateBlockArrowheadIterativeSolve(
+            c(:ρ),
+            c(:ρe_tot),
+            c(:ρq_rai);
+            alg₂ = velocity_alg,
+            P_alg₁ = MF.MainDiagonalPreconditioner(),
+            n_iters,
+        )
+        direct_alg = MF.BlockArrowheadSolve(
+            c(:ρ),
+            c(:ρe_tot),
+            c(:ρq_rai);
+            alg₂ = velocity_alg,
+        )
+        function split_solver(pairs, alg)
+            matrix = MF.FieldMatrix(pairs...)
+            return CA.split_jacobian_solver(
+                matrix,
+                Y,
+                alg,
+                CA.uncoupled_jacobian_names(pairs),
+            )
+        end
+        function increments(solver)
+            ΔY = zero(Y)
+            CA.LinearAlgebra.ldiv!(ΔY, solver, R)
+            return ΔY
+        end
+        tolerance = 1000 * eps(FT)
+        for alg in (iterative_alg(2), direct_alg)
+            solver = split_solver(with_cross, alg)
+            ΔY = increments(solver)
+            ΔY_plain = increments(split_solver(model_pairs, alg))
+            # The coupled fields' increments are those without the cross
+            # block.
+            for n in (:ρ, :ρe_tot, :ρq_rai)
+                @test isequal(
+                    parent(getproperty(ΔY.c, n)),
+                    parent(getproperty(ΔY_plain.c, n)),
+                )
+            end
+            @test isequal(parent(ΔY.f), parent(ΔY_plain.f))
+            # The tag solves its own row: D Δtag + C Δρq_rai = R_tag.
+            D = plain_pairs[end].second
+            C = cross.second
+            residual =
+                @. D * ΔY.c.ρq_tag_tropo + C * ΔY.c.ρq_rai - R.c.ρq_tag_tropo
+            @test maximum(abs, parent(residual)) <=
+                  tolerance * maximum(abs, parent(R.c.ρq_tag_tropo))
+            # And it differs from the solve without the cross block.
+            @test !isapprox(
+                parent(ΔY.c.ρq_tag_tropo),
+                parent(ΔY_plain.c.ρq_tag_tropo),
+            )
+            # Repeated solves allocate nothing (Julia 1.10 allocates in the
+            # split solve, as `energy_source_tags_integration.jl` records).
+            ΔY_again = zero(Y)
+            CA.LinearAlgebra.ldiv!(ΔY_again, solver, R)
+            bytes = @allocated CA.LinearAlgebra.ldiv!(ΔY_again, solver, R)
+            @test bytes <= 64 skip = VERSION < v"1.11"
+        end
+
+        # Without a species-`u₃` block the unsplit nested solve can take the
+        # cross block too. Its coupled increments are the split's, and so is
+        # its tag's, to rounding, at every iteration count.
+        # (Under prognostic EDMF a species' row does name `u₃`, and the
+        # unsplit form does not carry the cross blocks; see `_derivative_flags`.)
+        plain_with_cross = (plain_pairs..., cross)
+        split_reference = increments(split_solver(plain_with_cross, direct_alg))
+        tag_differences = map((1, 2, 4)) do n_iters
+            unsplit = MF.FieldMatrixWithSolver(
+                MF.FieldMatrix(plain_with_cross...),
+                Y,
+                iterative_alg(n_iters),
+            )
+            ΔY_unsplit = zero(Y)
+            CA.LinearAlgebra.ldiv!(ΔY_unsplit, unsplit, R)
+            split = increments(split_solver(plain_with_cross, iterative_alg(n_iters)))
+            for n in (:ρ, :ρe_tot, :ρq_rai)
+                @test isapprox(
+                    parent(getproperty(ΔY_unsplit.c, n)),
+                    parent(getproperty(split.c, n));
+                    rtol = tolerance,
+                )
+            end
+            @test isapprox(parent(ΔY_unsplit.f), parent(split.f); rtol = tolerance)
+            maximum(
+                abs,
+                parent(ΔY_unsplit.c.ρq_tag_tropo) .-
+                parent(split_reference.c.ρq_tag_tropo),
+            )
+        end
+        @info "The unsplit tag against the split's" FT tag_differences
+        @test maximum(tag_differences) <=
+              sqrt(eps(FT)) * maximum(abs, parent(split_reference.c.ρq_tag_tropo))
+    end
+end
+
+@testset "The tags' sedimentation cross blocks, assembled" begin
+    # The real blocks, from `update_sedimentation_jacobian!` on a small column,
+    # with a cache that holds what it reads. Each tag's cross block is checked
+    # against a finite difference of the tags' real sedimentation tendency
+    # (`_sediment_water_tags!`) in the falling species, at fixed `ρq_tot`, `ρ`
+    # and terminal velocity. The partition's blocks are checked against the
+    # parent's. The partition has drifted, so its shares are renormalized, and
+    # clamps bind in three cells.
+    CC = CA.ClimaCore
+    MF = CA.MatrixFields
+    Geometry = CC.Geometry
+    for FT in (Float32, Float64)
+        column(staggering) = CC.CommonSpaces.ColumnSpace(
+            FT;
+            z_min = 0,
+            z_max = 2000,
+            z_elem = 16,
+            staggering,
+        )
+        ᶜspace = column(CC.CommonSpaces.CellCenter())
+        ᶠspace = column(CC.CommonSpaces.CellFace())
+        ᶜz = CC.Fields.coordinate_field(ᶜspace).z
+        region(above) = CA.TanhAltitudeRegion(FT(750), FT(100), above)
+        tags = (
+            CA.WaterTag{:tropo}(region(false)),
+            CA.WaterTag{:strat}(region(true)),
+            CA.WaterTag{:evap}(nothing, :surface_flux),
+        )
+        model = CA.WaterTaggingModel(tags)
+        masses = (:ρq_lcl, :ρq_icl, :ρq_rai, :ρq_sno)
+        velocities = (:ᶜwₗ, :ᶜwᵢ, :ᶜwᵣ, :ᶜwₛ)
+        ᶜnames = (
+            :ρ,
+            :ρe_tot,
+            :ρq_tot,
+            masses...,
+            :ρq_tag_tropo,
+            :ρq_tag_strat,
+            :ρq_tag_evap,
+        )
+        Y = CC.Fields.FieldVector(;
+            c = similar(
+                CC.Fields.coordinate_field(ᶜspace),
+                NamedTuple{ᶜnames, NTuple{length(ᶜnames), FT}},
+            ),
+            f = similar(
+                CC.Fields.coordinate_field(ᶠspace),
+                NamedTuple{(:u₃,), Tuple{FT}},
+            ),
+        )
+        fill!(parent(Y.f), 0)
+        @. Y.c.ρ = FT(1.2) * exp(-(ᶜz) / 8000)
+        @. Y.c.ρe_tot = Y.c.ρ * FT(2.5e5)
+        @. Y.c.ρq_tot = Y.c.ρ * (FT(0.012) - FT(4e-6) * ᶜz)
+        @. Y.c.ρq_lcl = Y.c.ρ * FT(2e-4) * (1 + sin(ᶜz / 300))
+        @. Y.c.ρq_icl = Y.c.ρ * FT(5e-5) * (1 + cos(ᶜz / 400))
+        @. Y.c.ρq_rai = Y.c.ρ * FT(3e-4) * (1 + sin(ᶜz / 200 + 1))
+        @. Y.c.ρq_sno = Y.c.ρ * FT(1e-4) * (1 + cos(ᶜz / 250 + 2))
+        # A drifted partition: `tropo` holds 10% too much, `strat` 5% too
+        # little.
+        ᶜbelow = @. (1 - tanh((ᶜz - 750) / 100)) / 2
+        @. Y.c.ρq_tag_tropo = FT(1.1) * ᶜbelow * Y.c.ρq_tot
+        @. Y.c.ρq_tag_strat = FT(0.95) * (1 - ᶜbelow) * Y.c.ρq_tot
+        @. Y.c.ρq_tag_evap = FT(0.3) * Y.c.ρq_tot
+        # Clamps: `tropo` holds more than the cell's water in one cell, `evap`
+        # more in another and less than none in a third.
+        ρq_tot = parent(Y.c.ρq_tot)
+        parent(Y.c.ρq_tag_tropo)[2] = FT(1.5) * ρq_tot[2]
+        parent(Y.c.ρq_tag_evap)[5] = FT(1.2) * ρq_tot[5]
+        parent(Y.c.ρq_tag_evap)[9] = FT(-0.1) * ρq_tot[9]
+        @test CA.water_tag_fraction(parent(Y.c.ρq_tag_tropo)[2], ρq_tot[2]) == 1
+        @test CA.water_tag_fraction(parent(Y.c.ρq_tag_evap)[5], ρq_tot[5]) == 1
+        @test CA.water_tag_fraction(parent(Y.c.ρq_tag_evap)[9], ρq_tot[9]) == 0
+
+        ᶜvelocity(scale) = @. FT(scale) * (1 + ᶜz / 2000)
+        precomputed = (;
+            ᶜwₗ = ᶜvelocity(0.01),
+            ᶜwᵢ = ᶜvelocity(0.2),
+            ᶜwᵣ = ᶜvelocity(4),
+            ᶜwₛ = ᶜvelocity(1),
+            ᶜT = fill(FT(275), ᶜspace),
+            ᶜu = fill(
+                Geometry.Covariant123Vector(FT(0), FT(0), FT(0)),
+                ᶜspace,
+            ),
+        )
+        scratch = (;
+            ᶜbidiagonal_adjoint_matrix_c3 = CC.Fields.Field(
+                MF.BidiagonalMatrixRow{typeof(Geometry.Covariant3Vector(FT(0))')},
+                ᶜspace,
+            ),
+            ᶠband_matrix_wvec = similar(
+                Y.f,
+                MF.BandMatrixRow{
+                    CC.Utilities.PlusHalf{Int64}(0),
+                    1,
+                    Geometry.WVector{FT},
+                },
+            ),
+            ᶜtagging_q_share_norm = similar(Y.c.ρ),
+        )
+        ᶜΦ = @. FT(9.81) * ᶜz
+        p = (;
+            atmos = (;
+                microphysics_model = CA.NonEquilibriumMicrophysics1M(),
+                water_tagging_model = model,
+            ),
+            params = CA.ClimaAtmosParameters(FT),
+            core = (; ᶜΦ),
+            precomputed,
+            scratch,
+        )
+        matrix = MF.FieldMatrix(
+            CA.sedimentation_jacobian_blocks(Y, p.atmos, CA.UseDerivative())...,
+        )
+        dtγ = FT(60)
+        CA.update_sedimentation_jacobian!(matrix, Y, p, dtγ, CA.UseDerivative())
+        ᶜnorm = p.scratch.ᶜtagging_q_share_norm
+        # The update renormalized the drifted partition.
+        @test maximum(abs, parent(ᶜnorm) .- 1) > FT(0.04)
+
+        # The tags' sedimentation tendency for one species, as the model
+        # computes it (`vertical_advection_of_water_tendency!`).
+        ᶜJ = CC.Fields.local_geometry_field(Y.c).J
+        ᶠJ = CC.Fields.local_geometry_field(Y.f).J
+        ᶠρ = @. CA.ᶠinterp(Y.c.ρ * ᶜJ) / ᶠJ
+        function tag_tendencies(ᶜρqₚ, ᶜw)
+            ᶜYₜ = CA._water_fix_fields(Y.c.ρ, tags)
+            ᶜq = @. ᶜρqₚ / Y.c.ρ
+            CA._sediment_water_tags!(ᶜYₜ, Y.c, ᶜnorm, ᶜq, ᶜw, ᶠρ, tags)
+            return ᶜYₜ
+        end
+        c(n) = MF.FieldName(:c, n)
+        partition_names = (:ρq_tag_tropo, :ρq_tag_strat)
+        for (mass, velocity) in zip(masses, velocities)
+            ᶜρqₚ = getproperty(Y.c, mass)
+            ᶜw = getproperty(precomputed, velocity)
+            parent_block = matrix[c(:ρq_tot), c(mass)]
+            scale = maximum(abs, parent(parent_block))
+            @test scale > 0
+            # The partition's blocks sum to the parent's.
+            ᶜpartition_block = copy(parent_block)
+            @. ᶜpartition_block =
+                matrix[c(:ρq_tag_tropo), c(mass)] +
+                matrix[c(:ρq_tag_strat), c(mass)]
+            @test maximum(
+                abs,
+                parent(ᶜpartition_block) .- parent(parent_block),
+            ) <= 100 * eps(FT) * scale
+            # Each tag's block is the derivative of its tendency in the species.
+            ᶜv = @. ᶜρqₚ * (1 + sin(ᶜz / 170)) / 2
+            h = FT(0.1)
+            base = tag_tendencies(ᶜρqₚ, ᶜw)
+            moved = tag_tendencies((@. ᶜρqₚ + h * ᶜv), ᶜw)
+            for name in (partition_names..., :ρq_tag_evap)
+                block = matrix[c(name), c(mass)]
+                ᶜJv = @. block * ᶜv
+                (ᶜmoved, ᶜbase) = (getproperty(moved, name), getproperty(base, name))
+                ᶜfinite_difference = @. dtγ * (ᶜmoved - ᶜbase) / h
+                Jv_scale = maximum(abs, parent(ᶜJv))
+                @test Jv_scale > 0
+                @test maximum(
+                    abs,
+                    parent(ᶜJv) .- parent(ᶜfinite_difference),
+                ) <= 1000 * eps(FT) * Jv_scale
+            end
+        end
+    end
+end
+
+@testset "The tags' cross blocks come only with the split solver" begin
+    # Without the split, the tags' rows would join the nested solve's Schur
+    # complement. Under prognostic EDMF that gives them blocks to `u₃`, which
+    # the solve cannot take, so the unsplit form does not carry the cross
+    # blocks at all.
+    FT = Float64
+    space = CA.ClimaCore.CommonSpaces.ColumnSpace(
+        FT;
+        z_min = 0,
+        z_max = 1000,
+        z_elem = 4,
+        staggering = CA.ClimaCore.CommonSpaces.CellCenter(),
+    )
+    ᶜnames = (:ρ, :ρe_tot, :ρq_tot, :ρq_lcl, :ρq_icl, :ρq_rai, :ρq_sno)
+    ᶜnames = (ᶜnames..., :ρq_tag_tropo)
+    Y = CA.ClimaCore.Fields.FieldVector(;
+        c = similar(
+            CA.ClimaCore.Fields.coordinate_field(space),
+            NamedTuple{ᶜnames, NTuple{length(ᶜnames), FT}},
+        ),
+    )
+    atmos = (;
+        microphysics_model = CA.NonEquilibriumMicrophysics1M(),
+        diff_mode = CA.Implicit(),
+    )
+    split_flags = CA._derivative_flags(atmos, Y)
+    unsplit_flags = CA._derivative_flags(atmos, Y; split_uncoupled_fields = false)
+    @test split_flags.water_tag_cross_flag == CA.UseDerivative()
+    @test unsplit_flags.water_tag_cross_flag == CA.IgnoreDerivative()
+    block_keys(flags) = map(
+        pair -> pair.first,
+        CA.sedimentation_jacobian_blocks(Y, atmos, flags.water_tag_cross_flag),
+    )
+    tag = CA.MatrixFields.FieldName(:c, :ρq_tag_tropo)
+    for flags in (split_flags, unsplit_flags)
+        @test (tag, tag) in block_keys(flags)
+    end
+    for mass in (:ρq_lcl, :ρq_icl, :ρq_rai, :ρq_sno)
+        cross_key = (tag, CA.MatrixFields.FieldName(:c, mass))
+        @test cross_key in block_keys(split_flags)
+        @test !(cross_key in block_keys(unsplit_flags))
+    end
+end
+
+# WP6: the gross twin and the count of the cache ledgers.
+@testset "The ledgers' gross throughput" begin
+    region(above) = CA.TanhAltitudeRegion(750.0, 100.0, above)
+    tags = (
+        CA.WaterTag{:tropo}(region(false)),
+        CA.WaterTag{:strat}(region(true)),
+    )
+    model = CA.WaterTaggingModel(tags)
+    ledger_pair() = (; ρq_tag_tropo = zeros(1), ρq_tag_strat = zeros(1))
+    function run_rescales(FT, ρq_tots)
+        ᶜY = (;
+            ρq_tot = FT[ρq_tots[1]],
+            ρq_tag_tropo = FT[0.3 * ρq_tots[1]],
+            ρq_tag_strat = FT[0.7 * ρq_tots[1]],
+            q_tag_led_rescale = zeros(FT, 1),
+            q_tag_led_empty = zeros(FT, 1),
+        )
+        p = (;
+            tagging = (;
+                ᶜwater_fix = (;
+                    ρq_tag_tropo = zeros(FT, 1),
+                    ρq_tag_strat = zeros(FT, 1),
+                ),
+                ᶜwater_fix_gross = ledger_pair(),
+                ᶜwater_fix_count = ledger_pair(),
+                ᶜwater_pos = zeros(FT, 1),
+            ),
+        )
+        for ρq_tot in ρq_tots[2:end]
+            ᶜρq_tot_before = copy(ᶜY.ρq_tot)
+            ᶜY.ρq_tot .= FT(ρq_tot)
+            CA._rescale_water_tags!((; c = ᶜY), p, ᶜρq_tot_before, model)
+        end
+        return p.tagging
+    end
+
+    # Alternating signs: a correction up and back down leaves the signed ledger
+    # at zero, while the gross twin holds both and the count two events.
+    tagging = run_rescales(Float64, (10.0, 12.0, 10.0))
+    @test abs(tagging.ᶜwater_fix.ρq_tag_tropo[1]) < 1e-14
+    @test tagging.ᶜwater_fix_gross.ρq_tag_tropo[1] ≈ 2 * 0.3 * 2
+    @test tagging.ᶜwater_fix_gross.ρq_tag_strat[1] ≈ 2 * 0.7 * 2
+    @test tagging.ᶜwater_fix_count.ρq_tag_tropo[1] == 2
+
+    # A change at rounding level is not an event.
+    @test CA.tag_event(1e-15, 10.0) == 0
+    @test CA.tag_event(1e-10, 10.0) == 1
+    @test CA.tag_event(1e-3, 0.0) == 1
+
+    # In Float32 the tags move in Float32, but the gross twin sums in Float64,
+    # so the small changes after a large one are kept.
+    steps = (1.0f0, 1001.0f0, (1001.0f0 + k * 1.0f-2 for k in 1:1000)...)
+    tagging = run_rescales(Float32, steps)
+    gross =
+        tagging.ᶜwater_fix_gross.ρq_tag_tropo[1] +
+        tagging.ᶜwater_fix_gross.ρq_tag_strat[1]
+    expected =
+        Float64(1000.0f0) + sum(
+            abs(Float64(steps[k + 1]) - Float64(steps[k])) for k in 2:(length(steps) - 1)
+        )
+    @test isapprox(gross, expected; rtol = 1e-5)
+    @test eltype(tagging.ᶜwater_fix_gross.ρq_tag_tropo) == Float64
+end
+
+# WP6, step 2: the per-step gross of the state ledgers, on a real column, and
+# the refusal of a checkpoint written before them.
+@testset "The state ledgers' gross per step" begin
+    CC = CA.ClimaCore
+    FT = Float64
+    column(staggering) = CC.CommonSpaces.ColumnSpace(
+        FT;
+        z_min = 0,
+        z_max = 1000,
+        z_elem = 4,
+        staggering,
+    )
+    region(above) = CA.TanhAltitudeRegion(750.0, 100.0, above)
+    model = CA.WaterTaggingModel((
+        CA.WaterTag{:tropo}(region(false)),
+        CA.WaterTag{:strat}(region(true)),
+    ))
+    names = CA.water_tag_mechanism_names(model)
+    @test names == (
+        :q_tag_led_rescale,
+        :q_tag_led_empty,
+        :q_tag_led_repair,
+        :q_tag_led_repairnet,
+    )
+    # The callback counts a change as an event against the parent's water.
+    ᶜnames = (:ρ, :ρq_tot, names...)
+    Y = CC.Fields.FieldVector(;
+        c = similar(
+            CC.Fields.coordinate_field(column(CC.CommonSpaces.CellCenter())),
+            NamedTuple{ᶜnames, NTuple{length(ᶜnames), FT}},
+        ),
+        f = similar(
+            CC.Fields.coordinate_field(column(CC.CommonSpaces.CellFace())),
+            NamedTuple{(:u₃,), Tuple{FT}},
+        ),
+    )
+    parent(Y) .= 0
+    Y.c.ρ .= 1
+    Y.c.q_tag_led_repair .= 1
+    atmos = (; water_tagging_model = model, energy_source_tagging_model = nothing)
+    # The gross starts from the state the cache is built from, as after a
+    # restart, so the ledger's value then is not counted. `dt` is the step the
+    # parent's negative water ledger adds up.
+    integrator = (;
+        u = Y,
+        p = (; tagging = CA.tag_ledger_step_cache(Y, atmos), atmos),
+        dt = 10.0,
+    )
+    (; ledgers) = integrator.p.tagging.tag_ledger_steps
+    CA.accumulate_tag_ledger_gross!(integrator)
+    @test all(iszero, parent(ledgers.q_tag_led_repair.ᶜgross))
+    # Up by 2, then down by 0.5, as a negative stage weight can take a
+    # transfer's ledger down within a step. The ledger moved 1.5 net, the
+    # gross 2.5 per cell and 2500 per column of 1000 m.
+    Y.c.q_tag_led_repair .= 3
+    CA.accumulate_tag_ledger_gross!(integrator)
+    Y.c.q_tag_led_repair .= 2.5
+    CA.accumulate_tag_ledger_gross!(integrator)
+    (; ᶜgross, colgross) = ledgers.q_tag_led_repair
+    @test all(≈(2.5), parent(ᶜgross))
+    @test all(≈(2500), parent(colgross))
+    @test eltype(ᶜgross) == Float64
+    # Two steps changed the ledger, so two events per cell (WP6, step 3).
+    @test all(==(2), parent(ledgers.q_tag_led_repair.ᶜevents))
+    @test all(iszero, parent(ledgers.q_tag_led_rescale.ᶜevents))
+    @test all(iszero, parent(ledgers.q_tag_led_rescale.ᶜgross))
+
+    # A checkpoint without the ledgers predates them and is refused with its
+    # own message. One with them passes, and one without the copies' ledgers
+    # fails when the run has copies.
+    old = (; c = (; ρ = 1.0, ρq_tag_tropo = 1.0))
+    @test_throws "before the water tags kept their ledgers per mechanism" CA.check_tag_mechanism_ledgers(
+        "old.hdf5",
+        old,
+        names,
+        "water",
+        "q_tag_",
+        "water_tag_updraft_copy",
+    )
+    current = (; c = NamedTuple{names}(ntuple(_ -> 0.0, length(names))))
+    @test isnothing(
+        CA.check_tag_mechanism_ledgers(
+            "current.hdf5",
+            current,
+            names,
+            "water",
+            "q_tag_",
+            "water_tag_updraft_copy",
+        ),
+    )
+    @test_throws "water_tag_updraft_copy" CA.check_tag_mechanism_ledgers(
+        "current.hdf5",
+        current,
+        (names..., CA.WATER_TAG_COPY_MECHANISM_NAMES...),
+        "water",
+        "q_tag_",
+        "water_tag_updraft_copy",
+    )
+    @test CA.is_tag_mechanism_ledger_name(:e_src_led_repair)
+    @test !CA.is_tag_mechanism_ledger_name(:q_tag_inc_left)
+
+    # The audit's event total counts nodes, in either float type. In Float32 a
+    # Float64 count is stored as two slots per node (the code review, B1). And
+    # a change of one rounding unit is not an event (S3).
+    for FT in (Float32, Float64)
+        ᶜz = CC.Fields.coordinate_field(
+            CC.CommonSpaces.ColumnSpace(
+                FT;
+                z_min = 0,
+                z_max = 1000,
+                z_elem = 4,
+                staggering = CC.CommonSpaces.CellCenter(),
+            ),
+        ).z
+        ᶜcount = CA._throughput_field(ᶜz)
+        ᶜcount .= 3
+        @test CA.tag_event_total((; a = ᶜcount, b = ᶜcount)) ≈ 24
+        @test CA.tag_event(eps(FT(1e-2)), FT(1e-2)) == 0
+        @test CA.tag_event(FT(1e-4), FT(1e-2)) == 1
+    end
+end
+
+# WP6, step 3: each tag's own ledgers, what the corrections attempted beside
+# what the steps retained, the audit's report, and the checkpoint.
+@testset "Each tag's own ledgers" begin
+    region(above) = CA.TanhAltitudeRegion(750.0, 100.0, above)
+    tags = (
+        CA.WaterTag{:tropo}(region(false)),
+        CA.WaterTag{:strat}(region(true)),
+        CA.WaterTag{:evap}(nothing, (:surface_flux,)),
+    )
+    plain = CA.WaterTaggingModel(tags)
+    per_tag = CA.WaterTaggingModel(tags; ledger_per_tag = true)
+    follower = CA.WaterTaggingModel(
+        tags;
+        transport = CA.IncrementWaterTagTransport(),
+        ledger_per_tag = true,
+    )
+    fix_names = (:q_tag_led_fix_tropo, :q_tag_led_fix_strat, :q_tag_led_fix_evap)
+    inc_names = (:q_tag_led_inc_tropo, :q_tag_led_inc_strat, :q_tag_led_inc_evap)
+    @test CA.water_tag_per_tag_ledger_names(plain) == ()
+    @test CA.water_tag_per_tag_ledger_names(nothing) == ()
+    @test CA.water_tag_per_tag_ledger_names(per_tag) == fix_names
+    @test CA.water_tag_per_tag_ledger_names(follower) == (fix_names..., inc_names...)
+    @test CA.water_tag_ledger_inc_names(follower) == inc_names
+    @test CA.has_water_tag_ledger_per_tag(per_tag)
+    @test !CA.has_water_tag_ledger_per_tag(plain)
+    @test CA.water_tag_per_tag_ledger_variables(1.0f0, plain) == (;)
+    @test CA.water_tag_per_tag_ledger_variables(1.0f0, per_tag) ==
+          NamedTuple{fix_names}((0.0f0, 0.0f0, 0.0f0))
+    @test all(CA.is_tag_per_tag_ledger_name, (fix_names..., inc_names...))
+    @test CA.is_tag_per_tag_ledger_name(:e_src_led_inc_sfc)
+    @test !CA.is_tag_per_tag_ledger_name(:q_tag_led_repair)
+    @test !CA.is_tag_per_tag_ledger_name(:ρq_tag_tropo)
+    # The split solver may solve them apart, as the tags.
+    @test CA.is_splittable_jacobian_field(CA.MatrixFields.@name(c.q_tag_led_fix_evap))
+    @test CA.is_splittable_jacobian_field(CA.MatrixFields.@name(c.q_tag_led_inc_tropo))
+    # A tag's diagnostics put the kind before the tag's name.
+    @test CA.Diagnostics.tag_ledger_diagnostic_name(:q_tag_led_fix_tropo, "gross") ==
+          "q_tag_led_fixgross_tropo"
+    @test CA.Diagnostics.tag_ledger_diagnostic_name(:e_src_led_inc_sfc, "colgross") ==
+          "e_src_led_inccolgross_sfc"
+    # OD4's source ledger per tag (2026-09-25).
+    @test CA.is_tag_per_tag_ledger_name(:e_src_led_src_sfc)
+    @test CA.Diagnostics.tag_ledger_diagnostic_name(:e_src_led_src_sfc, "gross") ==
+          "e_src_led_srcgross_sfc"
+    # The residual's source ledger (G4.4) is split out as a tag's ledger is.
+    @test CA.is_tag_per_tag_ledger_name(CA.ENERGY_SOURCE_RESIDUAL_LEDGER)
+    @test CA.is_splittable_jacobian_field(CA.MatrixFields.@name(c.e_src_led_src_res))
+    @test CA.Diagnostics.tag_ledger_diagnostic_name(:e_src_led_src_res, "gross") ==
+          "e_src_led_srcgross_res"
+    @test CA.Diagnostics.tag_ledger_diagnostic_name(:q_tag_led_repair, "gross") ==
+          "q_tag_led_repair_gross"
+
+    # The limiters' rescale and the partition repair write each tag's change
+    # into its own ledger. From zero, the ledger is the cache ledger, bit for
+    # bit, and the tag's change.
+    for FT in (Float32, Float64)
+        ᶜY = (;
+            ρq_tot = FT[4, 8, 0],
+            ρq_tag_tropo = FT[1, 5, 1],
+            ρq_tag_strat = FT[2, -1, 1],
+            ρq_tag_evap = FT[1, 1, 1],
+            q_tag_led_rescale = zeros(FT, 3),
+            q_tag_led_empty = zeros(FT, 3),
+            q_tag_led_repair = zeros(FT, 3),
+            q_tag_led_repairnet = zeros(FT, 3),
+            q_tag_led_fix_tropo = zeros(FT, 3),
+            q_tag_led_fix_strat = zeros(FT, 3),
+            q_tag_led_fix_evap = zeros(FT, 3),
+        )
+        keyed(f) = (;
+            ρq_tag_tropo = f(),
+            ρq_tag_strat = f(),
+            ρq_tag_evap = f(),
+        )
+        p = (;
+            tagging = (;
+                ᶜwater_fix = keyed(() -> zeros(FT, 3)),
+                ᶜwater_fix_gross = keyed(() -> zeros(3)),
+                ᶜwater_fix_count = keyed(() -> zeros(3)),
+                ᶜwater_pos = zeros(FT, 3),
+                ᶜwater_neg = zeros(FT, 3),
+            ),
+        )
+        before = map(copy, ᶜY)
+        ᶜρq_tot_before = FT[3, 6, 2]
+        CA._rescale_water_tags!((; c = ᶜY), p, ᶜρq_tot_before, per_tag)
+        CA._repair_water_tag_partition!((; c = ᶜY), p, per_tag)
+        for name in (:tropo, :strat, :evap)
+            ᶜL = getproperty(ᶜY, Symbol(:q_tag_led_fix_, name))
+            ᶜfix = getproperty(p.tagging.ᶜwater_fix, Symbol(:ρq_tag_, name))
+            @test ᶜL == ᶜfix
+            @test ᶜL ≈
+                  getproperty(ᶜY, Symbol(:ρq_tag_, name)) .-
+                  getproperty(before, Symbol(:ρq_tag_, name))
+        end
+        @test maximum(abs, ᶜY.q_tag_led_fix_strat) > 0
+        # Without the key the kernels write no ledger per tag, and the tags
+        # move as they did with it.
+        ᶜY_plain = map(copy, before)
+        p_plain = (;
+            tagging = (;
+                ᶜwater_fix = keyed(() -> zeros(FT, 3)),
+                ᶜwater_fix_gross = keyed(() -> zeros(3)),
+                ᶜwater_fix_count = keyed(() -> zeros(3)),
+                ᶜwater_pos = zeros(FT, 3),
+                ᶜwater_neg = zeros(FT, 3),
+            ),
+        )
+        CA._rescale_water_tags!((; c = ᶜY_plain), p_plain, ᶜρq_tot_before, plain)
+        CA._repair_water_tag_partition!((; c = ᶜY_plain), p_plain, plain)
+        @test all(iszero, ᶜY_plain.q_tag_led_fix_tropo)
+        for name in (:ρq_tag_tropo, :ρq_tag_strat, :ρq_tag_evap)
+            @test getproperty(ᶜY_plain, name) == getproperty(ᶜY, name)
+        end
+    end
+end
+
+@testset "Attempted beside retained, on a column" begin
+    CC = CA.ClimaCore
+    FT = Float64
+    column(staggering) = CC.CommonSpaces.ColumnSpace(
+        FT;
+        z_min = 0,
+        z_max = 1000,
+        z_elem = 4,
+        staggering,
+    )
+    region(above) = CA.TanhAltitudeRegion(750.0, 100.0, above)
+    tags = (
+        CA.WaterTag{:tropo}(region(false)),
+        CA.WaterTag{:strat}(region(true)),
+    )
+    model = CA.WaterTaggingModel(tags; ledger_per_tag = true)
+    atmos = (; water_tagging_model = model, energy_source_tagging_model = nothing)
+    state_names = (
+        :ρ,
+        :ρq_tot,
+        :ρq_tag_tropo,
+        :ρq_tag_strat,
+        CA.water_tag_mechanism_names(model)...,
+        CA.water_tag_per_tag_ledger_names(model)...,
+    )
+    Y = CC.Fields.FieldVector(;
+        c = similar(
+            CC.Fields.coordinate_field(column(CC.CommonSpaces.CellCenter())),
+            NamedTuple{state_names, NTuple{length(state_names), FT}},
+        ),
+        f = similar(
+            CC.Fields.coordinate_field(column(CC.CommonSpaces.CellFace())),
+            NamedTuple{(:u₃,), Tuple{FT}},
+        ),
+    )
+    parent(Y) .= 0
+    Y.c.ρ .= 1
+    Y.c.ρq_tot .= 10
+    Y.c.ρq_tag_tropo .= 3
+    Y.c.ρq_tag_strat .= 7
+    zero_field() = zero(Y.c.ρ)
+    keyed(f) = (; ρq_tag_tropo = f(), ρq_tag_strat = f())
+    tagging = (;
+        ᶜwater_fix = keyed(zero_field),
+        ᶜwater_fix_gross = keyed(() -> CA._throughput_field(Y.c.ρ)),
+        ᶜwater_fix_count = keyed(() -> CA._throughput_field(Y.c.ρ)),
+        ᶜwater_pos = zero_field(),
+        ᶜwater_neg = zero_field(),
+        CA.tag_ledger_step_cache(Y, atmos)...,
+    )
+    p = (; tagging, atmos)
+    integrator = (; u = Y, p, dt = 10.0)
+    steps = tagging.tag_ledger_steps
+    @test keys(steps.attempted) == CA.water_tag_mechanism_names(model)
+    @test keys(steps.ledgers) ==
+          (
+        CA.water_tag_mechanism_names(model)...,
+        CA.water_tag_per_tag_ledger_names(model)...,
+    )
+
+    # A limiter raises the water by 2 on a stage value, and the stepper
+    # discards that stage: the state goes back. Then the accepted step's
+    # constraint lowers it by 1. The rescale attempted 2 + 1, the step retained
+    # the net change of the accepted state, 1.
+    rescale!(Y, ρq_tot) = begin
+        ᶜbefore = copy(Y.c.ρq_tot)
+        Y.c.ρq_tot .= ρq_tot
+        CA._rescale_water_tags!(Y, p, ᶜbefore, model)
+    end
+    saved = copy(Y)
+    rescale!(Y, 12.0)
+    Y .= saved
+    rescale!(Y, 9.0)
+    CA.accumulate_tag_ledger_gross!(integrator)
+    @test all(≈(3), parent(steps.attempted.q_tag_led_rescale))
+    @test all(≈(1), parent(steps.ledgers.q_tag_led_rescale.ᶜgross))
+    @test all(iszero, parent(steps.attempted.q_tag_led_empty))
+    # Each tag's ledger holds its own change, its gross the step's.
+    @test all(≈(-0.3), parent(Y.c.q_tag_led_fix_tropo))
+    @test all(≈(0.3), parent(steps.ledgers.q_tag_led_fix_tropo.ᶜgross))
+    @test all(==(1), parent(steps.ledgers.q_tag_led_fix_tropo.ᶜevents))
+    # The audit: per ledger, retained, attempted and events over the domain,
+    # and each tag's own ledger against the tag's water now. The column holds
+    # 1000 m of each, so 1 per cell integrates to 1000.
+    # The parent scale is `∫ρq_tot`: the accepted step left 9 over 1000 m.
+    parent_scale = CA.water_tag_ledger_parent_scale(Y)
+    @test parent_scale ≈ 9000
+    audit = CA.tag_ledger_audit(
+        Y,
+        p,
+        "q_tag_",
+        1.0e4,
+        tagging.ᶜwater_fix_gross,
+        parent_scale,
+    )
+    @test audit.led_rescale_retained ≈ 1000
+    @test audit.led_rescale_attempted ≈ 3000
+    @test audit.led_rescale_retained_relative ≈ 0.1
+    @test audit.led_rescale_events ≈ 4
+    @test audit.led_fix_tropo_retained ≈ 300
+    # The cache ledger's gross twin is what the tag's ledger's writers
+    # attempted: 0.6 up on the discarded stage, 0.3 down on the accepted one.
+    @test audit.led_fix_tropo_attempted ≈ 900
+    @test audit.led_fix_tropo_inventory_fraction ≈ 300 / (2.7 * 1000)
+    # A tag without negative parts has its burden as its inventory, so the two
+    # ratios are equal. Its burden is far above 2e-4 of the parent's water.
+    @test audit.led_fix_tropo_burden_fraction ==
+          audit.led_fix_tropo_inventory_fraction
+    @test audit.led_fix_tropo_parent_fraction ≈ 300 / 9000
+    @test audit.led_fix_tropo_applicable == 1
+    @test audit.ledger_parent_scale == parent_scale
+    # The ledgers per mechanism have no ratios to a tag.
+    @test !haskey(audit, :led_rescale_burden_fraction)
+    @test audit.ledger_cadence_step == 1
+    CA.set_tag_ledger_cadence!(p, "dss")
+    @test (@test_logs (:warn, r"exact\s+only at `step`") match_mode = :any CA.set_tag_ledger_cadence!(
+        p,
+        "stage",
+    )) === nothing
+    @test CA.tag_ledger_audit(
+        Y,
+        p,
+        "q_tag_",
+        1.0e4,
+        tagging.ᶜwater_fix_gross,
+        parent_scale,
+    ).ledger_cadence_step == 0
+    # Without the ledger cache, as in a mock, the report is empty.
+    @test CA.tag_ledger_audit(Y, (; tagging = (;)), "q_tag_", 1.0, (;), 1.0) ==
+          (;)
+
+    # The checkpoint carries every accumulator, bit for bit, and a fresh cache
+    # takes them back.
+    for (_, field) in CA.tag_ledger_checkpoint_fields(tagging)
+        parent(field) .= rand(size(parent(field))...)
+    end
+    context = CA.ClimaComms.context()
+    directory = mktempdir()
+    path = joinpath(directory, "day0.0.hdf5")
+    writer = CA.InputOutput.HDF5Writer(path, context)
+    CA.InputOutput.write!(writer, Y, "Y")
+    CA.write_tag_ledger_checkpoint!(writer, tagging)
+    Base.close(writer)
+    fresh = (;
+        ᶜwater_fix = keyed(zero_field),
+        ᶜwater_fix_gross = keyed(() -> CA._throughput_field(Y.c.ρ)),
+        ᶜwater_fix_count = keyed(() -> CA._throughput_field(Y.c.ρ)),
+        CA.tag_ledger_step_cache(Y, atmos)...,
+    )
+    CA.restore_tag_ledger_checkpoint!(fresh, path, context)
+    written = CA.tag_ledger_checkpoint_fields(tagging)
+    restored = CA.tag_ledger_checkpoint_fields(fresh)
+    @test first.(written) == first.(restored)
+    # The parent's negative water ledger adds its two fields, last.
+    @test length(written) == 6 + 3 * 6 + 4 + 2
+    @test first.(written[(end - 1):end]) ==
+          ["tag_ledger.negative_water.amount", "tag_ledger.negative_water.events"]
+    for ((_, a), (_, b)) in zip(written, restored)
+        @test parent(a) == parent(b)
+    end
+    # A checkpoint without them starts them at zero, with a warning. The
+    # negative water ledger, which came later, warns on its own.
+    bare = joinpath(directory, "bare.hdf5")
+    writer = CA.InputOutput.HDF5Writer(bare, context)
+    CA.InputOutput.write!(writer, Y, "Y")
+    Base.close(writer)
+    zeroed = (;
+        ᶜwater_fix = keyed(zero_field),
+        CA.tag_ledger_step_cache(Y, atmos)...,
+    )
+    @test_logs (:warn, r"before the parent's\s+negative water ledger") (
+        :warn,
+        r"carries none of the tags' accumulators",
+    ) CA.restore_tag_ledger_checkpoint!(zeroed, bare, context)
+    @test all(iszero, parent(zeroed.ᶜwater_fix.ρq_tag_tropo))
+    # One that carries some but not all is refused.
+    partial = joinpath(directory, "partial.hdf5")
+    writer = CA.InputOutput.HDF5Writer(partial, context)
+    CA.InputOutput.write!(writer, Y, "Y")
+    CA.write_tag_ledger_checkpoint!(writer, (; ᶜwater_fix = tagging.ᶜwater_fix))
+    Base.close(writer)
+    @test_throws r"carries some of the tags' accumulators" CA.restore_tag_ledger_checkpoint!(
+        zeroed,
+        partial,
+        context,
+    )
+end
+
+# The follower's flux, written into each tag's own ledger by the same kernel,
+# is the tag's change bit for bit.
+@testset "The follower's ledger per tag" begin
+    CC = CA.ClimaCore
+    for FT in (Float32, Float64)
+        column(staggering) = CC.CommonSpaces.ColumnSpace(
+            FT;
+            z_min = 0,
+            z_max = 1000,
+            z_elem = 8,
+            staggering,
+        )
+        region(above) = CA.TanhAltitudeRegion(500.0, 100.0, above)
+        tags = (
+            CA.WaterTag{:tropo}(region(false)),
+            CA.WaterTag{:strat}(region(true)),
+            CA.WaterTag{:evap}(nothing, (:surface_flux,)),
+        )
+        names = (
+            :ρ,
+            :ρq_tot,
+            :ρq_tag_tropo,
+            :ρq_tag_strat,
+            :ρq_tag_evap,
+            :q_tag_led_inc_tropo,
+            :q_tag_led_inc_strat,
+            :q_tag_led_inc_evap,
+        )
+        ᶜcoord = CC.Fields.coordinate_field(column(CC.CommonSpaces.CellCenter()))
+        ᶠcoord = CC.Fields.coordinate_field(column(CC.CommonSpaces.CellFace()))
+        new_state() = similar(ᶜcoord, NamedTuple{names, NTuple{length(names), FT}})
+        ᶜY = new_state()
+        parent(ᶜY) .= 0
+        @. ᶜY.ρ = 1
+        @. ᶜY.ρq_tot = FT(1e-2) * (1 + ᶜcoord.z / 1000)
+        @. ᶜY.ρq_tag_tropo = ᶜY.ρq_tot * (1 - ᶜcoord.z / 1000)
+        @. ᶜY.ρq_tag_strat = ᶜY.ρq_tot - ᶜY.ρq_tag_tropo
+        @. ᶜY.ρq_tag_evap = FT(0.1) * ᶜY.ρq_tot
+        ᶜnorm = @. ᶜY.ρq_tag_tropo + ᶜY.ρq_tag_strat
+        ᶠflux = @. CA.CT3(CA.Geometry.WVector(FT(1e-4) * sinpi(ᶠcoord.z / 1000)))
+        ᶜYₜ = new_state()
+        parent(ᶜYₜ) .= 0
+        CA._sgs_water_tag_fluxes!(ᶜYₜ, ᶜY, ᶜnorm, ᶠflux, tags)
+        CA._sgs_water_tag_fluxes!(CA.TagLedgerView{:inc}(ᶜYₜ), ᶜY, ᶜnorm, ᶠflux, tags)
+        for name in (:tropo, :strat, :evap)
+            ᶜtag = getproperty(ᶜYₜ, Symbol(:ρq_tag_, name))
+            ᶜledger = getproperty(ᶜYₜ, Symbol(:q_tag_led_inc_, name))
+            @test maximum(abs, parent(ᶜtag)) > 0
+            @test parent(ᶜledger) == parent(ᶜtag)
+        end
+    end
+end
+
+# Known issue 7, option C (the owner, 2026-09-25): the partition tags partition
+# the parent's non-negative water, and the negative part is a named remainder.
+@testset "Option C: the tags partition the parent's non-negative water" begin
+    CC = CA.ClimaCore
+    MF = CA.MatrixFields
+    for FT in (Float32, Float64)
+        # The target and the remainder add up to the parent, and a parent that
+        # is not negative is its own target, bit for bit.
+        @test CA.water_tag_partition_target(FT(2)) == FT(2)
+        @test CA.water_tag_partition_target(FT(-1)) == FT(0)
+        @test isequal(CA.water_tag_partition_target(FT(-0.0)), FT(-0.0))
+        @test CA.water_tag_negative_part(FT(-1)) == FT(-1)
+        @test CA.water_tag_negative_part(FT(2)) == FT(0)
+        for x in (FT(-3), FT(0), FT(5))
+            @test CA.water_tag_partition_target(x) +
+                  CA.water_tag_negative_part(x) == x
+        end
+        # The limiters' rescale aims at the target: a correction that leaves
+        # the parent negative takes a closed partition to zero, not below.
+        @test CA.water_tag_rescale_shift(FT(1.5), FT(-1), FT(2), FT(2)) ==
+              FT(-1.5)
+        @test CA.water_tag_rescale_shift(FT(1.5), FT(1), FT(2), FT(2)) ==
+              FT(1.5) * (FT(1) - FT(2)) / FT(2)
+
+        column(staggering) = CC.CommonSpaces.ColumnSpace(
+            FT;
+            z_min = 0,
+            z_max = 1200,
+            z_elem = 6,
+            staggering,
+        )
+        ᶜspace = column(CC.CommonSpaces.CellCenter())
+        ᶠspace = column(CC.CommonSpaces.CellFace())
+        ᶜz = CC.Fields.coordinate_field(ᶜspace).z
+        region(above) = CA.TanhAltitudeRegion(FT(600), FT(100), above)
+        tags = (
+            CA.WaterTag{:tropo}(region(false)),
+            CA.WaterTag{:strat}(region(true)),
+            CA.WaterTag{:evap}(nothing, :surface_flux),
+        )
+        model = CA.WaterTaggingModel(
+            tags;
+            transport = CA.IncrementWaterTagTransport(),
+            ledger_per_tag = true,
+        )
+        ᶜnames = (
+            :ρ,
+            :ρq_tot,
+            :ρq_tag_tropo,
+            :ρq_tag_strat,
+            :ρq_tag_evap,
+            :q_tag_inc_left,
+            :q_tag_inc_moved,
+            :q_tag_inc_negative,
+            :q_tag_led_inc_tropo,
+            :q_tag_led_inc_strat,
+            :q_tag_led_inc_evap,
+        )
+        state() = CC.Fields.FieldVector(;
+            c = similar(
+                CC.Fields.coordinate_field(ᶜspace),
+                NamedTuple{ᶜnames, NTuple{length(ᶜnames), FT}},
+            ),
+            f = similar(
+                CC.Fields.coordinate_field(ᶠspace),
+                NamedTuple{(:u₃,), Tuple{FT}},
+            ),
+        )
+        # A closed partition of the target, with a source tag beside it.
+        function closed!(Y, ᶜρq)
+            fill!(parent(Y.c), 0)
+            fill!(parent(Y.f), 0)
+            @. Y.c.ρ = FT(1.1)
+            Y.c.ρq_tot .= ᶜρq
+            ᶜtarget = @. CA.water_tag_partition_target(Y.c.ρq_tot)
+            ᶜbelow = @. (1 - tanh((ᶜz - 600) / 100)) / 2
+            @. Y.c.ρq_tag_tropo = ᶜbelow * ᶜtarget
+            @. Y.c.ρq_tag_strat = ᶜtarget - Y.c.ρq_tag_tropo
+            @. Y.c.ρq_tag_evap = FT(0.1) * ᶜtarget
+            return Y
+        end
+        ᶜbase = @. FT(0.012) - FT(4e-6) * ᶜz
+        cache() = (;
+            atmos = (; water_tagging_model = model),
+            tagging = (;
+                CA._water_tag_increment_cache(state(), model)...,
+                ᶜwater_parent = similar(ᶜbase),
+                ᶜwater_pos = similar(ᶜbase),
+            ),
+            scratch = (;
+                ᶜtagging_q_share_norm = similar(ᶜbase),
+                ᶜtemp_scalar = similar(ᶜbase),
+            ),
+        )
+        level(field, k) = parent(field)[k]
+        function ᶜcell(k)
+            z_k = parent(ᶜz)[k]
+            return @. ifelse(ᶜz == z_k, FT(1), FT(0))
+        end
+        ᶜcell3 = ᶜcell(3)
+        ᶜcell4 = ᶜcell(4)
+        dtγ = FT(60)
+        # One stage from `Y` to `U`, with the parent's post-solve `dY` zero:
+        # the tags after it.
+        function stage(Y, U)
+            p = cache()
+            CA.snapshot_water_tag_increment!(Y, p, dtγ)
+            dY = zero(U)
+            CA.correct_water_tag_increment!(dY, U, p)
+            after = copy(U)
+            @. after.c.ρq_tag_tropo += dtγ * dY.c.ρq_tag_tropo
+            @. after.c.ρq_tag_strat += dtγ * dY.c.ρq_tag_strat
+            @. after.c.ρq_tag_evap += dtγ * dY.c.ρq_tag_evap
+            return after, dY, p
+        end
+        tol = 100 * eps(FT) * maximum(abs, parent(ᶜbase))
+
+        # A solve takes cell 3 below zero: it gives its water and 3e-3 more to
+        # cell 4.
+        Y = closed!(state(), ᶜbase)
+        x = level(ᶜbase, 3)
+        y = FT(3e-3)
+        U = closed!(state(), ᶜbase)
+        @. U.c.ρq_tot = ᶜbase - (x + y) * ᶜcell3 + (x + y) * ᶜcell4
+        after, dY, p = stage(Y, U)
+        ᶜtarget = @. CA.water_tag_partition_target(U.c.ρq_tot)
+        ᶜpartition = @. after.c.ρq_tag_tropo + after.c.ρq_tag_strat
+        # The partition closes against the target, cell by cell, and the
+        # negative cell's partition holds nothing.
+        @test maximum(abs, parent(ᶜpartition) .- parent(ᶜtarget)) <= tol
+        @test abs(level(ᶜpartition, 3)) <= tol
+        # The bound: no partition tag goes negative.
+        @test minimum(parent(after.c.ρq_tag_tropo)) >= -tol
+        @test minimum(parent(after.c.ρq_tag_strat)) >= -tol
+        # Every change is in the ledgers: the negative part's column total is
+        # the ledger's, nothing is left out, and each tag's own ledger is its
+        # change bit for bit.
+        ᶜn = @. CA.water_tag_negative_part(Y.c.ρq_tot) -
+           CA.water_tag_negative_part(U.c.ρq_tot)
+        @test sum(dtγ .* dY.c.q_tag_inc_negative) ≈ sum(ᶜn) rtol = 100 * eps(FT)
+        @test sum(ᶜn) > 0
+        @test maximum(abs, parent(dY.c.q_tag_inc_left)) <= tol / dtγ
+        for name in (:tropo, :strat, :evap)
+            @test isequal(
+                parent(getproperty(dY.c, Symbol(:q_tag_led_inc_, name))),
+                parent(getproperty(dY.c, Symbol(:ρq_tag_, name))),
+            )
+        end
+        @test parent(dY.c.q_tag_led_inc_tropo .+ dY.c.q_tag_led_inc_strat) ≈
+              parent(dY.c.q_tag_inc_moved .+ dY.c.q_tag_inc_negative) atol =
+            tol / dtγ
+        # The closure check compares the partition with the target.
+        closure = CA.tag_closure(
+            after,
+            p,
+            CA.water_closure_total(model),
+            CA.water_region_tag_state_names(model),
+        )
+        @test closure.gross_relative <= 100 * eps(FT)
+        @test closure.total ≈ sum(ᶜtarget)
+        # The closure's non-positive columns and the parent's negative water
+        # read the raw `ρq_tot`, not the target, which is never negative. At
+        # 49d29435 the audit read the target and gave 0 here.
+        ᶜnegative = @. -CA.water_tag_negative_part(after.c.ρq_tot)
+        @test sum(ᶜnegative) > 0
+        @test sum(@. -CA.water_tag_negative_part(ᶜtarget)) == 0
+        @test closure.nonpositive_fraction > 0
+        p_audit = merge(
+            p,
+            (; scratch = merge(p.scratch, (; ᶜtemp_scalar_2 = similar(ᶜbase)))),
+        )
+        audit = CA.tag_audit(
+            after,
+            p_audit,
+            CA.water_closure_total(model),
+            CA.water_region_tag_state_names(model),
+            closure.scale,
+        )
+        @test audit.nonpositive_mass == sum(ᶜnegative)
+        water = CA.parent_negative_water(after)
+        @test water.negative == sum(ᶜnegative)
+        @test water.relative == sum(ᶜnegative) / sum(after.c.ρq_tot)
+
+        # The parent recovers: cell 3 takes 2e-3 from cell 4 on top of its
+        # deficit. The partition gives up the deficit where it holds water.
+        Y2 = closed!(state(), U.c.ρq_tot)
+        U2 = closed!(state(), U.c.ρq_tot)
+        z = FT(2e-3)
+        @. U2.c.ρq_tot = U.c.ρq_tot + (y + z) * ᶜcell3 - (y + z) * ᶜcell4
+        after2, dY2, _ = stage(Y2, U2)
+        ᶜtarget2 = @. CA.water_tag_partition_target(U2.c.ρq_tot)
+        ᶜpartition2 = @. after2.c.ρq_tag_tropo + after2.c.ρq_tag_strat
+        @test maximum(abs, parent(ᶜpartition2) .- parent(ᶜtarget2)) <= tol
+        ᶜn2 = @. CA.water_tag_negative_part(Y2.c.ρq_tot) -
+           CA.water_tag_negative_part(U2.c.ρq_tot)
+        @test sum(ᶜn2) < 0
+        @test sum(dtγ .* dY2.c.q_tag_inc_negative) ≈ sum(ᶜn2) rtol =
+            1000 * eps(FT)
+
+        # A parent that stays non-negative: nothing is given, and the
+        # partition follows the parent as before.
+        U3 = closed!(state(), ᶜbase)
+        @. U3.c.ρq_tot = ᶜbase - FT(1e-3) * ᶜcell3 + FT(1e-3) * ᶜcell4
+        after3, dY3, _ = stage(Y, U3)
+        @test all(iszero, parent(dY3.c.q_tag_inc_negative))
+        ᶜpartition3 = @. after3.c.ρq_tag_tropo + after3.c.ρq_tag_strat
+        @test maximum(abs, parent(ᶜpartition3) .- parent(U3.c.ρq_tot)) <= tol
+    end
+end
+
+@testset "The diffusion leak's correction (WP4c)" begin
+    region(above) = CA.TanhAltitudeRegion(750.0, 100.0, above)
+    tags = (
+        CA.WaterTag{:tropo}(region(false)),
+        CA.WaterTag{:strat}(region(true)),
+        CA.WaterTag{:evap}(nothing, (:surface_flux,)),
+    )
+    plain = CA.WaterTaggingModel(tags)
+    corrected = CA.WaterTaggingModel(tags; leak_correction = true)
+    per_tag = CA.WaterTaggingModel(tags; leak_correction = true, ledger_per_tag = true)
+    copies = CA.WaterTaggingModel(
+        tags;
+        updraft_copies = true,
+        leak_correction = true,
+        ledger_per_tag = true,
+    )
+    @test !CA.has_water_tag_leak_correction(nothing)
+    @test !CA.has_water_tag_leak_correction(plain)
+    @test CA.has_water_tag_leak_correction(corrected)
+
+    @testset "The ledgers' names" begin
+        fix_names = (:q_tag_led_fix_tropo, :q_tag_led_fix_strat, :q_tag_led_fix_evap)
+        leak_names =
+            (:q_tag_led_leak_tropo, :q_tag_led_leak_strat, :q_tag_led_leak_evap)
+        upleak_names =
+            (:q_tag_led_upleak_tropo, :q_tag_led_upleak_strat, :q_tag_led_upleak_evap)
+        @test CA.water_tag_leak_mechanism_names(nothing) == ()
+        @test CA.water_tag_leak_mechanism_names(plain) == ()
+        @test CA.water_tag_leak_mechanism_names(corrected) == (:q_tag_led_leaknet,)
+        @test CA.water_tag_leak_mechanism_names(copies) ==
+              (:q_tag_led_leaknet, :q_tag_led_upleaknet)
+        @test CA.water_tag_leak_mechanism_variables(1.0f0, plain) == (;)
+        @test CA.water_tag_leak_mechanism_variables(1.0f0, corrected) ==
+              (; q_tag_led_leaknet = 0.0f0)
+        # Each tag's own ledgers of the correction come with
+        # `water_tag_ledger_per_tag` only.
+        @test CA.water_tag_per_tag_ledger_names(corrected) == ()
+        @test CA.water_tag_per_tag_ledger_names(per_tag) == (fix_names..., leak_names...)
+        @test CA.water_tag_per_tag_ledger_names(copies) ==
+              (fix_names..., leak_names..., upleak_names...)
+        @test all(CA.is_tag_per_tag_ledger_name, (leak_names..., upleak_names...))
+        @test !CA.is_tag_per_tag_ledger_name(:q_tag_led_leaknet)
+        @test !CA.is_tag_per_tag_ledger_name(:q_tag_led_upleaknet)
+        @test CA.is_water_tag_leak_mechanism_name(:q_tag_led_leaknet)
+        @test CA.is_water_tag_leak_mechanism_name(:q_tag_led_upleaknet)
+        @test !CA.is_water_tag_leak_mechanism_name(:q_tag_led_leak_tropo)
+        # They are not the kernels' ledgers per mechanism: a tendency writes
+        # them, so they have no attempted total and no cadence warning.
+        @test !CA.is_tag_mechanism_ledger_name(:q_tag_led_leaknet)
+        atmos = (;
+            water_tagging_model = copies,
+            energy_source_tagging_model = nothing,
+        )
+        state_names = CA.tag_state_ledger_names(atmos)
+        attempted_names = CA.tag_attempted_ledger_names(atmos)
+        for name in
+            (:q_tag_led_leaknet, :q_tag_led_upleaknet, leak_names..., upleak_names...)
+            @test name in state_names
+            @test !(name in attempted_names)
+            @test !CA.is_tracer_var(name)
+        end
+        for name in (:q_tag_led_leaknet, :q_tag_led_leak_tropo, :q_tag_led_upleak_evap)
+            @test CA.is_splittable_jacobian_field(CA.MatrixFields.FieldName(:c, name))
+        end
+        # The diagnostics put a tag's kind before its name, and no tag's name
+        # can make one collide with the partition's ledger's.
+        @test CA.Diagnostics.tag_ledger_diagnostic_name(:q_tag_led_leak_tropo, "gross") ==
+              "q_tag_led_leakgross_tropo"
+        @test CA.Diagnostics.tag_ledger_diagnostic_name(
+            :q_tag_led_upleak_evap,
+            "colgross",
+        ) == "q_tag_led_upleakcolgross_evap"
+        @test CA.Diagnostics.tag_ledger_diagnostic_name(:q_tag_led_leaknet, "gross") ==
+              "q_tag_led_leaknet_gross"
+        @test CA.Diagnostics.tag_ledger_diagnostic_name(:q_tag_led_upleaknet, "gross") ==
+              "q_tag_led_upleaknet_gross"
+    end
+
+    @testset "The key and its refusals" begin
+        @test CA.tag_ledger_per_tag_from_config(true, "water_tag_leak_correction")
+        @test !CA.tag_ledger_per_tag_from_config(nothing, "water_tag_leak_correction")
+        @test_throws r"`water_tag_leak_correction` must be `true` or `false`" CA.tag_ledger_per_tag_from_config(
+            "true",
+            "water_tag_leak_correction",
+        )
+        edmf = Dict{String, Any}(
+            "turbconv" => "prognostic_edmfx",
+            "edmfx_sgs_diffusive_flux" => true,
+        )
+        one_moment = CA.NonEquilibriumMicrophysics1M()
+        check = CA.check_water_tag_leak_correction_supported
+        @test isnothing(check(edmf, one_moment))
+        @test isnothing(check(merge(edmf, Dict("turbconv" => "edonly_edmfx")), one_moment))
+        @test_throws r"needs `microphysics_model: 1M`" check(
+            edmf,
+            CA.EquilibriumMicrophysics0M(),
+        )
+        @test_throws r"needs `turbconv: prognostic_edmfx` or `edonly_edmfx`" check(
+            Dict{String, Any}(),
+            one_moment,
+        )
+        # Without the EDMF diffusive flux there is no leak, and the key does
+        # nothing. It is accepted, so that the gate's trials with that flux
+        # switched off build.
+        @test isnothing(
+            check(merge(edmf, Dict("edmfx_sgs_diffusive_flux" => false)), one_moment),
+        )
+        @test_throws r"refused with `vert_diff: VerticalDiffusion`" check(
+            merge(edmf, Dict("vert_diff" => "VerticalDiffusion")),
+            one_moment,
+        )
     end
 end

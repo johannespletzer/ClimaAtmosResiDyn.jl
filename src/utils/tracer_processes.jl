@@ -331,13 +331,15 @@ chemistry tracers such as `ρq_gas_A`.
 These are diffused with the eddy diffusivity `K_h`, both in the tendencies and
 in the implicit Jacobian. The sedimenting species are handled separately: cloud
 condensate takes a share of the aggregate water tendency, and rain and snow are
-not diffused at all.
+not diffused at all. So the water tags' rain and snow parts, `ρq_rtag_*` and
+`ρq_stag_*`, are not passive either: they move as rain and snow do.
 """
 passive_gs_tracer_names(Y) =
     unrolled_filter(
         name -> !(
             name == @name(ρq_tot) ||
-            name in gs_sedimenting_tracer_candidates
+            name in gs_sedimenting_tracer_candidates ||
+            _is_water_precip_part_field(name)
         ),
         gs_tracer_names(Y),
     )

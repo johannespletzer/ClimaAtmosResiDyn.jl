@@ -251,6 +251,190 @@ end
     end
 end
 
+@testset "water_tracers refusals" begin
+    evap = [Dict("name" => "evap", "source" => "surface_flux")]
+    water_config(extra, job_id) = tracer_config(
+        ["microphysics_model" => "0M", "water_tracers" => evap, extra...];
+        job_id,
+    )
+
+    @test isnothing(CA.check_water_tracers_transport_supported(nothing, false))
+    # Under prognostic EDMF the tags follow one updraft, by default through a
+    # donor share and an exchange, or through copies. More than one updraft is
+    # refused.
+    edmf = CA.AtmosTagging(
+        water_config(["turbconv" => "prognostic_edmfx"], "water_tags_edmf"),
+    )
+    @test edmf.water_tagging_model isa CA.WaterTaggingModel
+    @test !CA.has_water_tag_updraft_copies(edmf.water_tagging_model)
+    @test_throws "`updraft_number: 1`" CA.AtmosTagging(
+        water_config(
+            ["turbconv" => "prognostic_edmfx", "updraft_number" => 2],
+            "water_tags_edmf_two_updrafts",
+        ),
+    )
+    # The copies: under prognostic EDMF only, with one reconstruction for the
+    # updraft's water and its tracers, and only with tags to copy.
+    copies = CA.AtmosTagging(
+        water_config(
+            ["turbconv" => "prognostic_edmfx", "water_tag_updraft_copy" => true],
+            "water_tags_copies",
+        ),
+    )
+    @test CA.has_water_tag_updraft_copies(copies.water_tagging_model)
+    @test_throws "needs `turbconv: prognostic_edmfx`" CA.AtmosTagging(
+        water_config(["water_tag_updraft_copy" => true], "water_tags_copies_no_edmf"),
+    )
+    @test_throws "`edmfx_mse_q_tot_upwinding` equal" CA.AtmosTagging(
+        water_config(
+            [
+                "turbconv" => "prognostic_edmfx",
+                "water_tag_updraft_copy" => true,
+                "edmfx_mse_q_tot_upwinding" => "third_order",
+            ],
+            "water_tags_copies_upwinding",
+        ),
+    )
+    @test_throws "no tags to copy" CA.AtmosTagging(
+        tracer_config(
+            ["microphysics_model" => "0M", "water_tag_updraft_copy" => true];
+            job_id = "water_copies_without_tags",
+        ),
+    )
+    @test_throws "no tags for it to move" CA.AtmosTagging(
+        tracer_config(
+            ["microphysics_model" => "0M", "water_tag_transport" => "increment"];
+            job_id = "water_increment_without_tags",
+        ),
+    )
+    @test_throws "must be `true` or `false`" CA.water_tag_updraft_copy_from_config(
+        "true",
+    )
+    # AMD's diffusivity comes from each tracer's own gradient, so the tags'
+    # diffusion does not add up to the parent's.
+    @test_throws "amd_les: true" CA.AtmosTagging(
+        water_config(["amd_les" => true], "water_tags_amd"),
+    )
+    # Eddy diffusion alone shares one diffusivity, so the sum holds under 0M.
+    # Under 1M the known q_tot_eff leak applies, as under any diffusion, and is
+    # not refused.
+    edonly = CA.AtmosTagging(
+        water_config(["turbconv" => "edonly_edmfx"], "water_tags_edonly"),
+    )
+    @test edonly.water_tagging_model isa CA.WaterTaggingModel
+    # The records are not transported, so they stay allowed under EDMF.
+    records = CA.AtmosTagging(
+        tracer_config(
+            [
+                "microphysics_model" => "0M",
+                "turbconv" => "prognostic_edmfx",
+                "water_process_record" => ["surface_flux"],
+            ];
+            job_id = "water_records_edmf",
+        ),
+    )
+    @test records.water_process_record !== nothing
+    @test records.water_tagging_model === nothing
+    # And under AMD, which breaks only the transported tags.
+    records_amd = CA.AtmosTagging(
+        tracer_config(
+            [
+                "microphysics_model" => "0M",
+                "amd_les" => true,
+                "water_process_record" => ["surface_flux"],
+            ];
+            job_id = "water_records_amd",
+        ),
+    )
+    @test records_amd.water_process_record !== nothing
+    @test records_amd.water_tagging_model === nothing
+    # The prescribed flow's surface moisture flux enters ρq_tot untagged. The
+    # warning sees the built model, since the setup can bring the flow.
+    flow = CA.ShipwayHill2012VelocityProfile{FT}()
+    tagging = CA.WaterTaggingModel(CA.water_tracer_tuple(evap, FT))
+    @test_logs (:warn, r"prescribed flow") CA.warn_water_tags_under_prescribed_flow(
+        flow,
+        tagging,
+    )
+    @test_logs CA.warn_water_tags_under_prescribed_flow(nothing, tagging)
+    @test_logs CA.warn_water_tags_under_prescribed_flow(flow, nothing)
+    # Both routes to a flow reach the warning through `get_atmos`: the setup's
+    # own, as the shipped kinematic driver uses it, and the key.
+    for (entries, job_id) in (
+        (["initial_condition" => "ShipwayHill2012"], "water_tags_flow_setup"),
+        (
+            [
+                "initial_condition" => "DYCOMS_RF02",
+                "prescribed_flow" => "ShipwayHill2012",
+                # The model runs a prescribed flow explicitly only.
+                "implicit_microphysics" => false,
+            ],
+            "water_tags_flow_key",
+        ),
+    )
+        config = tracer_config(
+            [
+                "config" => "column",
+                "z_max" => 2000.0,
+                "z_elem" => 10,
+                "z_stretch" => false,
+                "microphysics_model" => "1M",
+                "water_tracers" => evap,
+                entries...,
+            ];
+            job_id,
+        )
+        params = CA.ClimaAtmosParameters(config)
+        setup = CA.get_setup_type(
+            config.parsed_args,
+            CA.Parameters.thermodynamics_params(params),
+        )
+        grid = CA.get_grid(config.parsed_args, params, config.comms_ctx)
+        @test_logs (:warn, r"prescribed flow") match_mode = :any CA.get_atmos(
+            config,
+            params,
+            grid;
+            setup_type = setup,
+        )
+    end
+
+    # Names that would take the name of another diagnostic of the family.
+    @test_throws "`res` is a reserved tag name" CA.water_tracer_tuple(
+        [Dict("name" => "res", "source" => "surface_flux")],
+        FT,
+    )
+    for name in (
+        "fix_a",
+        "upfix_a",
+        "inc_left",
+        "rtag_a",
+        "stag_a",
+        "fixgross_a",
+        "fixcount_a",
+        "upfixgross_a",
+        "upfixcount_a",
+    )
+        @test_throws "`$name` is refused" CA.water_tracer_tuple(
+            [Dict("name" => name, "source" => "surface_flux")],
+            FT,
+        )
+    end
+    # The energy source tags reserve their ledgers' prefixes too.
+    for name in ("fix_a", "fixgross_a", "fixcount_a", "inc_left")
+        @test_throws "`$name` is refused" CA.energy_source_tracer_tuple(
+            [Dict("name" => name, "source" => "surface_flux")],
+            FT,
+        )
+    end
+    # A reserved prefix counts only as a prefix, with its underscore.
+    for name in ("evap_fix", "fixed", "income", "stagnant", "rtagged")
+        @test CA.water_tracer_tuple(
+            [Dict("name" => name, "source" => "surface_flux")],
+            FT,
+        )[1] isa CA.WaterTag
+    end
+end
+
 @testset "energy_source_tags against the scheme" begin
     entries = [
         Dict{String, Any}("name" => "a", "region" => "tropics"),
@@ -349,6 +533,120 @@ end
     )
     @test enthalpy.energy_source_tagging_model.transport isa
           CA.EnthalpyEnergySourceTransport
+
+    # `enthalpy_increment` with sedimenting microphysics stepped explicitly.
+    # With 1M the tags' sedimentation cross blocks close the lag (PR #113's
+    # validation). So it runs with the manual Jacobian, the default, and with
+    # the dense one, which wins over the sparse autodiff one and is exact. The
+    # sparse autodiff Jacobian lacks the blocks, and without them the tags lag
+    # the parent there (FINDINGS E80 on the record branch). 2M and P3 are not
+    # measured. The default refuses those. The opt-in key lets them through
+    # the check, with a warning.
+    key = "energy_source_tag_increment_allow_explicit_microphysics"
+    explicit(microphysics) = (
+        "microphysics_model" => microphysics,
+        "implicit_microphysics" => false,
+        "energy_source_tag_transport" => "enthalpy_increment",
+    )
+    auto = "use_auto_jacobian" => true
+    dense = "use_dense_jacobian" => true
+    for (name, pairs) in (
+        "increment_explicit_1M" => explicit("1M"),
+        "increment_explicit_1M_dense" => (explicit("1M")..., auto, dense),
+    )
+        @test CA.AtmosTagging(source_config(name, pairs...)).energy_source_tagging_model.transport isa
+              CA.EnthalpyIncrementEnergySourceTransport
+    end
+    for (name, microphysics, pairs) in (
+        ("increment_explicit_1M_auto", "1M", (explicit("1M")..., auto)),
+        ("increment_explicit_2M", "2M", explicit("2M")),
+        ("increment_explicit_2MP3", "2MP3", explicit("2MP3")),
+    )
+        @test_throws Regex("refused with\\s+`microphysics_model: $microphysics`") CA.AtmosTagging(
+            source_config(name, pairs...),
+        )
+        @test_throws Regex("$key: true") CA.AtmosTagging(source_config(name, pairs...))
+        allowed =
+            @test_logs (:warn, r"stepped explicitly") match_mode = :any CA.AtmosTagging(
+                source_config("$(name)_allowed", pairs..., key => true),
+            )
+        @test allowed.energy_source_tagging_model.transport isa
+              CA.EnthalpyIncrementEnergySourceTransport
+    end
+    # The message says why. Under the sparse autodiff Jacobian 1M lacks the
+    # blocks, and the lag without them was measured. 2M and P3 were not.
+    explicit_1m_auto = source_config("increment_explicit_1M_auto", explicit("1M")..., auto)
+    @test_throws r"That Jacobian does not carry the tags' sedimentation" CA.AtmosTagging(
+        explicit_1m_auto,
+    )
+    @test_throws r"2\.1e-4 of the partitioned energy, against" CA.AtmosTagging(
+        explicit_1m_auto,
+    )
+    @test_throws r"Use the manual\s+Jacobian, the default" CA.AtmosTagging(
+        explicit_1m_auto,
+    )
+    auto_warning =
+        r"under `use_auto_jacobian: true`, because.*That Jacobian does not carry"
+    @test_logs (:warn, auto_warning) match_mode = :any CA.AtmosTagging(
+        source_config(
+            "increment_explicit_1M_auto_warned",
+            explicit("1M")...,
+            auto,
+            key => true,
+        ),
+    )
+    @test_throws r"No run has measured the closure" CA.AtmosTagging(
+        source_config("increment_explicit_2M_unmeasured", explicit("2M")...),
+    )
+    # The refusal concerns only those combinations. With the microphysics
+    # implicit, the default, also under the sparse autodiff Jacobian, with 0M,
+    # which sediments nothing, or with another transport, nothing changes, and
+    # the key's default is off.
+    for (name, pairs) in (
+        "increment_implicit_1m" => (
+            "microphysics_model" => "1M",
+            "energy_source_tag_transport" => "enthalpy_increment",
+        ),
+        "increment_implicit_1m_auto" => (
+            "microphysics_model" => "1M",
+            "use_auto_jacobian" => true,
+            "energy_source_tag_transport" => "enthalpy_increment",
+        ),
+        "increment_implicit_2m" => (
+            "microphysics_model" => "2M",
+            "energy_source_tag_transport" => "enthalpy_increment",
+        ),
+        "increment_explicit_0m" => (
+            "microphysics_model" => "0M",
+            "implicit_microphysics" => false,
+            "energy_source_tag_transport" => "enthalpy_increment",
+        ),
+    )
+        @test CA.AtmosTagging(source_config(name, pairs...)).energy_source_tagging_model.transport isa
+              CA.EnthalpyIncrementEnergySourceTransport
+    end
+    tracer_explicit_1m = CA.AtmosTagging(
+        source_config(
+            "tracer_explicit_1m",
+            "microphysics_model" => "1M",
+            "implicit_microphysics" => false,
+        ),
+    )
+    @test tracer_explicit_1m.energy_source_tagging_model.transport isa
+          CA.TracerEnergySourceTransport
+    @test CA.energy_source_increment_explicit_microphysics_from_config(nothing) ==
+          false
+    @test CA.energy_source_increment_explicit_microphysics_from_config(true) == true
+    @test_throws r"must be\s+`true` or `false`" CA.energy_source_increment_explicit_microphysics_from_config(
+        "true",
+    )
+    # As the offset and the transport, the key is refused without tags.
+    @test_throws r"no tags for it\s+to allow" CA.AtmosTagging(
+        tracer_config(
+            [key => true];
+            job_id = "tracer_config_source_explicit_microphysics_alone",
+        ),
+    )
 end
 
 @testset "passive_tracers release grid" begin
@@ -538,6 +836,7 @@ end
 @testset "Closure checks" begin
     tolerances = CA.DEFAULT_CLOSURE_TOLERANCES
     aborts = CA.DEFAULT_CLOSURE_ABORT_LEVELS
+    voids = CA.DEFAULT_CLOSURE_VOID_LEVELS
 
     # Both keys are optional.
     bare = CA.closure_check_from_config(
@@ -546,10 +845,48 @@ end
         FT;
         default_tolerance = tolerances.water,
         default_abort_above = aborts.water,
+        default_void_above = voids.water,
     )
     @test bare.period == "1days"
     @test bare.tolerance == FT(tolerances.water)
-    @test bare.abort_above == FT(aborts.water)
+    # No family ends a run by default: a diagnostic must not end a run the
+    # model completes (known issue 7). Water's old abort level is its void
+    # level now.
+    @test isnothing(aborts.water)
+    @test isnothing(bare.abort_above)
+    @test bare.void_above == FT(voids.water) == FT(1)
+    # An explicit level of either kind is read; `~` turns the void level off,
+    # and zero is refused, as for `abort_above`.
+    set_void = CA.closure_check_from_config(
+        Dict{String, Any}("void_above" => 5.0, "abort_above" => 10.0),
+        "`water_closure_check`",
+        FT;
+        default_tolerance = tolerances.water,
+        default_abort_above = aborts.water,
+        default_void_above = voids.water,
+    )
+    @test set_void.void_above == FT(5)
+    @test set_void.abort_above == FT(10)
+    @test isnothing(
+        CA.closure_check_from_config(
+            Dict{String, Any}("void_above" => nothing),
+            "`water_closure_check`",
+            FT;
+            default_tolerance = tolerances.water,
+            default_abort_above = aborts.water,
+            default_void_above = voids.water,
+        ).void_above,
+    )
+    @test_throws r"`void_above` must be positive" CA.closure_check_from_config(
+        Dict{String, Any}("void_above" => 0.0),
+        "`water_closure_check`",
+        FT;
+        default_tolerance = tolerances.water,
+        default_abort_above = aborts.water,
+        default_void_above = voids.water,
+    )
+    @test isnothing(voids.energy)
+    @test isnothing(voids.energy_source)
     # The audit is extra reductions and a second file, so it is opt-in.
     @test bare.audit == false
 
@@ -678,11 +1015,60 @@ end
     )
     checks = CA.closure_checks_from_config(config)
     @test checks.water.period == "6hours"
+    # From a configuration: water never aborts and has its void level; the
+    # energy family has neither.
+    @test isnothing(checks.water.abort_above)
+    @test checks.water.void_above == eltype(config)(1)
+    @test isnothing(checks.energy.abort_above)
+    @test isnothing(checks.energy.void_above)
     # This path takes its float type from the run, through `eltype(config)`,
     # rather than from this file's `FT`. `FLOAT_TYPE` defaults to Float32, and
     # `Float32(1e-4) != Float64(1e-4)`.
     @test checks.energy.tolerance isa eltype(config)
     @test checks.energy.tolerance == eltype(config)(1.0e-4)
+    # Only water reads the parent's negative water, at the contract's level by
+    # default (known issue 7).
+    @test checks.water.negative_water_void_above ==
+          eltype(config)(CA.DEFAULT_NEGATIVE_WATER_VOID_ABOVE) ==
+          eltype(config)(1.0e-4)
+    @test isnothing(checks.energy.negative_water_void_above)
+
+    # The water block's `negative_water_void_above`: its default, a level of
+    # its own, zero, and `~`, which switches it off. A negative level is
+    # refused, and so is the key in a block whose parent is not water.
+    water_check(spec) = CA.closure_check_from_config(
+        spec,
+        "`water_closure_check`",
+        FT;
+        default_tolerance = tolerances.water,
+        default_abort_above = aborts.water,
+        default_void_above = voids.water,
+        negative_water = true,
+    )
+    @test water_check(Dict{String, Any}()).negative_water_void_above ==
+          FT(1.0e-4)
+    @test water_check(
+        Dict{String, Any}("negative_water_void_above" => 1.0e-3),
+    ).negative_water_void_above == FT(1.0e-3)
+    @test water_check(
+        Dict{String, Any}("negative_water_void_above" => 0.0),
+    ).negative_water_void_above == FT(0)
+    @test isnothing(
+        water_check(
+            Dict{String, Any}("negative_water_void_above" => nothing),
+        ).negative_water_void_above,
+    )
+    @test_throws r"`negative_water_void_above` must not be negative" water_check(
+        Dict{String, Any}("negative_water_void_above" => -1.0e-4),
+    )
+    @test isnothing(bare.negative_water_void_above)
+    @test_throws r"does not take `negative_water_void_above`" CA.closure_check_from_config(
+        Dict{String, Any}("negative_water_void_above" => 1.0e-4),
+        "`energy_closure_check`",
+        FT;
+        default_tolerance = tolerances.energy,
+        default_abort_above = aborts.energy,
+    )
 end
 
 @testset "Closure checks refuse what they cannot compute" begin
@@ -1042,6 +1428,553 @@ end
     @test all(row -> length(split(row, ",")) == 9, rows)
 end
 
+# Known issue 7: past the void level the check warns once and marks every later
+# row `closure_void`, and the run goes on. Only an explicit `abort_above` ends
+# it.
+@testset "Closure past the void level" begin
+    CC = CA.ClimaCore
+    space = CC.CommonSpaces.ColumnSpace(
+        FT;
+        z_min = 0,
+        z_max = 1000,
+        z_elem = 4,
+        staggering = CC.CommonSpaces.CellCenter(),
+    )
+    Y = CC.Fields.FieldVector(;
+        c = similar(
+            CC.Fields.coordinate_field(space),
+            NamedTuple{(:ρ, :ρq_tot, :ρq_tag_a), NTuple{3, FT}},
+        ),
+    )
+    Y.c.ρ .= 1
+    Y.c.ρq_tot .= 1
+    integrator = (;
+        u = Y,
+        p = (; scratch = (; ᶜtemp_scalar = zero(Y.c.ρ))),
+        t = 3600.0,
+    )
+    check!(dir, voided; void_above = FT(1), abort_above = nothing) =
+        CA.tag_closure_callback!(
+            integrator,
+            dir,
+            "water",
+            :ρq_tot,
+            (:ρq_tag_a,),
+            nothing,
+            abort_above,
+            false;
+            void_above,
+            voided,
+        )
+    void_column(dir) =
+        map(row -> last(split(row, ",")), readlines(CA.tag_closure_path(dir, "water")))
+
+    dir = mktempdir()
+    voided = Ref(false)
+    # A closed partition: not void.
+    Y.c.ρq_tag_a .= 1
+    @test isnothing(check!(dir, voided))
+    # The tags hold three times the water: past the level. It warns once and
+    # does not end the run.
+    Y.c.ρq_tag_a .= 3
+    @test_logs (:warn, r"exceeds the void level") check!(dir, voided)
+    @test voided[]
+    # Closed again, but every row from the first pass on stays void, and the
+    # warning is not repeated.
+    Y.c.ρq_tag_a .= 1
+    @test_logs check!(dir, voided)
+    @test void_column(dir) == ["closure_void", "0", "1", "1"]
+    # Without a void level the table has no `closure_void` column.
+    plain = mktempdir()
+    check!(plain, Ref(false); void_above = nothing)
+    @test !occursin("void", first(readlines(CA.tag_closure_path(plain, "water"))))
+    # An explicit `abort_above` still ends the run.
+    Y.c.ρq_tag_a .= 3
+    @test_throws r"exceeds\s+the configured abort level" check!(
+        mktempdir(),
+        Ref(false);
+        abort_above = FT(1),
+    )
+    # The audit table gets the same last column.
+    audit_dir = mktempdir()
+    audit = (;
+        untagged = 0.0,
+        untagged_relative = 0.0,
+        overclaimed = 2.0,
+        overclaimed_relative = 2.0,
+        orphaned = 0.0,
+        orphaned_relative = 0.0,
+        orphaned_volume_fraction = 0.0,
+        nonpositive_mass = 0.0,
+        nonpositive_mass_fraction = 0.0,
+    )
+    CA.write_tag_audit!(audit_dir, 0.0, "water", audit; closure_void = true)
+    audit_rows = readlines(CA.tag_audit_path(audit_dir, "water"))
+    @test endswith(audit_rows[1], ",nonpositive_mass_fraction,closure_void")
+    @test endswith(audit_rows[2], ",1")
+
+    # The flags go through a checkpoint (the owner's review of #112). The cache
+    # holds one flag per tag family the model has. The stand-ins for the models
+    # only need to be there.
+    atmos = (;
+        water_tagging_model = :water,
+        tagging_model = nothing,
+        energy_source_tagging_model = :energy_source,
+    )
+    flags = CA.tag_closure_void_flags(atmos)
+    @test keys(flags) == (:water, :energy_source)
+    @test !flags.water[] && !flags.energy_source[]
+    # The callback passes the family's flag from `p.tagging`.
+    @test CA.tag_closure_voided((; tagging = (; closure_void = flags)), :water) ===
+          flags.water
+    flags.water[] = true
+    context = ClimaComms.SingletonCommsContext()
+    checkpoint = joinpath(mktempdir(), "day0.3600.hdf5")
+    CA.InputOutput.HDF5Writer(checkpoint, context) do writer
+        CA.write_tag_closure_void_attributes!(
+            writer.file,
+            (; closure_void = flags),
+        )
+    end
+    # A restart reads them back, and says which checks restart as void.
+    restored = CA.tag_closure_void_flags(atmos)
+    @test_logs (:warn, r"water tags passed their `void_above` level") CA.restore_tag_closure_void!(
+        (; closure_void = restored),
+        checkpoint,
+        context,
+    )
+    @test restored.water[]
+    @test !restored.energy_source[]
+    # The first row after the restart is void although the partition is closed,
+    # and it does not warn again.
+    Y.c.ρq_tag_a .= 1
+    after_restart = mktempdir()
+    @test_logs check!(after_restart, restored.water)
+    @test void_column(after_restart) == ["closure_void", "1"]
+    # A checkpoint written before the flags were recorded restarts as not void,
+    # with a warning.
+    old_checkpoint = joinpath(mktempdir(), "day0.3600.hdf5")
+    CA.InputOutput.HDF5Writer(_ -> nothing, old_checkpoint, context)
+    stale = CA.tag_closure_void_flags(atmos)
+    stale.water[] = true
+    @test_logs (:warn, r"written before the closure checks recorded") CA.restore_tag_closure_void!(
+        (; closure_void = stale),
+        old_checkpoint,
+        context,
+    )
+    @test !stale.water[]
+    @test !stale.energy_source[]
+    # Without tags there is nothing to write or read back.
+    @test isnothing(CA.write_tag_closure_void_attributes!(nothing, nothing))
+    @test isnothing(CA.restore_tag_closure_void!(nothing, checkpoint, context))
+end
+
+# Known issue 7, rev. 2's contract row "Parent validity: negative water": the
+# water check reads the parent's own negative water from the raw `ρq_tot`, and
+# marks its rows `negative_water_void` past the level. The ledger adds it up
+# after every accepted step, so that the checks miss nothing between them.
+
+# What a call allocates once compiled, behind a function barrier, so that the
+# testset's own scope adds nothing.
+second_call_allocations(f::F, args::Vararg{Any, N}) where {F, N} =
+    (f(args...); @allocated f(args...))
+
+@testset "The parent's negative water" begin
+    CC = CA.ClimaCore
+    space = CC.CommonSpaces.ColumnSpace(
+        FT;
+        z_min = 0,
+        z_max = 1000,
+        z_elem = 4,
+        staggering = CC.CommonSpaces.CellCenter(),
+    )
+    Y = CC.Fields.FieldVector(;
+        c = similar(
+            CC.Fields.coordinate_field(space),
+            NamedTuple{(:ρ, :ρq_tot, :ρq_tag_a), NTuple{3, FT}},
+        ),
+    )
+    Y.c.ρ .= 1
+    Δz = FT(250)
+    # Four cells of 250 m. The third holds -0.5, the others 1.
+    positive = FT[1, 1, 1, 1]
+    one_negative = FT[1, 1, -0.5, 1]
+    set_parent!(values) = (parent(Y.c.ρq_tot) .= values; Y)
+    # `water_closure_parent` asks the model whether rain and snow carry their
+    # own tags (#121). `nothing` answers no, as for this column's one tag.
+    p = (;
+        scratch = (;
+            ᶜtemp_scalar = zero(Y.c.ρ),
+            ᶜtemp_scalar_2 = zero(Y.c.ρ),
+        ),
+        tagging = (; ᶜwater_parent = zero(Y.c.ρ)),
+        atmos = (; water_tagging_model = nothing),
+    )
+
+    # The ratio: 0 on a positive column, and N / ∫ρq_tot with one negative
+    # cell, N = 250 × 0.5 = 125 and ∫ρq_tot = 250 × 2.5 = 625.
+    @test CA.parent_negative_water(set_parent!(positive)).relative == 0
+    water = CA.parent_negative_water(set_parent!(one_negative))
+    @test water.negative ≈ Δz * FT(0.5) rtol = 4 * eps(FT)
+    @test water.total ≈ Δz * FT(2.5) rtol = 4 * eps(FT)
+    @test water.relative ≈ FT(0.2) rtol = 8 * eps(FT)
+    # Under option C the closure's parent is the target, `max(ρq_tot, 0)`,
+    # whose negative part is zero. Read from it, the ratio would be 0.
+    ᶜtarget = CA.water_closure_parent(Y, p)
+    @test sum(@. -CA.water_tag_negative_part(ᶜtarget)) == 0
+    # The guard: no scale where the parent's water is zero or less in all.
+    @test CA.negative_water_relative(FT(0), FT(0)) == 0
+    @test CA.negative_water_relative(FT(1), FT(0)) == Inf
+    @test CA.negative_water_relative(FT(1), FT(-2)) == Inf
+    @test CA.negative_water_relative(FT(1), FT(4)) == FT(0.25)
+
+    # The audit's non-positive mass reads the raw parent too:
+    # Σ|min(ρq_tot, 0)| dV, not zero. At 49d29435 it read the target.
+    Y.c.ρq_tag_a .= max.(Y.c.ρq_tot, 0)
+    audit = CA.tag_audit(
+        Y,
+        p,
+        CA.water_closure_parent,
+        (:ρq_tag_a,),
+        FT(3) * Δz,
+    )
+    @test audit.nonpositive_mass ≈ Δz * FT(0.5) rtol = 4 * eps(FT)
+    @test audit.nonpositive_mass > 0
+    closure =
+        CA.tag_closure(Y, p, CA.water_closure_parent, (:ρq_tag_a,))
+    @test closure.nonpositive_fraction == FT(0.25)
+    @test closure.gross_relative == 0
+
+    # The check, as the water family runs it. `table_column` reads a column of
+    # a table by name.
+    function table_column(path, name)
+        header, rows... = readlines(path)
+        index = findfirst(==(name), split(header, ","))
+        isnothing(index) && return nothing
+        return map(row -> split(row, ",")[index], rows)
+    end
+    integrator(t) = (; u = Y, p, t)
+    function check!(dir, t, negative_water; audit = false)
+        Y.c.ρq_tag_a .= max.(Y.c.ρq_tot, 0)
+        return CA.tag_closure_callback!(
+            integrator(t),
+            dir,
+            "water",
+            CA.water_closure_parent,
+            (:ρq_tag_a,),
+            nothing,
+            nothing,
+            audit;
+            negative_water,
+        )
+    end
+    level = FT(1.0e-4)
+    dir = mktempdir()
+    voided = Ref(false)
+    flag = (; void_above = level, voided, ledger = nothing)
+    closure_table = CA.tag_closure_path(dir, "water")
+    # Positive: 0. Negative past the level: 1, with one warning. Positive
+    # again: still 1, and no second warning.
+    set_parent!(positive)
+    @test_logs check!(dir, 0.0, flag)
+    set_parent!(one_negative)
+    @test_logs (:warn, r"above\s+`negative_water_void_above`") match_mode =
+        :any check!(dir, 10.0, flag)
+    @test voided[]
+    set_parent!(positive)
+    @test_logs check!(dir, 20.0, flag)
+    @test table_column(closure_table, "negative_water_void") == ["0", "1", "1"]
+    relatives = parse.(FT, table_column(closure_table, "negative_water_relative"))
+    @test relatives[1] == 0 && relatives[3] == 0
+    @test relatives[2] ≈ FT(0.2) rtol = 8 * eps(FT)
+    # The contract's level is a mass fraction: a smaller negative part stays
+    # below it. 250 × 1e-5 is 3.3e-6 of the water, not void.
+    below = mktempdir()
+    below_voided = Ref(false)
+    set_parent!(FT[1, 1, -1.0e-5, 1])
+    check!(below, 0.0, (; void_above = level, voided = below_voided, ledger = nothing))
+    @test !below_voided[]
+    @test table_column(CA.tag_closure_path(below, "water"), "negative_water_void") ==
+          ["0"]
+    # `~` drops both columns, and the audit's flag.
+    off = mktempdir()
+    set_parent!(one_negative)
+    check!(off, 0.0, (; void_above = nothing, voided = Ref(false), ledger = nothing))
+    @test !occursin("negative_water", first(readlines(CA.tag_closure_path(off, "water"))))
+    # Without the key the table is as before, column for column.
+    header_off = first(readlines(CA.tag_closure_path(off, "water")))
+    @test header_off ==
+          "time,total,tagged,residual,relative,gross_residual," *
+          "gross_relative,scale,nonpositive_fraction"
+
+    # The same level at the end of every accepted step (the owner's decision
+    # on #118's review). The step's ratio is the row's, bit for bit, and 0
+    # without negative water.
+    set_parent!(one_negative)
+    @test CA.negative_water_step_relative(Y.c.ρq_tot) ===
+          CA.parent_negative_water(Y).relative
+    set_parent!(FT[1, -0.0, 0, 1])
+    @test CA.negative_water_step_relative(Y.c.ρq_tot) === zero(FT)
+    # Where all the water is zero or less, the guard gives `Inf`.
+    set_parent!(FT[0, 0, -0.5, 0])
+    @test CA.negative_water_step_relative(Y.c.ρq_tot) == Inf
+    # A row, a clean step, a step past the level, a clean step, and a row:
+    # the excursion lies wholly between the two rows. The step sets the flag
+    # and warns once. The next row is void, though its own ratio is 0, and it
+    # does not warn again.
+    step_voided = Ref(false)
+    step_p = merge(
+        p,
+        (; tagging = (; p.tagging..., negative_water_void = (; water = step_voided))),
+    )
+    check_step!(t, level) = CA.check_negative_water_step!((; u = Y, p = step_p, t), level)
+    step_flag = (; void_above = level, voided = step_voided, ledger = nothing)
+    between = mktempdir()
+    set_parent!(positive)
+    check!(between, 0.0, step_flag)
+    @test_logs check_step!(10.0, level)
+    @test !step_voided[]
+    set_parent!(one_negative)
+    @test_logs (:warn, r"end of the step to t = 20.0 s") check_step!(20.0, level)
+    @test step_voided[]
+    @test_logs check_step!(25.0, level)
+    set_parent!(positive)
+    @test_logs check_step!(30.0, level)
+    @test step_voided[]
+    @test_logs check!(between, 40.0, step_flag)
+    between_table = CA.tag_closure_path(between, "water")
+    @test table_column(between_table, "negative_water_void") == ["0", "1"]
+    @test table_column(between_table, "negative_water_relative") == ["0.0", "0.0"]
+    # A negative part below the level leaves the flag, and zero marks the
+    # first negative water.
+    step_voided[] = false
+    set_parent!(FT[1, 1, -1.0e-5, 1])
+    check_step!(0.0, level)
+    @test !step_voided[]
+    @test_logs (:warn,) check_step!(0.0, zero(FT))
+    @test step_voided[]
+    # `~` does no work: no sum, no flag, even on a negative parent.
+    step_voided[] = false
+    set_parent!(one_negative)
+    @test isnothing(check_step!(0.0, nothing))
+    @test !step_voided[]
+    @test (@allocated check_step!(0.0, nothing)) == 0
+    # With a level it allocates: each global sum goes through ClimaCore's
+    # `sum`, which wraps the local result in a one-element array for the
+    # allreduce. Measured, that is 48 bytes a sum on Julia 1.11 and 288 on
+    # Julia 1.10. Two sums here, since the parent is negative. The flag is
+    # set first, so that the calls do not warn.
+    step_voided[] = true
+    @test second_call_allocations(
+        CA.check_negative_water_step!,
+        (; u = Y, p = step_p, t = 0.0),
+        level,
+    ) <= 2 * (VERSION >= v"1.11" ? 48 : 288)
+    # The level the per-step callback gets: the water check's key, or nothing
+    # without water tags, without the check, or with `~`.
+    @test CA.negative_water_step_level((; negative_water_void_above = level), :water) ==
+          level
+    @test isnothing(
+        CA.negative_water_step_level((; negative_water_void_above = nothing), :water),
+    )
+    @test isnothing(CA.negative_water_step_level(nothing, :water))
+    @test isnothing(
+        CA.negative_water_step_level((; negative_water_void_above = level), nothing),
+    )
+
+    # The ledger: each accepted step adds max(-ρq_tot, 0) Δt and one event per
+    # negative cell, against a hand computation.
+    ledger = CA.negative_water_ledger_cache(Y, :water)
+    @test isnothing(CA.negative_water_ledger_cache(Y, nothing))
+    set_parent!(one_negative)
+    CA.accumulate_negative_water!(ledger, Y.c.ρq_tot, 10.0)
+    @test parent(ledger.ᶜamount)[:] == [0, 0, 5, 0]
+    @test parent(ledger.ᶜevents)[:] == [0, 0, 1, 0]
+    CA.accumulate_negative_water!(ledger, Y.c.ρq_tot, 5.0)
+    @test parent(ledger.ᶜamount)[:] == [0, 0, 7.5, 0]
+    @test parent(ledger.ᶜevents)[:] == [0, 0, 2, 0]
+    @test eltype(parent(ledger.ᶜamount)) == Float64
+    # A clean step, including a signed zero, leaves both bit for bit.
+    amount = copy(parent(ledger.ᶜamount))
+    events = copy(parent(ledger.ᶜevents))
+    set_parent!(FT[1, -0.0, 0, 1])
+    CA.accumulate_negative_water!(ledger, Y.c.ρq_tot, 10.0)
+    @test isequal(parent(ledger.ᶜamount), amount)
+    @test isequal(parent(ledger.ᶜevents), events)
+    @test isnothing(CA.accumulate_negative_water!(nothing, Y.c.ρq_tot, 10.0))
+
+    # The audit's columns of the ledger: the first row has an empty interval,
+    # a clean interval changes by exactly 0, and a step with negative water
+    # changes the integral by 250 × 0.5 × 10 kg s and the count by one.
+    fresh = CA.negative_water_ledger_cache(Y, :water)
+    audit_dir = mktempdir()
+    audit_voided = Ref(false)
+    ledger_check = (; void_above = level, voided = audit_voided, ledger = fresh)
+    set_parent!(positive)
+    check!(audit_dir, 0.0, ledger_check; audit = true)
+    CA.accumulate_negative_water!(fresh, Y.c.ρq_tot, 10.0)
+    check!(audit_dir, 10.0, ledger_check; audit = true)
+    set_parent!(one_negative)
+    CA.accumulate_negative_water!(fresh, Y.c.ρq_tot, 10.0)
+    @test_logs (:warn,) match_mode = :any check!(
+        audit_dir,
+        20.0,
+        ledger_check;
+        audit = true,
+    )
+    audit_table = CA.tag_audit_path(audit_dir, "water")
+    column(name) = parse.(Float64, table_column(audit_table, name))
+    @test column("negative_water_interval")[1:2] == [0, 0]
+    @test column("negative_water_interval")[3] ≈ 1250 rtol = 1.0e-14
+    @test column("negative_water_integral") ≈ [0, 0, 1250] rtol = 1.0e-14
+    @test column("negative_water_interval_events")[1:2] == [0, 0]
+    @test column("negative_water_interval_events")[3] ≈ 1 rtol = 1.0e-12
+    # The interval's mean, (1250 kg s / 10 s) over ∫ρq_tot = 625 kg.
+    @test column("negative_water_interval_mean_relative")[3] ≈ 0.2 rtol = 1.0e-12
+    @test table_column(audit_table, "negative_water_void") == ["0", "0", "1"]
+    # The flag is the audit's last column, after `closure_void` where set.
+    @test endswith(
+        first(readlines(audit_table)),
+        ",negative_water_interval_mean_relative," *
+        "negative_water_interval_events,negative_water_void",
+    )
+    # With `~` the audit keeps the ledger and drops only the flag.
+    audit_off = mktempdir()
+    check!(
+        audit_off,
+        0.0,
+        (; void_above = nothing, voided = Ref(false), ledger = fresh);
+        audit = true,
+    )
+    audit_off_header = first(readlines(CA.tag_audit_path(audit_off, "water")))
+    @test occursin("negative_water_integral", audit_off_header)
+    @test !occursin("negative_water_void", audit_off_header)
+
+    # The flag goes through a checkpoint, as `closure_void` does. Only water
+    # has one.
+    atmos = (;
+        water_tagging_model = :water,
+        tagging_model = nothing,
+        energy_source_tagging_model = :energy_source,
+    )
+    flags = CA.negative_water_void_flags(atmos)
+    @test keys(flags) == (:water,)
+    @test isempty(
+        CA.negative_water_void_flags(merge(atmos, (; water_tagging_model = nothing))),
+    )
+    @test CA.negative_water_voided(
+        (; tagging = (; negative_water_void = flags)),
+        :water,
+    ) ===
+          flags.water
+    flags.water[] = true
+    context = ClimaComms.SingletonCommsContext()
+    checkpoint = joinpath(mktempdir(), "day0.3600.hdf5")
+    CA.InputOutput.HDF5Writer(checkpoint, context) do writer
+        CA.write_negative_water_void_attributes!(
+            writer.file,
+            (; negative_water_void = flags),
+        )
+    end
+    restored = CA.negative_water_void_flags(atmos)
+    @test_logs (:warn, r"passed `negative_water_void_above`") CA.restore_negative_water_void!(
+        (; negative_water_void = restored),
+        checkpoint,
+        context,
+    )
+    @test restored.water[]
+    # The first row after the restart is void although the parent is positive.
+    set_parent!(positive)
+    after_restart = mktempdir()
+    @test_logs check!(
+        after_restart,
+        3600.0,
+        (; void_above = level, voided = restored.water, ledger = nothing),
+    )
+    @test table_column(
+        CA.tag_closure_path(after_restart, "water"),
+        "negative_water_void",
+    ) ==
+          ["1"]
+    # A checkpoint without the flag restarts at 0, with a warning.
+    old_checkpoint = joinpath(mktempdir(), "day0.3600.hdf5")
+    CA.InputOutput.HDF5Writer(_ -> nothing, old_checkpoint, context)
+    stale = CA.negative_water_void_flags(atmos)
+    stale.water[] = true
+    @test_logs (:warn, r"written before the negative\s+water flag") CA.restore_negative_water_void!(
+        (; negative_water_void = stale),
+        old_checkpoint,
+        context,
+    )
+    @test !stale.water[]
+    @test isnothing(CA.write_negative_water_void_attributes!(nothing, nothing))
+    @test isnothing(CA.restore_negative_water_void!(nothing, checkpoint, context))
+
+    # The ledger goes through a checkpoint as the tags' other accumulators do.
+    # A checkpoint without it restarts it at zero, with a warning, and reads
+    # the others as before.
+    tagging(ledger) = (;
+        tag_ledger_steps = (; ledgers = (;), attempted = (;), negative_water = ledger),
+    )
+    @test first.(CA.tag_ledger_checkpoint_fields(tagging(ledger))) ==
+          ["tag_ledger.negative_water.amount", "tag_ledger.negative_water.events"]
+    ledger_checkpoint = joinpath(mktempdir(), "day0.3600.hdf5")
+    CA.InputOutput.HDF5Writer(ledger_checkpoint, context) do writer
+        CA.write_tag_ledger_checkpoint!(writer, tagging(ledger))
+    end
+    back = CA.negative_water_ledger_cache(Y, :water)
+    CA.restore_tag_ledger_checkpoint!(tagging(back), ledger_checkpoint, context)
+    @test isequal(parent(back.ᶜamount), parent(ledger.ᶜamount))
+    @test isequal(parent(back.ᶜevents), parent(ledger.ᶜevents))
+    empty_ledger = CA.negative_water_ledger_cache(Y, :water)
+    @test_logs (:warn, r"before the parent's\s+negative water ledger") CA.restore_tag_ledger_checkpoint!(
+        tagging(empty_ledger),
+        old_checkpoint,
+        context,
+    )
+    @test all(iszero, parent(empty_ledger.ᶜamount))
+
+    # A crossing after the run's last row. The rows fall every 10 s, and the
+    # run ends at 25 s, so its last row is at 20 s. The parent is negative only
+    # at the end of the step to 25 s. The flag is set and the run warns, but
+    # no row shows it. A checkpoint written after it carries it, so the next
+    # segment's rows are marked.
+    tail_voided = Ref(false)
+    tail_p = merge(
+        p,
+        (; tagging = (; p.tagging..., negative_water_void = (; water = tail_voided))),
+    )
+    tail_flag = (; void_above = level, voided = tail_voided, ledger = nothing)
+    tail = mktempdir()
+    set_parent!(positive)
+    for t in (0.0, 10.0, 20.0)
+        check!(tail, t, tail_flag)
+    end
+    set_parent!(one_negative)
+    @test_logs (:warn, r"end of the step to t = 25.0 s") CA.check_negative_water_step!(
+        (; u = Y, p = tail_p, t = 25.0),
+        level,
+    )
+    @test tail_voided[]
+    tail_table = CA.tag_closure_path(tail, "water")
+    @test table_column(tail_table, "time") == ["0.0", "10.0", "20.0"]
+    @test table_column(tail_table, "negative_water_void") == ["0", "0", "0"]
+    tail_checkpoint = joinpath(mktempdir(), "day0.25.hdf5")
+    CA.InputOutput.HDF5Writer(tail_checkpoint, context) do writer
+        CA.write_negative_water_void_attributes!(
+            writer.file,
+            (; negative_water_void = (; water = tail_voided)),
+        )
+    end
+    tail_restored = CA.negative_water_void_flags(atmos)
+    @test_logs (:warn, r"passed `negative_water_void_above`") CA.restore_negative_water_void!(
+        (; negative_water_void = tail_restored),
+        tail_checkpoint,
+        context,
+    )
+    @test tail_restored.water[]
+end
+
 @testset "Audit table" begin
     dir = mktempdir()
     audit = (;
@@ -1134,4 +2067,328 @@ end
     @test length(source_model.tags) == 7
     @test source_model.offset == eltype(source)(110495)
     @test CA.closure_checks_from_config(source).energy_source.spin_up == "1hours"
+end
+
+# `water_tag_transport`'s default (the owner's review of #102, point 1). G3_PLAN
+# 4.3's rule makes the follower the default in the default mode under EDMF,
+# where the configuration supports it, and keeps `tracer` elsewhere.
+@testset "water_tag_transport's default" begin
+    region(above) = Dict{String, Any}(
+        "type" => "tanh_altitude",
+        "z_center" => 750.0,
+        "width" => 100.0,
+        "above" => above,
+    )
+    partition = [
+        Dict{String, Any}("name" => "tropo", "region" => region(false)),
+        Dict{String, Any}("name" => "strat", "region" => region(true)),
+        Dict{String, Any}("name" => "evap", "source" => "surface_flux"),
+    ]
+    edmf = ["turbconv" => "prognostic_edmfx"]
+    config(extra, job_id; tags = partition) = tracer_config(
+        ["microphysics_model" => "0M", "water_tracers" => tags, extra...];
+        job_id,
+    )
+    transport(extra, job_id; kwargs...) =
+        CA.AtmosTagging(config(extra, job_id; kwargs...)).water_tagging_model.transport
+    increment = CA.IncrementWaterTagTransport
+    tracer = CA.TracerWaterTagTransport
+    @test transport(edmf, "water_default_edmf") isa increment
+    # An explicit key overrides it, either way.
+    @test transport([edmf..., "water_tag_transport" => "tracer"], "water_edmf_tracer") isa
+          tracer
+    @test transport(["water_tag_transport" => "increment"], "water_increment") isa
+          increment
+    # Elsewhere the default is `tracer`: without EDMF, with copies, without the
+    # parent's post-solve correction, and without a region tag.
+    @test transport([], "water_default_plain") isa tracer
+    @test transport(
+        [edmf..., "water_tag_updraft_copy" => true],
+        "water_default_copies",
+    ) isa tracer
+    @test transport(
+        [edmf..., "energy_q_tot_upwinding" => "none"],
+        "water_default_no_correction",
+    ) isa tracer
+    @test transport(
+        edmf,
+        "water_default_sources_only";
+        tags = [partition[3]],
+    ) isa tracer
+    # With 1M stepped explicitly the follower is opt-in: the cross blocks close
+    # the lag on one column (WP5b, FINDINGS W29), which does not yet decide the
+    # default (the owner's review of #105).
+    explicit_1m =
+        [edmf..., "microphysics_model" => "1M", "implicit_microphysics" => false]
+    @test transport(explicit_1m, "water_default_explicit_1m") isa tracer
+    @test transport(
+        [explicit_1m..., "water_tag_transport" => "increment"],
+        "water_increment_explicit_1m",
+    ) isa increment
+    @test transport(
+        [edmf..., "microphysics_model" => "1M"],
+        "water_default_implicit_1m",
+    ) isa increment
+    # Not with the sparse autodiff Jacobian on the explicit path, which does
+    # not carry the cross blocks. There the follower is refused, with the
+    # reason. The dense one wins over it and is exact.
+    explicit_auto = [explicit_1m..., "use_auto_jacobian" => true]
+    @test_throws "use_auto_jacobian" CA.AtmosTagging(
+        config(
+            [explicit_auto..., "water_tag_transport" => "increment"],
+            "water_increment_explicit_1m_auto",
+        ),
+    )
+    @test transport(
+        [
+            explicit_auto...,
+            "use_dense_jacobian" => true,
+            "water_tag_transport" => "increment",
+        ],
+        "water_increment_explicit_1m_dense",
+    ) isa increment
+    @test transport(
+        [edmf..., "microphysics_model" => "1M", "use_auto_jacobian" => true],
+        "water_default_implicit_1m_auto",
+    ) isa increment
+    @test_throws "must be `tracer` or `increment`" CA.water_tag_transport_from_config(
+        "follow",
+    )
+end
+
+# WP6, step 3: each tag's own ledgers are opt-in, per family.
+@testset "Ledgers per tag" begin
+    water_entries = [
+        Dict{String, Any}("name" => "tropo", "region" => "tropics"),
+        Dict{String, Any}("name" => "extra", "region" => "extratropics"),
+    ]
+    source_entries = [
+        Dict{String, Any}("name" => "a", "region" => "tropics"),
+        Dict{String, Any}("name" => "b", "region" => "extratropics"),
+    ]
+    config(name, pairs...) =
+        tracer_config(
+            ["microphysics_model" => "0M", pairs...];
+            job_id = "ledger_per_tag_$name",
+        )
+    tagging(name, pairs...) = CA.AtmosTagging(config(name, pairs...))
+    both = (
+        "water_tracers" => water_entries,
+        "energy_source_tags" => source_entries,
+        "energy_source_tag_offset" => 110495.0,
+    )
+    off = tagging("off", both...)
+    @test !CA.has_water_tag_ledger_per_tag(off.water_tagging_model)
+    @test !CA.has_energy_source_ledger_per_tag(off.energy_source_tagging_model)
+    on = tagging(
+        "on",
+        both...,
+        "water_tag_ledger_per_tag" => true,
+        "energy_source_tag_ledger_per_tag" => true,
+    )
+    @test CA.has_water_tag_ledger_per_tag(on.water_tagging_model)
+    @test CA.has_energy_source_ledger_per_tag(on.energy_source_tagging_model)
+    @test CA.water_tag_per_tag_ledger_names(on.water_tagging_model) ==
+          (:q_tag_led_fix_tropo, :q_tag_led_fix_extra)
+    @test CA.energy_source_per_tag_ledger_names(on.energy_source_tagging_model) == (
+        :e_src_led_fix_a,
+        :e_src_led_fix_b,
+        :e_src_led_src_a,
+        :e_src_led_src_b,
+        :e_src_led_src_res,
+    )
+    # A quoted value is refused, and so is the key without its family.
+    @test_throws r"must be `true` or `false`" CA.tag_ledger_per_tag_from_config(
+        "true",
+        "water_tag_ledger_per_tag",
+    )
+    @test CA.tag_ledger_per_tag_from_config(nothing, "water_tag_ledger_per_tag") ==
+          false
+    @test_throws r"no tags to keep ledgers for" tagging(
+        "water_alone",
+        "water_tag_ledger_per_tag" => true,
+    )
+    @test_throws r"no tags to keep ledgers for" tagging(
+        "source_alone",
+        "energy_source_tag_ledger_per_tag" => true,
+    )
+end
+
+# G4.5: warnings, the void level, the abort and acceptance are kept apart. The
+# energy source tags get a second warning level, against the gross source
+# throughput, which needs each tag's ledgers and is off by default.
+@testset "Closure levels kept apart (G4.5)" begin
+    partition_entries = [
+        Dict{String, Any}("name" => "trop", "region" => "tropics"),
+        Dict{String, Any}("name" => "rad", "source" => "radiation"),
+    ]
+    check(value; ledger_per_tag = false) =
+        CA.energy_source_closure_check_from_config(
+            value,
+            partition_entries,
+            CA.EnthalpyIncrementEnergySourceTransport(),
+            FT;
+            ledger_per_tag,
+        )
+    # Off by default, with or without the ledgers.
+    @test isnothing(check(nothing).throughput_tolerance)
+    @test isnothing(check(nothing; ledger_per_tag = true).throughput_tolerance)
+    set = check(
+        Dict{String, Any}("throughput_tolerance" => 0.05, "tolerance" => 1e-3);
+        ledger_per_tag = true,
+    )
+    @test set.throughput_tolerance == FT(0.05)
+    # The other keys are read as before.
+    @test set.tolerance == FT(1e-3)
+    @test set.spin_up == "1hours"
+    # It needs the throughput, so the ledgers; and it must be positive.
+    @test_throws r"energy_source_tag_ledger_per_tag: true" check(
+        Dict{String, Any}("throughput_tolerance" => 0.05),
+    )
+    @test_throws r"must be positive" check(
+        Dict{String, Any}("throughput_tolerance" => 0.0);
+        ledger_per_tag = true,
+    )
+    # The other families do not take it.
+    @test_throws r"unknown key" CA.closure_check_from_config(
+        Dict{String, Any}("throughput_tolerance" => 0.05),
+        "`water_closure_check`",
+        FT;
+        default_tolerance = nothing,
+        default_abort_above = nothing,
+    )
+
+    # The check warns on each level in its own words, and neither is an
+    # acceptance verdict; the family's closure columns carry the ratio.
+    CC = CA.ClimaCore
+    space = CC.CommonSpaces.ColumnSpace(
+        FT;
+        z_min = 0,
+        z_max = 1000,
+        z_elem = 4,
+        staggering = CC.CommonSpaces.CellCenter(),
+    )
+    Y = CC.Fields.FieldVector(;
+        c = similar(
+            CC.Fields.coordinate_field(space),
+            NamedTuple{(:ρ, :ρe_tot, :ρe_src_a), NTuple{3, FT}},
+        ),
+    )
+    Y.c.ρ .= 1
+    Y.c.ρe_tot .= 1
+    Y.c.ρe_src_a .= 0.5
+    integrator = (;
+        u = Y,
+        p = (; scratch = (; ᶜtemp_scalar = zero(Y.c.ρ))),
+        t = 3600.0,
+    )
+    columns(ratio) = (Y, p, closure) -> (; gross_over_throughput = ratio)
+    run_check!(dir; tolerance = nothing, ratio = 0.01, level = nothing) =
+        CA.tag_closure_callback!(
+            integrator,
+            dir,
+            "energy_source",
+            :ρe_tot,
+            (:ρe_src_a,),
+            tolerance,
+            nothing,
+            false;
+            extra_closure = columns(ratio),
+            throughput_tolerance = level,
+        )
+    @test_logs (:warn, r"exceeds\s+the warning tolerance") run_check!(
+        mktempdir();
+        tolerance = FT(0.1),
+    )
+    @test_logs (:warn, r"over the gross source throughput") run_check!(
+        mktempdir();
+        ratio = 0.5,
+        level = 0.05,
+    )
+    # Below the level, or without one, it is silent.
+    @test_logs run_check!(mktempdir(); ratio = 0.01, level = 0.05)
+    @test_logs run_check!(mktempdir(); ratio = 0.5)
+    dir = mktempdir()
+    run_check!(dir; ratio = 0.5)
+    header = first(readlines(CA.tag_closure_path(dir, "energy_source")))
+    @test endswith(header, ",nonpositive_fraction,gross_over_throughput")
+end
+
+# The review of #120: the setup refuses `throughput_tolerance` where the pure
+# region tags are not a verified partition. `AtmosSimulation` calls
+# `check_energy_source_throughput_setup` with the cache and the callbacks'
+# keyword arguments, so this checks that the refusal finds the level in what
+# `callback_kwargs_from_config` gives.
+@testset "The setup refuses throughput_tolerance without a partition (#120)" begin
+    region_entries(regions) = [
+        Dict{String, Any}("name" => name, "region" => region) for
+        (name, region) in regions
+    ]
+    function source_config(regions, check; job_id)
+        config = tracer_config(
+            [
+                "energy_source_tags" => [
+                    region_entries(regions)...,
+                    Dict{String, Any}("name" => "rad", "source" => "radiation"),
+                ],
+                "energy_source_tag_offset" => 0,
+                "energy_source_tag_ledger_per_tag" => true,
+                "energy_source_closure_check" => check,
+            ];
+            job_id,
+        )
+        # The cache's deviation, from the tags' own masks on a sweep of
+        # latitudes in the configuration's float type, as
+        # `_energy_source_tagging_cache` takes it on the grid.
+        model = CA.AtmosTagging(config).energy_source_tagging_model
+        config_FT = eltype(config)
+        coords = [(; lat = config_FT(lat), z = zero(config_FT)) for lat in -90:0.25:90]
+        deviation = CA.energy_source_partition_deviation(
+            CA._tag_masks(coords, model.tags),
+            CA.energy_source_region_tag_state_names(model),
+            zeros(config_FT, length(coords)),
+        )
+        tagging = (; energy_source_partition_deviation = deviation)
+        return tagging, CA.callback_kwargs_from_config(config)
+    end
+    level = Dict{String, Any}("throughput_tolerance" => 0.05)
+    no_level = Dict{String, Any}("tolerance" => 1.0e-3)
+    tropics_only = ("trop" => "tropics",)
+    partition = ("trop" => "tropics", "extra" => "extratropics")
+
+    # `tropics` alone leaves the extratropics out: refused, with the deviation.
+    tagging, kwargs = source_config(tropics_only, level; job_id = "setup_gap")
+    @test !CA.energy_source_partition_verified(tagging)
+    @test kwargs.energy_source_closure_check.throughput_tolerance ==
+          typeof(tagging.energy_source_partition_deviation)(0.05)
+    @test_throws r"throughput_tolerance" CA.check_energy_source_throughput_setup(
+        tagging,
+        kwargs,
+    )
+    err = try
+        CA.check_energy_source_throughput_setup(tagging, kwargs)
+    catch e
+        e
+    end
+    @test occursin(string(tagging.energy_source_partition_deviation), err.msg)
+
+    # A region and its complement pass.
+    tagging, kwargs = source_config(partition, level; job_id = "setup_partition")
+    @test CA.energy_source_partition_verified(tagging)
+    @test isnothing(CA.check_energy_source_throughput_setup(tagging, kwargs))
+
+    # Without the key, nothing is refused, even on a strict subset.
+    tagging, kwargs = source_config(tropics_only, no_level; job_id = "setup_no_key")
+    @test isnothing(kwargs.energy_source_closure_check.throughput_tolerance)
+    @test isnothing(CA.check_energy_source_throughput_setup(tagging, kwargs))
+
+    # Without energy source tags there is no check and no cache entry.
+    plain = CA.callback_kwargs_from_config(
+        tracer_config(Pair{String, Any}[]; job_id = "setup_no_tags"),
+    )
+    @test isnothing(plain.energy_source_closure_check)
+    @test isnothing(CA.check_energy_source_throughput_setup(nothing, plain))
+    # Nor with no callback keywords at all, as `AtmosSimulation` defaults them.
+    @test isnothing(CA.check_energy_source_throughput_setup(nothing, ()))
+    @test isnothing(CA.check_energy_source_throughput_setup((;), ()))
 end

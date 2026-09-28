@@ -2372,15 +2372,191 @@ struct TaggingModel{T <: Tuple}
 end
 
 """
-    WaterTaggingModel(tags::Tuple)
+    AbstractWaterTagTransport
+
+How the water tags follow the parent's implicit transport, from the
+`water_tag_transport` config key: [`TracerWaterTagTransport`](@ref), the
+default, or [`IncrementWaterTagTransport`](@ref).
+"""
+abstract type AbstractWaterTagTransport end
+
+"""
+    TracerWaterTagTransport()
+
+The default. The tags are moved as tracers, explicitly, while the parent
+`ρq_tot` is advected implicitly. Their implicit terms, such as the sub-grid
+mass flux under EDMF, have no Jacobian block. So with one Newton iteration they
+take those terms at the stage's first guess while the parent takes the solved
+one, and `q_tag_res` grows by the difference.
+"""
+struct TracerWaterTagTransport <: AbstractWaterTagTransport end
+
+"""
+    IncrementWaterTagTransport()
+
+The tags follow the parent's own implicit increment. Their explicit vertical
+advection is skipped. After each Newton solve, the difference between the
+parent's increment of `ρq_tot` and the partition's is moved as a vertical flux,
+and each tag takes its share of it in the cell the flux leaves. See
+`correct_water_tag_increment!`. It needs region tags without sources that
+partition the domain.
+"""
+struct IncrementWaterTagTransport <: AbstractWaterTagTransport end
+
+"""
+    WaterTaggingModel(tags::Tuple; updraft_copies = false,
+                      transport = TracerWaterTagTransport(),
+                      ledger_per_tag = false, precipitation = false,
+                      leak_correction = false)
 
 Model component holding a `Tuple` of [`WaterTag`](@ref)s. Constructed from the
 `water_tracers` config entry; see `AtmosTagging(::AtmosConfig)` in
 `config/tracer_config.jl`.
+
+`updraft_copies`, from `water_tag_updraft_copy`, gives each tag a copy in every
+updraft under `turbconv: prognostic_edmfx`, which the model's own updraft
+machinery moves: the audit mode. Without it the tags stay grid-scale and take
+their share of the updraft's water flux by a donor share and an exchange: the
+default. It is a type parameter, so the state is built from it at compile
+time.
+
+`transport`, from `water_tag_transport`, is how the tags follow the parent's
+implicit terms: as tracers by default, or by the parent's own increment after
+each Newton solve. The increment needs region tags without sources, and is
+refused without them. See [`IncrementWaterTagTransport`](@ref).
+
+`ledger_per_tag`, from `water_tag_ledger_per_tag`, gives each tag its own state
+ledgers of what the corrections changed it by (WP6, step 3): `q_tag_led_fix_<name>`
+for the limiters' rescale and the partition repair, and, under the increment,
+`q_tag_led_inc_<name>` for the follower. Off by default, since each adds a
+state field per tag. A type parameter, like `updraft_copies`.
+
+`precipitation`, from `water_tag_precipitation`, splits each tag into three
+parts: `ρq_tag_<name>` holds the water that is neither rain nor snow,
+`ρq_rtag_<name>` the rain and `ρq_stag_<name>` the snow. It is a type
+parameter too. It needs 1-moment microphysics, which the configuration checks,
+and it is refused here with updraft copies. See
+[`has_water_tag_precipitation`](@ref).
+
+`leak_correction`, from `water_tag_leak_correction`, charges each tag the EDMF
+vertical diffusion of its share of the rain and snow, which the parent does not
+diffuse, on the grid mean and on the copies (WP4c). Off by default. A type
+parameter too. See [`correct_water_tag_diffusion_leak!`](@ref).
 """
-struct WaterTaggingModel{T <: Tuple}
+struct WaterTaggingModel{
+    T <: Tuple,
+    UpdraftCopies,
+    TR <: AbstractWaterTagTransport,
+    LedgerPerTag,
+    Precipitation,
+    LeakCorrection,
+}
     tags::T
+    transport::TR
 end
+function WaterTaggingModel(
+    tags::Tuple;
+    updraft_copies::Bool = false,
+    transport::AbstractWaterTagTransport = TracerWaterTagTransport(),
+    ledger_per_tag::Bool = false,
+    precipitation::Bool = false,
+    leak_correction::Bool = false,
+)
+    # The copies of the rain and snow parts are stage 3 of the design note
+    # (design/RAIN_SNOW_TAGS.md on the record branch, section 13). Their build
+    # cost is measured first.
+    precipitation &&
+        updraft_copies &&
+        error(
+            "`water_tag_precipitation: true` is refused with \
+            `water_tag_updraft_copy: true`. The updraft copies of the rain and \
+            snow parts are not built yet. Drop one of the two keys.",
+        )
+    # The correction gives the partition the parent's increment, less what the
+    # partition's own tendencies moved. Without a partition the tags that carry
+    # a source would take the parent's whole implicit transport on top of
+    # their own.
+    transport isa IncrementWaterTagTransport &&
+        !any(_is_partition_tag, tags) &&
+        error(
+            "`water_tag_transport: increment` needs region tags without \
+            sources that partition the domain. The correction gives them the \
+            parent's increment of `ρq_tot`, less what their own tendencies \
+            moved. Without them the tags that carry a source would take the \
+            parent's whole implicit transport on top of their own. Add a \
+            region and its complement, for example with `above: false` or \
+            `inside: false`.",
+        )
+    return WaterTaggingModel{
+        typeof(tags),
+        updraft_copies,
+        typeof(transport),
+        ledger_per_tag,
+        precipitation,
+        leak_correction,
+    }(
+        tags,
+        transport,
+    )
+end
+
+"""
+    follows_water_increment(model)
+
+Whether the water tags of `model` take the parent's own increment in each
+implicit stage (`water_tag_transport: increment`). A property of the model's
+type, so it folds away at compile time. `false` without water tags.
+"""
+follows_water_increment(::Nothing) = false
+follows_water_increment(model::WaterTaggingModel) =
+    model.transport isa IncrementWaterTagTransport
+
+"""
+    has_water_tag_updraft_copies(model)
+
+Whether the water tags have a copy in each updraft, from the
+`water_tag_updraft_copy` config key. `false` without water tags.
+"""
+has_water_tag_updraft_copies(::Nothing) = false
+has_water_tag_updraft_copies(
+    ::WaterTaggingModel{T, UpdraftCopies},
+) where {T, UpdraftCopies} = UpdraftCopies
+
+"""
+    has_water_tag_ledger_per_tag(model)
+
+Whether each water tag keeps its own state ledgers of the corrections, from the
+`water_tag_ledger_per_tag` config key. `false` without water tags.
+"""
+has_water_tag_ledger_per_tag(::Nothing) = false
+has_water_tag_ledger_per_tag(
+    ::WaterTaggingModel{T, U, TR, LedgerPerTag},
+) where {T, U, TR, LedgerPerTag} = LedgerPerTag
+
+"""
+    has_water_tag_precipitation(model)
+
+Whether each water tag of `model` has a rain part and a snow part, from the
+`water_tag_precipitation` config key. Then `ρq_tag_<name>` holds only the water
+that is neither rain nor snow. A property of the model's type, so it folds away
+at compile time. `false` without water tags.
+"""
+has_water_tag_precipitation(::Nothing) = false
+has_water_tag_precipitation(
+    ::WaterTaggingModel{T, U, TR, L, Precipitation},
+) where {T, U, TR, L, Precipitation} = Precipitation
+
+"""
+    has_water_tag_leak_correction(model)
+
+Whether the water tags of `model` are charged the EDMF vertical diffusion of
+their share of the rain and snow, from the `water_tag_leak_correction` config
+key (WP4c). `false` without water tags.
+"""
+has_water_tag_leak_correction(::Nothing) = false
+has_water_tag_leak_correction(
+    ::WaterTaggingModel{T, U, TR, L, P, LeakCorrection},
+) where {T, U, TR, L, P, LeakCorrection} = LeakCorrection
 
 """
     EnergySourceTag{name}(region, source = :none)
@@ -2498,7 +2674,7 @@ struct EnthalpyIncrementEnergySourceTransport <: AbstractEnergySourceTransport e
 """
     EnergySourceTaggingModel(tags::Tuple, offset = nothing; repair = true,
                              transport = TracerEnergySourceTransport(),
-                             updraft_copies = false)
+                             updraft_copies = false, ledger_per_tag = false)
 
 Model component holding a `Tuple` of [`EnergySourceTag`](@ref)s. Constructed
 from the `energy_source_tags` config entry; see `AtmosTagging(::AtmosConfig)` in
@@ -2532,12 +2708,20 @@ steady entraining plume (`sgs_mass_flux_of_energy_source_tags!`). On, it is an
 audit: the copies are passive updraft tracers, and the model moves them as it
 moves any other. It is refused with the `enthalpy` transport. See
 [`has_energy_source_updraft_copies`](@ref).
+
+`ledger_per_tag`, from `energy_source_tag_ledger_per_tag`, gives each tag its
+own state ledgers of what the corrections changed it by (WP6, step 3):
+`e_src_led_fix_<name>` for the repair, and, under `enthalpy_increment`,
+`e_src_led_inc_<name>` for the correction after each solve. Off by default,
+since each adds a state field per tag. A type parameter, like
+`updraft_copies`.
 """
 struct EnergySourceTaggingModel{
     T <: Tuple,
     O <: Union{Nothing, AbstractFloat},
     TR <: AbstractEnergySourceTransport,
     UpdraftCopies,
+    LedgerPerTag,
 }
     tags::T
     offset::O
@@ -2550,6 +2734,7 @@ function EnergySourceTaggingModel(
     repair::Bool = true,
     transport::AbstractEnergySourceTransport = TracerEnergySourceTransport(),
     updraft_copies::Bool = false,
+    ledger_per_tag::Bool = false,
 )
     !(transport isa TracerEnergySourceTransport) && isnothing(offset) &&
         error(
@@ -2596,6 +2781,7 @@ function EnergySourceTaggingModel(
         typeof(offset),
         typeof(transport),
         updraft_copies,
+        ledger_per_tag,
     }(
         tags,
         offset,
@@ -2616,6 +2802,18 @@ has_energy_source_updraft_copies(::Nothing) = false
 has_energy_source_updraft_copies(
     ::EnergySourceTaggingModel{T, O, TR, UpdraftCopies},
 ) where {T, O, TR, UpdraftCopies} = UpdraftCopies
+
+"""
+    has_energy_source_ledger_per_tag(model)
+
+Whether each energy source tag keeps its own state ledgers of the corrections,
+from the `energy_source_tag_ledger_per_tag` config key. `false` without energy
+source tags.
+"""
+has_energy_source_ledger_per_tag(::Nothing) = false
+has_energy_source_ledger_per_tag(
+    ::EnergySourceTaggingModel{T, O, TR, U, LedgerPerTag},
+) where {T, O, TR, U, LedgerPerTag} = LedgerPerTag
 
 """
     RecordedProcess{name}()

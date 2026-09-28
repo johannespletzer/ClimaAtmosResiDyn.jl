@@ -219,10 +219,19 @@ NVTX.@annotate function additional_tendency!(Yₜ, Y, p, t)
     open_applied_update!(Yₜ, p, :surface_flux)
     surface_flux_tendency!(Yₜ, Y, p, t)
     close_applied_update!(Yₜ, Y, p, :surface_flux)
+    # The water tags' updraft copies take their share of the updraft's part.
+    water_tag_copies_surface_flux_tendency!(Yₜ, Y, p, p.atmos.turbconv_model)
+    energy_source_copies_surface_flux_tendency!(
+        Yₜ,
+        Y,
+        p,
+        p.atmos.turbconv_model,
+    )
 
     open_applied_update!(Yₜ, p, :radiation)
     radiation_tendency!(Yₜ, Y, p, t, p.atmos.radiation_mode)
     close_applied_update!(Yₜ, Y, p, :radiation)
+    energy_source_copies_radiation_tendency!(Yₜ, Y, p, p.atmos.radiation_mode)
     edmfx_tke_tendency!(Yₜ, Y, p, t, p.atmos.turbconv_model)
 
     # Chemistry tendencies
@@ -239,6 +248,21 @@ NVTX.@annotate function additional_tendency!(Yₜ, Y, p, t)
             p.atmos.microphysics_model,
             p.atmos.turbconv_model,
         )
+        water_tag_copies_microphysics_tendency!(
+            Yₜ,
+            Y,
+            p,
+            p.atmos.microphysics_model,
+            p.atmos.turbconv_model,
+        )
+        energy_source_copies_microphysics_tendency!(
+            Yₜ,
+            Y,
+            p,
+            p.atmos.microphysics_model,
+            p.atmos.turbconv_model,
+        )
+        water_tag_precipitation_microphysics_tendency!(Yₜ, Y, p)
         close_applied_update!(Yₜ, Y, p, :microphysics)
     end
 
@@ -296,8 +320,11 @@ NVTX.@annotate function additional_tendency!(Yₜ, Y, p, t)
     edmfx_sgs_horizontal_diffusive_flux_tendency!(Yₜ, Y, p, t, p.atmos.turbconv_model)
 
     # Optional tendency to bring negative small tracers back from negative
-    # at the cost of water vapor.
+    # at the cost of water vapor. The water tags' rain and snow parts follow
+    # the rain and snow it moves.
+    snapshot_water_tag_precipitation_tendency!(p, Yₜ)
     tracer_nonnegativity_vapor_tendency!(Yₜ, Y, p, t, microphysics_model)
+    attribute_water_tag_precipitation_tendency!(Yₜ, Y, p)
 
     # NOTE: This will zero out all momentum tendencies in the EDMFX advection test,
     # where velocities do not evolve

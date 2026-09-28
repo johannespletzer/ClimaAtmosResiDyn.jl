@@ -285,7 +285,12 @@ time in seconds, and `"atmos_model_hash"`, a hash of `p.atmos` that a restart ch
 against so a checkpoint is not silently loaded into a different model configuration.
 With energy source tags, their offset, definitions, transport and repair are
 attached as well, and a restart that changes one is refused (see
-[`write_energy_source_checkpoint_attributes!`](@ref)).
+[`write_energy_source_checkpoint_attributes!`](@ref)). With water tags, their
+definitions are, for the same reason (see
+[`write_water_tag_checkpoint_attributes!`](@ref)). With any tags, the closure
+checks' void flags are attached, so that a restarted run keeps marking its rows
+(see [`write_tag_closure_void_attributes!`](@ref)), and with water tags the
+negative water flag (see [`write_negative_water_void_attributes!`](@ref)).
 
 Returns `nothing`. Installed by `checkpoint_callback` when `checkpoint_frequency` is
 finite.
@@ -317,7 +322,19 @@ NVTX.@annotate function save_state_to_disk_func(integrator, output_dir)
         hdfwriter.file,
         p.atmos.energy_source_tagging_model,
     )
+    # The water tags' definitions, for their restart guard.
+    write_water_tag_checkpoint_attributes!(
+        hdfwriter.file,
+        p.atmos.water_tagging_model,
+    )
+    # The closure checks' void flags and the water check's negative water
+    # flag, which a restart reads back.
+    write_tag_closure_void_attributes!(hdfwriter.file, p.tagging)
+    write_negative_water_void_attributes!(hdfwriter.file, p.tagging)
     InputOutput.write!(hdfwriter, Y, "Y")
+    # The tags' accumulators, which live in the cache, so that a restart
+    # continues them (WP6, step 3). Nothing without tags.
+    write_tag_ledger_checkpoint!(hdfwriter, p.tagging)
     Base.close(hdfwriter)
     return nothing
 end

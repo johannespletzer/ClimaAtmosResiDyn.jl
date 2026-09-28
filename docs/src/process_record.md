@@ -59,10 +59,10 @@ increments — the same caveat `q_tag_fix_<name>` carries.
     a restart. The change over an interval is therefore the difference of two
     outputs, and a time *average* of a record is not meaningful.
 
-    This is **not** the `q_tag_fix_<name>` contract. That one lives in the cache
-    and does restart at zero, so the change over an interval that spans a
-    restart cannot be recovered from it. A record can, because it is prognostic
-    and travels in the checkpoint.
+    This is **not** the `q_tag_fix_<name>` contract. That one lives in the
+    cache, and the checkpoint carries it beside the state (WP6, step 3). A
+    checkpoint written before that starts it at zero, with a warning. A record
+    needs no such help, because it is prognostic and travels in the state.
 
     A restart must configure the same records. One whose `prc_e_*` or
     `prc_q_*` fields differ from the configuration is refused before the run

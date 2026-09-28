@@ -29,6 +29,14 @@ const KNOWN_TEST_GROUPS = (
     "tagging_source_edmf",
     "tagging_source_increment",
     "tagging_source_updraft",
+    "tagging_water_edmf",
+    "tagging_water_edmf_copies",
+    "tagging_water_edmf_0m",
+    "tagging_water_edmf_0m_explicit",
+    "tagging_water_increment",
+    "tagging_water_increment_explicit",
+    "tagging_water_leak",
+    "tagging_water_precipitation",
     "parameterizations",
     "restarts",
 )
@@ -55,6 +63,7 @@ if TEST_GROUP in ("infrastructure", "all")
     @safetestset "Tracer processes" begin @time include("tracer_processes_tests.jl") end
     @safetestset "Tagged tracers" begin @time include("tagged_tracers_tests.jl") end
     @safetestset "Tagged water" begin @time include("tagged_water_tests.jl") end
+    @safetestset "Tagged water with rain and snow parts" begin @time include("tagged_water_precipitation_tests.jl") end
     @safetestset "Energy source tags" begin @time include("energy_source_tags_tests.jl") end
     @safetestset "Process records" begin @time include("process_record_tests.jl") end
     @safetestset "Parent-budget packets" begin @time include("parent_budget/reduction_tests.jl") end
@@ -81,7 +90,7 @@ if TEST_GROUP in ("infrastructure", "all")
 end
 
 # ============================================================================
-# Parent budget: the budget driven by real simulations. Every file here builds
+# Parent budget: the parent budget driven by real simulations. Every file here builds
 # several `AtmosSimulation`s and compiles the tendency pipeline for each, which
 # is why they are not in `infrastructure` with the parent budget's unit tests.
 # ============================================================================
@@ -225,6 +234,73 @@ end
 if TEST_GROUP in ("tagging_source_updraft", "all")
     @safetestset "Energy source tags with updraft copies" begin
         @time include("energy_source_tags_updraft_integration.jl")
+    end
+end
+
+# The water tags under prognostic EDMF. Each file builds the EDMF column twice,
+# with the tags and without them, and two builds fill a job's time limit, as they
+# do for the energy source tags. So each has a group of its own: the default
+# mode under 1M, the copies under 1M with the microphysics explicit, and the
+# copies under 0M with the microphysics implicit, the default.
+if TEST_GROUP in ("tagging_water_edmf", "all")
+    @safetestset "Water tags under EDMF" begin
+        @time include("tagged_water_edmf_integration.jl")
+    end
+end
+
+if TEST_GROUP in ("tagging_water_edmf_copies", "all")
+    @safetestset "Water tags with updraft copies" begin
+        @time include("tagged_water_edmf_copies_integration.jl")
+    end
+end
+
+if TEST_GROUP in ("tagging_water_edmf_0m", "all")
+    @safetestset "Water tags with updraft copies under 0M" begin
+        @time include("tagged_water_edmf_0m_integration.jl")
+    end
+end
+
+# The 0M rain-out split with the microphysics stepped explicitly, in both
+# modes. Its three builds compile the explicit path, so it has a group of its
+# own.
+if TEST_GROUP in ("tagging_water_edmf_0m_explicit", "all")
+    @safetestset "The 0M rain-out split, microphysics explicit" begin
+        @time include("tagged_water_edmf_0m_explicit_integration.jl")
+    end
+end
+
+# `water_tag_transport: increment` builds the EDMF column twice as well, with
+# the tags following the parent's increment and without tags.
+if TEST_GROUP in ("tagging_water_increment", "all")
+    @safetestset "Water tags following the implicit increment" begin
+        @time include("tagged_water_increment_integration.jl")
+    end
+end
+
+# The same with the microphysics stepped explicitly, where the tags' closure
+# rests on their sedimentation cross blocks. Its two builds compile the
+# explicit path, so it has a group of its own too.
+if TEST_GROUP in ("tagging_water_increment_explicit", "all")
+    @safetestset "Water tags following the increment, microphysics explicit" begin
+        @time include("tagged_water_increment_explicit_integration.jl")
+    end
+end
+
+# `water_tag_leak_correction: true` is a model type of its own, and its check
+# against the column without tags needs a second build, so it has its own group.
+if TEST_GROUP in ("tagging_water_leak", "all")
+    @safetestset "Water tags with the diffusion leak correction" begin
+        @time include("tagged_water_leak_correction_integration.jl")
+    end
+end
+
+# The water tags' rain and snow parts (`water_tag_precipitation: true`) on a
+# 1-moment column without EDMF. The file builds the column three times: with
+# the parts under each transport, and without tags. For the horizontal
+# operators it builds a small sphere twice, with the parts and without tags.
+if TEST_GROUP in ("tagging_water_precipitation", "all")
+    @safetestset "Water tags with rain and snow parts" begin
+        @time include("tagged_water_precipitation_integration.jl")
     end
 end
 

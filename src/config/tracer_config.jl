@@ -465,14 +465,61 @@ end
 # ============================================================================
 
 """
-    tracer_tag_tuple(entries, FT; tag_type, key, known, groups)
+    RESERVED_WATER_TAG_PREFIXES
+
+Name prefixes that a `water_tracers` tag may not take. A tag's diagnostic is
+`q_tag_<name>`. `fix_` starts the repair ledger `q_tag_fix_<name>` of the limiters
+and constraints, so a tag named `fix_a` would take the name of tag `a`'s
+ledger, and the first registered diagnostic would win silently. `upfix_` is
+held for the updraft copies' repair ledger, which collides the same way.
+`inc_` is held for an increment follower's ledgers, `q_tag_inc_left`,
+`q_tag_inc_moved` and `q_tag_inc_negative`. `negative` is held for
+`q_tag_negative`, the parent's negative water the partition leaves. `rtag_`
+and `stag_` were held for the rain and snow parts, before their names were
+fixed, and stay refused. `fixgross_`, `fixcount_`, `upfixgross_` and
+`upfixcount_` start the ledgers' gross twins and counts, and `led_` the
+ledgers per mechanism, `q_tag_led_rescale` and the others. `aud_` starts the
+microphysics audit's records `q_rtag_aud_<name>` and `q_stag_aud_<name>`,
+which a rain part `q_rtag_<name>` of a tag named `aud_<name>` would collide
+with.
+"""
+const RESERVED_WATER_TAG_PREFIXES = (
+    "fix_",
+    "upfix_",
+    "inc_",
+    "negative",
+    "rtag_",
+    "stag_",
+    "fixgross_",
+    "fixcount_",
+    "upfixgross_",
+    "upfixcount_",
+    "led_",
+    "aud_",
+)
+
+"""
+    RESERVED_ENERGY_SOURCE_TAG_PREFIXES
+
+Name prefixes that an `energy_source_tags` tag may not take, for the reason
+`RESERVED_WATER_TAG_PREFIXES` gives. A tag's diagnostic is
+`e_src_<name>`, and `fix_` starts the repair ledger `e_src_fix_<name>`,
+`fixgross_` and `fixcount_` its gross twin and count, `inc_` the
+increment ledger `e_src_inc_left` and `e_src_inc_moved`, and
+`led_` the repair's mechanism ledger `e_src_led_repair`.
+"""
+const RESERVED_ENERGY_SOURCE_TAG_PREFIXES =
+    ("fix_", "fixgross_", "fixcount_", "inc_", "led_")
+
+"""
+    tracer_tag_tuple(entries, FT; tag_type, key, known, groups, reserved_prefixes = ())
 
 Shared reader for the `water_tracers` and `energy_tracers` lists, which have the
 same entry schema: a unique `name`, plus a `region`, a `source`, or both.
 
 `tag_type` is [`TracerTag`](@ref) or [`WaterTag`](@ref), `key` is the config key
 being read (used in error messages), and `known` / `groups` are that family's
-source tables.
+source tables. A name starting with one of `reserved_prefixes` is refused.
 """
 function tracer_tag_tuple(
     entries,
@@ -481,6 +528,7 @@ function tracer_tag_tuple(
     key,
     known,
     groups,
+    reserved_prefixes = (),
 ) where {FT}
     entries isa AbstractVector || error(
         "`$key` must be a list of tracer entries, got a $(typeof(entries)).",
@@ -517,6 +565,13 @@ function tracer_tag_tuple(
         "`res` is a reserved tag name in `$key`: it collides with the closure \
         residual diagnostic. Choose another name.",
     )
+    for name in names, prefix in reserved_prefixes
+        startswith(String(name), prefix) && error(
+            "Tag names starting with `$prefix` are reserved in `$key`, so \
+            `$name` is refused. Such a name can take, or will be able to take, \
+            the name of another diagnostic of the family. Choose another name.",
+        )
+    end
     return Tuple(tags)
 end
 
@@ -548,6 +603,7 @@ water_tracer_tuple(entries, ::Type{FT}) where {FT} = tracer_tag_tuple(
     key = "water_tracers",
     known = KNOWN_WATER_TAG_SOURCES,
     groups = WATER_TAG_SOURCE_GROUPS,
+    reserved_prefixes = RESERVED_WATER_TAG_PREFIXES,
 )
 
 """
@@ -578,6 +634,7 @@ function energy_source_tracer_tuple(
         key = "energy_source_tags",
         known = KNOWN_TAG_SOURCES,
         groups = TAG_SOURCE_GROUPS,
+        reserved_prefixes = RESERVED_ENERGY_SOURCE_TAG_PREFIXES,
     )
     warn_inactive_energy_source_labels(tags, microphysics_model)
     return tags
@@ -863,19 +920,38 @@ energy_source_closure_tolerance(::EnthalpyIncrementEnergySourceTransport) =
     DEFAULT_CLOSURE_ABORT_LEVELS
 
 Default `abort_above` level of each tag family's closure check: the relative
-residual at which the run ends rather than warns, or `nothing` where no single
-level means the same thing in every configuration.
+residual at which the run ends rather than warns. `nothing` for every family.
 
-Water gets `1.0`. `gross_relative` is `∫|ρq_tot - Σ tags| / ∫|ρq_tot|`, and any
-set of non-negative tags that stays inside a non-negative parent misses it by at
-most the parent itself, pointwise. So an honest partition cannot reach 1, and
-neither can an honest strict subset of one, which leaves most of the water
-untagged and drives the ratio *towards* 1 from below. Passing 1 means the tags
-hold water that is not there, or the parent has gone negative. That is a broken
-state rather than drift, and it is ten orders of magnitude above the level the
-default `tolerance` warns at. Issue #64 is the run this level exists for: its
-residual passed 1 in the fourth simulated hour and reached 1e113 by the end of
-the day, while the run reported success.
+A diagnostic must never end a run that upstream completes. Water's check used to
+end the run above 1.0, and that ended runs whose parent's water had gone
+negative while the model itself ran on (known issue 7 in `docs/known_issues.md`).
+So no family ends a run by default. Above its void level the check warns once
+and marks every later row void instead; see
+[`DEFAULT_CLOSURE_VOID_LEVELS`](@ref). An explicit `abort_above` still ends the
+run, for a user who wants that.
+"""
+const DEFAULT_CLOSURE_ABORT_LEVELS =
+    (; water = nothing, energy = nothing, energy_source = nothing)
+
+"""
+    DEFAULT_CLOSURE_VOID_LEVELS
+
+Default `void_above` level of each tag family's closure check: the relative
+residual above which the tags no longer describe the field they partition. The
+first time a check passes it, it warns once. From then on it marks every row of
+its closure table, and of its audit table, as void, and the run goes on.
+`nothing` where no single level means the same thing in every configuration.
+
+Water gets `1.0`, the level at which its check used to end the run.
+`gross_relative` is `∫|ρq_tot - Σ tags| / ∫|ρq_tot|`, and any set of
+non-negative tags that stays inside a non-negative parent misses it by at most
+the parent itself, pointwise. So an honest partition cannot reach 1, and neither
+can an honest strict subset of one, which leaves most of the water untagged and
+drives the ratio *towards* 1 from below. Passing 1 means the tags hold water
+that is not there, or the parent has gone negative. That is a broken state
+rather than drift, and it is ten orders of magnitude above the level the
+default `tolerance` warns at. Issue #64 passed 1 in the fourth simulated hour
+and reached 1e113 by the end of the day.
 
 Both energy families get `nothing`. Their residual is normalized by `∫|ρe_tot|`,
 whose zero is a convention: a shifted energy reference can make the denominator
@@ -883,24 +959,26 @@ arbitrarily small and the ratio arbitrarily large with nothing actually wrong, s
 no level transfers between configurations. Set one per run, once its closure
 table shows where that run settles.
 """
-const DEFAULT_CLOSURE_ABORT_LEVELS =
+const DEFAULT_CLOSURE_VOID_LEVELS =
     (; water = 1.0, energy = nothing, energy_source = nothing)
 
 """
     closure_check_from_config(spec_value, context, FT; default_tolerance,
-                              default_abort_above, default_spin_up = nothing)
+                              default_abort_above, default_void_above = nothing,
+                              default_spin_up = nothing,
+                              negative_water = false)
 
 Read a `water_closure_check`, `energy_closure_check` or
 `energy_source_closure_check` block into
-`(; period, tolerance, abort_above, audit, spin_up)`, or `nothing` when the key
-is absent.
+`(; period, tolerance, abort_above, void_above, audit, spin_up, negative_water_void_above)`, or `nothing` when the key is absent.
 
 Every key is optional: `period` defaults to `"1days"`, `tolerance` to the
-family's entry in [`DEFAULT_CLOSURE_TOLERANCES`](@ref) and `abort_above` to its
-entry in [`DEFAULT_CLOSURE_ABORT_LEVELS`](@ref). Writing `abort_above: ~` turns
-the abort off for a family that defaults to having one. A `tolerance` of `~`
-means the check never warns about the residual; the warning about a non-positive
-parent stays.
+family's entry in [`DEFAULT_CLOSURE_TOLERANCES`](@ref), `abort_above` to its
+entry in [`DEFAULT_CLOSURE_ABORT_LEVELS`](@ref), which is `nothing` for every
+family, and `void_above` to its entry in [`DEFAULT_CLOSURE_VOID_LEVELS`](@ref).
+Writing `void_above: ~` turns the void flag off for a family that defaults to
+having one. A `tolerance` of `~` means the check never warns about the
+residual; the warning about a non-positive parent stays.
 
 `audit` defaults to `false`. Setting it writes a second table beside the closure
 table, splitting the residual into the parts that mean different things; see
@@ -915,6 +993,16 @@ The first hour of a run makes a residual that is an artefact of the initial
 adjustment, and the rows since the spin-up leave it out. The reference is taken
 again after a restart, at `spin_up` after the restart. Every family's block
 accepts the key; only the energy source family sets it by default.
+
+`negative_water_void_above` is read only where `negative_water` is `true`,
+which is the water block. It defaults to
+[`DEFAULT_NEGATIVE_WATER_VOID_ABOVE`](@ref), `1e-4`. The parent's negative
+water over its water, from the raw `ρq_tot`, is compared with it at each row
+and at the end of every accepted step. Once past it, every later row is marked
+`negative_water_void`. `~` switches it off, drops the columns, and removes the
+check at every step. It must not be negative. Zero marks the rows at the first
+negative water. The energy blocks refuse the key, since their parent is not
+water; there it is `nothing`.
 """
 closure_check_from_config(
     ::Nothing,
@@ -922,7 +1010,9 @@ closure_check_from_config(
     ::Type{FT};
     default_tolerance,
     default_abort_above,
+    default_void_above = nothing,
     default_spin_up = nothing,
+    negative_water = false,
 ) where {FT} = nothing
 
 function closure_check_from_config(
@@ -931,12 +1021,30 @@ function closure_check_from_config(
     ::Type{FT};
     default_tolerance,
     default_abort_above,
+    default_void_above = nothing,
     default_spin_up = nothing,
+    negative_water = false,
 ) where {FT}
+    negative_water ||
+        !(spec_value isa AbstractDict) ||
+        !haskey(spec_value, "negative_water_void_above") ||
+        error(
+            "$context does not take `negative_water_void_above`: only \
+            `water_closure_check` reads the parent's negative water. Drop \
+            the key from this block.",
+        )
     spec = checked_mapping(
         spec_value,
         context;
-        optional = ("period", "tolerance", "abort_above", "audit", "spin_up"),
+        optional = (
+            "period",
+            "tolerance",
+            "abort_above",
+            "void_above",
+            "audit",
+            "spin_up",
+            (negative_water ? ("negative_water_void_above",) : ())...,
+        ),
     )
     period = get(spec, "period", "1days")
     isfinite(time_to_seconds(period)) || error(
@@ -953,6 +1061,11 @@ function closure_check_from_config(
         context,
         FT,
     )
+    void_above = closure_void_above_from_config(
+        get(spec, "void_above", default_void_above),
+        context,
+        FT,
+    )
     audit = Bool(get(spec, "audit", false))
     spin_up = get(spec, "spin_up", default_spin_up)
     isnothing(spin_up) ||
@@ -961,7 +1074,49 @@ function closure_check_from_config(
             "$context `spin_up` must be a positive, finite time such as \
             \"1hours\", or `~` for none; got $(repr(spin_up)).",
         )
-    return (; period, tolerance, abort_above, audit, spin_up)
+    negative_water_void_above =
+        negative_water ?
+        negative_water_void_above_from_config(
+            get(
+                spec,
+                "negative_water_void_above",
+                DEFAULT_NEGATIVE_WATER_VOID_ABOVE,
+            ),
+            context,
+            FT,
+        ) : nothing
+    return (;
+        period,
+        tolerance,
+        abort_above,
+        void_above,
+        audit,
+        spin_up,
+        negative_water_void_above,
+    )
+end
+
+"""
+    negative_water_void_above_from_config(value, context, FT)
+
+Read the `negative_water_void_above` entry of the water closure-check block, as
+an `FT` or `nothing`. `nothing` switches the flag and its columns off. A
+negative level is refused: the ratio it is compared against is never
+negative.
+"""
+negative_water_void_above_from_config(::Nothing, context, ::Type{FT}) where {FT} =
+    nothing
+function negative_water_void_above_from_config(
+    value,
+    context,
+    ::Type{FT},
+) where {FT}
+    level = FT(value)
+    level >= 0 || error(
+        "$context `negative_water_void_above` must not be negative, got \
+        $level. Use `~` to switch the flag off.",
+    )
+    return level
 end
 
 """
@@ -993,29 +1148,85 @@ one is on by default whenever the tags include a pure region tag, a tag with a
     reference one hour after the start, without the audit;
   - `false` switches the check off;
   - a mapping sets the keys of [`closure_check_from_config`](@ref), with the same
-    defaults.
+    defaults, and one more, `throughput_tolerance`.
 
 `~` with no pure region tag gives no check, since there is no partition to close.
+
+`throughput_tolerance` is a second warning level, in the units of the gross
+source throughput (the tag-closure experiments' OD4): the check warns when the
+gross residual over the throughput since the start passes it. Its scale is set
+by the sources, not by the energy reference as `gross_relative`'s is; the
+residual itself still grows with the offset. It needs the
+throughput, so each tag's ledgers (`energy_source_tag_ledger_per_tag: true`),
+and without them it is refused. It also needs pure region tags whose masks sum
+to 1, a verified partition, since only then does the throughput count each
+source increment once. The masks are known only once the cache is built, so
+that is refused at setup ([`check_energy_source_throughput_partition`](@ref)).
+It defaults to `~`: no level has been approved. It warns only; like
+`tolerance` it is not an acceptance threshold.
 """
 function energy_source_closure_check_from_config(
     value,
     entries,
     transport,
-    ::Type{FT},
+    ::Type{FT};
+    ledger_per_tag = false,
 ) where {FT}
     value === false && return nothing
     if isnothing(value)
         has_energy_source_partition_entry(entries) || return nothing
         value = Dict{String, Any}()
     end
-    return closure_check_from_config(
-        value,
-        "`energy_source_closure_check`",
+    context = "`energy_source_closure_check`"
+    spec = config_mapping(value, context)
+    throughput_tolerance = closure_throughput_tolerance_from_config(
+        get(spec, "throughput_tolerance", nothing),
+        context,
+        FT,
+        ledger_per_tag,
+    )
+    check = closure_check_from_config(
+        filter(entry -> first(entry) != "throughput_tolerance", spec),
+        context,
         FT;
         default_tolerance = energy_source_closure_tolerance(transport),
         default_abort_above = DEFAULT_CLOSURE_ABORT_LEVELS.energy_source,
+        default_void_above = DEFAULT_CLOSURE_VOID_LEVELS.energy_source,
         default_spin_up = "1hours",
     )
+    return (; check..., throughput_tolerance)
+end
+
+"""
+    closure_throughput_tolerance_from_config(value, context, FT, ledger_per_tag)
+
+Read `throughput_tolerance`, as an `FT` or `nothing`. It must be positive, and
+it needs each tag's ledgers, which give the throughput it is compared against.
+"""
+closure_throughput_tolerance_from_config(
+    ::Nothing,
+    context,
+    ::Type{FT},
+    ledger_per_tag,
+) where {FT} = nothing
+function closure_throughput_tolerance_from_config(
+    value,
+    context,
+    ::Type{FT},
+    ledger_per_tag,
+) where {FT}
+    level = FT(value)
+    level > 0 || error(
+        "$context `throughput_tolerance` must be positive, got $level. Use `~` \
+        for no level.",
+    )
+    ledger_per_tag || error(
+        "$context `throughput_tolerance` compares the gross residual with the \
+        gross source throughput, which needs \
+        `energy_source_tag_ledger_per_tag: true`. Set it, or drop \
+        `throughput_tolerance`.",
+    )
+    return level
 end
 
 # Whether the `energy_source_tags` entries include a pure region tag, one with a
@@ -1037,8 +1248,8 @@ has_energy_source_partition_entry(entries) =
 
 Read the `abort_above` entry of a closure-check block, as an `FT` or `nothing`.
 
-`nothing` means the run never ends over closure, which is what the two energy
-families default to. Zero is refused rather than read as "always abort": a run
+`nothing` means the run never ends over closure, which is what every family
+defaults to. Zero is refused rather than read as "always abort": a run
 configured that way would die at the first check whatever its residual was, and
 `~` already says "never" without the ambiguity.
 """
@@ -1052,6 +1263,25 @@ function closure_abort_above_from_config(value, context, ::Type{FT}) where {FT}
         keep warning without ever ending the run.",
     )
     return abort_above
+end
+
+"""
+    closure_void_above_from_config(value, context, FT)
+
+Read the `void_above` entry of a closure-check block, as an `FT` or `nothing`.
+`nothing` means the check never marks its rows void. Zero is refused, as for
+`abort_above`: every row would be void from the first check.
+"""
+closure_void_above_from_config(::Nothing, context, ::Type{FT}) where {FT} =
+    nothing
+
+function closure_void_above_from_config(value, context, ::Type{FT}) where {FT}
+    void_above = FT(value)
+    void_above > 0 || error(
+        "$context `void_above` must be positive, got $void_above. Use `~` for \
+        no void level.",
+    )
+    return void_above
 end
 
 """
@@ -1069,6 +1299,8 @@ function closure_checks_from_config(config::AtmosConfig)
             FT;
             default_tolerance = DEFAULT_CLOSURE_TOLERANCES.water,
             default_abort_above = DEFAULT_CLOSURE_ABORT_LEVELS.water,
+            default_void_above = DEFAULT_CLOSURE_VOID_LEVELS.water,
+            negative_water = true,
         ),
         energy_source = energy_source_closure_check_from_config(
             pa["energy_source_closure_check"],
@@ -1076,7 +1308,11 @@ function closure_checks_from_config(config::AtmosConfig)
             energy_source_transport_from_config(
                 get(pa, "energy_source_tag_transport", "tracer"),
             ),
-            FT,
+            FT;
+            ledger_per_tag = tag_ledger_per_tag_from_config(
+                get(pa, "energy_source_tag_ledger_per_tag", false),
+                "energy_source_tag_ledger_per_tag",
+            ),
         ),
         energy = closure_check_from_config(
             pa["energy_closure_check"],
@@ -1084,6 +1320,7 @@ function closure_checks_from_config(config::AtmosConfig)
             FT;
             default_tolerance = DEFAULT_CLOSURE_TOLERANCES.energy,
             default_abort_above = DEFAULT_CLOSURE_ABORT_LEVELS.energy,
+            default_void_above = DEFAULT_CLOSURE_VOID_LEVELS.energy,
         ),
     )
 end
@@ -1290,6 +1527,136 @@ function check_energy_source_updraft_copy_supported(turbconv)
 end
 
 """
+    energy_source_increment_explicit_microphysics_from_config(value)
+
+Parse `energy_source_tag_increment_allow_explicit_microphysics`. `false`, the
+default, and `~` keep `energy_source_tag_transport: enthalpy_increment` refused
+with sedimenting microphysics stepped explicitly where no run has shown that
+the tags close. That is 2M and P3, and 1M under `use_auto_jacobian: true`.
+`true` allows it, for development runs. Anything else is an error, so that a
+quoted `"true"` cannot silently read as off. See
+`check_energy_source_increment_microphysics_supported`.
+"""
+function energy_source_increment_explicit_microphysics_from_config(value)
+    isnothing(value) && return false
+    value isa Bool || error(
+        "`energy_source_tag_increment_allow_explicit_microphysics` must be \
+        `true` or `false`, got $(repr(value)).",
+    )
+    return value
+end
+
+"""
+    SEDIMENTING_MICROPHYSICS_MODELS
+
+The values of `microphysics_model` whose species sediment: 1M, 2M and P3.
+0M removes its condensate as a local sink and sediments nothing.
+"""
+const SEDIMENTING_MICROPHYSICS_MODELS = ("1M", "2M", "2MP3")
+
+"""
+    check_energy_source_increment_microphysics_supported(
+        transport,
+        parsed_args,
+        allow_explicit_microphysics,
+    )
+
+Refuse `energy_source_tag_transport: enthalpy_increment` with microphysics that
+sediments stepped explicitly (`implicit_microphysics: false`) where no run has
+shown that the tags close, unless
+`energy_source_tag_increment_allow_explicit_microphysics: true`. That is
+`microphysics_model: 2M` or `2MP3`, and `1M` under `use_auto_jacobian: true`
+(`_explicit_one_moment_without_cross_blocks`). With the key the configuration
+runs, and the model warns.
+
+In the implicit Jacobian the parent's `ρe_tot` row has a cross block from each
+sedimenting species, for the energy the falling water carries. Without the
+tags' own blocks, one Newton iteration leaves the tags short of part of the
+parent's sedimentation update. The correction after each solve cannot move the
+part that changes a column's total, and that part stays in `e_src_res`. On the
+tag-closure experiments' DYCOMS RF02 column (prognostic EDMF, 1M, an hour)
+the closure residual was 2.1e-4 of the partitioned energy with the
+microphysics explicit, 1.5e-6 with it implicit, and 4.9e-12 with ten Newton
+iterations (FINDINGS E80 on the record branch). With the split solver the
+tags' rows carry their face shares of those blocks, as the water tags' rows
+do. With them, this column's explicit 1M hour closed to a gross residual of
+1.4e-15 against the pre-registered bound of 1e-7, with every model field bit
+for bit (PR #113's validation). So 1M stepped explicitly runs without the key
+where the Jacobian carries the blocks. The manual Jacobian, the default,
+carries them, and the dense one is exact. The sparse autodiff Jacobian takes
+its pattern from the unsplit blocks and lacks them, so under
+`use_auto_jacobian: true` 1M still needs the key. 2M and P3 sediment too. With
+the split solver the tags carry blocks to their species as well, but no run
+has measured the closure with them, so they need the key until one does.
+
+The check concerns only the tags' own keys. Without the tags, with another
+transport, with 0M, with the microphysics implicit, or with 1M under a
+Jacobian that carries the blocks, it does nothing.
+"""
+function check_energy_source_increment_microphysics_supported(
+    transport,
+    parsed_args,
+    allow_explicit_microphysics,
+)
+    transport isa EnthalpyIncrementEnergySourceTransport || return nothing
+    microphysics = get(parsed_args, "microphysics_model", nothing)
+    explicit_sedimenting =
+        microphysics in SEDIMENTING_MICROPHYSICS_MODELS &&
+        get(parsed_args, "implicit_microphysics", true) == false
+    explicit_sedimenting || return nothing
+    # With 1M the tags' sedimentation cross blocks close the lag (PR #113's
+    # validation). So 1M is refused only under a Jacobian that lacks them, as
+    # the water tags' follower is.
+    one_moment = microphysics == "1M"
+    without_blocks = _explicit_one_moment_without_cross_blocks(parsed_args)
+    one_moment && !without_blocks && return nothing
+    jacobian = one_moment ? " under `use_auto_jacobian: true`" : ""
+    reason =
+        one_moment ?
+        "That Jacobian does not carry the tags' sedimentation cross blocks, \
+        while the parent's `ρe_tot` row has them. With few Newton iterations \
+        the tags then lag the parent's sedimentation, and the lag lands in \
+        `e_src_res`." :
+        "No run has measured the closure with `microphysics_model: \
+        $microphysics`. With the manual Jacobian, the default, the tags carry \
+        sedimentation cross blocks to each falling species, as with 1M. The \
+        sparse autodiff Jacobian (`use_auto_jacobian: true`) carries none."
+    if allow_explicit_microphysics
+        @warn(
+            "`energy_source_tag_transport: enthalpy_increment` runs with \
+            `microphysics_model: $microphysics` stepped explicitly$jacobian, because \
+            `energy_source_tag_increment_allow_explicit_microphysics: true`. \
+            $reason",
+        )
+        return nothing
+    end
+    measured =
+        one_moment ?
+        "On a DYCOMS RF02 EDMF column with one Newton iteration and without \
+        the blocks, the closure residual after an hour was 2.1e-4 of the \
+        partitioned energy, against 1.5e-6 with the microphysics implicit \
+        (FINDINGS E80 on the record branch). With the blocks the gross \
+        residual was 1.4e-15 (PR #113's validation)." :
+        "With 1M stepped explicitly on a DYCOMS RF02 EDMF column, the closure \
+        residual after an hour was 2.1e-4 of the partitioned energy without \
+        the blocks (FINDINGS E80 on the record branch), and the gross \
+        residual 1.4e-15 with them (PR #113's validation)."
+    remedy =
+        one_moment ?
+        "Use the manual Jacobian, the default, step the microphysics \
+        implicitly, or set" :
+        "Until a run measures `microphysics_model: $microphysics`, step the \
+        microphysics implicitly, the default, or set"
+    return error(
+        "`energy_source_tag_transport: enthalpy_increment` is refused with \
+        `microphysics_model: $microphysics` stepped explicitly \
+        (`implicit_microphysics: false`)$jacobian. $reason $measured $remedy \
+        `energy_source_tag_increment_allow_explicit_microphysics: true` to \
+        run it anyway, for development.",
+    )
+end
+
+"""
     check_energy_source_tagging_supported(turbconv, updraft_number)
 
 Refuse `energy_source_tags` under `turbconv: prognostic_edmfx` with more than
@@ -1337,11 +1704,288 @@ function check_energy_source_tagging_supported(turbconv, updraft_number)
 end
 
 """
+    check_water_tracers_transport_supported(turbconv, amd_les, updraft_number = 1)
+
+Refuse `water_tracers` where the model moves `ρq_tot` in a way the tags do not
+follow.
+
+  - `turbconv: prognostic_edmfx` with more than one updraft is refused. The
+    tags follow one updraft: by their share of its water flux and an
+    exchange, or by copies (`water_tag_updraft_copy`), and both take the
+    environment as the grid mean less that updraft. The model itself runs one
+    updraft only and asserts that when it builds its cache; this refuses more,
+    with a message. With one updraft the tags follow it.
+  - `amd_les: true` is refused. AMD diffuses each tracer with a diffusivity
+    taken from that tracer's own gradient. The operator is nonlinear, so in
+    general the tags' diffusion does not add up to that of `ρq_tot`, and no
+    repair restores the partition. Smagorinsky–Lilly and constant horizontal
+    diffusion share one diffusivity and keep it.
+
+`docs/known_issues.md`, issue 3, describes both. The check is kept apart from
+`check_water_tagging_supported`, which also gates
+`water_process_record`. The records are not transported, so neither applies to
+them. A prescribed flow is warned about once the model is built, since the
+setup can bring one without the key; see
+`warn_water_tags_under_prescribed_flow`.
+"""
+function check_water_tracers_transport_supported(
+    turbconv,
+    amd_les,
+    updraft_number = 1,
+)
+    turbconv == "prognostic_edmfx" &&
+        updraft_number > 1 &&
+        error(
+            "`water_tracers` with `turbconv: prognostic_edmfx` need \
+            `updraft_number: 1`, got $updraft_number. The tags follow one \
+            updraft, by their share of its water flux and an exchange or by \
+            copies, and take the environment as the grid mean less that \
+            updraft. `water_process_record` is allowed.",
+        )
+    amd_les === true && error(
+        "`water_tracers` with `amd_les: true` are not supported. AMD diffuses \
+        each tracer with a diffusivity taken from that tracer's own gradient, \
+        so in general the tags' diffusion does not add up to that of \
+        `ρq_tot`, and the partition breaks. `smagorinsky_lilly` and \
+        `constant_horizontal_diffusion` share one diffusivity and keep it. \
+        See docs/known_issues.md, issue 3.",
+    )
+    return nothing
+end
+
+"""
+    default_water_tag_transport(parsed_args, updraft_copies, tags)
+
+The transport the water tags take when `water_tag_transport` is not set.
+
+G3_PLAN 4.3 fixed the rule before V-W3 ran. If the default mode's one-iteration
+part of the closure residual exceeds a quarter of the 0.2% tolerance, the follower
+becomes the default under EDMF. V-W3 measured twelve times that (FINDINGS W21
+on the record branch). So `increment` is the default in the default mode under
+`turbconv: prognostic_edmfx`, where the configuration shows it is supported:
+
+  - an ARS algorithm, which solves every stage it uses;
+  - an `energy_q_tot_upwinding` other than `none`, so the parent has a
+    post-solve correction;
+  - a region tag without a source, which the follower needs;
+  - microphysics other than 1M stepped explicitly.
+
+With 1M stepped explicitly the follower is opt-in. The tags' sedimentation
+cross blocks close the lag there, but the evidence is one column: W23's DYCOMS
+RF02 EDMF column, ARS222, `dt` 120 s, one Newton iteration, one hour (FINDINGS
+W29). A precipitating case on a timestep and Newton ladder decides the default
+(the owner's review of #105). The cross blocks need a Jacobian that carries
+them: the manual one does, and the dense one is exact. Under
+`use_auto_jacobian` the follower is refused there
+(`_explicit_one_moment_without_cross_blocks`).
+
+Elsewhere, and with copies, `tracer`. The model still checks what the
+configuration cannot show, such as whether the regions partition the domain.
+"""
+function default_water_tag_transport(parsed_args, updraft_copies, tags)
+    tracer = TracerWaterTagTransport()
+    get(parsed_args, "turbconv", nothing) == "prognostic_edmfx" || return tracer
+    updraft_copies && return tracer
+    startswith(string(get(parsed_args, "ode_algo", "ARS343")), "ARS") ||
+        return tracer
+    string(get(parsed_args, "energy_q_tot_upwinding", "vanleer_limiter")) ==
+    "none" && return tracer
+    any(_is_partition_tag, tags) || return tracer
+    _explicit_one_moment_config(parsed_args) && return tracer
+    return IncrementWaterTagTransport()
+end
+_explicit_one_moment_config(parsed_args) =
+    get(parsed_args, "microphysics_model", nothing) == "1M" &&
+    get(parsed_args, "implicit_microphysics", true) == false
+
+# With 1M microphysics stepped explicitly, the water tags' follower and the
+# energy source tags' `enthalpy_increment` close only because the tags' Jacobian
+# rows carry the sedimentation cross blocks. Only the manual Jacobian's split
+# solver carries them (`_derivative_flags`). The sparse autodiff Jacobian takes
+# its pattern from the unsplit blocks, so it lacks them. The dense one wins over
+# it when both are set, and is exact.
+_explicit_one_moment_without_cross_blocks(parsed_args) =
+    _explicit_one_moment_config(parsed_args) &&
+    get(parsed_args, "use_auto_jacobian", false) == true &&
+    get(parsed_args, "use_dense_jacobian", false) != true
+const _EXPLICIT_ONE_MOMENT_INCREMENT_MESSAGE = "`water_tag_transport: \
+    increment` is refused with 1M microphysics stepped explicitly \
+    (`implicit_microphysics: false`) under `use_auto_jacobian: true`. That \
+    Jacobian does not carry the tags' sedimentation cross blocks, so the tags \
+    lag the parent's sedimentation by about 0.8% of the water an hour with \
+    one Newton iteration (FINDINGS W23 on the record branch). The lag changes \
+    the column's total, which the follower cannot move. Use the manual \
+    Jacobian, the default, step the microphysics implicitly, or set \
+    `water_tag_transport: tracer`, which lags alike."
+
+"""
+    water_tag_updraft_copy_from_config(value)
+
+Parse `water_tag_updraft_copy`. `false`, the default, and `~` give the water
+tags no copy in the updrafts; `true` gives them one. Anything else is an
+error, so that a quoted `"true"` cannot silently read as off.
+"""
+function water_tag_updraft_copy_from_config(value)
+    isnothing(value) && return false
+    value isa Bool || error(
+        "`water_tag_updraft_copy` must be `true` or `false`, got \
+        $(repr(value)).",
+    )
+    return value
+end
+
+"""
+    water_tag_transport_from_config(value, default = TracerWaterTagTransport())
+
+Parse `water_tag_transport`. `tracer` moves the water tags as tracers.
+`increment` makes them follow the parent's implicit increment after each Newton
+solve. `~`, the default, gives `default`, which
+[`default_water_tag_transport`](@ref) chooses from the configuration. Anything
+else is an error.
+"""
+function water_tag_transport_from_config(
+    value,
+    default = TracerWaterTagTransport(),
+)
+    isnothing(value) && return default
+    value == "tracer" && return TracerWaterTagTransport()
+    value == "increment" && return IncrementWaterTagTransport()
+    return error(
+        "`water_tag_transport` must be `tracer` or `increment`, got \
+        $(repr(value)).",
+    )
+end
+
+"""
+    water_tag_transport_text(transport)
+
+The config value of a water tag transport, for messages and the restart guard.
+"""
+water_tag_transport_text(::TracerWaterTagTransport) = "tracer"
+water_tag_transport_text(::IncrementWaterTagTransport) = "increment"
+
+"""
+    check_water_tag_updraft_copy_supported(turbconv, mse_q_tot_upwinding, tracer_upwinding)
+
+Refuse `water_tag_updraft_copy: true` without `turbconv: prognostic_edmfx`, the
+only model with updrafts that carry tracers, and where the updraft's water and
+its tracers are reconstructed differently. The copies' SGS fluxes sum to the
+parent's only when both use one reconstruction:
+`edmfx_mse_q_tot_upwinding` moves `q_totʲ`, and `edmfx_tracer_upwinding` moves
+every updraft tracer, the copies among them.
+"""
+function check_water_tag_updraft_copy_supported(
+    turbconv,
+    mse_q_tot_upwinding,
+    tracer_upwinding,
+)
+    turbconv == "prognostic_edmfx" || error(
+        "`water_tag_updraft_copy: true` needs `turbconv: prognostic_edmfx`, \
+        got `turbconv: $(repr(turbconv))`. Only that model has updrafts that \
+        carry tracers, and so a copy of the tags.",
+    )
+    mse_q_tot_upwinding == tracer_upwinding || error(
+        "`water_tag_updraft_copy: true` needs `edmfx_mse_q_tot_upwinding` equal \
+        to `edmfx_tracer_upwinding`, got $(repr(mse_q_tot_upwinding)) and \
+        $(repr(tracer_upwinding)). The first reconstructs the updraft's water \
+        and the second its tracers, the copies among them. With two \
+        reconstructions the copies' fluxes do not sum to the parent's.",
+    )
+    return nothing
+end
+
+"""
+    warn_water_tags_under_prescribed_flow(prescribed_flow, water_tagging_model)
+
+Warn when a run with water tags has a prescribed flow. The flow's surface
+moisture flux enters `ρq_tot` with no tagged counterpart, so that water is
+untagged, and the closure residual `q_tag_res` grows by it where region tags
+partition the domain. The flow also clips negative `ρq_tot` to zero whenever
+the state is constrained. The tags follow the clip through
+[`rescale_water_tags!`](@ref), and `q_tag_fix_<name>` records what it moved.
+
+It takes the built model's fields, because the flow comes from the setup, as
+`initial_condition: ShipwayHill2012` gives it, or from the `prescribed_flow`
+key. `get_atmos` calls it.
+"""
+warn_water_tags_under_prescribed_flow(prescribed_flow, water_tagging_model) =
+    isnothing(prescribed_flow) || isnothing(water_tagging_model) ? nothing :
+    @warn(
+        "`water_tracers` with a prescribed flow: the flow's surface moisture \
+        flux enters `ρq_tot` untagged, so `q_tag_res`, where region tags are \
+        configured, grows by it. The flow also clips negative `ρq_tot` when \
+        the state is constrained, which the tags follow and \
+        `q_tag_fix_<name>` records.",
+    )
+
+"""
+    tag_ledger_per_tag_from_config(value, key)
+
+Parse `water_tag_ledger_per_tag` or `energy_source_tag_ledger_per_tag`, named by
+`key`. `false`, the default, and `~` keep no ledger per tag; `true` gives each
+tag its own state ledgers of the corrections (WP6, step 3). Anything else is an
+error, so that a quoted `"true"` cannot silently read as off.
+"""
+function tag_ledger_per_tag_from_config(value, key)
+    isnothing(value) && return false
+    value isa Bool ||
+        error("`$key` must be `true` or `false`, got $(repr(value)).")
+    return value
+end
+
+"""
+    check_water_tag_leak_correction_supported(parsed_args, microphysics_model)
+
+Refuse `water_tag_leak_correction: true` where it has no leak to correct or
+where the leak is only partly corrected (WP4c).
+
+The leak is the diffusion of the rain and snow, which the tags diffuse and the
+parent does not. So it needs 1-moment microphysics, whose diffusing water
+`q_tot_eff` excludes rain and snow. Under 0-moment there is none, and the water
+tags support no other scheme (`check_water_tagging_supported`). The correction is built for the EDMF
+vertical diffusive flux, the path that WP4c's gate measured and retained, and
+its updrafts' mirror (FINDINGS W40 on the record branch). So it needs
+`turbconv: prognostic_edmfx` or `edonly_edmfx`. With
+`edmfx_sgs_diffusive_flux: false` there is no flux and no leak, and the key does
+nothing; it is accepted, so that a run with that flux switched off, such as
+WP4c's gate trials, keeps the rest of its configuration. The boundary-layer
+diffusion (`vert_diff`) leaks the same way, but the gate did not measure it, so
+the key is refused with it rather than leaving that part uncorrected.
+"""
+function check_water_tag_leak_correction_supported(parsed_args, microphysics_model)
+    microphysics_model isa NonEquilibriumMicrophysics1M || error(
+        "`water_tag_leak_correction: true` needs `microphysics_model: 1M`, got \
+        $(nameof(typeof(microphysics_model))). The leak it corrects is the \
+        diffusion of rain and snow, which the parent does not diffuse and the \
+        tags do. Without prognostic rain and snow there is no leak. Drop the \
+        key.",
+    )
+    get(parsed_args, "turbconv", nothing) in ("prognostic_edmfx", "edonly_edmfx") ||
+        error(
+            "`water_tag_leak_correction: true` needs `turbconv: \
+            prognostic_edmfx` or `edonly_edmfx`. It corrects the EDMF vertical \
+            diffusive flux and its updrafts' mirror, the paths WP4c's gate \
+            measured, and nothing else. Drop the key.",
+        )
+    isnothing(get(parsed_args, "vert_diff", nothing)) || error(
+        "`water_tag_leak_correction: true` is refused with `vert_diff: \
+        $(parsed_args["vert_diff"])`. The boundary-layer diffusion leaks the \
+        rain and snow as the EDMF flux does, but the correction is not built \
+        for it, so part of the leak would stay. Drop one of the two keys.",
+    )
+    return nothing
+end
+
+"""
     AtmosTagging(config::AtmosConfig)
 
-Assemble the `AtmosTagging` group from the `energy_tracers`, `water_tracers`,
+Assemble the `AtmosTagging` group from the `energy_tracers`, `water_tracers`
+(with `water_tag_updraft_copy`, `water_tag_transport`,
+`water_tag_precipitation`, `water_tag_ledger_per_tag` and
+`water_tag_leak_correction`),
 `energy_source_tags` (with `energy_source_tag_offset`, `energy_source_tag_repair`,
-`energy_source_tag_transport` and `energy_source_tag_updraft_copy`),
+`energy_source_tag_transport`, `energy_source_tag_updraft_copy` and
+`energy_source_tag_increment_allow_explicit_microphysics`),
 `energy_process_record` and
 `water_process_record` config keys. Any of them
 being `~` (null) or an empty list disables that feature entirely, at no runtime
@@ -1349,8 +1993,16 @@ cost.
 
 Energy source tags are refused without `energy_source_tag_offset`, see
 `check_energy_source_offset_given`, and under `turbconv: prognostic_edmfx` with
-more than one updraft, see `check_energy_source_tagging_supported`. The label
-warnings of the energy source tags and the records see the microphysics model.
+more than one updraft, see `check_energy_source_tagging_supported`. Under
+`energy_source_tag_transport: enthalpy_increment` they are refused with 2M or
+P3 microphysics stepped explicitly, and with 1M stepped explicitly under
+`use_auto_jacobian: true`, unless the configuration opts in, see
+`check_energy_source_increment_microphysics_supported`. Water tags are refused
+under `turbconv: prognostic_edmfx` with more than one updraft and under
+`amd_les: true`, see `check_water_tracers_transport_supported`. The label warnings of the energy
+source tags and the records see the microphysics model, and the warning for
+water tags under a prescribed flow sees the built model
+(`warn_water_tags_under_prescribed_flow`).
 """
 function AtmosTagging(config::AtmosConfig)
     FT = eltype(config)
@@ -1362,11 +2014,97 @@ function AtmosTagging(config::AtmosConfig)
         TaggingModel(energy_tracer_tuple(entries, FT))
     end
     water_entries = config.parsed_args["water_tracers"]
+    water_updraft_copies = water_tag_updraft_copy_from_config(
+        get(config.parsed_args, "water_tag_updraft_copy", false),
+    )
+    water_transport_value = get(config.parsed_args, "water_tag_transport", nothing)
+    water_transport = water_tag_transport_from_config(water_transport_value)
+    water_precipitation = water_tag_precipitation_from_config(
+        get(config.parsed_args, "water_tag_precipitation", false),
+    )
+    water_ledger_per_tag = tag_ledger_per_tag_from_config(
+        get(config.parsed_args, "water_tag_ledger_per_tag", false),
+        "water_tag_ledger_per_tag",
+    )
+    water_leak_correction = tag_ledger_per_tag_from_config(
+        get(config.parsed_args, "water_tag_leak_correction", false),
+        "water_tag_leak_correction",
+    )
     water_tagging_model = if isnothing(water_entries) || isempty(water_entries)
+        water_precipitation && error(
+            "`water_tag_precipitation: true` is set but `water_tracers` is \
+            not, so there are no tags to split. Configure `water_tracers`, or \
+            drop the key.",
+        )
+        water_leak_correction && error(
+            "`water_tag_leak_correction: true` is set but `water_tracers` is \
+            not, so there are no tags to correct. Configure `water_tracers`, \
+            or drop the key.",
+        )
+        water_ledger_per_tag && error(
+            "`water_tag_ledger_per_tag: true` is set but `water_tracers` is \
+            not, so there are no tags to keep ledgers for. Configure \
+            `water_tracers`, or drop the key.",
+        )
+        water_updraft_copies && error(
+            "`water_tag_updraft_copy: true` is set but `water_tracers` is \
+            not, so there are no tags to copy. Configure `water_tracers`, or \
+            drop the key.",
+        )
+        water_transport isa TracerWaterTagTransport || error(
+            "`water_tag_transport: \
+            $(water_tag_transport_text(water_transport))` is set but \
+            `water_tracers` is not, so there are no tags for it to move. \
+            Configure `water_tracers`, or drop the key.",
+        )
         nothing
     else
         check_water_tagging_supported(microphysics_model)
-        WaterTaggingModel(water_tracer_tuple(water_entries, FT))
+        check_water_tracers_transport_supported(
+            get(config.parsed_args, "turbconv", nothing),
+            get(config.parsed_args, "amd_les", false),
+            get(config.parsed_args, "updraft_number", 1),
+        )
+        water_updraft_copies && check_water_tag_updraft_copy_supported(
+            get(config.parsed_args, "turbconv", nothing),
+            get(config.parsed_args, "edmfx_mse_q_tot_upwinding", "first_order"),
+            get(config.parsed_args, "edmfx_tracer_upwinding", "first_order"),
+        )
+        water_precipitation && check_water_tag_precipitation_supported(
+            microphysics_model,
+            get(config.parsed_args, "turbconv", nothing),
+        )
+        water_tags = water_tracer_tuple(water_entries, FT)
+        water_transport = water_tag_transport_from_config(
+            water_transport_value,
+            default_water_tag_transport(
+                config.parsed_args,
+                water_updraft_copies,
+                water_tags,
+            ),
+        )
+        water_transport isa IncrementWaterTagTransport &&
+            _explicit_one_moment_without_cross_blocks(config.parsed_args) &&
+            error(_EXPLICIT_ONE_MOMENT_INCREMENT_MESSAGE)
+        water_leak_correction && check_water_tag_leak_correction_supported(
+            config.parsed_args,
+            microphysics_model,
+        )
+        # `water_tag_leak_correction` needs EDMF, which `water_tag_precipitation`
+        # refuses, so the two are never on together. `water_tag_precipitation`
+        # and `water_tag_ledger_per_tag` work together. Each tag keeps one
+        # ledger of each kind.
+        # The corrections of its rain and snow parts go to that ledger too, and
+        # a move between its own parts leaves it unchanged, as it leaves
+        # `q_tag_fix_<name>` unchanged.
+        WaterTaggingModel(
+            water_tags;
+            updraft_copies = water_updraft_copies,
+            transport = water_transport,
+            precipitation = water_precipitation,
+            ledger_per_tag = water_ledger_per_tag,
+            leak_correction = water_leak_correction,
+        )
     end
     source_entries = config.parsed_args["energy_source_tags"]
     source_offset_value =
@@ -1381,6 +2119,18 @@ function AtmosTagging(config::AtmosConfig)
     source_updraft_copies = energy_source_updraft_copy_from_config(
         get(config.parsed_args, "energy_source_tag_updraft_copy", false),
     )
+    source_ledger_per_tag = tag_ledger_per_tag_from_config(
+        get(config.parsed_args, "energy_source_tag_ledger_per_tag", false),
+        "energy_source_tag_ledger_per_tag",
+    )
+    source_increment_explicit_microphysics =
+        energy_source_increment_explicit_microphysics_from_config(
+            get(
+                config.parsed_args,
+                "energy_source_tag_increment_allow_explicit_microphysics",
+                false,
+            ),
+        )
     energy_source_tagging_model =
         if isnothing(source_entries) || isempty(source_entries)
             isnothing(source_offset) || error(
@@ -1399,9 +2149,25 @@ function AtmosTagging(config::AtmosConfig)
                 `energy_source_tags` is not, so there are no tags to copy. \
                 Configure `energy_source_tags`, or drop the key.",
             )
+            source_ledger_per_tag && error(
+                "`energy_source_tag_ledger_per_tag: true` is set but \
+                `energy_source_tags` is not, so there are no tags to keep \
+                ledgers for. Configure `energy_source_tags`, or drop the key.",
+            )
+            source_increment_explicit_microphysics && error(
+                "`energy_source_tag_increment_allow_explicit_microphysics: \
+                true` is set \
+                but `energy_source_tags` is not, so there are no tags for it \
+                to allow. Configure `energy_source_tags`, or drop the key.",
+            )
             nothing
         else
             check_energy_source_offset_given(source_offset_value)
+            check_energy_source_increment_microphysics_supported(
+                source_transport,
+                config.parsed_args,
+                source_increment_explicit_microphysics,
+            )
             check_energy_source_tagging_supported(
                 get(config.parsed_args, "turbconv", nothing),
                 get(config.parsed_args, "updraft_number", 1),
@@ -1419,6 +2185,7 @@ function AtmosTagging(config::AtmosConfig)
                 repair = source_repair,
                 transport = source_transport,
                 updraft_copies = source_updraft_copies,
+                ledger_per_tag = source_ledger_per_tag,
             )
         end
     energy_process_record = process_record_from_config(

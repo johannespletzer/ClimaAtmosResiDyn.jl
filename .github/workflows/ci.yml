@@ -178,7 +178,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     # A job killed mid-suite reports `cancelled`, which the ci-required gate
-    # cannot distinguish from a superseded run, so the budget has to leave real
+    # cannot distinguish from a superseded run, so the time limit has to leave real
     # headroom. The tagged-simulation files are one group per file for the same
     # reason: they share no compilation, so combining them only adds compile
     # time, and a job that overruns drops coverage of whatever had not started.
@@ -209,6 +209,14 @@ jobs:
           - tagging_source_edmf
           - tagging_source_increment
           - tagging_source_updraft
+          - tagging_water_edmf
+          - tagging_water_edmf_copies
+          - tagging_water_edmf_0m
+          - tagging_water_edmf_0m_explicit
+          - tagging_water_increment
+          - tagging_water_increment_explicit
+          - tagging_water_leak
+          - tagging_water_precipitation
           - parameterizations
           - restarts
         # The groups that test upstream ClimaAtmos code run on 1.11 only. A
