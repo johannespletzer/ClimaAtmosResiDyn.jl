@@ -239,26 +239,34 @@ function args_integrator(Y, p, tspan, ode_algo, callback,
                 post-solve correction in the stepper's hook, and it is not \
                 there. The tags would lose their vertical advection.",
             )
-        # With the parent-budget ledger on, the explicit tendency, the
+        # With the parent budget on, the explicit tendency, the
         # state-writing hooks, the implicit-stage initialiser and the
         # post-implicit correction sit behind meters that read the state around
         # each call and never write it. Off, these are the plain functions.
-        ledger = p.parent_budget
+        parent_budget = p.parent_budget
         PB = Internals.ParentBudget
         tendency_function = CTS.ClimaODEFunction(;
-            T_exp_T_lim! = PB.meter_explicit(ledger, T_exp_T_lim!),
+            T_exp_T_lim! = PB.meter_explicit(parent_budget, T_exp_T_lim!),
             T_imp!,
-            T_post_imp! = PB.meter_post_implicit(ledger, T_post_imp!, implicit_tendency!),
+            T_post_imp! = PB.meter_post_implicit(
+                parent_budget,
+                T_post_imp!,
+                implicit_tendency!,
+            ),
             cache! = set_precomputed_quantities!, cache_imp!,
-            lim! = PB.meter_hook(ledger, :lim!, limiters_func!),
-            dss! = PB.meter_hook(ledger, :dss!, dss!),
-            constrain_state! = PB.meter_hook(ledger, :constrain_state!, constrain_state!),
+            lim! = PB.meter_hook(parent_budget, :lim!, limiters_func!),
+            dss! = PB.meter_hook(parent_budget, :dss!, dss!),
+            constrain_state! = PB.meter_hook(
+                parent_budget,
+                :constrain_state!,
+                constrain_state!,
+            ),
             update_cache = update_cache_signal_handler(update_cache_every),
             update_constrain_state = update_constrain_state_signal_handler(
                 update_constrain_state_every,
             ),
             initialize_imp! = PB.meter_initialize(
-                ledger,
+                parent_budget,
                 initialize_implicit_stage_problem!,
             ),
         )

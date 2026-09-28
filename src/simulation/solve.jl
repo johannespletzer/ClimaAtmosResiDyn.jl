@@ -99,8 +99,8 @@ end
 """
     write_parent_budget_report(simulation, comms_ctx)
 
-Write the parent-budget ledger's claim certificate into the output directory
-on the root process and log its summary, when the run has a ledger. It is
+Write the parent budget's claim certificate into the output directory
+on the root process and log its summary, when the run has a parent budget. It is
 called at the end of a successful solve. A crashed run writes none.
 """
 function write_parent_budget_report(simulation, comms_ctx)
@@ -118,7 +118,7 @@ function write_parent_budget_report(simulation, comms_ctx)
     @info "Parent-budget report written" path
     @info PB.budget_summary(adapter)
     # A failed identity is a finding about the run, so it is raised above the
-    # summary. The return code does not change: the ledger is a diagnostic.
+    # summary. The return code does not change: the parent budget is a diagnostic.
     failed = PB.failed_claims(adapter)
     isempty(failed) ||
         @warn "Parent-budget claims failed on the last accepted step" failed
@@ -135,7 +135,7 @@ The first step is taken outside the timed solve so that compilation is not count
 the callbacks are precompiled. Failures are caught rather than rethrown, so that partial
 results can still be inspected: in a serial run the crashed state is written to the
 output directory first. The diagnostic writers are closed on every path.
-When the run has a parent-budget ledger, its report is written to the output
+When the run has a parent budget, its report is written to the output
 directory after a successful solve. A failure to write it is logged and does not
 change the return code.
 

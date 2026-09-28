@@ -26,7 +26,7 @@ import ClimaTimeSteppers as CTS
 
 const FT = Float64
 
-# The ledger's column. `AtmosModel` takes the grid, and `AtmosSimulation` takes
+# The parent budget's column. `AtmosModel` takes the grid, and `AtmosSimulation` takes
 # the model. The parameters follow the model's microphysics, as the removed
 # `AtmosSimulation{FT}` constructor chose them.
 function column_model(; kwargs...)

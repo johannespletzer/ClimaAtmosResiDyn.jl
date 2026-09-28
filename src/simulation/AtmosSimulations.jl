@@ -296,10 +296,10 @@ entry point for simulations written as scripts; configuration-driven runs go thr
     either a precomputed field or a callable `(Y, params) -> velocity` evaluated once `Y`
     exists.
 
-### Parent-budget ledger
+### Parent budget
 
-  - `parent_budget_mode = "off"`: The parent-budget ledger, `"off"`, `"summary"` or
-    `"audit"`. When on, the ledger measures every accepted step's mass, water and
+  - `parent_budget_mode = "off"`: The parent budget, `"off"`, `"summary"` or
+    `"audit"`. When on, the parent budget measures every accepted step's mass, water and
     energy against what the integrator applied, with one global collective per
     step and no change to the trajectory. `"audit"` also attributes each channel
     to the processes that wrote it. It refuses configurations outside the
@@ -307,13 +307,13 @@ entry point for simulations written as scripts; configuration-driven runs go thr
     `Internals.ParentBudget.ReadOnlyCallback`. A restarted run checks the
     restored state against the endpoints its checkpoint carried. See the
     parent-budget pages of the documentation.
-  - `parent_budget_attribution = "net"`: How the ledger books a process row in
+  - `parent_budget_attribution = "net"`: How the parent budget books a process row in
     `"audit"` mode: `"net"` books the signed integral of what the process applied,
     `"gross"` also keeps its positive and negative parts as a diagnostic. The
     identities use the net amount either way.
-  - `parent_budget_tolerances = nothing`: The tolerances the ledger judges its
+  - `parent_budget_tolerances = nothing`: The tolerances the parent budget judges its
     residuals against, a mapping from `:mass`, `:water` or `:energy` to a
-    `BudgetTolerance`. Without one the ledger takes the tolerances from the
+    `BudgetTolerance`. Without one the parent budget takes the tolerances from the
     committed calibration table for this backend, float type and rank count.
     With no table row every numeric verdict is `blocked`, naming the tolerance.
 
@@ -428,7 +428,7 @@ function AtmosSimulation(
         steady_state_velocity isa Function ? steady_state_velocity(Y, params) :
         steady_state_velocity
 
-    # The ledger's schema is fixed from the model before anything is collected.
+    # The parent budget's schema is fixed from the model before anything is collected.
     # A restarted run also reads the endpoints its checkpoint carried, so the
     # first transaction can check the restored state against them.
     parent_budget_checkpoint =
@@ -443,7 +443,7 @@ function AtmosSimulation(
         tolerances = parent_budget_tolerances,
         checkpoint = parent_budget_checkpoint,
     )
-    # With the ledger on, a custom callback must declare itself read-only.
+    # With the parent budget on, a custom callback must declare itself read-only.
     callbacks = Internals.ParentBudget.declared_callbacks(parent_budget, callbacks)
 
     p = @timed_log verbose "Built cache" build_cache(
@@ -465,7 +465,7 @@ function AtmosSimulation(
     default_callbacks &&
         check_energy_source_throughput_setup(p.tagging, callback_kwargs)
 
-    # Combine all callbacks. The ledger's callback goes first: it reads the
+    # Combine all callbacks. The parent budget's callback goes first: it reads the
     # accepted state and the stepper cache before any other callback runs.
     discrete_callbacks = @timed_log verbose "Assembled callbacks" if default_callbacks
         checkpoint_frequency = parse_checkpoint_frequency(checkpoint_frequency)

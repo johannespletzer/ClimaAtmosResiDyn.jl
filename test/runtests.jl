@@ -90,9 +90,9 @@ if TEST_GROUP in ("infrastructure", "all")
 end
 
 # ============================================================================
-# Parent budget: the ledger driven by real simulations. Every file here builds
+# Parent budget: the budget driven by real simulations. Every file here builds
 # several `AtmosSimulation`s and compiles the tendency pipeline for each, which
-# is why they are not in `infrastructure` with the ledger's unit tests.
+# is why they are not in `infrastructure` with the parent budget's unit tests.
 # ============================================================================
 if TEST_GROUP in ("parent_budget", "all")
     @safetestset "Parent-budget envelopes" begin @time include("parent_budget/envelope_tests.jl") end

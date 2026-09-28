@@ -1,5 +1,5 @@
 #####
-##### Parent-budget ledger: the κ calibration table
+##### Parent budget: the κ calibration table
 #####
 ##### The tolerance's arithmetic term carries a factor κ that covers reduction
 ##### order and rank dependence. The contract says it is calibrated and never
@@ -156,7 +156,7 @@ protocol_tolerances() = Dict(
 
 Return the named configuration the protocol runs. It is a moist DYCOMS_RF02
 column with zero-moment microphysics, idealized radiation and a slab ocean, in
-summary mode, at `Float64`, with every reservoir the ledger knows. The caller
+summary mode, at `Float64`, with every reservoir the parent budget knows. The caller
 builds an `AtmosConfig` from it and adds the output directory.
 """
 calibration_configuration() = Dict{String, Any}(

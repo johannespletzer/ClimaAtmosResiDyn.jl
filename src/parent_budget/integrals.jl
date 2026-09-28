@@ -1,5 +1,5 @@
 #####
-##### Parent-budget ledger: the authoritative integrals
+##### Parent budget: the authoritative integrals
 #####
 ##### The three parent quantities are defined once, here, and both ends of every
 ##### transaction use these definitions, so a change of definition cannot be
@@ -18,7 +18,7 @@
 """
     BUDGET_ACCOUNTING_TYPE
 
-The float type the ledger does its own arithmetic in, `Float64`.
+The float type the parent budget does its own arithmetic in, `Float64`.
 
 Deliberately independent of the state's float type. A residual is what survives
 subtracting two large global totals, and a `Float32` subtraction destroys it, so
@@ -153,7 +153,7 @@ point_areal_density(x, WJ) = BUDGET_ACCOUNTING_TYPE(x) / BUDGET_ACCOUNTING_TYPE(
 
 Sum `values` across every rank of `context`, in place, with **one** collective.
 
-This is the only place the ledger communicates. Everything upstream of it is
+This is the only place the parent budget communicates. Everything upstream of it is
 local, and everything downstream reads a reduced buffer, which is what keeps the
 cost at one collective per accepted step however many quantities and legs a step
 carries.
@@ -179,7 +179,7 @@ const REDUCTION_COUNT = Ref(0)
 """
     budget_context(Y)
 
-Return the communications context the ledger reduces over, taken from the state
+Return the communications context the parent budget reduces over, taken from the state
 it is measuring rather than from a global default.
 """
 budget_context(Y) = ClimaComms.context(axes(Y.c))
@@ -262,7 +262,7 @@ This is a **diagnostic derived from state, not a parent quantity and not a
 conservation invariant.** Prescribed forcing adds water to a column without
 adding air to it, so dry air is not conserved in a forced run and this quantity
 moves by minus the added water. Comparing it against the mass and water budgets
-is how those two are checked against each other; it is not a closure the ledger
+is how those two are checked against each other; it is not a closure the parent budget
 claims.
 
 Equals the total mass for a dry model, which has no water state.
@@ -287,7 +287,7 @@ end
 # the moisture model is, so `Y.sfc.water` exists in a dry run and holds a
 # permanent zero. Dispatching on presence would report that zero as a measured
 # budget, which is exactly the confusion between a measured zero and an
-# inapplicable quantity that the ledger exists to prevent.
+# inapplicable quantity that the parent budget exists to prevent.
 
 """
     owns_atmosphere_water(microphysics_model) -> Bool

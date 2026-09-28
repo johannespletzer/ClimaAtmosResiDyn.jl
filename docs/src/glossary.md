@@ -52,7 +52,9 @@ record is a process's.
     mass, total water and total energy changed by exactly what the accepted
     time step applied. Its terms, from *reservoir* to *reported*, are explained
     in plain language on the
-    [parent-budget vocabulary](parent_budget/vocabulary.md) page.
+    [parent-budget vocabulary](parent_budget/vocabulary.md) page. In the code
+    its per-step store is `BudgetJournal`, and the tendency code reaches it
+    through `open_parent_budget_event!` and `close_parent_budget_event!`.
   - **Tag ledger**: a running total that a tag correction keeps of what it
     moved. The word is used on the tag side only. It comes in three kinds. A
     *repair ledger* is `q_tag_fix_*` or `e_src_fix_*`, held in the cache as

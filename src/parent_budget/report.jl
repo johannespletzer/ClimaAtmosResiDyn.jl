@@ -1,12 +1,12 @@
 #####
-##### Parent-budget ledger: the report and the claim certificate
+##### Parent budget: the report and the claim certificate
 #####
 ##### The report states what a run established. It is written once at the end
 ##### of the run. It says which claim levels held for which quantities in which
 ##### control volumes, under which configuration, and what blocked the rest.
 ##### It is versioned YAML beside the run's other output, with a concise human
 ##### summary. Nothing here is new accounting. The report reads the last
-##### commit and the ledger's cumulative totals and adds nothing to them.
+##### commit and the journal's cumulative totals and adds nothing to them.
 
 """
     REPORT_VERSION
@@ -97,7 +97,7 @@ tolerance_entry(t::BudgetTolerance) = Dict{String, Any}(
     budget_report(adapter; job_id = "", float_type = "") -> Dict{String, Any}
 
 Return the claim certificate of a run as a nested dictionary ready to be
-written. It holds the configuration the ledger ran under, the tolerances and
+written. It holds the configuration the parent budget ran under, the tolerances and
 their source, and the restart segmentation. For every control volume and
 quantity it holds the parent verdict with cumulative totals, the attribution
 verdict of every channel and the transfer verdict of every event, all from the
@@ -105,7 +105,7 @@ last accepted step. Before the first commit the claims section is empty and
 `last_step` is 0.
 """
 function budget_report(adapter::ParentBudgetAdapter; job_id = "", float_type = "")
-    (; schema, ledger) = adapter
+    (; schema, journal) = adapter
     commit = latest_commit(adapter)
     record = adapter.timestepper
     context = adapter.context
@@ -214,7 +214,7 @@ Then come the attribution and transfer verdicts that are not `pass`,
 function budget_summary(adapter::ParentBudgetAdapter)
     commit = latest_commit(adapter)
     io = IOBuffer()
-    println(io, "Parent-budget ledger, ", adapter.mode isa AuditMode ? "audit" : "summary",
+    println(io, "Parent budget, ", adapter.mode isa AuditMode ? "audit" : "summary",
         " mode, ", adapter.steps_committed, " accepted step(s), tolerances from ",
         adapter.tolerance_source)
     isnothing(adapter.transition) ||

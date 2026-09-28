@@ -314,7 +314,7 @@ NVTX.@annotate function save_state_to_disk_func(integrator, output_dir)
         "atmos_model_hash",
         hash_physics(p.atmos),
     )
-    # The parent-budget ledger's endpoint of this state, for the restart check.
+    # The parent budget's endpoint of this state, for the restart check.
     Internals.ParentBudget.write_checkpoint_attributes!(hdfwriter.file, p.parent_budget)
     # The energy source tags' settings, for the restart guard.
     write_energy_source_checkpoint_attributes!(

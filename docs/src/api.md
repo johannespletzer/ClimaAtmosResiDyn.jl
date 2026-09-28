@@ -533,6 +533,6 @@ compatibility surface.
 
 ```@docs
 ClimaAtmos.open_applied_update!
-ClimaAtmos.open_ledger_event!
+ClimaAtmos.open_parent_budget_event!
 ClimaAtmos.snapshot_tags!
 ```
