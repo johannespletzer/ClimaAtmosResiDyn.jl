@@ -595,3 +595,63 @@ The run tree stays at `e09e0986`. The driver, the configuration and `main`'s
 code at `cfc2152c` are as registered there, and the check job `13996777`
 tested them. This amendment changes only the text above and
 `ic_miss_score2.py`.
+
+## 10. The revision of C: the owner's options after W47 and W48 (2026-09-29)
+
+A brief for the owner's decision. It restates what W47 and W48 found, and
+lists the options with a recommendation. Nothing here is decided.
+
+**What was found.** At site 23 the region tags hold up to 2.2% more water
+than option C's target, `max(ρq_tot, 0)`, against a 0.2% tolerance (W42). The
+four rises that no ledger records lie wholly in cells whose parent is at or
+below zero (W47). The external forcing's bracket, applied alone, reproduces
+each rise. Without its subsidence term it keeps 5% to 16% of that growth, and
+without the vertical fluctuation at least 80% (W48, leave-one-out). Cell by
+cell, the growth lies where the parent rises but stays at or below zero while
+the region tags gain water.
+
+**Why, in the code.** `attribute_tagged_ρq_tot!` gives each region tag its
+mask times the parent's gain, `M_k·Δ⁺`, whatever the parent's sign. Where
+subsidence adds water to a cell whose parent stays at or below zero, the
+region tags gain that water, but the target there stays zero. The follower
+already treats the implicit part by the target (its negative-part entry). The
+explicit brackets do not.
+
+**The options**
+
+ 1. **The brackets give the region tags the target's gain, for every explicit
+    process.** Recommended. Production reaches the region tags only where the
+    parent is above zero. Where it is at or below zero, the gain goes to the
+    negative part, which `q_tag_negative` already reports.
+      + It covers subsidence and every other explicit process in one rule, at
+        the one place where the gain is handed out.
+      + It matches C's definition and the follower's pattern.
+      + Where the parent is never at or below zero, the tags are unchanged bit
+        for bit (site 26, W42), and no model field changes.
+      + The design must still fix how a step that crosses zero is split. The
+        bracket works on tendencies, not on a step's increment.
+ 2. **The same rule for the external forcing only,** subsidence included.
+      + At site 23 it gives the same result, because the whole explicit
+        tendency's share equals the forcing's in every rise (W47).
+      + It leaves any other explicit process with the same flaw, where a
+        case has one.
+ 3. **A correction to the target at each step's end,** with its own ledger:
+    move each cell's excess over the target to the negative part.
+      + It catches any source, known or not.
+      + But it corrects after the fact rather than attribute correctly, and it
+        hides where the excess comes from. That is the leakage monitor the
+        record chose not to destroy (the partition repair's docstring).
+ 4. **Accept C as it is,** and document the miss.
+      + Site 23's water results are not scored anyway. Its parent's negative
+        water reaches 10.8% of its water in W48's windows, against the
+        contract's `1e-4`, and #118's flag marks every row after it.
+      + But the tags keep drifting from their target wherever the parent goes
+        negative. OD7, which waits on site 23, stays blocked.
+
+**After a choice of 1, 2 or 3:**
+
+  - a design subsection with its pre-registered validation: section 8's rules
+    V1 to V5 again at sites 23 and 26 (90 days), and the probe's windows, where
+    the rises should go;
+  - a PR against `main` with the rule, its unit tests and parity;
+  - the validation runs.
