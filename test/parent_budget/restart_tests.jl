@@ -114,7 +114,7 @@ end
         @test transition isa PB.RestartTransition
         @test transition.status === :verified
         @test transition.checkpoint_step == 2
-        # The record after the restart is a new segment from the restored
+        # The history after the restart is a new segment from the restored
         # endpoint, and its steps close as before.
         @test adapter.journal.initial.step == 0
         step!(restarted, 2)

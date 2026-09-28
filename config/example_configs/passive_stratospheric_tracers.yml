@@ -23,7 +23,7 @@ job_id: "passive_stratospheric_tracers"
 # The 6 x 4 grid is sized by compilation cost. Setup is almost entirely
 # compilation and grows steeply with the tracer count. perf/tracer_scaling.jl
 # measures it at roughly N^2.9, about 17 minutes at 24 tracers against over two
-# hours at 48, paid again on every launch and restart. Within that budget the
+# hours at 48, paid again on every launch and restart. Within that cost the
 # stack is coarsened rather than truncated, with 4 height bands at double the
 # spacing so it still reaches the same altitude, because the deep stratosphere
 # is where the long residence times are. To cover more regions, run several

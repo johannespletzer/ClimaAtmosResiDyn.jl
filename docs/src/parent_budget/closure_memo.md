@@ -83,7 +83,7 @@ the arithmetic level.
 
 The tip has these test files under `test/parent_budget/`: endpoint, envelope,
 explicit_attribution, implicit_attribution, journal, reduction, registry,
-report, restart_ledger, transfer. The registry and `coverage.md` agree cell by
+report, restart, transfer. The registry and `coverage.md` agree cell by
 cell.
 
 | Named file              | Covered elsewhere?                                                                                                                                                                                                                                                                                                                                                         |

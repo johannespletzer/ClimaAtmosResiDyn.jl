@@ -4,16 +4,16 @@
 ##### What a configuration is expected to produce, declared before anything is
 ##### collected. The journal records what happened; this file says what should
 ##### have. Reconciliation compares the two in both directions, so an expected
-##### channel that recorded nothing blocks rather than vanishing, and a record
+##### channel that recorded nothing blocks rather than vanishing, and an entry
 ##### this file does not declare is refused rather than becoming a new row.
 #####
-##### Deriving the expected set from the records is the failure the separation
+##### Deriving the expected set from the entries is the failure the separation
 ##### exists to prevent. A process that never reported would remove itself from
 ##### its own audit, and the report would close over whatever happened to arrive.
 #####
 ##### Nothing here reads a leg, a packet, or a transaction. A schema is built
 ##### once from the model configuration and never changes afterwards, which is
-##### also what makes the packet layout computable before the first record.
+##### also what makes the packet layout computable before the first entry.
 
 # ============================================================================
 # Reservoirs
@@ -400,11 +400,11 @@ end
 What the coverage registry can say a component of a declared row will be.
 
   - `:measured`: not provably zero, so the parent budget has to measure it.
-  - `:invariant_zero`: provably zero, with the proof named in the record.
+  - `:invariant_zero`: provably zero, with the proof named in the evidence.
   - `:not_applicable`: the row does not write this quantity in this
     configuration.
   - `:open`: not established from the code, so nothing is demanded of the
-    record and the claim it feeds stays blocked.
+    entry and the claim it feeds stays blocked.
 
 This is the proof obligation half of what a schema declares. Applicability says
 whether a reservoir owns a quantity at all; a disposition says what a particular
@@ -419,7 +419,7 @@ const EXPECTED_DISPOSITIONS =
     OPEN_DISPOSITIONS
 
 Every quantity `:open`: the default for a declaration whose proof obligations
-have not been established yet. It demands nothing of a record and blocks every
+have not been established yet. It demands nothing of an entry and blocks every
 claim the declaration feeds, which is what the coverage registry's `open` rows
 mean: a sum over a row nothing has established proves nothing, however small it
 comes out. A declaration passes only once its dispositions are declared.
@@ -562,7 +562,7 @@ struct ChannelSpec
         length(unique(keys)) == length(keys) || error(
             "Channel $name declares the same (process, reservoir) row twice. " *
             "A row is recorded once and a repeated declaration would demand " *
-            "two records of it.",
+            "two entries of it.",
         )
         for row in rows
             row.reservoir in reservoirs || error(
@@ -710,7 +710,7 @@ struct TransferEventSpec
         length(unique(modeled_legs)) == length(modeled_legs) || error(
             "Transfer event $name declares the same (reservoir, leg) pair " *
             "twice. A leg is recorded once and a repeated declaration would " *
-            "demand two records of it.",
+            "demand two entries of it.",
         )
         for (reservoir, _) in modeled_legs
             reservoir === EXTERIOR_LABEL && error(

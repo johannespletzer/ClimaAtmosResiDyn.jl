@@ -170,8 +170,8 @@ column_atmos_model(; kwargs...) =
             )
 
             # A non-positive parent empties every tag, whatever it held. This is
-            # the branch a nonnegativity constraint reaches, and the ledger has
-            # to see the removal.
+            # the branch a nonnegativity constraint reaches, and the repair
+            # ledger has to see the removal.
             @test CA.water_tag_rescale_shift(FT(-1), FT(0), FT(-2), FT(0)) ==
                   FT(1)
             @test CA.water_tag_rescale_shift(FT(2), FT(3), FT(0), FT(2)) ==
@@ -380,7 +380,7 @@ column_atmos_model(; kwargs...) =
             # water surfaces in `q_tag_res` instead of being attributed
             @test ᶜY.ρq_tag_tropics[4] == FT(0)
             # A negative tag is removed when the total water is set to zero.
-            # The ledger records the amount removed as an increase.
+            # The repair ledger records the amount removed as an increase.
             @test ᶜY.ρq_tag_tropics[5] == FT(0)
             @test ᶜfix.ρq_tag_tropics[5] == FT(1)
             @test all(>=(0), ᶜY.ρq_tag_tropics[1:8])
@@ -435,7 +435,7 @@ column_atmos_model(; kwargs...) =
             # Scaling it would have made it more negative.
             @test ᶜY.ρq_tag_tropics[9] == before_tropics[9]
 
-            # The ledger records the signed correction applied to each tag
+            # The repair ledger records the signed correction applied to each tag
             @test ᶜfix.ρq_tag_tropics ≈ ᶜY.ρq_tag_tropics .- before_tropics
             @test ᶜfix.ρq_tag_extratropics ≈
                   ᶜY.ρq_tag_extratropics .- before_extra
@@ -452,7 +452,7 @@ column_atmos_model(; kwargs...) =
             @test ᶜY.q_tag_led_empty ≈ ifelse.(held, FT(0), ᶜpartition_fix)
             @test ᶜY.q_tag_led_empty[5] ≈ FT(2)
 
-            # The ledger accumulates across calls rather than being overwritten
+            # The repair ledger accumulates across calls rather than being overwritten
             CA._rescale_water_tags!((; c = ᶜY), p, copy(ᶜY.ρq_tot), model)
             @test ᶜfix.ρq_tag_tropics ≈ ᶜY.ρq_tag_tropics .- before_tropics
         end
@@ -593,7 +593,7 @@ column_atmos_model(; kwargs...) =
             # Source tags are outside the partition and remain unchanged.
             @test ᶜY.ρq_tag_evap == before_evap
             @test ᶜwater_fix.ρq_tag_evap == fill(FT(0.5), 3)
-            # Corrections accumulate on top of the existing fix ledger.
+            # Corrections accumulate on top of the existing repair ledger.
             @test ᶜwater_fix.ρq_tag_tropics ≈
                   fill(FT(0.5), 3) .+ ᶜY.ρq_tag_tropics .- before_tropics
             @test ᶜwater_fix.ρq_tag_extratropics ≈

@@ -17,8 +17,8 @@ t_end: "1days"
 #   - The records say what each of those processes did at each point.
 #
 # The closure check is on by default with these tags: daily, report-only, from a
-# spin-up reference an hour in. The repair is on by default too, and its ledgers
-# are in the default output.
+# spin-up reference an hour in. The repair is on by default too, and the repair
+# ledgers are in the default output.
 
 # Required with the tags. The tags partition `ρe_tot + c·ρ`, which this offset
 # makes positive everywhere, so the donor share is defined everywhere. The model

@@ -194,7 +194,7 @@ end
     BudgetPacket(layout)
 
 A fixed-layout buffer of accounting-precision values, with a
-`PacketSlotState` per slot and a record of whether it has been reduced.
+`PacketSlotState` per slot and a flag saying whether it has been reduced.
 
 `values` is what the collective reduces. `states` is **not** reduced: every
 disposition is derived from the schema, so it is already identical on every rank,

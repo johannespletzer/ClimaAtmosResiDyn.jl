@@ -45,12 +45,15 @@ Always read the ClimaAtmos-specific guide before working in this repository:
 - Bookkeeping words: budget is the parent's, ledger is a tag's, record is a
   process's. Say "the parent budget" for `src/parent_budget`, name a tag
   ledger's kind (repair, increment or mechanism), and keep the noun "record"
-  for process records. Parent-budget code follows the rule too: the per-step
-  store is `BudgetJournal`, held in `adapter.journal`, and the event hooks are
-  `open_parent_budget_event!` and `close_parent_budget_event!`. Tag-side code
-  identifiers, config keys, output names and file names keep their names, even
-  where they say "ledger" (`restart_ledger_tests.jl`). See
-  [the glossary](docs/src/glossary.md).
+  for process records. The code follows the rule too. The parent budget's
+  per-step store is `BudgetJournal`, held in `adapter.journal`. Its event
+  hooks are `open_parent_budget_event!` and `close_parent_budget_event!`, and
+  its timestepper pin is `TimestepperPin`. Tag-side names that say "ledger"
+  already follow the rule. The stratospheric tracers' tracer budget is a
+  separate feature and keeps its name. See [the glossary](docs/src/glossary.md).
+- Restarts and existing simulation output do not constrain renames yet. The
+  runs so far were tests and can be redone, so a checkpoint key, output name
+  or config key may change when a naming rule calls for it.
 
 ## Self-correction
 

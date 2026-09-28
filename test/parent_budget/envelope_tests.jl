@@ -120,16 +120,16 @@ end
     end
 
     @testset "The timestepper is pinned" begin
-        record = adapter.timestepper
-        @test record.package_version == pkgversion(CTS)
-        @test record.algorithm === :ARS343
-        @test record.stages == 4
-        @test !record.fsal
+        pin = adapter.timestepper
+        @test pin.package_version == pkgversion(CTS)
+        @test pin.algorithm === :ARS343
+        @test pin.stages == 4
+        @test !pin.fsal
         γ = 0.4358665215084590
-        @test record.b_exp ≈
+        @test pin.b_exp ≈
               [0.0, -3 / 2 * γ^2 + 4 * γ - 1 / 4, 3 / 2 * γ^2 - 5 * γ + 5 / 4, γ]
-        @test record.b_imp == record.b_exp
-        @test iszero(record.b_exp[1])
+        @test pin.b_imp == pin.b_exp
+        @test iszero(pin.b_exp[1])
     end
 
     @testset "One collective per accepted step" begin

@@ -116,8 +116,8 @@ What the parent budget found when it opened on a restored state. The status is
 `:verified` when the checkpoint carried endpoints and the restored state
 reproduced every one of them exactly, and `:unverified` when the checkpoint
 carried none. A restored state that differs from its checkpoint is refused at
-initialisation instead of becoming a record. `checkpoint_step` is the step
-the parent budget had committed when the checkpoint was written. The record after
+initialisation instead of entering the history. `checkpoint_step` is the step
+the parent budget had committed when the checkpoint was written. The history after
 the restart is a new segment, starting from the restored endpoint.
 """
 struct RestartTransition

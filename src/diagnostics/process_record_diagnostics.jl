@@ -39,7 +39,7 @@ Register the diagnostics of the configured process records:
   - `q_prc_<process>`: the total-water increment it has applied (kg kg⁻¹).
 
 Both are cumulative from the start of the run and are carried through a
-restart, because the records are prognostic. A budget over an interval is
+restart, because the records are prognostic. The change over an interval is
 therefore the difference of two outputs, and a time average of one is not
 meaningful. `q_tag_fix_<name>` lives in the cache instead, and a checkpoint
 carries it separately (WP6, step 3).
@@ -94,8 +94,8 @@ function _register_process_record_diagnostics!(
                        "the process added and negative where it removed, so " *
                        "this is a record of what the process did rather than " *
                        "a share of what is present. Cumulative since the " *
-                       "start of the run and carried through a restart, " *
-                       "so a budget over an interval is the difference of two " *
+                       "start of the run and carried through a restart, so " *
+                       "the change over an interval is the difference of two " *
                        "outputs, and a time average of this variable is not " *
                        "meaningful. Both tendency paths are recorded, so " *
                        "`microphysics` is recorded however microphysics is " *
