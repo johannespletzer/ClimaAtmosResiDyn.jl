@@ -99,12 +99,27 @@ offset, is shared out by the shares of the cell that loses the energy:
   - at the surface, the lowest cell's shares are kept.
 
 The partition tags' shares add up to one, so their fluxes add up to the
-parent's, and sedimentation adds nothing to `e_src_res`. Two conditions come
-with it. It needs an offset: a share is zero wherever the total is not
-positive, and there the tags would not move, which the model warns about at
-initialization. And the tags have no Jacobian block for it, so within a step
-they lag the parent's implicit flux slightly, and that gap lands in
-`e_src_res`.
+parent's, and sedimentation adds nothing to `e_src_res`. It needs an offset: a
+share is zero wherever the total is not positive, and there the tags would not
+move, which the model warns about at initialization.
+
+The parent's flux is implicit, and its Jacobian has a cross block from `ρe_tot`
+to each falling species. With the manual Jacobian's split solver, the default,
+each tag's row has one too: the face's share times the block of `E`, which is
+the parent's `ρe_tot` block plus `c` times its `ρ` block. So the partition's
+blocks add up to the block of `E`. The tags keep no diagonal block of their
+own for sedimentation. The split solver solves the tags after the model's
+fields, by back-substitution, so the model's increments do not change, bit for
+bit. The blocks leave out what the parent's block leaves out: the shares' and
+`e_int`'s own dependence on the state, and the EDMF corrections. Without the
+split (`use_auto_jacobian: true`) there are no cross blocks. Then, within a
+step, the tags lag the parent's implicit flux slightly, and with the increment
+follower that gap changes the column's total, which lands in `e_src_res`. With
+the microphysics stepped explicitly and one Newton iteration, that was 2.1e-4
+of the column's energy in an hour (FINDINGS E80 in the tag-closure
+experiments). So the model refuses `enthalpy_increment` with 1M stepped
+explicitly under `use_auto_jacobian: true`, unless a key allows it (see the
+requirements of `enthalpy_increment` below).
 
 Under `turbconv: prognostic_edmfx` the parent's energy flux in sedimentation
 has two corrections besides the grid mean's, one for the updraft and one for
@@ -125,8 +140,9 @@ every evaluation of the tendency. A tag's composition in an updraft is taken as
 that of the cell the flux leaves. The flux moves the energy convection carries,
 but it does not mix provenance the way it mixes the air. It runs in the
 implicit tendency beside the parent's flux. The parent's flux has Jacobian
-blocks and the tags' has none, as in sedimentation. So within a step the tags
-lag the parent's implicit flux slightly, and that gap lands in `e_src_res`.
+blocks and the tags' has none, unlike sedimentation under the manual
+Jacobian. So within a step the tags lag the parent's implicit flux slightly,
+and that gap lands in `e_src_res`.
 
 ### The updraft's mixing of provenance
 
@@ -602,25 +618,43 @@ misses one:
     after each solve, and the model's constraints read that cache.
 
 With microphysics that sediments (`microphysics_model` 1M, 2M or 2MP3) stepped
-explicitly (`implicit_microphysics: false`) the mode is refused as well, unless
-`energy_source_tag_increment_allow_explicit_microphysics: true`. In the implicit Jacobian
-the parent's `ρe_tot` row has a cross block from each sedimenting species, for
-the energy the falling water carries. The tags' rows do not. So with one Newton
-iteration the tags miss part of the parent's sedimentation update. The
-correction cannot move the part that changes a column's total, and that part
-lands in `e_src_res`. On the tag-closure experiments' DYCOMS RF02 EDMF column,
-with one Newton iteration, the closure residual after an hour was 2.1e-4 of
-the partitioned energy with the microphysics explicit and 1.5e-6 with it
-implicit. With ten iterations it was 4.9e-12. 2M and P3 sediment too, and no
-run has measured them, so they are refused until one does. The water tags lag
-in the same way under 1M. PR #105 proposes the analogous cross blocks for
-them, and PR #113 the energy tags' own. Until the energy tags carry them, the
-key is an override for development runs, and the model warns when it is
-used. The refusal concerns only the tags' keys. Without the tags, or
-with another transport, the configuration runs as before.
+explicitly (`implicit_microphysics: false`) the mode needs the tags'
+sedimentation cross blocks. In the implicit Jacobian the parent's `ρe_tot` row
+has a cross block from each sedimenting species, for the energy the falling
+water carries. Without the tags' own blocks, one Newton iteration leaves the
+tags short of part of the parent's sedimentation update. The correction cannot
+move the part that changes a column's total, and that part lands in
+`e_src_res`. On the tag-closure experiments' DYCOMS RF02 EDMF column, with one
+Newton iteration, the closure residual after an hour was 2.1e-4 of the
+partitioned energy with the microphysics explicit and 1.5e-6 with it implicit.
+With ten iterations it was 4.9e-12. With the split solver the tags' rows carry
+their face shares of those blocks, as the water tags' rows do (see the
+sedimentation cross blocks above). With them, this column's explicit 1M hour
+closed to a gross residual of 1.4e-15 against the pre-registered bound of
+1e-7, with every model field bit for bit (PR #113's validation).
+
+So 1M stepped explicitly runs with the manual Jacobian, the default, and with
+the dense one (`use_dense_jacobian: true`), which is exact. The model refuses
+it under `use_auto_jacobian: true`. That sparse Jacobian takes its pattern from
+the unsplit blocks and lacks the tags' blocks. The model also refuses 2M and
+2MP3 stepped explicitly. With the split solver the tags carry blocks to their
+species as well, but no run has measured the closure with them.
+`energy_source_tag_increment_allow_explicit_microphysics: true` lets a refused
+configuration run. The key is an override for development runs, and the model
+warns when it is used. The refusal concerns only the tags' keys. Without the
+tags, or with another transport, the configuration runs as before.
 
 ```yaml
+# Runs as it is: 1M stepped explicitly, with the manual Jacobian.
 energy_source_tag_transport: enthalpy_increment
+microphysics_model: 1M
+implicit_microphysics: false
+```
+
+```yaml
+# 2M stepped explicitly has not been measured, so it needs the key.
+energy_source_tag_transport: enthalpy_increment
+microphysics_model: 2M
 implicit_microphysics: false
 energy_source_tag_increment_allow_explicit_microphysics: true # development runs only
 ```
