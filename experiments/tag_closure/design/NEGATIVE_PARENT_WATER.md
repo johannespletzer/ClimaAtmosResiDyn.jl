@@ -431,3 +431,128 @@ models and ran six steps (60 to 120 s) in 2946 s, writing its CSV. The job is
 `13987196`, from the run tree at `49958c1b` (clean; `ic_s23_c`'s code,
 `e6bab0fc`, with the record), output in
 `$SCRATCH/tag_closure/output/ic_miss_probe_s23/output_0000/`.
+
+### 9.7 The extended probe on `main`, pre-registered before it runs (2026-09-28)
+
+W47 scored the probe of this section. Four rises lie wholly in class N, and
+the forcing as a whole reproduces each of them. Three go to candidate 5, the
+forcing's vertical fluctuation. In the fourth (days 52.75–53.00) no candidate
+is supported, because that term only contributes (0.47). Subsidence alone
+gives 5.5 to 7.9 times each rise, and the terms' shares do not add up. The
+owner decided on 2026-09-28 to probe more before any fix, the fourth rise
+and cell by cell. The owner also decided to rerun the probe on `main` now,
+where #118 checks the parent's negative water at every accepted step. This
+subsection registers that run. Nothing below changes after it. Sections 9.1
+to 9.6 stand as written.
+
+#### 9.7.1 What changes, and what stays
+
+  - **The code is `main`'s:** `cfc2152c`, merged into the record at
+    `679c52dd`. The run tree is the record at the commit that registers this
+    subsection. The model's own fields should not have moved since
+    `e6bab0fc`, by the fork's parity rule, and P0a checks it. The tag code has
+    moved: option C's final form (#116), the per-step check (#118), and #119
+    and #121, which are off in this configuration.
+  - **The configuration** is `configs/ic_miss_probe2_s23.yml`,
+    `ic_miss_probe_s23.yml` with only the job id changed. #118's check at
+    every accepted step runs in the reference by default
+    (`negative_water_void_above`, `1e-4`).
+  - **The driver** is `analysis/water/ic_miss_probe2.jl`. It does everything
+    `ic_miss_probe.jl` does, unchanged, and adds 9.7.2.
+  - **The windows and the five rises** are those of 9.2 and 9.4.
+
+#### 9.7.2 What is added
+
+ 1. **The parent's negative water at every step's end:** `∫max(−ρq_tot, 0)`,
+    its ratio to `∫ρq_tot`, and #118's latch.
+ 2. **Leave-one-out probes.** For each forcing term `t`, the forcing without
+    `t`, composed as the model composes the forcing: the other terms' `(dT, dq)` accumulated and converted once, then their direct parts. It uses the
+    same bracket, is applied alone at `Yₖ` and is stepped by `Δt`. Its share
+    is `ℓ_t = Σ_{k∈I} (ΔE_forcing − ΔE_{forcing∖t}) / R`: how much of the
+    forcing's growth goes when `t` is left out. It answers what 9.4's
+    one-term probes cannot, because those do not add up.
+ 3. **Candidate 5's mechanism, cell by cell.** A mechanism cell in a step has
+    its parent at or below zero before and after the step, while the region
+    tags' sum rises. The excess's change in those cells is measured for the
+    reference's step, as a part of `R`, and for the forcing's probe, as a
+    part of the forcing's own growth. Each is split by the sign of the
+    parent's change.
+ 4. **Per level, summed over each 6-hour interval:**
+      + the reference's change of the excess: all of it, in N, and in the
+        mechanism's cells;
+      + the forcing's, each term's and each leave-one-out probe's;
+      + the forcing's mechanism part.
+
+Two CSVs: `<job_id>_steps.csv` and `<job_id>_levels.csv`.
+
+#### 9.7.3 Validity
+
+  - **P0a, the parent is `ic_s23_c`'s.** The model's own fields (`rhoa`, `ta`,
+    `hus`, `clw`, `cli`, `wa`, `pr`, `lwp`, `arup`, `husup`, daily and
+    6-hourly) match bit for bit at every common output time. If not, the
+    probe measures another parent. Its numbers are reported, and nothing is
+    attributed to W42's rises.
+  - **P0b, the tags' fields against `ic_s23_c`.** Reported, not a gate. Where
+    they differ, the rises may differ, and P2 says how.
+  - **P1** as in 9.3.
+  - **P2** as in 9.3, with the first probe's value (W47) beside W42's.
+  - **P3, #118's latch.** At every step whose ratio passes `1e-4`, the latch
+    reads 1 at that step's end. A failure is a defect of #118. It is
+    reported, and it does not touch the attribution.
+
+#### 9.7.4 Reading, per rise
+
+  - **9.4's shares and verdict,** read as `ic_miss_score.py` reads them,
+    over 9.4's probes. The leave-one-out probes are not among them.
+  - **Leave-one-out.** `ℓ_t ≥ 0.5` **carries** the rise. From 0.1 to 0.5 it
+    **contributes**.
+  - **The mechanism is shown cell by cell** where its cells hold at least half
+    of `R` in the reference's step and at least half of the forcing probe's
+    own growth. Otherwise it is **not shown**.
+  - **The levels.** The fewest levels that hold half the rise, their
+    heights, and each term's part of the rise in them. Also the forcing's
+    growth's overlap with the reference's: the sum over levels of the
+    smaller positive part, over the reference's positive part. These are
+    reported, with no threshold.
+  - **The fix's scope,** for the owner's choice between the whole forcing and
+    its local terms:
+      + subsidence carries a rise: a fix must cover subsidence;
+      + only local terms carry it: a fix of the local terms covers it;
+      + no term carries it, and the forcing's share is at least 0.5: the
+        terms act together, and a fix belongs at the forcing's bracket as a
+        whole;
+      + the forcing's share is below 0.5: not the forcing, and 9.5's
+        "unattributed" case applies.
+  - **The fourth rise** is read by the same rules as the others.
+
+**Bounded claims,** beside 9.4's:
+
+  - A leave-one-out probe changes the composition of the forcing, since the
+    `(dT, dq)` are converted once. So `ℓ_t` bounds the term's part in the
+    forcing and does not isolate it.
+  - The mechanism's cells locate where the excess grows. For the reference's
+    step they do not show that the forcing's bracket gave the water, since
+    other processes act in the same step. For the forcing's probe, they do.
+
+#### 9.7.5 What it means
+
+As 9.5, with the scope of 9.7.4. The owner decides the fix.
+
+#### 9.7.6 Checks and the job
+
+**Before the job:** a short check job from the run tree, with
+`IC_PROBE_UNIT=seconds` and a window near the start. It must build all five
+models, step, and write both CSVs. `ic_miss_score2.py` must then run on
+synthetic inputs made from the first probe's CSV, which checks its parsing
+only.
+
+**The job:**
+
+  - `submit_g3.sh` from the clean run tree `../ClimaAtmosResiDyn-ic-probe2-run`,
+    at the commit that registers this subsection;
+  - `DRIVER=experiments/tag_closure/analysis/water/ic_miss_probe2.jl`;
+  - `hpda2_compute`, 2 CPUs, 48 GB, `--time=12:00:00`.
+
+The estimate is 4 to 5 h. The first probe took 3 h 8 min, and the five
+leave-one-out probes add five forcing evaluations to each window step.
+`analysis/water/ic_miss_score2.py` scores it.
