@@ -808,9 +808,13 @@ function default_model_callbacks(
             water_closure_check,
             tagging.water_tagging_model;
             family = "water",
-            # The partition's target, the parent's non-negative water.
+            # The partition's target, the parent's non-negative water. Under
+            # `water_tag_precipitation: true` it is the sum of the three
+            # compartments' non-negative parts.
             total_name = water_closure_total(tagging.water_tagging_model),
-            state_names = water_region_tag_state_names,
+            # The region tags, with their rain and snow parts under
+            # `water_tag_precipitation: true`.
+            state_names = water_partition_state_names,
             config_key = "water_closure_check",
             tracer_key = "water_tracers",
             extra_audit = water_extra_audit(tagging.water_tagging_model),

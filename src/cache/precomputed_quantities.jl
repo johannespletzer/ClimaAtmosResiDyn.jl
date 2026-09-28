@@ -899,6 +899,9 @@ NVTX.@annotate function set_explicit_precomputed_quantities!(Y, p, t)
         p.atmos.microphysics_model,
         p.atmos.turbconv_model,
     )
+    # The same microphysics as flows between the compartments, for the water
+    # tags' rain and snow parts. It writes only the tags' cache.
+    set_water_tag_microphysics_flows!(Y, p)
     # Compute surface precipitation fluxes (has to be after microphysics_sources_cache
     # because for the 0 moment microphysics it's an integral of the q_tot sink).
     set_precipitation_surface_fluxes!(Y, p, p.atmos.microphysics_model)

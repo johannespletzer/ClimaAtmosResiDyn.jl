@@ -45,11 +45,68 @@ function compute_qv_tag!(out, state, cache, time, ρq_tag_name)
     end
 end
 
-function compute_q_tag_res!(out, state, cache, time, ρq_tag_names)
+# Under `water_tag_precipitation: true` the vapour is in the tag's
+# non-precipitating part only, so its share is taken of that compartment,
+# `ρq_tot - ρq_rai - ρq_sno`, not of all the water. `q_liq` and `q_ice` include
+# rain and snow, so the vapour is the same as without the key.
+@inline function _qv_tag_part(ρq_tag, ρ, ρq_tot, ρq_nonprecip, q_liq, q_ice)
+    ρq_vap = max(ρq_tot - ρ * (q_liq + q_ice), zero(ρ))
+    return specific(ρq_tag, ρ) * water_tag_fraction(ρq_vap, ρq_nonprecip)
+end
+
+function compute_qv_tag_part!(out, state, cache, time, ρq_tag_name)
+    ᶜρq_tag = getproperty(state.c, ρq_tag_name)
+    (; ᶜq_liq, ᶜq_ice) = cache.precomputed
+    ᶜnonprecip = water_tag_part_parent(state.c, NonPrecipitatingPart())
+    result = isnothing(out) ? similar(state.c.ρ) : out
+    @. result = _qv_tag_part(
+        ᶜρq_tag,
+        state.c.ρ,
+        state.c.ρq_tot,
+        ᶜnonprecip,
+        ᶜq_liq,
+        ᶜq_ice,
+    )
+    return result
+end
+
+# A tag's total water under `water_tag_precipitation: true`: the sum of its
+# three parts, per unit mass.
+function compute_q_tag_total!(out, state, cache, time, part_names)
+    result = isnothing(out) ? similar(state.c.ρ) : out
+    result .= zero(eltype(result))
+    for name in part_names
+        result .+= getproperty(state.c, name)
+    end
+    result .= specific.(result, state.c.ρ)
+    return result
+end
+
+# The residual of one compartment: the compartment's non-negative part less the
+# partition's parts of it, per unit mass. The parts partition that
+# non-negative part (known issue 7, option C, per compartment).
+function compute_q_tag_part_res!(out, state, cache, time, part_names, part)
+    result = isnothing(out) ? similar(state.c.ρ) : out
+    result .= water_tag_part_target(state.c, part)
+    for name in part_names
+        result .-= getproperty(state.c, name)
+    end
+    result .= specific.(result, state.c.ρ)
+    return result
+end
+
+# A tag's surface precipitation, `water_tag_precipitation_flux!`.
+function compute_pr_tag!(out, state, cache, time, tag)
+    result = isnothing(out) ? similar(cache.precomputed.surface_rain_flux) : out
+    return water_tag_precipitation_flux!(result, state, cache, tag)
+end
+
+function compute_q_tag_res!(out, state, cache, time, ρq_tag_names, model)
     ᶜres = isnothing(out) ? similar(state.c.ρq_tot) : out
     # Against the partition's target, the parent's non-negative water
-    # (known issue 7, option C).
-    ᶜres .= water_tag_partition_target.(state.c.ρq_tot)
+    # (known issue 7, option C). Under `water_tag_precipitation: true` it is
+    # the sum of the three compartments' non-negative parts.
+    ᶜres .= water_partition_target(state.c, model)
     for ρq_tag_name in ρq_tag_names
         ρq_tag_name in propertynames(state.c) ||
             error("$ρq_tag_name does not exist in the model")
@@ -60,13 +117,13 @@ function compute_q_tag_res!(out, state, cache, time, ρq_tag_names)
 end
 
 # `q_tag_negative`: the parent's negative water, the remainder the partition
-# leaves (known issue 7, option C).
-function compute_q_tag_negative!(out, state, cache, time)
-    if isnothing(out)
-        return specific.(water_tag_negative_part.(state.c.ρq_tot), state.c.ρ)
-    else
-        out .= specific.(water_tag_negative_part.(state.c.ρq_tot), state.c.ρ)
-    end
+# leaves (known issue 7, option C). Under `water_tag_precipitation: true` it is
+# the sum of the three compartments' negative parts.
+function compute_q_tag_negative!(out, state, cache, time, model)
+    result = isnothing(out) ? similar(state.c.ρ) : out
+    ᶜnegative = water_partition_negative_part(state.c, model)
+    @. result = specific(ᶜnegative, state.c.ρ)
+    return result
 end
 
 function compute_q_tag_upfix!(out, state, cache, time, ρq_tag_name)
@@ -153,18 +210,36 @@ Register the diagnostics associated with the tagged prognostic water tracers of
 `model`. Their short names depend on the configured tag names, so this is called
 during simulation setup rather than at package load time:
 
-  - `q_tag_<name>`: tagged **total** water `ρq_tag_<name> / ρ`, for each tag;
+  - `q_tag_<name>`: tagged **total** water `ρq_tag_<name> / ρ`, for each tag.
+    Under `water_tag_precipitation: true` it is the sum of the tag's three
+    parts, `(ρq_tag_<name> + ρq_rtag_<name> + ρq_stag_<name>) / ρ`;
 
   - `qv_tag_<name>`: tagged **vapor**, `q_tag_<name> * q_v / q_t`, under the
-    assumption that the phases are well mixed within a grid cell;
+    assumption that the phases are well mixed within a grid cell. Under
+    `water_tag_precipitation: true` the vapour's share is taken of the tag's
+    non-precipitating part and its compartment: `q_ntag_<name>` times `q_v`
+    over `q_tot - q_rai - q_sno`;
 
   - `q_tag_res`: closure residual `(max(ρq_tot, 0) - Σᵢ ρq_tag_i) / ρ`, where
     the sum runs over the pure region tags (only registered when at least one
-    exists). The tags partition the parent's non-negative water;
+    exists), and under `water_tag_precipitation: true` over their three parts.
+    The tags partition the parent's non-negative water. Under the key that is
+    the sum of the three compartments' non-negative parts;
+
+  - under `water_tag_precipitation: true` only: `q_ntag_<name>`,
+    `q_rtag_<name>` and `q_stag_<name>`, each part per unit mass;
+    `q_ntag_res`, `q_rtag_res` and `q_stag_res`, each compartment's
+    non-negative part less the partition's parts of it; `pr_tag_<name>`, the
+    tag's share of the surface precipitation `pr`
+    (`water_tag_precipitation_flux!`); and `q_rtag_aud_<name>` and
+    `q_stag_aud_<name>`, the microphysics audit
+    (`water_tag_microphysics_audit`);
 
   - `q_tag_negative`: the parent's negative water, `min(ρq_tot, 0) / ρ`, which
-    the partition leaves (known issue 7, option C). So `q_tag_res`,
-    `q_tag_negative` and the region tags add up to `q_tot`;
+    the partition leaves (known issue 7, option C). Under
+    `water_tag_precipitation: true` it is the sum of the three compartments'
+    negative parts. So `q_tag_res`, `q_tag_negative` and the region tags add
+    up to `q_tot`;
 
   - `q_tag_inc_left`, `q_tag_inc_moved` and `q_tag_inc_negative`, under `water_tag_transport: increment` only: the increment correction's ledger per unit mass,
     cumulative since the start of the run. See
@@ -186,28 +261,35 @@ during simulation setup rather than at package load time:
     those configured, everything recorded here is partition repair.
 
 A no-op when water tagging is disabled. Per-tag entries that already exist in the
-diagnostics catalog are kept (their compute function only depends on the tag
-name); the `q_tag_res` entry is always dropped and re-registered, because the set
-of region tags it sums over can differ between setups — including differing to
-*empty*, in which case no new entry replaces the stale one.
+diagnostics catalog are kept where their compute function only depends on the
+tag name. `q_tag_<name>` and `qv_tag_<name>` depend on
+`water_tag_precipitation` too, so they are dropped and re-registered, as are the
+entries of the rain and snow parts. The `q_tag_res` entry is always dropped and
+re-registered, because the set of region tags it sums over can differ between
+setups — including differing to *empty*, in which case no new entry replaces
+the stale one.
 """
 function register_water_tagging_diagnostics!(model::AtmosModel)
-    register_water_tagging_diagnostics!(model.water_tagging_model)
+    # The 0M entries come first. They drop every `pr_tag_*`, `prra_tag_*` and
+    # `prsn_tag_*` entry of an earlier model. Under `water_tag_precipitation:
+    # true`, which needs 1M, the tags' own `pr_tag_<name>` is registered after.
     register_water_tag_precipitation_diagnostics!(
         model.water_tagging_model,
         model.microphysics_model,
     )
+    register_water_tagging_diagnostics!(model.water_tagging_model)
     return nothing
 end
 
 # `pr_tag_<name>`, `prra_tag_<name>` and `prsn_tag_<name>`: each tag's part of
-# the surface precipitation, under 0M only, where the rain-out is the only
-# sink (WP4a). Under 1M the rain and snow parts of WP4b will give it. With a
-# region tag, `pr_tag_res` is `pr` less the region tags' parts. Every entry of
-# an earlier model is dropped first, whatever its tag's name, since each holds
-# its model's tag and would compute that tag's part here. All of them read one
-# batch per output time (`update_water_tag_rainouts!`), so their cost is linear
-# in the number of tags.
+# the surface precipitation, under 0M, where the rain-out is the only sink
+# (WP4a). Under 1M, `water_tag_precipitation: true` gives `pr_tag_<name>` alone,
+# from the tag's rain and snow parts. The method for the tagging model
+# registers it after this. With a region tag, `pr_tag_res` is `pr` less the
+# region tags' parts. Every entry of an earlier model is dropped first, whatever
+# its tag's name, since each holds its model's tag and would compute that tag's
+# part here. All of them read one batch per output time
+# (`update_water_tag_rainouts!`), so their cost is linear in the number of tags.
 const WATER_TAG_PRECIPITATION_PREFIXES = ("pr_tag_", "prra_tag_", "prsn_tag_")
 function register_water_tag_precipitation_diagnostics!(model, microphysics_model)
     for short_name in collect(keys(ALL_DIAGNOSTICS))
@@ -279,38 +361,131 @@ function register_water_tagging_diagnostics!(::Nothing)
     return nothing
 end
 function register_water_tagging_diagnostics!(model::WaterTaggingModel)
+    precipitation = has_water_tag_precipitation(model)
     for tag in model.tags
         name = tag_name(tag)
         ρq_tag_name = Symbol(:ρq_tag_, name)
+        part_names = (ρq_tag_name, Symbol(:ρq_rtag_, name), Symbol(:ρq_stag_, name))
 
+        # Its compute depends on `water_tag_precipitation`, so a stale entry
+        # from an earlier model is dropped first.
+        total_compute(out, u, p, t) =
+            precipitation ? compute_q_tag_total!(out, u, p, t, part_names) :
+            compute_q_tag!(out, u, p, t, ρq_tag_name)
+        vapor_compute(out, u, p, t) =
+            precipitation ? compute_qv_tag_part!(out, u, p, t, ρq_tag_name) :
+            compute_qv_tag!(out, u, p, t, ρq_tag_name)
         short_name = "q_tag_$name"
-        if !haskey(ALL_DIAGNOSTICS, short_name)
-            add_diagnostic_variable!(;
-                short_name,
-                units = "kg kg^-1",
-                long_name = "Tagged Total Water Content ($name)",
-                comments = "Grid-mean mass of all water phases carried by the " *
-                           "tag `$name`, per unit mass of moist air. Not to be " *
-                           "confused with vapor: see `qv_tag_$name`.",
-                compute! = (out, u, p, t) ->
-                    compute_q_tag!(out, u, p, t, ρq_tag_name),
-            )
-        end
+        delete!(ALL_DIAGNOSTICS, short_name)
+        add_diagnostic_variable!(;
+            short_name,
+            units = "kg kg^-1",
+            long_name = "Tagged Total Water Content ($name)",
+            comments = "Grid-mean mass of all water phases carried by the " *
+                       "tag `$name`, per unit mass of moist air. Not to be " *
+                       "confused with vapor: see `qv_tag_$name`." *
+                       (
+                           precipitation ?
+                           " The sum of the tag's non-precipitating, rain and " *
+                           "snow parts (`water_tag_precipitation: true`)." : ""
+                       ),
+            compute! = total_compute,
+        )
 
         short_name = "qv_tag_$name"
-        if !haskey(ALL_DIAGNOSTICS, short_name)
+        delete!(ALL_DIAGNOSTICS, short_name)
+        add_diagnostic_variable!(;
+            short_name,
+            units = "kg kg^-1",
+            long_name = "Tagged Water Vapor Content ($name)",
+            comments = "Vapor share of the tag `$name`, computed as " *
+                       (
+                           precipitation ?
+                           "q_ntag * q_v / (q_tot - q_rai - q_sno), from " *
+                           "the tag's non-precipitating part. " :
+                           "q_tag * q_v / q_t. "
+                       ) *
+                       "This assumes the water phases " *
+                       "are well mixed within a grid cell: the tags " *
+                       "partition total water, so they carry no phase " *
+                       "information of their own. Attribution assumption, " *
+                       "not a model prognostic.",
+            compute! = vapor_compute,
+        )
+
+        # The three parts, the tag's surface precipitation and the audit,
+        # under `water_tag_precipitation: true` only. A stale entry from an
+        # earlier model would read fields this model does not have.
+        for (short_name, long_name, what, field_name) in (
+            (
+                "q_ntag_$name",
+                "Tagged Non-Precipitating Water Content ($name)",
+                "The vapour, cloud liquid and cloud ice carried by the tag " *
+                "`$name`, per unit mass of moist air: its part of " *
+                "`q_tot - q_rai - q_sno`.",
+                ρq_tag_name,
+            ),
+            (
+                "q_rtag_$name",
+                "Tagged Rain Content ($name)",
+                "The rain carried by the tag `$name`, per unit mass of moist " *
+                "air: its part of `q_rai`.",
+                Symbol(:ρq_rtag_, name),
+            ),
+            (
+                "q_stag_$name",
+                "Tagged Snow Content ($name)",
+                "The snow carried by the tag `$name`, per unit mass of moist " *
+                "air: its part of `q_sno`.",
+                Symbol(:ρq_stag_, name),
+            ),
+            (
+                "q_rtag_aud_$name",
+                "Microphysics Audit of the Tagged Rain ($name)",
+                "The change of the rain part of the tag `$name` that the " *
+                "net-flow rule would give, less the change the gross flows " *
+                "gave, per unit mass of moist air, cumulative since the " *
+                "start of the run. The non-precipitating part's difference " *
+                "is minus the sum of this and `q_stag_aud_$name`.",
+                Symbol(:q_rtag_aud_, name),
+            ),
+            (
+                "q_stag_aud_$name",
+                "Microphysics Audit of the Tagged Snow ($name)",
+                "The same as `q_rtag_aud_$name`, for the snow part.",
+                Symbol(:q_stag_aud_, name),
+            ),
+        )
+            delete!(ALL_DIAGNOSTICS, short_name)
+            precipitation || continue
             add_diagnostic_variable!(;
                 short_name,
                 units = "kg kg^-1",
-                long_name = "Tagged Water Vapor Content ($name)",
-                comments = "Vapor share of the tag `$name`, computed as " *
-                           "q_tag * q_v / q_t. This assumes the water phases " *
-                           "are well mixed within a grid cell: the tags " *
-                           "partition total water, so they carry no phase " *
-                           "information of their own. Attribution assumption, " *
-                           "not a model prognostic.",
+                long_name,
+                comments = what * " Only under water_tag_precipitation: true.",
                 compute! = (out, u, p, t) ->
-                    compute_qv_tag!(out, u, p, t, ρq_tag_name),
+                    compute_q_tag_ledger!(out, u, p, t, field_name),
+            )
+        end
+        # Under the key only. Without it `pr_tag_<name>` is the 0M rain-out's
+        # entry, which `register_water_tag_precipitation_diagnostics!` owns.
+        # That function also drops the entries of an earlier model.
+        if precipitation
+            short_name = "pr_tag_$name"
+            delete!(ALL_DIAGNOSTICS, short_name)
+            add_diagnostic_variable!(;
+                short_name,
+                units = "kg m^-2 s^-1",
+                long_name = "Tagged Precipitation ($name)",
+                comments = "The tag `$name`'s share of the surface " *
+                           "precipitation `pr`: the flux of its rain and snow " *
+                           "parts and of its share of the cloud at the bottom " *
+                           "face, built as `pr` is, upward positive. The " *
+                           "partition's fluxes sum to `pr` where its rain and " *
+                           "snow parts sum to the model's at the lowest level. " *
+                           "Only under water_tag_precipitation: true.",
+                compute! = (out, u, p, t) ->
+                    compute_pr_tag!(out, u, p, t, tag),
             )
         end
 
@@ -521,7 +696,12 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
             "gave the tags, or took from them, because the parent's negative " *
             "part changed: the tags partition max(ρq_tot, 0), whose column " *
             "total grows by the negative water a solve creates. Zero where " *
-            "the parent stays non-negative (known issue 7, option C).",
+            "the parent stays non-negative (known issue 7, option C)." *
+            (
+                precipitation ?
+                " Under water_tag_precipitation: true the same holds for the " *
+                "water that is neither rain nor snow." : ""
+            ),
         ),
     )
         delete!(ALL_DIAGNOSTICS, short_name)
@@ -543,6 +723,43 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
         )
     end
 
+    # Each compartment's residual under `water_tag_precipitation: true`,
+    # against its non-negative part (known issue 7, option C, per compartment).
+    for (short_name, title, part) in (
+        ("q_ntag_res", "Non-Precipitating Water", NonPrecipitatingPart()),
+        ("q_rtag_res", "Rain", RainPart()),
+        ("q_stag_res", "Snow", SnowPart()),
+    )
+        delete!(ALL_DIAGNOSTICS, short_name)
+        (precipitation && has_partition) || continue
+        prefix =
+            part isa NonPrecipitatingPart ? :ρq_tag_ :
+            part isa RainPart ? :ρq_rtag_ : :ρq_stag_
+        compartment_names = Tuple(
+            Symbol(prefix, chopprefix(string(region_name), "ρq_tag_")) for
+            region_name in region_names
+        )
+        add_diagnostic_variable!(;
+            short_name,
+            units = "kg kg^-1",
+            long_name = "Tagged $title Closure Residual",
+            comments = "The non-negative part of the parent's " *
+                       "$(lowercase(title)) less the sum of the region " *
+                       "tags' parts of it, per unit mass of moist air. The " *
+                       "parts partition that non-negative part (known issue " *
+                       "7, option C, per compartment). Only under " *
+                       "water_tag_precipitation: true.",
+            compute! = (out, u, p, t) -> compute_q_tag_part_res!(
+                out,
+                u,
+                p,
+                t,
+                compartment_names,
+                part,
+            ),
+        )
+    end
+
     # Drop any stale entry first, then decide whether to register a new one. An
     # earlier simulation in this process may have registered `q_tag_res` over a
     # different set of region tags. If every tag in this model carries a
@@ -552,6 +769,7 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
     delete!(ALL_DIAGNOSTICS, "q_tag_res")
     delete!(ALL_DIAGNOSTICS, "q_tag_negative")
     if !isempty(region_names)
+        partition_names = water_partition_state_names(model)
         add_diagnostic_variable!(;
             short_name = "q_tag_negative",
             units = "kg kg^-1",
@@ -560,8 +778,17 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
                        "The region tags partition the non-negative part, " *
                        "max(ρq_tot, 0), so this is the remainder they leave, " *
                        "beside q_tag_res (known issue 7, option C). Zero " *
-                       "wherever q_tot is not negative.",
-            compute! = (out, u, p, t) -> compute_q_tag_negative!(out, u, p, t),
+                       "wherever q_tot is not negative." *
+                       (
+                           precipitation ?
+                           " Under water_tag_precipitation: true each " *
+                           "compartment's parts partition its own " *
+                           "non-negative part, and this is the sum of the " *
+                           "negative parts of the water that is neither rain " *
+                           "nor snow, of rain and of snow. It is then zero " *
+                           "wherever no compartment is negative." : ""
+                       ),
+            compute! = (out, u, p, t) -> compute_q_tag_negative!(out, u, p, t, model),
         )
         add_diagnostic_variable!(;
             short_name = "q_tag_res",
@@ -570,7 +797,15 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
             comments = "Total water's non-negative part minus the sum of the " *
                        "region tags, (max(ρq_tot, 0) - Σᵢ ρq_tag_i) / ρ. " *
                        "Where ρq_tot is negative, the tags aim at zero, and " *
-                       "the negative water is q_tag_negative. One contributor is the " *
+                       "the negative water is q_tag_negative. " *
+                       (
+                           precipitation ?
+                           "Under water_tag_precipitation: true the sum runs " *
+                           "over all three parts of each tag, and the " *
+                           "non-negative part is the sum of the three " *
+                           "compartments' non-negative parts. " : ""
+                       ) *
+                       "One contributor is the " *
                        "vertical advection split: the tags are advected on " *
                        "the explicit passive-tracer path while ρq_tot is " *
                        "advected implicitly with a post-Newton upwind " *
@@ -582,7 +817,7 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
                        "gives. Subtract `q_tag_fix_*` to separate numerical " *
                        "corrections.",
             compute! = (out, u, p, t) ->
-                compute_q_tag_res!(out, u, p, t, region_names),
+                compute_q_tag_res!(out, u, p, t, partition_names, model),
         )
     end
     return nothing

@@ -237,18 +237,23 @@ end
 # partition's shares renormalized to sum to one, a source tag's its own clamped
 # share. `_is_partition_tag` resolves on the tag's type. The tag's field is
 # looked up outside the broadcast, which cannot take the tag itself.
-function _water_tag_share_field(ᶜY, ᶜnorm, tag)
+#
+# `ᶜparent` is the water the tags partition, `ρq_tot` unless the increment
+# follower passes the non-precipitating water (`water_tag_parent`).
+function _water_tag_share_field(ᶜY, ᶜnorm, tag, ᶜparent = ᶜY.ρq_tot)
     ᶜρq_tag = tag_field(ᶜY, tag)
     return _is_partition_tag(tag) ?
-           (@. lazy(water_tag_sediment_share(ᶜρq_tag, ᶜY.ρq_tot, ᶜnorm))) :
-           (@. lazy(water_tag_source_sediment_share(ᶜρq_tag, ᶜY.ρq_tot)))
+           (@. lazy(water_tag_sediment_share(ᶜρq_tag, ᶜparent, ᶜnorm))) :
+           (@. lazy(water_tag_source_sediment_share(ᶜρq_tag, ᶜparent)))
 end
 
-_sgs_water_tag_fluxes!(ᶜYₜ, ᶜY, ᶜnorm, ᶠflux, ::Tuple{}) = nothing
-function _sgs_water_tag_fluxes!(ᶜYₜ, ᶜY, ᶜnorm, ᶠflux, tags::Tuple)
+_sgs_water_tag_fluxes!(ᶜYₜ, ᶜY, ᶜnorm, ᶠflux, tags::Tuple) =
+    _sgs_water_tag_fluxes!(ᶜYₜ, ᶜY, ᶜnorm, ᶠflux, tags, ᶜY.ρq_tot)
+_sgs_water_tag_fluxes!(ᶜYₜ, ᶜY, ᶜnorm, ᶠflux, ::Tuple{}, ᶜparent) = nothing
+function _sgs_water_tag_fluxes!(ᶜYₜ, ᶜY, ᶜnorm, ᶠflux, tags::Tuple, ᶜparent)
     tag = first(tags)
     ᶜρq_tagₜ = tag_field(ᶜYₜ, tag)
-    ᶜshare = _water_tag_share_field(ᶜY, ᶜnorm, tag)
+    ᶜshare = _water_tag_share_field(ᶜY, ᶜnorm, tag, ᶜparent)
     @. ᶜρq_tagₜ -= ᶜadvdivᵥ(
         ᶠflux * ifelse(
             _is_upward(ᶠflux),
@@ -256,7 +261,14 @@ function _sgs_water_tag_fluxes!(ᶜYₜ, ᶜY, ᶜnorm, ᶠflux, tags::Tuple)
             ᶠtop_bias_zero(ᶜshare),
         ),
     )
-    return _sgs_water_tag_fluxes!(ᶜYₜ, ᶜY, ᶜnorm, ᶠflux, Base.tail(tags))
+    return _sgs_water_tag_fluxes!(
+        ᶜYₜ,
+        ᶜY,
+        ᶜnorm,
+        ᶠflux,
+        Base.tail(tags),
+        ᶜparent,
+    )
 end
 
 """

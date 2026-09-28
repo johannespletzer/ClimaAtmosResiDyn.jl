@@ -235,7 +235,10 @@ call added, including calls on stage values that the stepper discards;
 `cadence`, the run's `update_constrain_state_every`, which
 [`set_tag_ledger_cadence!`](@ref) sets. Each tag's own ledger of the limiters'
 and the repair's corrections has no `attempted`: the cache ledger's gross twin
-takes the same changes.
+takes the same changes. Under `water_tag_precipitation: true` the gross twin
+also counts the moves between a tag's own parts, which leave the tag's own
+ledger unchanged. So a water tag's `attempted` exceeds its retained gross by
+those moves too.
 """
 function tag_ledger_step_cache(Y, atmos)
     names = tag_state_ledger_names(atmos)
@@ -778,13 +781,18 @@ prefix. Over the domain, as `scale` is:
     in absolute value, over every call, including stage values the stepper
     discards. For a tag's own ledger of the limiters' and the repair's
     corrections, the cache ledger's gross twin `fix_gross`, which takes the
-    same changes;
+    same changes. Under `water_tag_precipitation: true` the gross twin also
+    counts the moves between a tag's own parts, which leave the tag's own
+    ledger unchanged. So a water tag's `led_fix_<name>_attempted` exceeds
+    `_retained` by those moves too;
   - `<L>_events`: the number of cell-steps whose change of `L` exceeded
     rounding against the cell's total;
   - for a tag's own ledger, `<L>_inventory_fraction`, `<L>_burden_fraction`,
     `<L>_parent_fraction` and `<L>_applicable`: `<L>_retained` over the tag's
     integral now, over its absolute burden now, and over `parent_scale`, and
     whether a ratio to the tag applies ([`tag_ledger_normalization`](@ref)).
+    Under `water_tag_precipitation: true` a water tag's integral is the sum
+    of its three parts, and its burden the sum of the parts' burdens.
 
 With a tag's own ledgers, `ledger_parent_scale`: `parent_scale`, the family's
 parent scale, `∫ρq_tot` for the water tags and for the energy source tags
@@ -842,11 +850,11 @@ function _tag_ledger_audit(steps, Y, prefix, scale, fix_gross, parent_scale)
                 chopprefix(chopprefix(short, "led_fix_"), "led_inc_"),
                 "led_src_",
             )
-            ᶜtag = getproperty(Y.c, Symbol(tag_prefix, tag_name))
+            (inventory, burden) = _tag_ledger_inventory(Y.c, tag_prefix, tag_name)
             ratios = tag_ledger_normalization(
                 retained,
-                Float64(sum(ᶜtag)),
-                Float64(sum(abs, ᶜtag)),
+                inventory,
+                burden,
                 Float64(parent_scale),
             )
             for (ratio, value) in pairs(ratios)
@@ -858,6 +866,25 @@ function _tag_ledger_audit(steps, Y, prefix, scale, fix_gross, parent_scale)
     per_tag && column!("ledger_parent_scale", Float64(parent_scale))
     column!("ledger_cadence_step", steps.cadence[] == :step ? 1.0 : 0.0)
     return NamedTuple{Tuple(names)}(Tuple(values))
+end
+
+# A tag's signed integral and its absolute burden, for its own ledgers' ratios.
+# Under `water_tag_precipitation: true` a water tag's water is the sum of its
+# three parts, and its own ledger of the corrections takes all three. So the
+# rain and snow parts are added, each with its own burden. Without the key the
+# tag is its one field.
+function _tag_ledger_inventory(ᶜY, tag_prefix, name)
+    ᶜtag = getproperty(ᶜY, Symbol(tag_prefix, name))
+    inventory = Float64(sum(ᶜtag))
+    burden = Float64(sum(abs, ᶜtag))
+    if tag_prefix == "ρq_tag_" && hasproperty(ᶜY, Symbol(:ρq_rtag_, name))
+        for part_prefix in (:ρq_rtag_, :ρq_stag_)
+            ᶜpart = getproperty(ᶜY, Symbol(part_prefix, name))
+            inventory += Float64(sum(ᶜpart))
+            burden += Float64(sum(abs, ᶜpart))
+        end
+    end
+    return (inventory, burden)
 end
 
 """

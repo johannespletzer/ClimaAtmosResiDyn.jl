@@ -416,12 +416,26 @@ the model refuses it where they fail. A restart that changes
 before the default changed restarts only with `water_tag_transport: tracer`
 set.
 
+## Rain and snow parts
+
+With `water_tag_precipitation: true` each tag has three parts: the water that
+is neither rain nor snow, the rain and the snow. They have a page of their own,
+[Rain and Snow Tags](tagged_water_precipitation.md).
+
 ## Diagnostics and closure
 
-  - `q_tag_<name>`: tagged **total** water ``\rho q_\mathrm{tag}/\rho``;
+  - `q_tag_<name>`: tagged **total** water ``\rho q_\mathrm{tag}/\rho``, and
+    under `water_tag_precipitation: true` the sum of the tag's three parts;
+  - with the key only: `q_ntag_<name>`, `q_rtag_<name>` and `q_stag_<name>`,
+    the parts; `q_ntag_res`, `q_rtag_res` and `q_stag_res`, each
+    compartment's residual; `pr_tag_<name>`, the tag's share of `pr`; and
+    `q_rtag_aud_<name>` and `q_stag_aud_<name>`, the microphysics audit. See
+    [Rain and snow parts](#Rain-and-snow-parts);
   - `qv_tag_<name>`: tagged **vapor**, ``q_\mathrm{tag} \, q_v / q_t``;
   - `q_tag_res`: the closure residual ``(\max(\rho q_\mathrm{tot}, 0) - \sum_i \rho q_{\mathrm{tag},i})/\rho``, summed over the pure region tags. The tags partition the parent's non-negative water;
-  - `q_tag_negative`: the parent's negative water, ``\min(\rho q_\mathrm{tot}, 0)/\rho``, the remainder the partition leaves. `q_tag_res`, `q_tag_negative` and the region tags add up to ``q_\mathrm{tot}``;
+  - `q_tag_negative`: the parent's negative water, ``\min(\rho q_\mathrm{tot}, 0)/\rho``, the remainder the partition leaves. `q_tag_res`, `q_tag_negative` and the region tags add up to ``q_\mathrm{tot}``.
+    Under `water_tag_precipitation: true` the non-negative and negative parts
+    are taken per compartment;
   - `q_tag_fix_<name>`: water moved into or out of the tag by the limiters and
     state constraints, cumulative since the start of the run and carried
     through a restart, so a budget over an interval is the difference of two
@@ -431,15 +445,18 @@ set.
   - `q_tag_leak_<path>`: the rate at which one path drifts the partition's sum
     from ``\rho q_\mathrm{tot}``, computed from the state; see below;
   - `pr_tag_<name>`, `prra_tag_<name>` and `prsn_tag_<name>`, under 0-moment
-    microphysics only: the tag's part of `pr`, `prra` and `prsn`, the column
+    microphysics: the tag's part of `pr`, `prra` and `prsn`, the column
     integral of its part of the rain-out (`water_tag_precipitation!`). It is
     upward-positive as `pr` is, so negative, and split into rain and snow by
     the grid mean's temperature as `pr` is. It is computed from the state at
     output time, so it is the rate at the step's end, not the one the step
     applied. All the tags' parts are computed together, once per output time
     (`update_water_tag_rainouts!`), so the cost of the whole set grows
-    linearly with the number of tags. Under 1-moment it waits on rain and snow
-    tags;
+    linearly with the number of tags. Under 1-moment,
+    `water_tag_precipitation: true` gives `pr_tag_<name>` alone, the flux of
+    the tag's rain and snow parts and its share of the cloud at the bottom
+    face (see [Rain and snow parts](#Rain-and-snow-parts)).
+    `prra_tag_<name>`, `prsn_tag_<name>` and `pr_tag_res` stay 0-moment only;
   - `pr_tag_res`, with a region tag, under 0-moment: `pr` less the region
     tags' `pr_tag`, the rain-out no region tag takes. Under the split it is the
     rain-out times one less the partition's sum of shares, in each subdomain:
@@ -489,7 +506,10 @@ ledger `L`, named without its `q_tag_` prefix:
   - `<L>_attempted`: what the ledger's writers added, in absolute value, over
     every call, including calls on stage values that the stepper discards. For
     a tag's `led_fix` ledger it is the cache ledger's gross twin, which takes
-    the same changes;
+    the same changes. Under `water_tag_precipitation: true` the gross twin
+    also counts the moves between a tag's own parts, which leave the tag's own
+    ledger unchanged. So a water tag's `led_fix_<name>_attempted` exceeds
+    `_retained` by those moves too;
   - `<L>_events`: the number of cell-steps whose change of `L` exceeded
     rounding against the cell's water;
   - each also over the column's water, `_relative`;
@@ -498,9 +518,12 @@ ledger `L`, named without its `q_tag_` prefix:
     water now, `∫ρq_tag`; `<L>_burden_fraction`, over its absolute burden,
     `∫|ρq_tag|`; `<L>_parent_fraction`, over the parent's water, `∫ρq_tot`;
     and `<L>_applicable`. Each bounds how far the corrections can have moved
-    that tag. Under the follower most of what `led_inc` holds is the parent's
-    vertical advection, which the tags no longer take explicitly, so it bounds
-    the follower's intervention from above and does not isolate it;
+    that tag. Under `water_tag_precipitation: true` the tag's water is the
+    sum of its three parts, and its burden the sum of the parts' burdens,
+    since its `led_fix` ledger takes the corrections of all three. Under the
+    follower most of what `led_inc` holds is the parent's vertical advection,
+    which the tags no longer take explicitly, so it bounds the follower's
+    intervention from above and does not isolate it;
   - `ledger_parent_scale`, with the ledgers per tag: `∫ρq_tot`, the scale of
     `_parent_fraction`;
   - `ledger_cadence_step`: 1 at `update_constrain_state_every: step`, 0
@@ -620,7 +643,10 @@ its records are not transported.
   - **1-moment**: phase changes are *not* an obstacle — those conserve
     ``\rho q_\mathrm{tot}`` and are invisible to the tags. Sedimentation is,
     and it is handled by mirroring the flux per tag rather than attributing it;
-    see [Sedimentation with 1-moment microphysics](@ref).
+    see [Sedimentation with 1-moment microphysics](@ref). With
+    `water_tag_precipitation: true` rain and snow carry their own tags, and the
+    phase changes move water between a tag's parts; see
+    [Rain and snow parts](#Rain-and-snow-parts).
   - **Dry**: there is no ``\rho q_\mathrm{tot}`` in the state to partition.
   - **2-moment and P3** remain unsupported: they additionally carry prognostic
     number concentrations, whose provenance is a separate question from the mass

@@ -261,6 +261,9 @@ NVTX.@annotate function explicit_vertical_advection_tendency!(Yₜ, Y, p, t)
             ᶜχ = @. lazy(specific(ᶜρχ, Y.c.ρ))
             vtt = vertical_transport(ᶜρ, ᶠu³, ᶜχ, dt, tracer_upwinding)
             @. ᶜρχₜ += vtt
+            # A water tag's rain or snow part hands this back to the tag's
+            # non-precipitating part when that follows the increment.
+            water_tag_precip_advection!(Yₜ, p, ρχ_name, vtt)
         end
     end
     enthalpy_vertical_advection_of_energy_source_tags!(Yₜ, Y, p)

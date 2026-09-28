@@ -125,6 +125,7 @@ makedocs(;
             "Passive Tracers" => "passive_tracers.md",
             "Tagged Energy Tracers" => "tagged_tracers.md",
             "Tagged Water Tracers" => "tagged_water.md",
+            "Rain and Snow Tags" => "tagged_water_precipitation.md",
             "Energy Source Tags" => "energy_source_tags.md",
             "Energy Source Tags: a user guide" => "energy_source_tags_guide.md",
             "Process-Change Records" => "process_record.md",
