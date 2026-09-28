@@ -76,11 +76,11 @@ function compute_tag_ledger_colgross!(out, state, cache, name)
     return result
 end
 
-# The parent's negative water ledger (known issue 7), per volume, from the
+# The parent's negative water accumulator (known issue 7), per volume, from the
 # Float64 cache: its time integral, or its count of steps with negative water.
-function compute_negative_water_ledger!(out, state, cache, name)
-    ledger = cache.tagging.tag_ledger_steps.negative_water
-    ᶜfield = getproperty(ledger, name)
+function compute_negative_water_accumulator!(out, state, cache, name)
+    accumulator = cache.tagging.tag_ledger_steps.negative_water
+    ᶜfield = getproperty(accumulator, name)
     result = isnothing(out) ? similar(state.c.ρ) : out
     @. result = ᶜfield
     return result
@@ -139,8 +139,8 @@ state ledger:
 The grosses are carried through a restart by the checkpoint (WP6, step 3).
 See `tag_ledger_step_cache`.
 
-With water tags, also the parent's negative water ledger (known issue 7; see
-`negative_water_ledger_cache`), which no default output writes:
+With water tags, also the parent's negative water accumulator (known issue 7; see
+`negative_water_accumulator_cache`), which no default output writes:
 
   - `q_tag_negative_integral`: the sum over the accepted steps of
     `max(-ρq_tot, 0) Δt`, in kg s m⁻³. Its volume integral, in kg s, is the
@@ -178,7 +178,7 @@ function register_tag_ledger_diagnostics!(model::AtmosModel)
                        "negative_water_integral. Zero wherever q_tot was " *
                        "never negative at the end of a step (known issue 7).",
             compute! = (out, u, p, t) ->
-                compute_negative_water_ledger!(out, u, p, :ᶜamount),
+                compute_negative_water_accumulator!(out, u, p, :ᶜamount),
         )
         add_diagnostic_variable!(;
             short_name = "q_tag_negative_events",
@@ -188,7 +188,7 @@ function register_tag_ledger_diagnostics!(model::AtmosModel)
                        "ρq_tot < 0 in this cell, since the start of the run " *
                        "and carried through a restart (known issue 7).",
             compute! = (out, u, p, t) ->
-                compute_negative_water_ledger!(out, u, p, :ᶜevents),
+                compute_negative_water_accumulator!(out, u, p, :ᶜevents),
         )
     end
     # Each tag's own ledgers are named by the tags of an earlier model too.

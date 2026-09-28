@@ -789,7 +789,7 @@ does not exist yet. Called on the root process only.
 own names, or `nothing`. `closure_void` is as in [`write_tag_closure!`](@ref):
 a column `closure_void`, 1 or 0, where the check has a void level.
 `negative_water`, from the water check, is a `NamedTuple` of named columns
-that end the row: the parent's negative water ledger and
+that end the row: the parent's negative water accumulator and
 `negative_water_void` (see [`tag_closure_callback!`](@ref)), or `nothing`.
 """
 function write_tag_audit!(
@@ -916,9 +916,9 @@ check warns on every row where it is above zero.
 
 The water check also reads the parent's own negative water, from the raw
 `ρq_tot` (known issue 7). `negative_water`, `nothing` for the other families,
-is `(; void_above, voided, ledger)`: the check's `negative_water_void_above`,
+is `(; void_above, voided, accumulator)`: the check's `negative_water_void_above`,
 the family's flag in `p.tagging.negative_water_void`, and the parent's
-negative water ledger (see [`negative_water_ledger_cache`](@ref)) or
+negative water accumulator (see [`negative_water_accumulator_cache`](@ref)) or
 `nothing`. See [`negative_water_rows`](@ref) for the columns. Past
 `void_above` the check warns once, and marks this row and every later row
 `negative_water_void = 1`, in both tables, also after a restart. The same
@@ -1093,7 +1093,7 @@ _passed_throughput_tolerance(extra_columns, level) =
 
 The water check's columns on the parent's own negative water, for one row, as
 `(; closure, audit, first_void, relative)`. `negative_water` is
-`(; void_above, voided, ledger)`, as [`tag_closure_callback!`](@ref) takes it,
+`(; void_above, voided, accumulator)`, as [`tag_closure_callback!`](@ref) takes it,
 or `nothing`, which gives no columns and no reduction.
 
 On the closure table, where `void_above` is set:
@@ -1109,8 +1109,8 @@ On the closure table, where `void_above` is set:
 
 `void_above = nothing` (`negative_water_void_above: ~`) drops both columns.
 
-On the audit table, where the audit is on: the parent's negative water ledger
-(see [`negative_water_ledger_cache`](@ref)), and `negative_water_void` last
+On the audit table, where the audit is on: the parent's negative water accumulator
+(see [`negative_water_accumulator_cache`](@ref)), and `negative_water_void` last
 where `void_above` is set.
 
   - `negative_water_integral`: `∫∫max(-ρq_tot, 0) dV dt` since the start of
@@ -1132,16 +1132,16 @@ The previous audit row is the previous one of this run or segment. At the
 first row of a run or of a restarted segment the interval is empty, and the
 three interval columns are 0.
 
-The ledger does not set the flag. The check at every accepted step does, from
-the ratio at that step. The ledger shows how much negative water there was
+The accumulator does not set the flag. The check at every accepted step does, from
+the ratio at that step. The accumulator shows how much negative water there was
 between the rows, and in how many cell-steps.
 """
 negative_water_rows(Y, p, ::Nothing, t, audit) =
     (; closure = nothing, audit = nothing, first_void = false, relative = nothing)
 function negative_water_rows(Y, p, negative_water, t, audit)
-    (; void_above, voided, ledger) = negative_water
-    ledger_on = audit && !isnothing(ledger)
-    isnothing(void_above) && !ledger_on &&
+    (; void_above, voided, accumulator) = negative_water
+    accumulator_on = audit && !isnothing(accumulator)
+    isnothing(void_above) && !accumulator_on &&
         return negative_water_rows(Y, p, nothing, t, audit)
     parent_water = parent_negative_water(Y)
     (; relative) = parent_water
@@ -1158,8 +1158,8 @@ function negative_water_rows(Y, p, negative_water, t, audit)
         !audit ? nothing :
         (;
             (
-                ledger_on ?
-                negative_water_ledger_row!(ledger, t, parent_water.total) : (;)
+                accumulator_on ?
+                negative_water_accumulator_row!(accumulator, t, parent_water.total) : (;)
             )...,
             flag...,
         )
@@ -1167,17 +1167,17 @@ function negative_water_rows(Y, p, negative_water, t, audit)
 end
 
 """
-    negative_water_ledger_row!(ledger, t, total)
+    negative_water_accumulator_row!(accumulator, t, total)
 
-The audit's columns of the parent's negative water ledger at time `t`, and
+The audit's columns of the parent's negative water accumulator at time `t`, and
 remember them for the next row. `total` is `∫ρq_tot dV` now. See
 [`negative_water_rows`](@ref). Collective, as `sum` is.
 """
-function negative_water_ledger_row!(ledger, t, total)
-    integral = Float64(sum(ledger.ᶜamount))
-    events = tag_event_total((ledger.ᶜevents,))
-    (last_t, last_integral, last_events) = ledger.last_row[]
-    ledger.last_row[] = (t, integral, events)
+function negative_water_accumulator_row!(accumulator, t, total)
+    integral = Float64(sum(accumulator.ᶜamount))
+    events = tag_event_total((accumulator.ᶜevents,))
+    (last_t, last_integral, last_events) = accumulator.last_row[]
+    accumulator.last_row[] = (t, integral, events)
     if isnan(last_t)
         interval = 0.0
         interval_events = 0.0
