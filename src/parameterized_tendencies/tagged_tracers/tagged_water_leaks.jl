@@ -49,15 +49,9 @@ Zero where the path is off, or on a column for the horizontal paths. On the
 sphere the result is DSSed, as a tendency diagnostic is. See
 [`WATER_TAG_LEAK_PATHS`](@ref) for the paths.
 
-Under `water_tag_precipitation: true` the tags' `ρq_tag_<name>` fields hold
-the diffusing water and move as it does, so the paths are designed not to leak
-through the rain and snow. One gap remains, on `hyperdiff`. The hyperdiffusion
-takes each tag's share of the reference profile `q_tot_r`
-(`prep_water_tag_hyperdiffusion!`). Where the partition holds none of the
-non-precipitating water, because it is not positive or every tag's part of it
-is at or below zero, the shares are zero. There the tags take no part of
-`q_tot_r`, and their sum does not follow the parent's hyperdiffusion. Under the
-key `hyperdiff` reports that rate, and the other paths are zero. The copies
+Under `water_tag_precipitation: true` only `hyperdiff` can be nonzero: where
+the partition holds none of the non-precipitating water, the tags take no
+part of `q_tot_r`. See `docs/src/tagged_water_precipitation.md`. The copies
 are refused with the key.
 """
 function water_tag_leak!(ᶜleak, Y, p, path::Val)
