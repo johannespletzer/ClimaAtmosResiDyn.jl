@@ -10,6 +10,15 @@
 ##### to it as a vertical flux, as `correct_energy_source_increment!` does for
 ##### the energy source tags. The tags' explicit vertical advection is skipped,
 ##### because the parent's increment carries it.
+#####
+##### Under `water_tag_precipitation: true` the tags' `ρq_tag_<name>` fields
+##### follow the parent's increment of the water that is neither rain nor snow,
+##### `ρq_tot - ρq_rai - ρq_sno`. `ρq_tot` is advected implicitly with its rain
+##### and snow, and `ρq_rai` and `ρq_sno` explicitly. So the rain and snow parts
+##### keep their explicit advection and hand it back to the non-precipitating
+##### part (`water_tag_precip_advection!`), and they follow their own implicit
+##### terms, which are their species' by construction (the design note WP4b-D,
+##### section 6).
 
 # The names of the correction's ledger, in the state's order.
 const WATER_TAG_LEDGER_NAMES =
@@ -41,7 +50,8 @@ and `(;)` otherwise:
     cell below zero, that part grows by the negative water, and the column's
     total with it. That change is not a lag, so the tags take it, where the
     mismatch has its sign, by the cells' composition. Zero wherever the
-    parent stays non-negative.
+    parent stays non-negative. Under `water_tag_precipitation: true` it is
+    the same for the non-precipitating water, `ρq_tot - ρq_rai - ρq_sno`.
 
 All three are prognostic, so the stepper weights each stage's entry as it weights
 the tags. They record what the correction intends. A face whose donor cell holds
@@ -191,7 +201,9 @@ snapshot_water_tag_increment!(Y, p, dtγ) =
 function _snapshot_water_tag_increment!(Y, p, dtγ, model)
     (; ᶜq_tag_ρq_tot_snapshot, ᶜq_tag_partition_snapshot, q_tag_dtγ) =
         p.tagging
-    @. ᶜq_tag_ρq_tot_snapshot = Y.c.ρq_tot
+    # The water the tags' `ρq_tag_<name>` fields partition: `ρq_tot`, or its
+    # non-precipitating part under `water_tag_precipitation: true`.
+    @. ᶜq_tag_ρq_tot_snapshot = $(water_tag_parent(Y.c, model))
     _water_partition_sum!(ᶜq_tag_partition_snapshot, Y.c, Y.c, false, model.tags)
     q_tag_dtγ[] = dtγ
     return nothing
@@ -242,6 +254,13 @@ share there. It is recorded in `q_tag_inc_negative`. Where no cell can take it,
 it is left out with the rest. Where the parent stays non-negative, `N` is zero
 and every number here is what it was, bit for bit.
 
+Under `water_tag_precipitation: true` the `ρq_tag_<name>` fields partition the
+non-precipitating water, `ρq_tot - ρq_rai - ρq_sno` ([`water_tag_parent`](@ref)),
+and option C applies to that compartment. The target is its non-negative part,
+and `N` comes from its negative part. The shares switch to the partition's own
+composition where that water is negative, not where `ρq_tot` is. The rain and
+snow parts follow their own implicit terms and take no part in this.
+
 What it cannot do:
 
   - **Change a column's total**, apart from the negative part above. The flux
@@ -291,29 +310,34 @@ function correct_water_tag_increment!(dY, U, p)
     # and `ρq_tot`, so the `dY` terms of the partition are zero; they are kept
     # so the mismatch stays right if it ever writes more.
     _water_partition_sum!(ᶜm, U.c, dY.c, dtγ, model.tags)
-    # The partition's target is the parent's non-negative water (known issue
-    # 7, option C). Where the parent is non-negative on both sides of the
-    # stage this is the parent's increment, bit for bit.
-    ᶜρq_tot_new = @. lazy(U.c.ρq_tot + dtγ * dY.c.ρq_tot)
+    # The water the tags' `ρq_tag_<name>` fields partition after the stage:
+    # `ρq_tot`, or under `water_tag_precipitation: true` its non-precipitating
+    # part. The partition's target is its non-negative part (known issue 7,
+    # option C, per compartment under the key). Where it is non-negative on
+    # both sides of the stage this is its increment, bit for bit.
+    ᶜparent_new = _water_tag_parent_after(U.c, dY.c, dtγ, model)
     @. ᶜm =
         (
-            water_tag_partition_target(ᶜρq_tot_new) -
+            water_tag_partition_target(ᶜparent_new) -
             water_tag_partition_target(ᶜq_tag_ρq_tot_snapshot)
         ) - (ᶜm - ᶜq_tag_partition_snapshot)
-    # The part of the target's increment that is the parent's negative part
-    # changing: the target less the parent, `-Δ min(ρq_tot, 0)`. Zero where
-    # the parent stays non-negative.
+    # The part of the target's increment that is the negative part changing:
+    # the target less the water it is taken of, `-Δ min(ρq_tot, 0)`, or the
+    # same of the non-precipitating water under the key. Zero where that
+    # water stays non-negative.
     @. ᶜn =
         water_tag_negative_part(ᶜq_tag_ρq_tot_snapshot) -
-        water_tag_negative_part(ᶜρq_tot_new)
+        water_tag_negative_part(ᶜparent_new)
     Operators.column_integral_indefinite!(ᶠq_tag_mismatch_integral, ᶜm)
     Operators.column_integral_definite!(q_tag_mismatch_total, ᶜm)
     Operators.column_integral_definite!(q_tag_negative_total, ᶜn)
     # The shares at the solved stage, for the flux and the negative part. Where
-    # the parent is negative there, the tags move by the partition's own
-    # composition (`_water_tag_follower_share_field`), so they need its sum.
+    # the water the tags partition is negative there, the tags move by the
+    # partition's own composition (`_water_tag_follower_share_field`), so they
+    # need its sum. Under the key that water is the non-precipitating part.
     water_tag_share_norm!(p, U)
     ᶜnorm = p.scratch.ᶜtagging_q_share_norm
+    ᶜparent = water_tag_parent(U.c, model)
     ᶜpos = p.tagging.ᶜwater_pos
     @. ᶜpos = 0
     _accumulate_partition_pos!(ᶜpos, U.c, model.tags)
@@ -323,7 +347,7 @@ function correct_water_tag_increment!(dY, U, p)
     # to cells whose partition holds water to give it a composition. Where no
     # cell can take it, it is left out with the rest.
     @. ᶜq_tag_negative_weight = ifelse(
-        ifelse(U.c.ρq_tot < 0, ᶜpos > 0, ᶜnorm > 0),
+        ifelse(ᶜparent < 0, ᶜpos > 0, ᶜnorm > 0),
         water_increment_left_weight(ᶜm, q_tag_negative_total),
         zero(ᶜm),
     )
@@ -387,6 +411,7 @@ function correct_water_tag_increment!(dY, U, p)
         ᶜpos,
         ᶠq_tag_increment_flux,
         model.tags,
+        ᶜparent,
     )
     # What each cell takes for the negative part, by its own composition.
     @. ᶜq_tag_negative_weight *= ifelse(
@@ -403,12 +428,15 @@ function correct_water_tag_increment!(dY, U, p)
         q_tag_negative_total,
         dtγ,
         model.tags,
+        ᶜparent,
     )
     # Each tag's own ledger, where kept, takes the same flux and the same
     # share of the negative part, so it holds what the correction moved into
     # or out of that tag (WP6, step 3). The same kernels write it, from a zero
-    # entry as the tag's is, so it is the tag's change bit for bit. Its
-    # absolute value per stage goes to `attempted`.
+    # entry as the tag's is, so it is the tag's change bit for bit. They take
+    # the same parent too, so under `water_tag_precipitation: true` the shares
+    # divide by the non-precipitating water. Its absolute value per stage goes
+    # to `attempted`.
     ledger_view = water_tag_inc_ledger_view(dY, model)
     if !isnothing(ledger_view)
         _follower_water_tag_fluxes!(
@@ -418,6 +446,7 @@ function correct_water_tag_increment!(dY, U, p)
             ᶜpos,
             ᶠq_tag_increment_flux,
             model.tags,
+            ᶜparent,
         )
         _give_water_tags!(
             ledger_view,
@@ -428,6 +457,7 @@ function correct_water_tag_increment!(dY, U, p)
             q_tag_negative_total,
             dtγ,
             model.tags,
+            ᶜparent,
         )
     end
     add_attempted_per_tag!(p, dY, dtγ, ledger_view, model.tags)
@@ -456,27 +486,40 @@ function correct_water_tag_increment!(dY, U, p)
     return nothing
 end
 
-# The share a cell's tag moves by in the follower. Where the parent is not
-# negative, the flux's (`_water_tag_share_field`), so nothing changes there,
-# bit for bit. Where it is negative, the tag's clamped fraction of the
-# partition's own positive water, `ᶜpos`: the parent's shares are undefined
-# there, and without these a cell whose parent a solve took below zero could
-# not give up the tags it held (known issue 7, option C).
-function _water_tag_follower_share_field(ᶜY, ᶜnorm, ᶜpos, tag)
+# The water the tags' `ρq_tag_<name>` fields partition after the stage, with the
+# parent's post-solve correction: `ρq_tot`, or under `water_tag_precipitation:
+# true` its non-precipitating part.
+_water_tag_parent_after(ᶜU, ᶜdY, dtγ, model) =
+    has_water_tag_precipitation(model) ?
+    (@. lazy(
+        (ᶜU.ρq_tot + dtγ * ᶜdY.ρq_tot) - (ᶜU.ρq_rai + dtγ * ᶜdY.ρq_rai) -
+        (ᶜU.ρq_sno + dtγ * ᶜdY.ρq_sno),
+    )) : (@. lazy(ᶜU.ρq_tot + dtγ * ᶜdY.ρq_tot))
+
+# The share a cell's tag moves by in the follower. `ᶜparent` is the water the
+# tags' `ρq_tag_<name>` fields partition, `ρq_tot` or under
+# `water_tag_precipitation: true` its non-precipitating part
+# (`water_tag_parent`). Where it is not negative, the share is the flux's
+# (`_water_tag_share_field`), so nothing changes there, bit for bit. Where it
+# is negative, the share is the tag's clamped fraction of the partition's own
+# positive water, `ᶜpos`. The parent's shares are undefined there, and without
+# these a cell whose parent a solve took below zero could not give up the tags
+# it held (known issue 7, option C).
+function _water_tag_follower_share_field(ᶜY, ᶜnorm, ᶜpos, tag, ᶜparent)
     ᶜρq_tag = tag_field(ᶜY, tag)
-    ᶜshare = _water_tag_share_field(ᶜY, ᶜnorm, tag)
+    ᶜshare = _water_tag_share_field(ᶜY, ᶜnorm, tag, ᶜparent)
     return @. lazy(
-        ifelse(ᶜY.ρq_tot < 0, water_tag_fraction(ᶜρq_tag, ᶜpos), ᶜshare),
+        ifelse(ᶜparent < 0, water_tag_fraction(ᶜρq_tag, ᶜpos), ᶜshare),
     )
 end
 
 # The follower's flux, as `_sgs_water_tag_fluxes!` moves the default mode's,
 # with the follower's shares.
-_follower_water_tag_fluxes!(ᶜYₜ, ᶜY, ᶜnorm, ᶜpos, ᶠflux, ::Tuple{}) = nothing
-function _follower_water_tag_fluxes!(ᶜYₜ, ᶜY, ᶜnorm, ᶜpos, ᶠflux, tags::Tuple)
+_follower_water_tag_fluxes!(ᶜYₜ, ᶜY, ᶜnorm, ᶜpos, ᶠflux, ::Tuple{}, ᶜparent) = nothing
+function _follower_water_tag_fluxes!(ᶜYₜ, ᶜY, ᶜnorm, ᶜpos, ᶠflux, tags::Tuple, ᶜparent)
     tag = first(tags)
     ᶜρq_tagₜ = tag_field(ᶜYₜ, tag)
-    ᶜshare = _water_tag_follower_share_field(ᶜY, ᶜnorm, ᶜpos, tag)
+    ᶜshare = _water_tag_follower_share_field(ᶜY, ᶜnorm, ᶜpos, tag, ᶜparent)
     @. ᶜρq_tagₜ -= ᶜadvdivᵥ(
         ᶠflux * ifelse(
             _is_upward(ᶠflux),
@@ -491,6 +534,7 @@ function _follower_water_tag_fluxes!(ᶜYₜ, ᶜY, ᶜnorm, ᶜpos, ᶠflux, ta
         ᶜpos,
         ᶠflux,
         Base.tail(tags),
+        ᶜparent,
     )
 end
 
@@ -498,11 +542,11 @@ end
 # the parent's negative part, as a tendency over `dtγ`, by the follower's
 # shares. Only where the column's total `N` is not zero, so a run whose parent
 # stays non-negative is unchanged bit for bit.
-_give_water_tags!(ᶜYₜ, ᶜY, ᶜnorm, ᶜpos, ᶜgive, N, dtγ, ::Tuple{}) = nothing
-function _give_water_tags!(ᶜYₜ, ᶜY, ᶜnorm, ᶜpos, ᶜgive, N, dtγ, tags::Tuple)
+_give_water_tags!(ᶜYₜ, ᶜY, ᶜnorm, ᶜpos, ᶜgive, N, dtγ, ::Tuple{}, ᶜparent) = nothing
+function _give_water_tags!(ᶜYₜ, ᶜY, ᶜnorm, ᶜpos, ᶜgive, N, dtγ, tags::Tuple, ᶜparent)
     tag = first(tags)
     ᶜρq_tagₜ = tag_field(ᶜYₜ, tag)
-    ᶜshare = _water_tag_follower_share_field(ᶜY, ᶜnorm, ᶜpos, tag)
+    ᶜshare = _water_tag_follower_share_field(ᶜY, ᶜnorm, ᶜpos, tag, ᶜparent)
     @. ᶜρq_tagₜ =
         ifelse(N != 0, ᶜρq_tagₜ + ᶜgive * ᶜshare / dtγ, ᶜρq_tagₜ)
     return _give_water_tags!(
@@ -514,6 +558,7 @@ function _give_water_tags!(ᶜYₜ, ᶜY, ᶜnorm, ᶜpos, ᶜgive, N, dtγ, tag
         N,
         dtγ,
         Base.tail(tags),
+        ᶜparent,
     )
 end
 
