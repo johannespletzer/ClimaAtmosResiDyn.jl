@@ -843,7 +843,7 @@ The fields among the Jacobian's `block_pairs` that a [`SplitJacobianSolver`](@re
 solves apart from the rest, as a `Tuple` of `FieldName`s.
 
 A field qualifies when it is a tag, a process record or a field of an increment
-correction's ledger, it has its own diagonal block, and no block names it
+ledger, it has its own diagonal block, and no block names it
 except in its own row: not as a column, and not as a part of another row or
 column. Such a field enters no other variable's equation.
 

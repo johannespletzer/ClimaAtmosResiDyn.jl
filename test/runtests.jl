@@ -90,7 +90,7 @@ if TEST_GROUP in ("infrastructure", "all")
 end
 
 # ============================================================================
-# Parent budget: the budget driven by real simulations. Every file here builds
+# Parent budget: the parent budget driven by real simulations. Every file here builds
 # several `AtmosSimulation`s and compiles the tendency pipeline for each, which
 # is why they are not in `infrastructure` with the parent budget's unit tests.
 # ============================================================================

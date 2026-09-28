@@ -289,8 +289,8 @@ when they are disabled. Contains:
     per-timestep broadcast.
   - `ᶜenergy_source_fix`: one center `Field` per tag, accumulating the energy
     that `repair_energy_source_tags!` has moved into or out of it. It is
-    reported as `e_src_fix_<name>`. It lives in the cache, so it restarts at
-    zero, as the water tags' repair ledger does.
+    reported as `e_src_fix_<name>`. It lives in the cache, and a checkpoint
+    carries it, as it carries the water tags' repair ledger (WP6, step 3).
   - `ᶜenergy_source_pos` and `ᶜenergy_source_neg`: the positive and negative
     parts of the partition's sum, which the repair fills itself.
   - `ᶠenergy_source_interior`: one on every face but the bottom one, where it

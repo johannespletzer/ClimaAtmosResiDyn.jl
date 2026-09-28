@@ -20,7 +20,7 @@
 ##### terms, which are their species' by construction (the design note WP4b-D,
 ##### section 6).
 
-# The names of the correction's ledger, in the state's order.
+# The names of the increment ledger, in the state's order.
 const WATER_TAG_LEDGER_NAMES =
     (:q_tag_inc_left, :q_tag_inc_moved, :q_tag_inc_negative)
 
@@ -73,7 +73,7 @@ water_tag_increment_ledger_variables(ρq_tot, model::WaterTaggingModel) =
 """
     water_tag_increment_ledger_names(model)
 
-`Tuple` of the state-field `Symbol`s of the correction's ledger:
+`Tuple` of the state-field `Symbol`s of the increment ledger:
 `(:q_tag_inc_left, :q_tag_inc_moved, :q_tag_inc_negative)` under
 `water_tag_transport: increment`,
 and `()` otherwise. See [`water_tag_increment_ledger_variables`](@ref).

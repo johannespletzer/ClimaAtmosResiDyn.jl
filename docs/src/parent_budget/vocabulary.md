@@ -20,9 +20,9 @@ this page explains only the first family.
     moved. It comes in three kinds. A *repair ledger* is `q_tag_fix_*` or
     `e_src_fix_*`, held in the cache as `ᶜwater_fix` or `ᶜenergy_source_fix`.
     An *increment ledger* is `e_src_inc_left`, `e_src_inc_moved` or
-    `q_tag_inc_*`. A *mechanism ledger* is `q_tag_led_*` or `e_src_led_*`.
-    This version of the code does not define `q_tag_inc_*`, `q_tag_led_*` or
-    `e_src_led_*`. They are named in the tag-closure design notes.
+    `q_tag_inc_*`. A *mechanism ledger* is `q_tag_led_<mechanism>` or
+    `e_src_led_<mechanism>`. See the [glossary](../glossary.md) for each tag's
+    own ledgers.
   - **Closure residual**: The parent minus the sum of the tags. It is
     `q_tag_res`, `e_src_res` or `e_tag_res`.
   - **Process record**: One process's signed history of the parent tendency,

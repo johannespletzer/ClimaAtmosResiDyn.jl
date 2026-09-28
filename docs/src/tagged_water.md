@@ -330,7 +330,7 @@ Where a subdomain's share is not defined, the grid mean's applies. The split
 applies to both signs, since a subdomain's area can go negative in the Newton
 iterates. Where it does, the subdomain's rain-out is a gain, and the split
 attributes that gain too. So the split, and `pr_tag` below, are signed
-attributions, which close with the sink, not a record of physical rain-out
+attributions, which close with the sink, not a measure of physical rain-out
 alone. In the default mode without the SGS mass flux there is no
 exchange, and the grid mean's share applies to all the rain-out, as it does
 without EDMF. The model's fields do not change.

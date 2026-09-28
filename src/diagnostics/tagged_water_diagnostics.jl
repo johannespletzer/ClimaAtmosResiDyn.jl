@@ -241,7 +241,7 @@ during simulation setup rather than at package load time:
     negative parts. So `q_tag_res`, `q_tag_negative` and the region tags add
     up to `q_tot`;
 
-  - `q_tag_inc_left`, `q_tag_inc_moved` and `q_tag_inc_negative`, under `water_tag_transport: increment` only: the increment correction's ledger per unit mass,
+  - `q_tag_inc_left`, `q_tag_inc_moved` and `q_tag_inc_negative`, under `water_tag_transport: increment` only: the increment ledger per unit mass,
     cumulative since the start of the run. See
     `water_tag_increment_ledger_variables`.
 

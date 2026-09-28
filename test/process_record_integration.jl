@@ -152,8 +152,9 @@ end
     # 4. Checkpoint round trip. Records live in `Y`, so they are written to the
     # checkpoint and restored with their values rather than restarting at
     # zero. This is what makes the change over a window the difference of two
-    # outputs even when a restart falls between them, and it is the one place
-    # the records differ from `q_tag_fix_<name>`, which stays in the cache.
+    # outputs even when a restart falls between them. The records travel in
+    # `Y`. `q_tag_fix_<name>` stays in the cache, and the checkpoint carries it
+    # separately.
     restart_file = joinpath(simulation.output_dir, "day0.20.hdf5")
     @test isfile(restart_file)
 

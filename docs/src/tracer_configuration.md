@@ -510,7 +510,7 @@ name, and another diagnostic of the family would take it:
     `q_tag_res` or `e_tag_res`.
   - A `water_tracers` name may not begin with `fix_`, `upfix_`, `inc_`,
     `rtag_`, `stag_`, `fixgross_`, `fixcount_`, `upfixgross_`,
-    `upfixcount_`, `led_` or `aud_`. `fix_` begins the ledger
+    `upfixcount_`, `led_` or `aud_`. `fix_` begins the repair ledger
     `q_tag_fix_<name>`, and `aud_` the microphysics audit's records
     `q_rtag_aud_<name>` and `q_stag_aud_<name>` of
     `water_tag_precipitation` (see [Tagged Water Tracers](tagged_water.md)).
