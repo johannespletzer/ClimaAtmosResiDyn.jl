@@ -281,9 +281,8 @@ not re-derive them.
 
 ## 7. Tagged water ends a run where the parent's water goes negative (option C built; its validation fails one rule at site 23)
 
-**Status:** option C is built and unit-tested (below). Option A keeps the
-check from ending the run; this branch has it by merge of #112, which is not
-merged into `main`. Whether C keeps the tags on their target over the long runs
+**Status:** option C is on `main` since #116 and unit-tested (below). Option A
+keeps the check from ending the run; it is on `main` since #112. Whether C keeps the tags on their target over the long runs
 was the record branch's pre-registered validation
 (`design/NEGATIVE_PARENT_WATER.md`, section 8). It ran on 2026-09-25 (the
 record's FINDINGS W42). Site 23 now runs 90 days, the model fields match the
@@ -319,13 +318,14 @@ configured abort level 1.0 at t = 6.4368e6 s", from `tag_closure_callback!`.
 That level assumed a non-negative parent: then non-negative tags miss it by at
 most the parent itself. Here the parent is negative.
 
-**Option A, chosen, in this branch by merge** (the owner's choice of
-2026-09-24): #112, `claude/tag-closure-no-abort`, a PR against `main` that is
-not merged. This branch has it at `1b096d77`. With it, no closure check ends a
-run by default. Past water's old level, 1.0, is its `void_above`: the check
-warns once and marks this and every later row `closure_void` in the closure and
-audit tables, through restarts, and the run goes on. An explicit `abort_above`
-still ends a run.
+**Option A, chosen, on `main`** (the owner's choice of 2026-09-24): #112,
+merged. With it, no closure check ends a run by default. Past water's old
+level, 1.0, is its `void_above`: the check warns once and marks this and every
+later row `closure_void` in the closure and audit tables, through restarts, and
+the run goes on. An explicit `abort_above` still ends a run. The site-23
+validation above ran on #116's branch before that, with #112's first version,
+`36cd8cee`, whose mark started again after a restart. It has not been rerun on
+`main`.
 
 **The probe** (the record's FINDINGS W39) read the per-tag ledgers over 20
 days at site 23. When the parent first goes negative, the follower's moved

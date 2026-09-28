@@ -117,10 +117,15 @@ Two consequences worth stating:
     closure check compares the partition with the non-negative part. Where
     the parent is never negative, nothing changes, bit for bit.
 
-    That closure can pass while the parent is negative. So the water closure
-    check also reads the parent's own negative water, from the raw
-    ``\rho q_\mathrm{tot}``: `negative_water_relative` on every row, and the
-    flag `negative_water_void` past `negative_water_void_above`, `1e-4` by
+    That allocation is a numerical closure convention, not a physical path
+    of water. It keeps the partition on its target, but it can move
+    provenance between cells that no water moved between. It does not yet
+    keep the tags within their budget at site 23 (known issue 7).
+
+    Under this rule the closure can pass while the parent is negative. So the
+    water closure check also reads the parent's own negative water, from the
+    raw ``\rho q_\mathrm{tot}``: `negative_water_relative` on every row, and
+    the flag `negative_water_void` past `negative_water_void_above`, `1e-4` by
     default. A ledger in the cache adds the negative water up after every
     accepted step, for the audit. See "The parent's negative water" in
     `tracer_configuration.md`.
