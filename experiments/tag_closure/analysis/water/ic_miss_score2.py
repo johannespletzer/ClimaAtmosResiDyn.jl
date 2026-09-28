@@ -54,6 +54,12 @@ LOCAL_PROBES = (
 # The model's own fields among the reference's outputs; every other file is a
 # tag's or a ledger's.
 MODEL_FIELDS = ("rhoa", "ta", "hus", "clw", "cli", "wa", "pr", "lwp", "arup", "husup")
+# P0a needs every one of these files in both runs (9.7.7): the ten daily
+# fields and the two 6-hourly ones.
+MODEL_FILES = tuple(f"{v}_1d_inst.nc" for v in MODEL_FIELDS) + ("rhoa_6h_inst.nc", "hus_6h_inst.nc")
+# P3: a step within this relative distance of the level is "at the level"
+# (9.7.7), since the driver's ratio is not #118's own function.
+P3_ROUNDING = 1e-9
 
 
 def bits(a):
@@ -94,9 +100,11 @@ def p0():
             tags += 1
             if not same:
                 tags_differ.append(f"{name} ({rel:.1e})")
-    ok = model > 0 and not model_differ
-    print(f"P0a, the model's fields are ic_s23_c's: {model} files compared, differing: "
-          f"{model_differ or 'none'}: {'pass' if ok else 'FAIL'}")
+    missing = [f for f in MODEL_FILES
+               if not (os.path.exists(os.path.join(PROBE, f)) and os.path.exists(os.path.join(RUN, f)))]
+    ok = model == len(MODEL_FILES) and not model_differ and not missing
+    print(f"P0a, the model's fields are ic_s23_c's: {model} of {len(MODEL_FILES)} files compared, "
+          f"missing: {missing or 'none'}, differing: {model_differ or 'none'}: {'pass' if ok else 'FAIL'}")
     print(f"P0b, the tags' fields against ic_s23_c (reported): {tags} files compared, "
           f"differing: {len(tags_differ)}" + (f": {', '.join(tags_differ)}" if tags_differ else ""))
     return ok
@@ -180,8 +188,17 @@ def score_rise(a, b, kind, rows, levels, frac42, first):
     rel = R / water
     p2 = abs(rel - w42) <= P2_MAX * abs(w42)
     first_rel = first.get((a, b), np.nan)
+    near_first = abs(rel - first_rel) <= P2_MAX * abs(first_rel)
     print(f"  P2: rise {R:.4e} kg/m², {rel:.3e} of the water; W42 {w42:.3e}: "
           f"{'pass' if p2 else 'outside 10%, reported beside'}; the first probe {first_rel:.3e}")
+    # 9.7.7: a rise that did not grow is not read, and a rise far from both
+    # W42's and the first probe's is main's own.
+    if R <= 0:
+        print("  NOT READ: the excess did not grow over this interval on main (R <= 0).")
+        return
+    if not p2 and not near_first:
+        print("  NOTE: outside 10% of both W42 and the first probe. Read as main's own rise; "
+              "its reading does not answer W47's question for this interval.")
     p1 = abs(S("on_total") - R) <= P1_MAX * abs(R)
     print(f"  P1: on {S('on_total'):.4e} against the reference {R:.4e}: {'pass' if p1 else 'trials not assessable'}; "
           f"largest step gaps q_tot {max(r['on_gap_q_tot'] for r in sel):.2e}, tags {max(r['on_gap_tags'] for r in sel):.2e}")
@@ -234,8 +251,8 @@ def score_rise(a, b, kind, rows, levels, frac42, first):
             carries.append(term)
     # Section 9.7.4: candidate 5's mechanism, cell by cell.
     ref_m5 = (S("ref_M5_up") + S("ref_M5_down")) / R
-    f_m5 = (S("probe_forcing_M5_up") + S("probe_forcing_M5_down")) / F if F else np.nan
-    f_up = S("probe_forcing_M5_up") / F if F else np.nan
+    f_m5 = (S("probe_forcing_M5_up") + S("probe_forcing_M5_down")) / F if F > 0 else np.nan
+    f_up = S("probe_forcing_M5_up") / F if F > 0 else np.nan
     shown = ref_m5 >= MECHANISM and f_m5 >= MECHANISM
     print(f"  mechanism, cell by cell: reference {ref_m5:.2f} of the rise (parent rising {S('ref_M5_up') / R:.2f}); "
           f"forcing {f_m5:.2f} of its own growth (parent rising {f_up:.2f}): "
@@ -269,7 +286,7 @@ def score_rise(a, b, kind, rows, levels, frac42, first):
     elif F / R >= ATTRIBUTES:
         scope = "no term carries it alone, the forcing as a whole does: a fix at the forcing's bracket"
     else:
-        scope = "the forcing does not attribute it"
+        scope = "the forcing does not attribute it; 9.4's verdict above says whether the rise is unattributed"
     print(f"  READING 9.7: {scope}; mechanism {'shown' if shown else 'not shown'} cell by cell")
 
 
@@ -279,11 +296,13 @@ def p3(rows):
         if not sel:
             print(f"P3, window {a}-{b}: no steps")
             continue
-        over = [r for r in sel if r["negative_water_relative"] > NEGATIVE_WATER_LEVEL]
+        over = [r for r in sel if r["negative_water_relative"] > NEGATIVE_WATER_LEVEL * (1 + P3_ROUNDING)]
+        at_level = [r for r in sel if abs(r["negative_water_relative"] - NEGATIVE_WATER_LEVEL)
+                    <= NEGATIVE_WATER_LEVEL * P3_ROUNDING]
         wrong = [r for r in over if r["latch"] != 1.0]
         print(f"P3, window {a}-{b} days: largest per-step ratio {max(r['negative_water_relative'] for r in sel):.3e}, "
-              f"{len(over)} of {len(sel)} steps above {NEGATIVE_WATER_LEVEL:g}, latch 0 at {len(wrong)} of them: "
-              f"{'pass' if not wrong else 'FAIL'}")
+              f"{len(over)} of {len(sel)} steps above {NEGATIVE_WATER_LEVEL:g} ({len(at_level)} at the level), "
+              f"latch 0 at {len(wrong)} of them: {'pass' if not wrong else 'FAIL'}")
 
 
 def main():

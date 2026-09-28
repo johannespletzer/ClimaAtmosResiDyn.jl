@@ -452,7 +452,9 @@ to 9.6 stand as written.
     subsection. The model's own fields should not have moved since
     `e6bab0fc`, by the fork's parity rule, and P0a checks it. The tag code has
     moved: option C's final form (#116), the per-step check (#118), and #119
-    and #121, which are off in this configuration.
+    and #121, which are off in this configuration. For the energy tags,
+    #113, #115 and #120 are live here under `enthalpy_increment`; #114's
+    copies are off.
   - **The configuration** is `configs/ic_miss_probe2_s23.yml`,
     `ic_miss_probe_s23.yml` with only the job id changed. #118's check at
     every accepted step runs in the reference by default
@@ -466,11 +468,13 @@ to 9.6 stand as written.
  1. **The parent's negative water at every step's end:** `∫max(−ρq_tot, 0)`,
     its ratio to `∫ρq_tot`, and #118's latch.
  2. **Leave-one-out probes.** For each forcing term `t`, the forcing without
-    `t`, composed as the model composes the forcing: the other terms' `(dT, dq)` accumulated and converted once, then their direct parts. It uses the
-    same bracket, is applied alone at `Yₖ` and is stepped by `Δt`. Its share
-    is `ℓ_t = Σ_{k∈I} (ΔE_forcing − ΔE_{forcing∖t}) / R`: how much of the
-    forcing's growth goes when `t` is left out. It answers what 9.4's
-    one-term probes cannot, because those do not add up.
+    `t`, composed as the model composes the forcing: the other terms'
+    `(dT, dq)` accumulated and converted once, then their direct parts. It
+    uses the same bracket, is applied alone at `Yₖ` and is stepped by `Δt`.
+    Its share is `ℓ_t = Σ_{k∈I} (ΔE_forcing − ΔE_{forcing∖t}) / R`: how much
+    of the forcing's growth goes when `t` is left out. It is a second
+    measure of a term's part, beside 9.4's one-term probes, and it does not
+    add up either.
  3. **Candidate 5's mechanism, cell by cell.** A mechanism cell in a step has
     its parent at or below zero before and after the step, while the region
     tags' sum rises. The excess's change in those cells is measured for the
@@ -489,7 +493,8 @@ Two CSVs: `<job_id>_steps.csv` and `<job_id>_levels.csv`.
 
   - **P0a, the parent is `ic_s23_c`'s.** The model's own fields (`rhoa`, `ta`,
     `hus`, `clw`, `cli`, `wa`, `pr`, `lwp`, `arup`, `husup`, daily and
-    6-hourly) match bit for bit at every common output time. If not, the
+    6-hourly; twelve files, all of which must be there in both runs) match
+    bit for bit at every common output time. If not, the
     probe measures another parent. Its numbers are reported, and nothing is
     attributed to W42's rises.
   - **P0b, the tags' fields against `ic_s23_c`.** Reported, not a gate. Where
@@ -497,8 +502,10 @@ Two CSVs: `<job_id>_steps.csv` and `<job_id>_levels.csv`.
   - **P1** as in 9.3.
   - **P2** as in 9.3, with the first probe's value (W47) beside W42's.
   - **P3, #118's latch.** At every step whose ratio passes `1e-4`, the latch
-    reads 1 at that step's end. A failure is a defect of #118. It is
-    reported, and it does not touch the attribution.
+    reads 1 at that step's end. A step within `1e-9` (relative) of the level
+    is reported as at the level, not counted, since the driver computes the
+    ratio itself and not with #118's function. A failure is a defect of
+    #118. It is reported, and it does not touch the attribution.
 
 #### 9.7.4 Reading, per rise
 
@@ -521,14 +528,18 @@ Two CSVs: `<job_id>_steps.csv` and `<job_id>_levels.csv`.
       + no term carries it, and the forcing's share is at least 0.5: the
         terms act together, and a fix belongs at the forcing's bracket as a
         whole;
-      + the forcing's share is below 0.5: not the forcing, and 9.5's
-        "unattributed" case applies.
+      + the forcing's share is below 0.5: the forcing does not attribute it,
+        and 9.4's verdict says whether the rise is unattributed.
   - **The fourth rise** is read by the same rules as the others.
+  - **A rise with `R ≤ 0` on `main` is not read.** A rise outside 10% of both
+    W42's value and the first probe's is read as `main`'s own rise. Its
+    reading does not answer W47's question for that interval.
 
 **Bounded claims,** beside 9.4's:
 
-  - A leave-one-out probe changes the composition of the forcing, since the
-    `(dT, dq)` are converted once. So `ℓ_t` bounds the term's part in the
+  - A leave-one-out probe is not additive either. The excess takes a `max`,
+    and the bracket gives the tendency to the tags by their shares, so a
+    term's effect depends on the others. `ℓ_t` bounds the term's part in the
     forcing and does not isolate it.
   - The mechanism's cells locate where the excess grows. For the reference's
     step they do not show that the forcing's bracket gave the water, since
@@ -543,8 +554,8 @@ As 9.5, with the scope of 9.7.4. The owner decides the fix.
 **Before the job:** a short check job from the run tree, with
 `IC_PROBE_UNIT=seconds` and a window near the start. It must build all five
 models, step, and write both CSVs. `ic_miss_score2.py` must then run on
-synthetic inputs made from the first probe's CSV, which checks its parsing
-only.
+synthetic inputs made from the first probe's CSV by
+`analysis/water/ic_miss_score2_synthetic.py`, which checks its parsing only.
 
 **The job:**
 
@@ -556,3 +567,31 @@ only.
 The estimate is 4 to 5 h. The first probe took 3 h 8 min, and the five
 leave-one-out probes add five forcing evaluations to each window step.
 `analysis/water/ic_miss_score2.py` scores it.
+
+#### 9.7.7 Amended before the run (2026-09-28), after an agent's review
+
+An agent reviewed this subsection and its scripts at `e09e0986`, read-only,
+before the job. These changes follow from that review. They were made before
+the job was submitted, and nothing of the run had been read:
+
+  - **9.7.4:** the last scope case now leaves "unattributed" to 9.4's
+    verdict. Before, it called a forcing share below 0.5 9.5's
+    "unattributed" case, which 9.4's rule does not say.
+  - **9.7.4:** a rise with `R ≤ 0` is not read, and a rise far from both W42
+    and the first probe is read as `main`'s own. Before, a negative `R` or
+    forcing growth would have flipped every share's sign.
+  - **9.7.3:** P0a needs all twelve model-field files in both runs. Before,
+    one matching file passed. P3 gets a rounding band at the level.
+  - **Wording:** 9.7.1 names the energy-tag PRs whose code is live. 9.7.2
+    and the bounded claims no longer credit leave-one-out with additivity or
+    blame the `(dT, dq)` conversion, which is linear.
+  - **Committed:** `analysis/water/ic_miss_score2_synthetic.py`, the
+    synthetic check that 9.7.6 calls for.
+  - **Noted, unchanged:** both score scripts count `large_scale_advection`
+    among the local probes, which 9.4's list does not name. This
+    configuration has no such probe, so it changes nothing.
+
+The run tree stays at `e09e0986`. The driver, the configuration and `main`'s
+code at `cfc2152c` are as registered there, and the check job `13996777`
+tested them. This amendment changes only the text above and
+`ic_miss_score2.py`.
