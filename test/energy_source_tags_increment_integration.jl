@@ -15,9 +15,11 @@ step by step. The parent's increment has no such gap. This file checks:
     and none of it allocates;
  2. on the DYCOMS RF02 EDMF column with 1-moment microphysics, where the parent
     has its own post-solve correction (the default `energy_q_tot_upwinding`):
-    the closure residual is small, and the ledger explains its column total.
-    The audit, the diagnostics and the split solver read the ledger. The
-    model's fields are those of the same column without tags, bit for bit;
+    the closure residual and the ledger's left part are both at rounding,
+    since the tags' sedimentation cross blocks move the partition with the
+    falling species. The audit, the diagnostics and the split solver read the
+    ledger. The model's fields are those of the same column without tags, bit
+    for bit;
  3. the updraft's mixing of provenance on that column: the default exchange
     sums to zero over the partition and allocates only the parent helper's
     8 bytes. The audit with updraft copies is
@@ -331,19 +333,23 @@ tags = [
         @test sum(ᶜabs) > 0
         @test abs(sum(Y.c.e_src_inc_moved)) < 1e-10 * sum(ᶜabs)
 
-        # The left part explains the residual's column total, less what the
-        # loss rule flushes from it. On this column after an hour that is
-        # about 1% of the gross residual (FINDINGS E64 in the tag-closure
-        # experiments).
+        # The tags' sedimentation cross blocks (G4.16) let the Newton solve
+        # move the partition with the falling species, as it moves `E`. So
+        # nothing that changes a column's total is left for the correction,
+        # and the left part and the residual are both rounding. Without the
+        # blocks the residual was about -50 J/m² after an hour, 8e-7 of the
+        # scale, and the left part explained it (FINDINGS E64 in the
+        # tag-closure experiments). Under `enthalpy` this column's
+        # `gross_relative` is 1.5e-3 after an hour.
         closure_increment = closure(increment)
         left = sum(Y.c.e_src_inc_left)
         @info "EDMF column after an hour, J/m²" closure_increment.gross_residual closure_increment.residual left
-        @test abs(left) > 0.5 * closure_increment.gross_residual
-        @test abs(closure_increment.residual - left) <
-              0.05 * closure_increment.gross_residual
-        # Under `enthalpy` this column's `gross_relative` is 1.5e-3 after an
-        # hour; here it is 8e-7.
-        @test closure_increment.gross_relative < 1e-5
+        rounding = 1000 * eps(FT) * closure_increment.scale
+        @test abs(left) < rounding
+        @test abs(closure_increment.residual) < rounding
+        @test closure_increment.gross_residual < rounding
+        # G4.16's pre-registered bound, which the rounding check implies.
+        @test closure_increment.gross_relative < 1e-7
 
         # The audit's columns and the diagnostics read the ledger.
         audit = CA.energy_source_audit(Y, p, model, FT(1))
@@ -368,6 +374,22 @@ tags = [
         uncoupled = Set(map(field -> field.name, cache.solver.uncoupled))
         for name in (:e_src_inc_left, :e_src_inc_moved)
             @test CA.MatrixFields.FieldName(:c, name) in uncoupled
+        end
+        # G4.16: every energy source tag is solved apart, with a block to
+        # every falling species. These blocks are what took the residual above
+        # to rounding.
+        uncoupled_fields = collect(cache.solver.uncoupled)
+        mass_names = map(CA.center_state_name, CA.sedimenting_mass_names(Y))
+        tag_names = map(
+            CA.center_state_name,
+            CA.sedimenting_energy_source_tag_names(Y),
+        )
+        @test !isempty(mass_names)
+        @test !isempty(tag_names)
+        for tag_name in tag_names
+            fields = filter(field -> field.name == tag_name, uncoupled_fields)
+            @test length(fields) == 1
+            @test issubset(Set(mass_names), Set(map(first, only(fields).lower)))
         end
 
         # The model's own fields are those of the same column without tags,

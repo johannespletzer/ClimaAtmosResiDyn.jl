@@ -534,48 +534,82 @@ end
     @test enthalpy.energy_source_tagging_model.transport isa
           CA.EnthalpyEnergySourceTransport
 
-    # `enthalpy_increment` with sedimenting microphysics stepped explicitly:
-    # the tags have no sedimentation cross blocks, so they lag the parent
-    # there (FINDINGS E80 on the record branch, for 1M; 2M and P3 are not
-    # measured). The default refuses it. The opt-in key lets it through the
-    # check, with a warning.
+    # `enthalpy_increment` with sedimenting microphysics stepped explicitly.
+    # With 1M the tags' sedimentation cross blocks close the lag (PR #113's
+    # validation). So it runs with the manual Jacobian, the default, and with
+    # the dense one, which wins over the sparse autodiff one and is exact. The
+    # sparse autodiff Jacobian lacks the blocks, and without them the tags lag
+    # the parent there (FINDINGS E80 on the record branch). 2M and P3 are not
+    # measured. The default refuses those. The opt-in key lets them through
+    # the check, with a warning.
     key = "energy_source_tag_increment_allow_explicit_microphysics"
     explicit(microphysics) = (
         "microphysics_model" => microphysics,
         "implicit_microphysics" => false,
         "energy_source_tag_transport" => "enthalpy_increment",
     )
-    for microphysics in ("1M", "2M", "2MP3")
+    auto = "use_auto_jacobian" => true
+    dense = "use_dense_jacobian" => true
+    for (name, pairs) in (
+        "increment_explicit_1M" => explicit("1M"),
+        "increment_explicit_1M_dense" => (explicit("1M")..., auto, dense),
+    )
+        @test CA.AtmosTagging(source_config(name, pairs...)).energy_source_tagging_model.transport isa
+              CA.EnthalpyIncrementEnergySourceTransport
+    end
+    for (name, microphysics, pairs) in (
+        ("increment_explicit_1M_auto", "1M", (explicit("1M")..., auto)),
+        ("increment_explicit_2M", "2M", explicit("2M")),
+        ("increment_explicit_2MP3", "2MP3", explicit("2MP3")),
+    )
         @test_throws Regex("refused with\\s+`microphysics_model: $microphysics`") CA.AtmosTagging(
-            source_config("increment_explicit_$microphysics", explicit(microphysics)...),
+            source_config(name, pairs...),
         )
-        @test_throws Regex("$key: true") CA.AtmosTagging(
-            source_config("increment_explicit_$microphysics", explicit(microphysics)...),
-        )
+        @test_throws Regex("$key: true") CA.AtmosTagging(source_config(name, pairs...))
         allowed =
             @test_logs (:warn, r"stepped explicitly") match_mode = :any CA.AtmosTagging(
-                source_config(
-                    "increment_explicit_$(microphysics)_allowed",
-                    explicit(microphysics)...,
-                    key => true,
-                ),
+                source_config("$(name)_allowed", pairs..., key => true),
             )
         @test allowed.energy_source_tagging_model.transport isa
               CA.EnthalpyIncrementEnergySourceTransport
     end
-    # The message says what was measured: 1M was, 2M and P3 were not.
-    @test_throws r"2\.1e-4 of the partitioned energy, against" CA.AtmosTagging(
-        source_config("increment_explicit_1M_measured", explicit("1M")...),
+    # The message says why. Under the sparse autodiff Jacobian 1M lacks the
+    # blocks, and the lag without them was measured. 2M and P3 were not.
+    explicit_1m_auto = source_config("increment_explicit_1M_auto", explicit("1M")..., auto)
+    @test_throws r"That Jacobian does not carry the tags' sedimentation" CA.AtmosTagging(
+        explicit_1m_auto,
     )
-    @test_throws r"No run has measured the lag" CA.AtmosTagging(
+    @test_throws r"2\.1e-4 of the partitioned energy, against" CA.AtmosTagging(
+        explicit_1m_auto,
+    )
+    @test_throws r"Use the manual\s+Jacobian, the default" CA.AtmosTagging(
+        explicit_1m_auto,
+    )
+    auto_warning =
+        r"under `use_auto_jacobian: true`, because.*That Jacobian does not carry"
+    @test_logs (:warn, auto_warning) match_mode = :any CA.AtmosTagging(
+        source_config(
+            "increment_explicit_1M_auto_warned",
+            explicit("1M")...,
+            auto,
+            key => true,
+        ),
+    )
+    @test_throws r"No run has measured the closure" CA.AtmosTagging(
         source_config("increment_explicit_2M_unmeasured", explicit("2M")...),
     )
-    # The refusal concerns only that combination. With the microphysics
-    # implicit, the default, with 0M, which sediments nothing, or with another
-    # transport, nothing changes, and the key's default is off.
+    # The refusal concerns only those combinations. With the microphysics
+    # implicit, the default, also under the sparse autodiff Jacobian, with 0M,
+    # which sediments nothing, or with another transport, nothing changes, and
+    # the key's default is off.
     for (name, pairs) in (
         "increment_implicit_1m" => (
             "microphysics_model" => "1M",
+            "energy_source_tag_transport" => "enthalpy_increment",
+        ),
+        "increment_implicit_1m_auto" => (
+            "microphysics_model" => "1M",
+            "use_auto_jacobian" => true,
             "energy_source_tag_transport" => "enthalpy_increment",
         ),
         "increment_implicit_2m" => (
