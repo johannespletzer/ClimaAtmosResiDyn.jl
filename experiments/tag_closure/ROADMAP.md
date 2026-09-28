@@ -472,6 +472,11 @@ changes an approved row.
     pre-registered probe (`design/NEGATIVE_PARENT_WATER.md`, section 9), then
     C validated again. Site 23's long-run rerun, and with it OD7, waits.
     Kept C over dropping it or accepting it as is.
+    *Probed (job `13987196`), scored on 2026-09-28 (W47):* three of the four
+    unrecorded rises go to candidate 5, the forcing's vertical fluctuation,
+    in cells whose parent is negative. The fourth is unattributed. The owner
+    decides the revision of C (section 9.5), and whether the rerun on `main`
+    is still needed.
 
   - **Known issue 7: option C.** The partition tags partition the parent's
     non-negative water, `max(ρq_tot, 0)`. The follower takes that field's

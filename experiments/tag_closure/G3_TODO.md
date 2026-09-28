@@ -43,6 +43,16 @@ The twelve criteria of the plan, section 2, in short:
 
 ## Decisions
 
+  - [ ] **Option C's revision, after W47.** The probe supports candidate 5,
+    the forcing's vertical fluctuation, in three of the four unrecorded
+    rises. The fourth is unattributed. Section 9.5 of
+    `design/NEGATIVE_PARENT_WATER.md` sketches a revision: the explicit
+    attribution gets the target's treatment. The owner decides:
+      + the fix;
+      + whether the rerun on `main` after #118 (the plan of 2026-09-27) is
+        still needed;
+      + whether subsidence, whose share lies in class N, is treated with
+        the local terms.
   - [ ] **OD9 to OD14, proposed by the provenance pathway.** *Scope added
     (provenance pathway, 2026-09-26):*
     [PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), section 9. They are in [the
@@ -119,10 +129,13 @@ The twelve criteria of the plan, section 2, in short:
     23: the region tags overshoot the target by up to 2.2% of the water
     (budget 0.2%). V5's per-tag row fails for `pbl` (2.03%, from day 89).
     By section 8.3 the owner decides (Decisions). *The owner, 2026-09-25:
-    probe the miss first,* then validate again (the register). [ ] The
+    probe the miss first,* then validate again (the register). [x] The
     probe, pre-registered in the design note's section 9. [ ] C's
     validation again. *2026-09-28:* the probe ran as job `13987196` on
-    2026-09-25, with exit status 0 (RUNS.md). It is not scored yet.
+    2026-09-25, with exit status 0 (RUNS.md). *Scored 2026-09-28 (W47):*
+    three of the four unrecorded rises go to candidate 5, the forcing's
+    vertical fluctuation, and the fourth is unattributed. The revision of C
+    waits on the owner (Decisions).
     *The owner, 2026-09-25:* a persistent parent-validity flag in the
     closure tables, B and D together (the register, OD3's negative-water
     row). B, `negative_water_void`: a latch per family, key

@@ -1,0 +1,91 @@
+P0, the reference is ic_s23_c: 83 files compared at their common times, differing: none: pass
+
+== rise 30.50-30.75 days (no ledger), 2160 steps
+  P2: rise 2.0340e-02 kg/m², 1.630e-03 of the water; W42 1.636e-03: pass
+  P1: on 2.0340e-02 against the reference 2.0340e-02: pass; largest step gaps q_tot 3.58e-13, tags 3.58e-13
+  where: N 1.00, P -0.00, X 0.00 of the rise
+  ledgers, per-step change in the cells with an excess, summed, over the rise: q_tag_inc_negative 0.0127, q_tag_inc_moved 0.486, q_tag_inc_left 5.74e-11, q_tag_led_repair 0.0172, q_tag_led_rescale 0, q_tag_led_empty 0, q_tag_led_fix_pbl 0.0172, q_tag_led_fix_free 0.0172, q_tag_led_inc_pbl 0.466, q_tag_led_inc_free 0.147
+  probe explicit: share +1.000; of it in N 1.00, in P -0.00 attributes
+  probe forcing: share +1.000; of it in N 1.00, in P -0.00 attributes
+  probe forcing_horizontaladvection: share +0.022; of it in N 2.01, in P -1.01 
+  probe forcing_nudging_ta_hus: share -0.000; of it in N -0.00, in P 1.00 
+  probe forcing_nudging_ua_va: share +0.000; of it in N nan, in P nan 
+  probe forcing_subsidence: share +7.918; of it in N 1.00, in P -0.00 attributes
+  probe forcing_verticalfluctuation: share +0.563; of it in N 1.00, in P -0.00 attributes
+  probe surface_flux: share +0.000; of it in N 0.00, in P 1.00 
+  trial off_sgs_diffusive_flux: share -0.000; of it in P -0.05 
+  trial off_sgs_mass_flux: share +0.000; of it in P 0.00 
+  trial tracer: share -0.049; of it in P 1.15 
+  VERDICT: candidate 5 (forcing_verticalfluctuation)
+
+== rise 30.75-31.00 days (the control: follower ledgers), 2160 steps
+  P2: rise 2.1608e-02 kg/m², 1.898e-03 of the water; W42 2.724e-03: outside 10%, reported beside
+  P1: on 2.1608e-02 against the reference 2.1608e-02: pass; largest step gaps q_tot 1.61e-03, tags 1.61e-03
+  where: N 1.02, P -0.02, X -0.04 of the rise
+  ledgers, per-step change in the cells with an excess, summed, over the rise: q_tag_inc_negative 45.7, q_tag_inc_moved 55.8, q_tag_inc_left 0.000655, q_tag_led_repair 0.417, q_tag_led_rescale 0, q_tag_led_empty 0, q_tag_led_fix_pbl 0.417, q_tag_led_fix_free 0.417, q_tag_led_inc_pbl 92.3, q_tag_led_inc_free 14.8
+  probe explicit: share +1.048; of it in N 1.01, in P -0.01 attributes
+  probe forcing: share +1.048; of it in N 1.01, in P -0.01 attributes
+  probe forcing_horizontaladvection: share -0.037; of it in N -0.99, in P 1.99 
+  probe forcing_nudging_ta_hus: share -0.000; of it in N -0.00, in P 1.00 
+  probe forcing_nudging_ua_va: share +0.000; of it in N nan, in P nan 
+  probe forcing_subsidence: share +6.776; of it in N 1.00, in P -0.00 attributes
+  probe forcing_verticalfluctuation: share +0.468; of it in N 1.01, in P -0.01 contributes
+  probe surface_flux: share -0.000; of it in N -0.00, in P 1.00 
+  trial off_sgs_diffusive_flux: share +0.032; of it in P 1.01 
+  trial off_sgs_mass_flux: share +0.054; of it in P -0.11 
+  trial tracer: share -48.239; of it in P -0.20 
+  VERDICT: no candidate supported
+
+== rise 52.50-52.75 days (no ledger), 2160 steps
+  P2: rise 2.0481e-02 kg/m², 1.648e-03 of the water; W42 1.639e-03: pass
+  P1: on 2.0481e-02 against the reference 2.0481e-02: pass; largest step gaps q_tot 2.72e-12, tags 2.72e-12
+  where: N 1.00, P -0.00, X 0.00 of the rise
+  ledgers, per-step change in the cells with an excess, summed, over the rise: q_tag_inc_negative 0.0062, q_tag_inc_moved 0.172, q_tag_inc_left 9.18e-08, q_tag_led_repair 0.0091, q_tag_led_rescale 0, q_tag_led_empty 0, q_tag_led_fix_pbl 0.0091, q_tag_led_fix_free 0.0091, q_tag_led_inc_pbl 0.154, q_tag_led_inc_free 0.052
+  probe explicit: share +1.000; of it in N 1.00, in P -0.00 attributes
+  probe forcing: share +1.000; of it in N 1.00, in P -0.00 attributes
+  probe forcing_horizontaladvection: share +0.045; of it in N 1.00, in P -0.00 
+  probe forcing_nudging_ta_hus: share -0.000; of it in N -0.00, in P 1.00 
+  probe forcing_nudging_ua_va: share +0.000; of it in N nan, in P nan 
+  probe forcing_subsidence: share +6.388; of it in N 1.00, in P -0.00 attributes
+  probe forcing_verticalfluctuation: share +0.562; of it in N 1.00, in P -0.00 attributes
+  probe surface_flux: share -0.000; of it in N -0.00, in P 1.00 
+  trial off_sgs_diffusive_flux: share +0.000; of it in P -0.00 
+  trial off_sgs_mass_flux: share -0.000; of it in P 0.96 
+  trial tracer: share -0.032; of it in P -0.61 
+  VERDICT: candidate 5 (forcing_verticalfluctuation)
+
+== rise 52.75-53.00 days (no ledger), 2160 steps
+  P2: rise 2.4422e-02 kg/m², 1.953e-03 of the water; W42 1.932e-03: pass
+  P1: on 2.4422e-02 against the reference 2.4422e-02: pass; largest step gaps q_tot 3.64e-12, tags 3.64e-12
+  where: N 1.00, P -0.00, X 0.00 of the rise
+  ledgers, per-step change in the cells with an excess, summed, over the rise: q_tag_inc_negative 0.00984, q_tag_inc_moved 0.0945, q_tag_inc_left 4.95e-08, q_tag_led_repair 0.0102, q_tag_led_rescale 0, q_tag_led_empty 0, q_tag_led_fix_pbl 0.0102, q_tag_led_fix_free 0.0102, q_tag_led_inc_pbl 0.0909, q_tag_led_inc_free 0.0449
+  probe explicit: share +1.000; of it in N 1.00, in P -0.00 attributes
+  probe forcing: share +1.000; of it in N 1.00, in P -0.00 attributes
+  probe forcing_horizontaladvection: share +0.037; of it in N 1.00, in P -0.00 
+  probe forcing_nudging_ta_hus: share -0.000; of it in N -0.00, in P 1.00 
+  probe forcing_nudging_ua_va: share +0.000; of it in N nan, in P nan 
+  probe forcing_subsidence: share +5.540; of it in N 1.00, in P -0.00 attributes
+  probe forcing_verticalfluctuation: share +0.472; of it in N 1.00, in P -0.00 contributes
+  probe surface_flux: share +0.000; of it in N 0.00, in P 1.00 
+  trial off_sgs_diffusive_flux: share +0.000; of it in P -0.01 
+  trial off_sgs_mass_flux: share -0.000; of it in P 0.93 
+  trial tracer: share -0.056; of it in P -0.22 
+  VERDICT: no candidate supported
+
+== rise 53.00-53.25 days (no ledger), 2160 steps
+  P2: rise 2.3011e-02 kg/m², 1.829e-03 of the water; W42 1.795e-03: pass
+  P1: on 2.3011e-02 against the reference 2.3011e-02: pass; largest step gaps q_tot 3.24e-12, tags 3.24e-12
+  where: N 1.00, P -0.00, X 0.00 of the rise
+  ledgers, per-step change in the cells with an excess, summed, over the rise: q_tag_inc_negative 0.0383, q_tag_inc_moved 0.0629, q_tag_inc_left 8.16e-08, q_tag_led_repair 0.00451, q_tag_led_rescale 0, q_tag_led_empty 0, q_tag_led_fix_pbl 0.00451, q_tag_led_fix_free 0.00451, q_tag_led_inc_pbl 0.0597, q_tag_led_inc_free 0.056
+  probe explicit: share +1.000; of it in N 1.00, in P -0.00 attributes
+  probe forcing: share +1.000; of it in N 1.00, in P -0.00 attributes
+  probe forcing_horizontaladvection: share +0.040; of it in N 1.00, in P -0.00 
+  probe forcing_nudging_ta_hus: share -0.000; of it in N -0.00, in P 1.00 
+  probe forcing_nudging_ua_va: share +0.000; of it in N nan, in P nan 
+  probe forcing_subsidence: share +5.816; of it in N 1.00, in P -0.00 attributes
+  probe forcing_verticalfluctuation: share +0.501; of it in N 1.00, in P -0.00 attributes
+  probe surface_flux: share +0.000; of it in N 0.00, in P 1.00 
+  trial off_sgs_diffusive_flux: share -0.000; of it in P 0.05 
+  trial off_sgs_mass_flux: share -0.000; of it in P 0.97 
+  trial tracer: share -0.115; of it in P 0.02 
+  VERDICT: candidate 5 (forcing_verticalfluctuation)

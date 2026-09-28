@@ -98,11 +98,13 @@ not checked, it says so.
             on `main` (G3_TODO, WP4c).
           * `claude/backup/wp4b-2026-09-27` (`5d904221`): follow-ups for
             #121, never committed. Not on `main` (G3_TODO, WP4b).
-      + *Option C's miss probe ran, but is not scored.* Job `13987196`
-        finished on 2026-09-25 with exit status 0 (RUNS.md). The record has
-        its score script, `analysis/water/ic_miss_score.py`, but no finding.
-        The owner's plan of 2026-09-27 reruns it on `main` after #118, so
-        that it also gives the parent's negative water at every step.
+      + *Option C's miss probe, scored later that day: W47.* Job `13987196`
+        finished on 2026-09-25 with exit status 0, and nobody had scored it.
+        By the pre-registered rules, three of the four rises that no ledger
+        recorded go to candidate 5, the forcing's vertical fluctuation, in
+        cells whose parent is negative. The fourth is unattributed. The
+        owner decides the revision of C, and whether the rerun on `main`
+        after #118 (the plan of 2026-09-27) is still needed.
       + *#118's CI: one runner shutdown.* On 2026-09-28 the Julia 1.10 job
         `tagging_water_precipitation` stopped after 52 minutes, when GitHub's
         runner received a shutdown signal during the sphere test. The rerun
@@ -114,8 +116,12 @@ not checked, it says so.
         into the archive and removed, and 22 merged remote branches were deleted
         ("Branches, worktrees and sessions"). The archive's
         `scratch_tag_closure/` was synced first.
-      + *Where the next session starts:* score the probe, then decide on the
-        rerun; decide what becomes of the wp4b and wp4c follow-ups; #126.
+      + *Where the next session starts:* the owner's decision on C after
+        W47; what becomes of the wp4b and wp4c follow-ups; #126. The
+        uncommitted start of W45's investigation in `-plan2` is backed up
+        as `claude/backup/plan2-2026-09-25` (`b3cd940a`). Record work now
+        uses the worktree `../ClimaAtmosResiDyn-rec`, detached, pushing
+        `HEAD:claude/plan-rev2`.
       + *`main` merged into this branch* (`679c52dd`, `main` at `cfc2152c`),
         its first merge since 2026-09-23. All 21 conflicts went to
         `main`'s side. Outside `experiments/tag_closure/` this branch is
@@ -371,13 +377,22 @@ The archive tags on origin: `archive/tag-closure-experiments-2026-09-23`,
 `archive/c1c-sgs-diffusion`, `archive/m3-species-lists`,
 `archive/upstream-vwb-species-guard` and `archive/tagged-tracers`.
 
-**Where G3 works.** Model code goes on `claude/water-tags-edmf` in the worktree
-`../ClimaAtmosResiDyn-wedmf`, and G3's runs launch from
-`../ClimaAtmosResiDyn-wedmf-run`, both created on 2026-09-23 (G3_PLAN,
-section 5). Records go on `claude/tag-closure-record`. Outside
-`experiments/`, it differs from `main` only in
-`toml/tag_closure_c1_reference.toml`, which committed configs point to. Merge
-`origin/main` into it again when `main` moves.
+**Where the work goes (2026-09-28).**
+
+  - *Records* go on `claude/plan-rev2`. They are committed from
+    `../ClimaAtmosResiDyn-rec`, detached, and pushed with
+    `git push origin HEAD:claude/plan-rev2` after a rebase. Outside
+    `experiments/tag_closure/`, this branch differs from `main` only in
+    `toml/tag_closure_c1_reference.toml`, which committed configs point to.
+    Merge `origin/main` into it again when `main` moves.
+  - *Model code* goes on a branch off `main`, one per change, and reaches
+    `main` by a PR.
+  - *Runs* launch from a detached run tree at a record commit. Where a run
+    needs code not yet on `main`, the PR's branch is merged into that tree.
+
+Until 2026-09-25 the record was `claude/tag-closure-record`, and G3's code
+went on `claude/water-tags-edmf` (worktrees `-wedmf` and `-wedmf-run`,
+2026-09-23). `-wedmf` was removed on 2026-09-28.
 
 **2026-09-28, after that day's housekeeping.** The table above is as it
 stood on 2026-09-23. Beside the repository there are now:

@@ -89,7 +89,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                                   | section                                             |
 |:----------------------------------------------------- |:--------------------------------------------------- |
-| W1–W45                                                | 1. Water tags                                       |
+| W1–W47                                                | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48, E85 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11                 | 3. The energy reference and the offset              |
 | E40, E53                                              | 4. EDMF and the updrafts                            |
@@ -1670,6 +1670,89 @@ same run tree otherwise; the window from 6600 s.
 `d0c0064a`, #119), and V2, job `13973349`, the same tree.
 `analysis/water/wp4c_gate_score.py --startup 6600`, `wp4c_corr_compare.py`;
 `output/wp4c_corr/`.*
+
+**W47. Option C's miss at site 23, the probe. The four rises of the excess
+that no ledger recorded lie wholly in cells whose parent is negative at the
+step's start. The external forcing, applied alone at each step's start,
+reproduces each of them. By the pre-registered rules, three of the four go
+to candidate 5, the forcing's vertical fluctuation (shares 0.50 to 0.56). In
+the fourth that term only contributes (0.47), and no candidate is supported.
+Candidates 1 to 4 are supported in none. Each share bounds a term's part.
+None isolates a cause.** The probe of `design/NEGATIVE_PARENT_WATER.md`
+section 9 reruns `ic_s23_c` to day 53.3. At each of the 13,824 steps in the
+windows days 30.3–31.0 and 52.4–53.3 it records:
+
+  - the excess's change, split by where it lies: class N (parent at or below
+    zero at the step's start), class P (parent above zero), and class X (the
+    parent changes sign over the step);
+  - each explicit process applied alone;
+  - four one-step trials.
+
+The validity checks of section 9.3:
+
+  - **P0 passes.** The probe's 83 NetCDF files match `ic_s23_c`'s bit for
+    bit at every common output time.
+  - **P1 passes** for all five rises. The largest step gap is 3.6e-12 in the
+    no-ledger rises and 1.6e-3 in the control.
+  - **P2 passes** for the four no-ledger rises, each within 1.9% of W42's
+    6-hourly value. The control's rise, 1.90e-3 of the water, is 30% below
+    W42's 2.72e-3. It is reported beside W42's value, as section 9.3 says.
+
+| rise (days)          | R / W (W42)                  | in N | forcing | subsidence | vertical fluctuation | horizontal advection | `tracer` trial | verdict                       |
+|:-------------------- |:---------------------------- |:---- |:------- |:---------- |:-------------------- |:-------------------- |:-------------- |:----------------------------- |
+| 30.50–30.75          | 1.630e-3 (1.636e-3)          | 1.00 | 1.000   | 7.92       | 0.563                | 0.022                | −0.049         | candidate 5                   |
+| 52.50–52.75          | 1.648e-3 (1.639e-3)          | 1.00 | 1.000   | 6.39       | 0.562                | 0.045                | −0.032         | candidate 5                   |
+| 52.75–53.00          | 1.953e-3 (1.932e-3)          | 1.00 | 1.000   | 5.54       | 0.472                | 0.037                | −0.056         | none (0.472 only contributes) |
+| 53.00–53.25          | 1.829e-3 (1.795e-3)          | 1.00 | 1.000   | 5.82       | 0.501                | 0.040                | −0.115         | candidate 5                   |
+| 30.75–31.00, control | 1.898e-3 (2.724e-3, outside) | 1.02 | 1.048   | 6.78       | 0.468                | −0.037               | −48.2          | none                          |
+
+In every rise, the whole explicit tendency has the forcing's share. The two
+nudging terms and the surface flux have shares of 0.000. The
+`off_sgs_mass_flux` and `off_sgs_diffusive_flux` trials reach at most 0.054
+in the control and 0.000 elsewhere. The forcing's, subsidence's and the
+vertical fluctuation's shares lie in class N (1.00, and 1.01 in the control).
+
+  - **Candidates 1 to 4 are not supported.**
+      + *Candidate 1:* the subsidence term alone grows the excess by 5.5 to
+        7.9 times each rise. But all of it lies in class N, and candidate 1
+        needs class P.
+      + *Candidates 2 and 3:* the SGS trials are near zero, and the
+        `tracer` trial's share is negative.
+      + *Candidate 4:* class X holds none of any rise.
+  - **The terms' shares do not add up to the forcing's.** Subsidence alone
+    exceeds the whole forcing's share five- to eight-fold. The excess is not
+    linear in the tendency, and each term is applied alone at the step's
+    start. So terms that partly cancel within the forcing each show their
+    own share. The shares bound each term's part. They do not divide the
+    rise between the terms.
+  - **Outside the rules' mapping (reported, not scored):** subsidence is a
+    term of the forcing, and its share lies in class N. Section 9.4 lists it
+    under candidate 1 only, which needs class P. Whether it belongs with
+    candidate 5's local terms is a question this probe does not decide.
+  - **The control:** in the rise the follower carried, the per-step ledgers
+    in the cells with an excess move by 46 times the rise
+    (`q_tag_inc_negative`) and 56 times (`q_tag_inc_moved`). This matches
+    what W42 found per 6 hours. The `tracer` trial's share is −48: with the
+    follower off, the one-step trials grow the excess by about 49 times the
+    rise. Section 9.2's amendment says this trial bounds the follower's part
+    only loosely.
+  - **What it means, by section 9.5:** candidate 5 is an explicit process.
+    As section 9.1 describes it, the process's bracket gives a cell whose
+    parent is negative new region water. The target, zero there, does not
+    have it, and no ledger records it. The probe supports that reading for
+    three rises. It does not show it cell by cell. A revision would give the
+    explicit attribution the target's treatment. Water produced where the
+    parent stays at or below zero would enter the negative part, not the
+    region tags. The follower's negative-part entry is the pattern. The
+    owner decides the fix. The owner also decides whether the rerun on
+    `main` after #118 (the plan of 2026-09-27) is still needed.
+
+*`hpda2_compute`, 2026-09-25, job `13987196`, run tree
+`../ClimaAtmosResiDyn-ic-probe-run` at `49958c1b` (`ic_s23_c`'s code
+`e6bab0fc` with the record), `analysis/water/ic_miss_probe.jl`,
+`configs/ic_miss_probe_s23.yml`. Scored on 2026-09-28 with
+`analysis/water/ic_miss_score.py`, unchanged since `cf4f4fa9` (19 s before
+the job started); `output/ic_miss_probe/`.*
 
 ## 2. Energy source tags: closure by transport
 
