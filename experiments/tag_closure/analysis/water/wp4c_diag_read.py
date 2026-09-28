@@ -26,7 +26,14 @@ import numpy as np
 parser = argparse.ArgumentParser()
 parser.add_argument("diag_dir")
 parser.add_argument("--dt", type=float, default=120.0)
+parser.add_argument("--v1-csv", help="V1's gate CSV, to check X against its per-step part 2a")
+parser.add_argument("--w40-csv", help="W40's gate CSV, to check X + L against its per-step part 2a")
 args = parser.parse_args()
+
+
+def gate_column(path, column="vdiff_ledger_q_tag_inc_moved_gross"):
+    with open(path) as f:
+        return {float(r["t_seconds"]): float(r[column]) for r in csv.DictReader(f)}
 
 PARTS = ["tend", "filt_q", "filt_T", "lin_o", "jac", "post_diff", "constr_diff"]
 
@@ -54,6 +61,18 @@ for steps_path in sorted(glob.glob(os.path.join(args.diag_dir, "*_diag_steps.csv
     for q in ("X", "XL", "L", "leak", "leak_residual"):
         print(f"   {q:14s} gross {per_day(S[:, col[q + '_gross']].sum()):.4e}   "
               f"net {per_day(S[:, col[q + '_net']].sum()):+.3e}")
+    for label, path, q in (("V1", args.v1_csv, "X"), ("W40", args.w40_csv, "XL")):
+        if path:
+            g = gate_column(path)
+            ours = S[:, col[q + "_gross"]]
+            theirs = np.array([g[t] for t in S[:, 0]])
+            rel = np.abs(ours / theirs - 1)
+            print(f"   check: {q} against {label}'s per-step part 2a: Σ ours / Σ theirs = "
+                  f"{ours.sum() / theirs.sum():.6f}; per step, largest relative gap {rel.max():.2e}, "
+                  f"median {np.median(rel):.2e}")
+    for q in ("A_precomputed_max_absdiff", "A_cloud_fraction_max_absdiff", "A_K_h_max_absdiff"):
+        if q in col:
+            print(f"   {q}: largest {np.nanmax(S[:, col[q]]):.3e}, median {np.nanmedian(S[:, col[q]]):.3e}")
     rise = S[:, col["X_gross"]].sum() - S[:, col["XL_gross"]].sum()
     print(f"   rise, Σ|X| − Σ|X + L|: {per_day(rise):+.4e}")
     print(f"   check: stage weights reproduce A's moved to {S[:, col['A_stage_weight_error']].max():.2e} kg m-3")
@@ -90,11 +109,25 @@ for steps_path in sorted(glob.glob(os.path.join(args.diag_dir, "*_diag_steps.csv
               f"unexplained gross A {unexp[0]:.2e}, B {unexp[1]:.2e} of W a day")
         print(f"   {'part':12s} {'Σ|part of X|':>13s} {'Σ|part of L|':>13s} {'⟨part,−L⟩/⟨L,L⟩':>16s} "
               f"{'Σ|X|−Σ|X−part|':>15s}")
-        for part in PARTS:
-            pA = Cc[:, ccol[f"{s}_A_{part}"]]
-            pB = Cc[:, ccol[f"{s}_B_{part}"]]
+        groups = [(part, [part]) for part in PARTS] + [
+            ("filt_q+filt_T", ["filt_q", "filt_T"]),
+            ("solve, all", ["filt_q", "filt_T", "lin_o", "jac"]),
+        ]
+        for part, members in groups:
+            pA = sum(Cc[:, ccol[f"{s}_A_{m}"]] for m in members)
+            pB = sum(Cc[:, ccol[f"{s}_B_{m}"]] for m in members)
             pL = pB - pA
             marginal = np.sum(np.abs(X) * J) - np.sum(np.abs(X - pA) * J)
             print(f"   {part:12s} {per_day(np.sum(np.abs(pA) * J)):13.4e} "
                   f"{per_day(np.sum(np.abs(pL) * J)):13.4e} {ip(pA, -L) / LL:+16.3f} "
                   f"{per_day(marginal):+15.4e}")
+        # A's sub-parts: the parent's leak term and the partition's correction,
+        # each through its own solve (inside the parts above, not added to them).
+        for part in ("leak_tend", "leak_solve", "leak_parent", "leak_partition"):
+            key = f"{s}_A_{part}"
+            if key not in ccol:
+                continue
+            pA = Cc[:, ccol[key]]
+            marginal = np.sum(np.abs(X) * J) - np.sum(np.abs(X - pA) * J)
+            print(f"   (sub) {part:14s} {per_day(np.sum(np.abs(pA) * J)):13.4e} {'':13s} "
+                  f"{ip(pA, -L) / LL:+16.3f} {per_day(marginal):+15.4e}")

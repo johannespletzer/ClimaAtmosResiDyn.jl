@@ -34,6 +34,8 @@ up = col("on_ledger_q_tag_led_upleaknet_net")
 net = col("on_ledger_q_tag_led_leaknet_net")
 src = col("diffusion_up_source_net")
 src_gross = col("diffusion_up_source_gross")
+grid = col("vdiff_source_net")
+grid_gross = col("vdiff_source_gross")
 print(f"{len(t)} steps, t = {t[0]:.0f} s to {t[-1]:.0f} s; water at the end {water[-1]:.6g} kg m-2")
 for label, keep in (("whole run", t > 0), ("established flow", t > args.startup)):
     u, s, n = up[keep].sum(), src[keep].sum(), net[keep].sum()
@@ -42,6 +44,8 @@ for label, keep in (("whole run", t > 0), ("established flow", t > args.startup)
     print(f"   Σ dt ∫ ρ leak_diffusion_up dz {s:+.5e} kg m-2 (gross {src_gross[keep].sum():.5e})")
     print(f"   ratio of the first to minus the second: {u / -s:.4f}")
     print(f"   Σ ∫ Δleaknet dz (grid mean, unweighted): {n:+.3e} kg m-2")
+    print(f"   the grid mean's closed-form leak, Σ dt ∫ ρ leak_vdiff dz: {grid[keep].sum():+.3e} "
+          f"(gross {grid_gross[keep].sum():.5e}): a flux divergence, unweighted")
     k = keep & (np.abs(src) > 0)
     r = up[k] / -src[k]
     print(f"   per step: correlation {np.corrcoef(up[k], -src[k])[0, 1]:.4f}; ratio median "

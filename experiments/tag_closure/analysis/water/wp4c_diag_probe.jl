@@ -1,7 +1,7 @@
 # Why WP4c's `vdiff` correction raises the gate's part 2a (FINDINGS W45, W46).
 #
 #   CONFIG=<configs/wp4c_corr_d4w_default.yml> OUTDIR=<dir> \
-#       [T_START=6600] [T_END=10800] [EVERY=1] [SETS=default] \
+#       [T_START=6600] [T_END=10800] [EVERY=1] [SETS=gate,sync] \
 #       julia --project=<env at the validation's run tree> wp4c_diag_probe.jl
 #
 # The reference is CONFIG as it is: D4-W under the follower with
@@ -16,12 +16,22 @@
 # X + L = Δmoved(B) − Δmoved(C) is W40's. L = Δmoved(B) − Δmoved(A) is what
 # the correction takes out of the follower's moved part.
 #
-# SETS picks solver variants for the trials (the reference is unchanged):
-#   default           the config's solver (one Newton iteration, 2 linear
-#                     iterations);
-#   lin<k>            `approximate_linear_solve_iters: k`;
-#   newton<n>lin<k>   also `max_newton_iters_ode: n`.
-# Each is its own A, B, C, with the same types, so they compile once.
+# SETS picks how the trials are run (the reference is unchanged), as tokens
+# joined by `_`:
+#   gate     the trials step at every step from the start, as the gate's probe
+#            runs them, and each takes the reference's state only;
+#   sync     the trials step only at the sampled steps, and each first takes
+#            the reference's cloud fraction as it stood before the reference's
+#            previous step. The model computes the cloud fraction by a Picard
+#            iteration that starts from the cache's previous value
+#            (`set_covariance_cache_and_cloud_fraction!`), so a trial that
+#            takes only `Yₖ` recomputes it from its own history. With the sync
+#            its precomputed quantities are the reference's bit for bit, which
+#            the probe checks for A (`A_precomputed_max_absdiff`);
+#   lin<k>   `approximate_linear_solve_iters: k` for the trials;
+#   newton<n> `max_newton_iters_ode: n` for the trials.
+# E.g. `gate`, `sync`, `sync_lin8`, `sync_newton3_lin8`. The sets share their
+# types, so they compile once.
 #
 # Each implicit stage is recorded in the follower's post-solve hook, which this
 # script redefines to call the model's own correction and then read, without
@@ -65,16 +75,18 @@ RUN = splitext(basename(CONFIG))[1]
 T_START = parse(Float64, get(ENV, "T_START", "6600"))
 T_END = parse(Float64, get(ENV, "T_END", "10800"))
 EVERY = parse(Int, get(ENV, "EVERY", "1"))
-SETS = split(get(ENV, "SETS", "default"), ",")
+SETS = split(get(ENV, "SETS", "gate,sync"), ",")
 seconds(x) = CA.time_to_seconds(x)
 @info "ClimaAtmos" path = pathof(CA)
 
-function solver_settings(set)
-    set == "default" && return (;)
-    m = match(r"^(?:newton(\d+))?lin(\d+)$", set)
-    isnothing(m) && error("SETS entries are default, lin<k> or newton<n>lin<k>, got $set")
-    newton = isnothing(m.captures[1]) ? nothing : parse(Int, m.captures[1])
-    return (; newton, linear = parse(Int, m.captures[2]))
+function set_settings(set)
+    tokens = split(set, "_")
+    all(t -> t in ("gate", "sync") || occursin(r"^(lin|newton)\d+$", t), tokens) ||
+        error("SETS entries are tokens gate, sync, lin<k>, newton<n> joined by _, got $set")
+    ("gate" in tokens) == ("sync" in tokens) && error("a set is either gate or sync: $set")
+    pick(prefix) = (i = findfirst(t -> startswith(t, prefix), tokens);
+        isnothing(i) ? nothing : parse(Int, tokens[i][(length(prefix) + 1):end]))
+    return (; sync = "sync" in tokens, linear = pick("lin"), newton = pick("newton"))
 end
 
 function config(; tag, corr = nothing, off = false, t_end, solver = (;))
@@ -87,9 +99,9 @@ function config(; tag, corr = nothing, off = false, t_end, solver = (;))
     isnothing(corr) || (dict["water_tag_leak_correction"] = corr)
     off && (dict["edmfx_sgs_diffusive_flux"] = false)
     dict["t_end"] = "$(t_end)secs"
-    haskey(solver, :linear) && (dict["approximate_linear_solve_iters"] = solver.linear)
-    haskey(solver, :newton) && !isnothing(solver.newton) &&
-        (dict["max_newton_iters_ode"] = solver.newton)
+    isnothing(get(solver, :linear, nothing)) ||
+        (dict["approximate_linear_solve_iters"] = solver.linear)
+    isnothing(get(solver, :newton, nothing)) || (dict["max_newton_iters_ode"] = solver.newton)
     return CA.AtmosConfig(dict; job_id = "$(RUN)_diag_$tag")
 end
 
@@ -128,8 +140,10 @@ function copy_common!(dest, src)
     parent(dest.f) .= parent(src.f)
     return dest
 end
-function take_state!(integrator, Y, t)
+function take_state!(integrator, Y, t; cloud_fraction = nothing)
     copy_common!(integrator.u, Y)
+    isnothing(cloud_fraction) ||
+        (integrator.p.precomputed.ᶜcloud_fraction .= cloud_fraction)
     integrator.t = t
     CA.set_precomputed_quantities!(integrator.u, integrator.p, integrator.t)
     steps = CA._tag_ledger_steps(integrator.p.tagging)
@@ -252,6 +266,43 @@ function record_stage!(dY, U, p)
         entry[:post_diff] = post .- C[:post]
         entry[:constr_diff] = constr .- C[:constr]
         entry[:X_m] = m .- C[:m]
+        # A sub-part of the above: the parent's leak term and the partition's
+        # correction, at the first guess, each through its own solve. The
+        # correction has no Jacobian block and the parent's `ρq_tot` row holds
+        # more blocks than the tags' rows, so the two need not cancel after the
+        # solve even where they cancel before it.
+        if REC.label == :A
+            Û = cache.temp
+            ᶠρK_h = CA.Fields.Field(eltype(Û.c.ρ), axes(Û.f))
+            @. ᶠρK_h = CA.ᶠinterp(Û.c.ρ) * p.precomputed.ᶠK_h
+            b_leak = similar(nc.f)
+            b_leak .= 0
+            b_leak.c.ρq_tot .= CA.ᶜdiffusive_flux_divergenceᵥ(ᶠρK_h, CA._leaking_water(Û, p))
+            correction = similar(nc.f)
+            correction .= 0
+            CA.apply_water_tag_leak_correction!(
+                correction,
+                Û,
+                p,
+                ᶠρK_h,
+                p.scratch.ᶜtagging_q_leak_correction,
+                nothing,
+                false,
+            )
+            for name in tags
+                getproperty(b_leak.c, name) .= getproperty(correction.c, name)
+            end
+            b_leak .*= dtγ
+            entry[:leak_tend] = mpart(b_leak, partition)
+            entry[:leak_solve] = solve_m(j, b_leak, partition) .- entry[:leak_tend]
+            # The parent's leak term alone through the parent's solve, and the
+            # partition's correction alone through the tags' solve.
+            b_parent = similar(b_leak)
+            b_parent .= 0
+            b_parent.c.ρq_tot .= b_leak.c.ρq_tot
+            entry[:leak_parent] = solve_m(j, b_parent, partition)
+            entry[:leak_partition] = solve_m(j, b_leak .- b_parent, partition)
+        end
     end
     REC.data[(REC.set, REC.label, s)] = entry
     return nothing
@@ -263,6 +314,27 @@ function (correction::CA.WaterTagIncrementCorrection)(dY, U, p, t)
     CA.correct_water_tag_increment!(dY, U, p)
     REC.active && record_stage!(dY, U, p)
     return nothing
+end
+
+# The precomputed quantities that are fields, to compare a trial's cache with
+# the reference's.
+precomputed_fields(p) = [
+    name => getproperty(p.precomputed, name) for
+    name in propertynames(p.precomputed) if
+    getproperty(p.precomputed, name) isa CA.Fields.Field
+]
+precomputed_snapshot(p) =
+    Dict(name => copy(parent(x)) for (name, x) in precomputed_fields(p))
+function precomputed_difference(snapshot, p)
+    worst, names = 0.0, Symbol[]
+    for (name, x) in precomputed_fields(p)
+        a, b = snapshot[name], parent(x)
+        all(isequal.(a, b)) && continue
+        push!(names, name)
+        d = [abs(u - v) for (u, v) in zip(a, b) if isfinite(u) && isfinite(v)]
+        worst = max(worst, isempty(d) ? Inf : Float64(maximum(d)))
+    end
+    return worst, names
 end
 
 net(ᶜf) = Float64(sum(ᶜf))
@@ -283,7 +355,7 @@ function diag()
     dt = Float64(seconds(reference.dt))
     trials = Dict{Tuple{String, Symbol}, Any}()
     for set in SETS
-        solver = solver_settings(set)
+        solver = set_settings(set)
         for (label, kwargs) in ((:C, (; off = true)), (:B, (; corr = false)), (:A, (;)))
             @info "building" set label
             flush(stderr)
@@ -299,8 +371,8 @@ function diag()
     J = column(CA.Fields.local_geometry_field(reference.u.c).J)
     ᶜleak = similar(reference.u.c.ρ)
     for set in SETS
-        newton = get(solver_settings(set), :newton, nothing)
-        decompose = isnothing(newton) || newton == 1
+        settings = set_settings(set)
+        decompose = isnothing(settings.newton) || settings.newton == 1
         rows = Vector{Vector{Float64}}()
         header = String[]
         cells = Vector{Vector{Float64}}()
@@ -313,30 +385,49 @@ function diag()
             start_as_driver!(reference)
         end
         step_index = 0
+        cf_previous = nothing
         while seconds(reference.t) < T_END - 1e-6
             step_index += 1
             tₖ = reference.t
             sampled = seconds(tₖ) >= T_START - 1e-6 && (step_index % EVERY == 0)
-            if !sampled
+            # The reference's cloud fraction at this step's start, and at the
+            # previous step's start, from which this one was iterated.
+            cf_now = copy(reference.p.precomputed.ᶜcloud_fraction)
+            cf_sync = settings.sync ? cf_previous : nothing
+            cf_previous = cf_now
+            if !sampled && settings.sync
                 CA.CTS.step!(reference)
                 continue
             end
             Yₖ = copy(reference.u)
+            reference_cache = precomputed_snapshot(reference.p)
             CA.CTS.step!(reference)
             ends = Dict{Symbol, Any}()
+            precomputed_gap = NaN
+            cf_gap = K_h_gap = NaN
             for label in (:C, :B, :A)
                 trial = trials[(set, label)]
-                take_state!(trial, Yₖ, tₖ)
-                REC.label, REC.stage, REC.integrator, REC.active = label, 0, trial, true
+                take_state!(trial, Yₖ, tₖ; cloud_fraction = cf_sync)
+                if label == :A
+                    precomputed_gap, gap_names = precomputed_difference(reference_cache, trial.p)
+                    cf_gap = Float64(maximum(abs.(reference_cache[:ᶜcloud_fraction] .-
+                        parent(trial.p.precomputed.ᶜcloud_fraction))))
+                    K_h_gap = Float64(maximum(abs.(reference_cache[:ᶠK_h] .-
+                        parent(trial.p.precomputed.ᶠK_h))))
+                    sampled && !isempty(gap_names) && (step_index % 10 == 0 || isempty(rows)) &&
+                        @info "A's precomputed differ from the reference's" set t = seconds(tₖ) precomputed_gap gap_names
+                end
+                REC.label, REC.stage, REC.integrator, REC.active = label, 0, trial, sampled
                 CA.CTS.step!(trial)
                 REC.active = false
                 @assert trial.t == reference.t
                 ends[label] = trial.u.c.q_tag_inc_moved .- Yₖ.c.q_tag_inc_moved
             end
+            sampled || continue
             # The closed-form leak and the part the correction cannot take
             # (where the partition's shares do not sum to 1), at `Yₖ`.
             A = trials[(set, :A)]
-            take_state!(A, Yₖ, tₖ)
+            take_state!(A, Yₖ, tₖ; cloud_fraction = cf_sync)
             CA.water_tag_leak!(ᶜleak, Yₖ, A.p, Val(:vdiff))
             ᶜl = @. dt * Yₖ.c.ρ * ᶜleak
             CA.water_tag_share_norm!(A.p, Yₖ)
@@ -384,6 +475,14 @@ function diag()
                             push!(hdr, "s$(i)_$(label)_$(part)_net", "s$(i)_$(label)_$(part)_gross")
                             cellcols["s$(i)_$(label)_$(part)"] = column(ᶜpart)
                         end
+                        if label == :A
+                            for part in (:leak_tend, :leak_solve, :leak_parent, :leak_partition)
+                                ᶜpart = w .* e[part]
+                                push!(row, net(ᶜpart), gross(ᶜpart))
+                                push!(hdr, "s$(i)_A_$(part)_net", "s$(i)_A_$(part)_gross")
+                                cellcols["s$(i)_A_$(part)"] = column(ᶜpart)
+                            end
+                        end
                         push!(row, gross(rest), e[:resolve_error], e[:linearity_error])
                         push!(hdr, "s$(i)_$(label)_unexplained_gross",
                             "s$(i)_$(label)_resolve_error", "s$(i)_$(label)_linearity_error")
@@ -391,8 +490,9 @@ function diag()
                 end
             end
             # The step's moved change against the weighted stages (A).
-            push!(row, maximum(abs.(parent(recon .- ends[:A]))))
-            push!(hdr, "A_stage_weight_error")
+            push!(row, maximum(abs.(parent(recon .- ends[:A]))), precomputed_gap, cf_gap, K_h_gap)
+            push!(hdr, "A_stage_weight_error", "A_precomputed_max_absdiff",
+                "A_cloud_fraction_max_absdiff", "A_K_h_max_absdiff")
             isempty(header) && append!(header, hdr)
             push!(rows, row)
             if isempty(cell_header)

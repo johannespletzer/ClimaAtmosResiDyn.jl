@@ -1,0 +1,15 @@
+360 steps, t = 120 s to 43200 s; water at the end 11.5607 kg m-2
+-- whole run, 360 steps
+   Σ ∫ Δupleaknet dz            -3.60679e-04 kg m-2 (-3.120e-05 of the water)
+   Σ dt ∫ ρ leak_diffusion_up dz +3.61442e-04 kg m-2 (gross 4.15583e-03)
+   ratio of the first to minus the second: 0.9979
+   Σ ∫ Δleaknet dz (grid mean, unweighted): +1.818e-17 kg m-2
+   the grid mean's closed-form leak, Σ dt ∫ ρ leak_vdiff dz: -1.469e-19 (gross 7.46348e-02): a flux divergence, unweighted
+   per step: correlation 0.9951; ratio median 0.9917, 5th to 95th percentile 0.7507 to 1.1547
+-- established flow, 305 steps
+   Σ ∫ Δupleaknet dz            -3.40088e-04 kg m-2 (-2.942e-05 of the water)
+   Σ dt ∫ ρ leak_diffusion_up dz +3.39886e-04 kg m-2 (gross 3.97650e-03)
+   ratio of the first to minus the second: 1.0006
+   Σ ∫ Δleaknet dz (grid mean, unweighted): +1.882e-17 kg m-2
+   the grid mean's closed-form leak, Σ dt ∫ ρ leak_vdiff dz: -1.322e-19 (gross 7.18282e-02): a flux divergence, unweighted
+   per step: correlation 0.9956; ratio median 0.9897, 5th to 95th percentile 0.7754 to 1.1736
