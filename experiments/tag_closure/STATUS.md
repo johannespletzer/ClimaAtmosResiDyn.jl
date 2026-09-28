@@ -115,9 +115,11 @@ not checked, it says so.
         ("Branches, worktrees and sessions"). The archive's
         `scratch_tag_closure/` was synced first.
       + *Where the next session starts:* score the probe, then decide on the
-        rerun; decide what becomes of the wp4b and wp4c follow-ups; #126;
-        merge `main` into this branch. Every conflict of that merge resolves
-        to `main`'s side (#125's description).
+        rerun; decide what becomes of the wp4b and wp4c follow-ups; #126.
+      + *`main` merged into this branch* (`679c52dd`, `main` at `cfc2152c`),
+        its first merge since 2026-09-23. All 21 conflicts went to
+        `main`'s side. Outside `experiments/tag_closure/` this branch is
+        `main` again, plus `toml/tag_closure_c1_reference.toml`.
 
   - **Update, 2026-09-26: the provenance pathway, proposed.**
     [PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md) proposes a revision of rev.
