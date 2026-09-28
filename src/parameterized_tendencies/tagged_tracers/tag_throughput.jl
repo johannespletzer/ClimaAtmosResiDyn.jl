@@ -529,6 +529,13 @@ the correction after each solve moved into or out of it; and
 `e_src_led_src_<name>` for every tag, what the sources' brackets
 (`attribute_energy_source_tags!`) put into it or took out of it. The last one's
 per-step gross is OD4's scale (`energy_source_throughput`).
+
+The source ledgers end with `e_src_led_src_res`, the residual's own: what the
+brackets did to `e_src_res`, the part of the total the partition's tags did
+not take (G4.4). It is the net residual source attribution. Only where the
+pure region tags' masks are a verified partition is its per-step gross the
+loss rule's flush of the residual. The tag name `res` is refused, so the name
+cannot collide with a tag's.
 """
 energy_source_ledger_fix_names(::Nothing) = ()
 energy_source_ledger_fix_names(model::EnergySourceTaggingModel) =
@@ -541,8 +548,21 @@ energy_source_ledger_inc_names(model::EnergySourceTaggingModel) =
     _prefixed_tag_names(Val(:e_src_led_inc_), model.tags) : ()
 energy_source_ledger_src_names(::Nothing) = ()
 energy_source_ledger_src_names(model::EnergySourceTaggingModel) =
-    has_energy_source_ledger_per_tag(model) ?
-    _prefixed_tag_names(Val(:e_src_led_src_), model.tags) : ()
+    has_energy_source_ledger_per_tag(model) ? _src_ledger_names(model.tags) : ()
+# The source ledgers of the tags, then the residual's, as one literal tuple.
+@generated _src_ledger_names(tags::Tuple) = QuoteNode((
+    (Symbol(:e_src_led_src_, _tag_type_name(T)) for T in tags.parameters)...,
+    :e_src_led_src_res,
+))
+
+"""
+    ENERGY_SOURCE_RESIDUAL_LEDGER
+
+`:e_src_led_src_res`, the residual's own source ledger among each energy source
+tag's source ledgers (`energy_source_ledger_src_names`). It belongs to no tag,
+so the audit gives it no inventory fraction.
+"""
+const ENERGY_SOURCE_RESIDUAL_LEDGER = :e_src_led_src_res
 energy_source_per_tag_ledger_names(model) = (
     energy_source_ledger_fix_names(model)...,
     energy_source_ledger_inc_names(model)...,
@@ -813,7 +833,10 @@ function _tag_ledger_audit(steps, Y, prefix, scale, fix_gross, parent_scale)
         column!("$(short)_attempted", attempted)
         column!("$(short)_attempted_relative", per_scale(attempted))
         column!("$(short)_events", tag_event_total((ledger.ᶜevents,)))
-        if is_tag_per_tag_ledger_name(name)
+        # The residual's source ledger belongs to no tag, so it has no
+        # inventory to set its gross against (G4.4).
+        if is_tag_per_tag_ledger_name(name) &&
+           name != ENERGY_SOURCE_RESIDUAL_LEDGER
             per_tag = true
             tag_name = chopprefix(
                 chopprefix(chopprefix(short, "led_fix_"), "led_inc_"),
@@ -847,8 +870,12 @@ sources, of the per-step gross of each tag's source ledger,
 `Σ_steps |Δ e_src_led_src_<name>|`, integrated. The partition's tags receive
 every source in full, gains by their masks and losses by their shares, so each
 unit of source energy counts once; the source tags overlay it and are left out.
-A window's throughput is the difference of two values. `nothing` where the
-tags keep no ledger per tag. Collective, as `sum` is.
+That holds only where their masks sum to one, a verified partition
+([`energy_source_partition_verified`](@ref)). A strict subset counts too
+little and an overlap too much, so the tables write `NaN` there. This function
+returns the sum either way. A window's throughput is the difference of two
+values. `nothing` where the tags keep no ledger per tag. Collective, as `sum`
+is.
 """
 energy_source_throughput(Y, p, model) =
     _energy_source_throughput(_tag_ledger_steps(p.tagging), model)

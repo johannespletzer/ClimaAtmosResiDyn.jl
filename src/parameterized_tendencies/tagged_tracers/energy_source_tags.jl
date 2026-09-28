@@ -296,6 +296,11 @@ when they are disabled. Contains:
   - `ᶠenergy_source_interior`: one on every face but the bottom one, where it
     is zero. `sediment_energy_source_tags!` uses it to keep the lowest cell as
     the donor at the surface, where there is no cell below.
+  - `energy_source_partition_deviation`: how far the masks of the pure region
+    tags are from summing to 1, a number
+    ([`energy_source_partition_deviation`](@ref)). The throughput and the
+    flush are read only where it is within
+    [`energy_source_partition_tolerance`](@ref).
   - Under `energy_source_tag_transport: enthalpy_increment` only, the fields of
     `snapshot_energy_source_increment!` and `correct_energy_source_increment!`:
     the snapshots of `ρe_tot`, `ρ` and the partition's sum at the start of an
@@ -305,6 +310,11 @@ when they are disabled. Contains:
 _energy_source_tagging_cache(Y, ::Nothing) = nothing
 function _energy_source_tagging_cache(Y, model::EnergySourceTaggingModel)
     ᶜenergy_source_masks = _tag_masks(Fields.coordinate_field(Y.c), model.tags)
+    partition_deviation = energy_source_partition_deviation(
+        ᶜenergy_source_masks,
+        energy_source_region_tag_state_names(model),
+        Y.c.ρ,
+    )
     _check_region_partition(
         ᶜenergy_source_masks,
         energy_source_region_tag_state_names(model),
@@ -337,10 +347,58 @@ function _energy_source_tagging_cache(Y, model::EnergySourceTaggingModel)
         ᶜenergy_source_pos,
         ᶜenergy_source_neg,
         ᶠenergy_source_interior,
+        energy_source_partition_deviation = partition_deviation,
         _energy_source_increment_cache(Y, model)...,
         _energy_source_copy_cache(Y, model)...,
     )
 end
+
+"""
+    energy_source_partition_tolerance(FT)
+
+How far the masks of the pure region tags may sum from 1 for them to count as
+a verified partition: 100 rounding units of `FT`, 2.2e-14 in Float64 and
+1.2e-5 in Float32. It is the level above which `enthalpy_increment` refuses
+the masks, as the water tags' follower does
+(`water_increment_partition_tolerance`). A region and its complement sum to 1
+within a few rounding units.
+"""
+energy_source_partition_tolerance(::Type{FT}) where {FT} = 100 * eps(FT)
+
+"""
+    energy_source_partition_deviation(ᶜmasks, names, ᶜρ)
+
+How far the pure region tags are from a partition of unity: the largest
+`|Σᵢ Mᵢ - 1|` over the domain, reduced across processes, for the masks in
+`ᶜmasks` of the tags `names`. It is `1` without a pure region tag, where the sum
+is zero. `ᶜρ` gives the float type and the processes. The cache keeps it; see
+[`energy_source_partition_verified`](@ref).
+"""
+function energy_source_partition_deviation(ᶜmasks, names, ᶜρ)
+    FT = eltype(ᶜρ)
+    isempty(names) && return one(FT)
+    mask_sum = reduce(
+        (a, b) -> a .+ b,
+        map(name -> parent(getproperty(ᶜmasks, name)), names),
+    )
+    return FT(_collective_maximum(maximum(abs.(mask_sum .- 1)), ᶜρ))
+end
+
+"""
+    energy_source_partition_verified(deviation)
+    energy_source_partition_verified(tagging)
+
+Whether the masks of the pure region tags are a verified partition: they sum
+to 1 everywhere within [`energy_source_partition_tolerance`](@ref). Only then
+does the throughput count each unit of source energy once
+([`energy_source_throughput`](@ref)), and only then is `e_src_led_src_res` the
+loss rule's flush of the residual. A strict subset counts too little, and an
+overlap too much. The second form reads the deviation the cache keeps.
+"""
+energy_source_partition_verified(deviation::Real) =
+    deviation <= energy_source_partition_tolerance(typeof(deviation))
+energy_source_partition_verified(tagging) =
+    energy_source_partition_verified(tagging.energy_source_partition_deviation)
 
 # With updraft copies, a work field for the copies' mirrors
 # (`energy_source_copy_mirrors.jl`): the partition's copies' sum, and each
@@ -368,7 +426,7 @@ function _check_increment_partition(ᶜmasks, names, model)
     # 100 rounding units, as the water tags' follower allows
     # (`water_increment_partition_tolerance`): a region and its complement sum
     # to 1 within a few; a gap the size of the closure budget does not pass.
-    deviation > 100 * eps(eltype(mask_sum)) && error(
+    deviation > energy_source_partition_tolerance(eltype(mask_sum)) && error(
         "`energy_source_tag_transport: enthalpy_increment` needs region tags \
         that partition the domain, and the masks of these sum to 1 only to \
         within $deviation. The correction gives the region tags the parent's \
@@ -622,8 +680,9 @@ function energy_source_audit(Y, p, model::EnergySourceTaggingModel, scale)
         repair_gross_relative = per_scale(repair_gross),
         repair_events = tag_event_total(p.tagging.ᶜenergy_source_fix_count),
         _energy_source_ledger_audit(Y, ᶜtmp, model, per_scale)...,
-        # OD4's scale, where each tag keeps its source ledger.
-        _energy_source_throughput_column(throughput)...,
+        # OD4's scale, where each tag keeps its source ledger, and whether the
+        # partition makes it exact.
+        _energy_source_throughput_column(throughput, p.tagging)...,
         # Per state ledger, retained, attempted and events, and each tag's own
         # ledgers against its energy, its burden and the parent scale, where
         # kept (WP6, step 3).
@@ -638,10 +697,19 @@ function energy_source_audit(Y, p, model::EnergySourceTaggingModel, scale)
     )
 end
 
-# The audit's `source_throughput`: OD4's scale, cumulative since the start of
-# the run (`energy_source_throughput`). No column without it.
-_energy_source_throughput_column(::Nothing) = (;)
-_energy_source_throughput_column(throughput) = (; source_throughput = throughput)
+# The columns `source_partition_valid` and `source_throughput`: whether the
+# pure region tags' masks are a verified partition, 1 or 0, and OD4's scale,
+# cumulative since the start of the run (`energy_source_throughput`). The sum
+# counts each source increment once only on a verified partition, so the
+# throughput is `NaN` elsewhere. No columns without the throughput.
+_energy_source_throughput_column(::Nothing, tagging) = (;)
+function _energy_source_throughput_column(throughput, tagging)
+    valid = energy_source_partition_verified(tagging)
+    return (;
+        source_partition_valid = Int(valid),
+        source_throughput = valid ? Float64(throughput) : NaN,
+    )
+end
 
 """
     energy_source_ledger_parent_scale(Y, throughput)
@@ -649,7 +717,10 @@ _energy_source_throughput_column(throughput) = (; source_throughput = throughput
 The energy source tags' parent scale for their own ledgers' ratios and
 small-tag bound: OD4's gross source throughput, `throughput`, from
 `energy_source_throughput`. The tags keep it whenever they keep ledgers
-per tag, so it is there wherever the ratios are.
+per tag, so it is there wherever the ratios are. Where the pure region tags'
+masks are not a verified partition, it is still what the partition's tags took
+from the sources, and serves as a scale. It is then not the whole throughput,
+and the audit writes `source_throughput` as `NaN`.
 
 Where `throughput` is `nothing`, the interim the owner set before it existed:
 the process records' amounts, `Σₚ ∫|prc_e_p|` over the recorded processes, or
@@ -850,6 +921,7 @@ function _attribute_energy_source_tags!(
     (; ᶜenergy_source_masks) = p.tagging
     ᶜΔ = _energy_source_increment(Yₜ, p.scratch, model.offset)
     ᶜparent = _energy_source_parent_field(Y, model.offset)
+    ledger_view = energy_source_src_ledger_view(Yₜ, model)
     # Each tag's change also goes into its source ledger, where the tags keep
     # ledgers per tag: OD4's throughput (`energy_source_throughput`).
     _accumulate_energy_source_tags!(
@@ -860,9 +932,88 @@ function _attribute_energy_source_tags!(
         source,
         model.tags,
         ᶜparent,
-        energy_source_src_ledger_view(Yₜ, model),
+        ledger_view,
+    )
+    # And what the partition's tags did not take goes into the residual's
+    # source ledger (G4.4). With masks that sum to one it is the loss rule's
+    # flush of `e_src_res`.
+    accumulate_energy_source_residual_source!(
+        ledger_view,
+        Y.c,
+        ᶜenergy_source_masks,
+        ᶜΔ,
+        model.tags,
+        ᶜparent,
     )
     return nothing
+end
+
+"""
+    accumulate_energy_source_residual_source!(ledger_view, ᶜY, ᶜmasks, ᶜΔ,
+                                              tags, ᶜparent)
+
+Add to `e_src_led_src_res`, the residual's own source ledger, what one source
+bracket did to the residual `R = E - Σ partition tags`: the bracket's increment
+`ᶜΔ` of `E` less the change each partition tag took,
+
+    Δ - Σ_partition (Mᵢ Δ⁺ - φᵢ Δ⁻) = (1 - Σ Mᵢ) Δ⁺ - (1 - Σ φᵢ) Δ⁻.
+
+In general this is the net residual source attribution: what the sources put
+into the residual or took out of it. Where the masks are a verified partition
+([`energy_source_partition_verified`](@ref)), they sum to one, and it is
+`-(R/E) Δ⁻`, the loss rule's flush of the residual. Elsewhere it also holds
+`(1 - Σ Mᵢ) Δ⁺`, the part of each gain that a gap leaves out of the partition,
+or that an overlap takes twice. It is then not the flush. The audit reads its
+per-step gross as the gross flush only on a verified partition
+(`energy_source_residual_report`).
+
+The partition's changes are computed again here, from the same expression the
+tags' own broadcast uses, rather than read from the tags' tendencies. So the
+tags' tendencies are computed exactly as without the ledger. A no-op for
+`nothing`, where the tags keep no ledger per tag.
+"""
+accumulate_energy_source_residual_source!(
+    ::Nothing,
+    ᶜY,
+    ᶜmasks,
+    ᶜΔ,
+    tags,
+    ᶜparent,
+) = nothing
+function accumulate_energy_source_residual_source!(
+    ledger_view::TagLedgerView{:src},
+    ᶜY,
+    ᶜmasks,
+    ᶜΔ,
+    tags,
+    ᶜparent,
+)
+    ᶜL = getproperty(ledger_view.obj, ENERGY_SOURCE_RESIDUAL_LEDGER)
+    @. ᶜL += ᶜΔ
+    _subtract_partition_changes!(ᶜL, ᶜY, ᶜmasks, ᶜΔ, tags, ᶜparent)
+    return nothing
+end
+
+_subtract_partition_changes!(ᶜL, ᶜY, ᶜmasks, ᶜΔ, ::Tuple{}, ᶜparent) = nothing
+function _subtract_partition_changes!(ᶜL, ᶜY, ᶜmasks, ᶜΔ, tags::Tuple, ᶜparent)
+    tag = first(tags)
+    # A partition tag receives every source: its mask's share of a gain, and
+    # its donor share of a loss (`_accumulate_energy_source_tag!`).
+    if _is_energy_partition_tag(tag)
+        ᶜρe_src = tag_field(ᶜY, tag)
+        ᶜmask = tag_field(ᶜmasks, tag)
+        @. ᶜL -=
+            ᶜmask * max(ᶜΔ, 0) +
+            min(ᶜΔ, 0) * energy_source_fraction(ᶜρe_src, ᶜparent)
+    end
+    return _subtract_partition_changes!(
+        ᶜL,
+        ᶜY,
+        ᶜmasks,
+        ᶜΔ,
+        Base.tail(tags),
+        ᶜparent,
+    )
 end
 
 # The bracketed process's increment to the total the tags partition. With an
