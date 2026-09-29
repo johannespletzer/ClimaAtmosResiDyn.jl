@@ -363,7 +363,7 @@ closed partition a bracket's tendency is the target's.
 How a bracket gives a process's gain to the partition tags.
 
   - `TargetGain()`, the explicit brackets: the gain of the partition's
-    target, [`water_tag_target_gain`](@ref). The owner's rule of 2026-09-29.
+    target, `water_tag_target_gain`. The owner's rule of 2026-09-29.
   - `ParentGain()`, the implicit microphysics bracket: `max(Δ, 0)` wherever
     the parent is, as before. The owner's rule covers the explicit processes.
     Under 0M this increment is a sink, except where a subdomain's area is
