@@ -1,0 +1,39 @@
+# V-W10 (WP9), energy family, both modes: D4, the DYCOMS RF02 EDMF column with
+# 1M microphysics, as G4.15's `g411_d4_default` has it but with no tags, no
+# record and no closure check. The driver adds the tags, the mode and the
+# variant; see design/WP9_COST.md.
+job_id: "wp9_energy_d4_edmf"
+
+initial_condition: "DYCOMS_RF02"
+turbconv: "prognostic_edmfx"
+implicit_diffusion: true
+approximate_linear_solve_iters: 2
+edmfx_entr_model: "Generalized"
+edmfx_detr_model: "Generalized"
+edmfx_sgs_mass_flux: true
+edmfx_sgs_diffusive_flux: true
+edmfx_nh_pressure: true
+edmfx_vertical_diffusion: false
+edmfx_filter: true
+prognostic_tke: true
+microphysics_model: "1M"
+fixed_terminal_velocity_liquid: false
+rad: "DYCOMS"
+config: "column"
+z_elem: 30
+z_max: 1500.0
+z_stretch: false
+perturb_initstate: false
+toml: [toml/prognostic_edmfx_1M.toml]
+ode_algo: "ARS222"
+
+dt: "120secs"
+t_end: "1days"
+FLOAT_TYPE: "Float64"
+
+# Off, since a tagged run switches it on by default, and the timing is meant to
+# be the tags' own cost.
+energy_source_closure_check: false
+
+output_default_diagnostics: false
+diagnostics: []
