@@ -745,6 +745,22 @@ after the owner's decision 1 ("WP4a's two points" above). Separate from #104's
 scope (the split, `pr_tag` and the restatement), by the owner's review of
 #104, finding 6.
 
+  - [x] The switch, the pair, on `claude/wp4a-j-jacobian-switch` at
+    `f2c1e6a5` (from `main` at `43b01ca1`): `water_tag_rainout_jacobian`,
+    `false` by default (the note's section 4, "As built"). The unit tests
+    passed 134/134 on the login node.
+  - [ ] Tests in a Slurm job (`13999575`), the mutants (`13999576`: the
+    diagonal, the block to `ρq_tot`, the `−I` start, the call), and the
+    parity of the branch without the key against `main` (`13999577`).
+  - [x] The experiment's pre-registration completed (the note's section 5.1):
+    17 configs `configs/wp4aj_*.yml`, the scorer
+    `analysis/water/wp4aj_score.py` (smoke-tested on W16's outputs), the
+    budgets reused from 6.1's first-hour row. Nothing waits for the owner.
+  - [ ] The 17 runs, from the run tree `-wp4aj-run`; the score; W51.
+  - [ ] Known issue 4 closed or restated in `docs/known_issues.md`, by the
+    verdict.
+  - [ ] The PR (the coordinating session opens it).
+
 ## WP4b: rain and snow carry their own tags (draft PR #121)
 
   - [x] **WP4b-D, the design note.** *Its fields and points decided

@@ -7,7 +7,9 @@ added to the session's goal that day. **Second version**, after its review by
 section 9 says how each point was taken. `file:line` references are to
 `claude/water-tags-edmf-wp5` at `fd07d902`, which contains #100, #101 and WP5.
 The split (2) and `pr_tag` (3) are coded after this version. The switch (4)
-waits on the owner's choice.
+waits on the owner's choice. *The owner chose the pair on 2026-09-28
+(DECISIONS.md, "WP4a's two points"). WP4a-J built it (4, "As built") and
+completed the experiment's pre-registration (5.1) on 2026-09-29.*
 
 ## 1. The problem
 
@@ -167,6 +169,25 @@ PrognosticEDMFX (the split's derivative is not this), and documented under
 diagonal alone keeps parity: no model row has a tag's column. It changes no
 state, so it is outside the restart guard; the manifest stamps it.
 
+*As built (WP4a-J, 2026-09-29), the pair,* on `claude/wp4a-j-jacobian-switch`
+at `f2c1e6a5`, from `main` at `43b01ca1`. The key and its default are as
+specified. Each tag's row gets both entries: `dtγ·min(Δ, 0)·∂φ/∂ρq_tagᵢ` on its
+diagonal and `dtγ·min(Δ, 0)·∂φ/∂ρq_tot` in a diagonal block to `ρq_tot`, with
+`Δ = ρ·dq_tot_dt` as `microphysics_tendency!` adds it. Away from the clamps
+these are the formulas above. Where `water_tag_fraction`'s clamp binds, or
+`ρq_tot ≤ 0`, the share does not move, and both are zero; at the clamp's two
+ends the unclamped slope is taken. The split solver back-substitutes the
+block to `ρq_tot` after the model's fields, as it does the sedimentation
+cross blocks. So the blocks exist only with the split solver: under
+`use_auto_jacobian` the key does nothing, like `use_dense_jacobian`. With
+explicit diffusion the tag's diagonal starts at `−I` in the update; with
+implicit diffusion the entry adds to the diffusion's. Tests:
+`test/tagged_water_rainout_jacobian_tests.jl` (the entries against finite
+differences of the tags' kernel, the no-op cases, the refusals) and
+`..._integration.jl` (the new group `tagging_water_rainout_jacobian`: every
+model field bit for bit with the key, the entries from `update_jacobian!`, the
+back-substitution, no added allocation, a restart that switches it on).
+
 ## 5. The experiment, pre-registered
 
 On the raining 0M column of V-W0a (DYCOMS RF02 without EDMF, ARS222, implicit
@@ -201,6 +222,112 @@ its size** otherwise.
 **The copies' part of issue 4** (their implicit rain-out, `known_issues.md:98-111`)
 is out of this experiment: it needs the 0M EDMF copies column's own 1/2/10
 ladder, which V-W4's pattern gives on TRMM (W21) and is proposed as a follow-up.
+
+### 5.1 Completed for WP4a-J, before any run (2026-09-29)
+
+What the section above leaves open is fixed here, on the owner's choice of
+the pair. Nothing below changes after the runs. The switch is the one built
+in section 4, at `f2c1e6a5`.
+
+**The runs,** `configs/wp4aj_*.yml`. The column is `w0a_0m_implicit_*_2h`'s
+(DYCOMS RF02, 0M without EDMF, the DYCOMS radiation, the decaying diffusion,
+implicit microphysics and diffusion, ARS222, 30 levels, 2 h, Float64) with
+the tags `tropo`, `strat` and `evap` and `water_tag_transport: tracer`.
+
+| run                              | dt            | Newton   | switch     |
+|:-------------------------------- |:------------- |:-------- |:---------- |
+| `wp4aj_ref_dt{120,60,30}_n20`    | 120, 60, 30 s | 20       | off        |
+| `wp4aj_ref_dt{120,60,30}_n40`    | 120, 60, 30 s | 40       | off        |
+| `wp4aj_dt120_n{1,2,10}_{off,on}` | 120 s         | 1, 2, 10 | off and on |
+| `wp4aj_dt{60,30}_n1_{off,on}`    | 60, 30 s      | 1        | off and on |
+| `wp4aj_dt120_n1_untagged`        | 120 s         | 1        | no tags    |
+
+That is 17. Section 5 says eleven runs, but its table lists thirteen, and
+the 40-iteration checks make sixteen. The untagged twin is added: OD2's rule
+reads a case's window from its untagged run, and it gives parity. Every run
+writes its fields every 6 minutes, a multiple of each time step, so the runs
+of one comparison share their output times.
+
+**The measures,** by `analysis/water/wp4aj_score.py`. It takes every number
+from the verifier (`analysis/evidence/compare_runs.py`), one call per pair,
+and every budget from the verifier's own table and `judge_tag_row`.
+
+  - **P1:** the untagged twin against `wp4aj_dt120_n1_off`, every model field
+    bit for bit (`--parity-only`).
+  - **P2:** at each of the five rungs, on against off, every model field bit
+    for bit (`--expect-parity`).
+  - **M1, the primary readout:** the same five pairs, each tag's L1 and L∞ of
+    on against off, at every 6-minute output to 1 h and every 12 minutes to
+    2 h.
+  - **M2:** each on and off run against its dt's 20-iteration reference, per
+    tag, at the same outputs.
+  - **V1:** each 20-iteration reference against its 40-iteration check, per
+    tag.
+  - **V2:** the column rains in the first hour: `pr` is not zero at some
+    output up to 1 h in `wp4aj_dt120_n1_off`.
+  - **Reported:** each run's gross residual `G(t)` (6.1's definition over the
+    run's own water), OD2's startup end read from the untagged twin, and the
+    bound on `c`, `dtγ (q_c / q_tot) / τ`, largest over cells and outputs up
+    to 1 h.
+
+**The budgets, reused.** OD2's window for DYCOMS 0M is its startup, the rain
+event, which W15 found ends within the first hour; the case has no
+established flow (ROADMAP.md, OD2's table). So G3_PLAN 6.1's first-hour row
+applies: L1 ≤ 1% for the region tags and ≤ 10% for the source tag, L∞ ≤ 25%,
+and a tag under 1% of the partition passes on `∫ρ|Δq|dz ≤ 2e-4 ∫ρq_tot dz`.
+They are judged at 1 h, where the verifier's `--judge` judges that row. The
+other outputs are reported, not judged, as 6.1 reports its 6 h and 12 h
+outputs. V1 is judged with the same budgets at 1 h. P1 and P2 are bit for
+bit, the fork's rule. No new tolerance is set.
+
+**The verdict,** section 5's decision rule, read as follows:
+
+  - P2 fails: a parity defect of the switch. Nothing else is read.
+  - P1, V1 or V2 fails: not assessable.
+  - Otherwise, known issue 4 is **closed** if the three off runs at one
+    iteration (dt 120, 60 and 30 s) are within the budgets of their dt's
+    reference at 1 h, every tag; **restated with its size** otherwise: the
+    tags that miss, with their L1 and L∞.
+
+The on runs are judged the same way and reported, not used in the verdict.
+M1 is reported; section 5 names it the primary readout because the parent is
+the same in both runs, so it isolates the entries.
+
+**Predictions,** written before the runs, for the pair:
+
+  - `c` at dt 120 s is about 2e-3, as section 5 says: the scorer's bound on
+    W16's one-iteration run is 2.3e-3 (its smoke test, below). It halves with
+    each halving of dt.
+  - In the scalar model the pair is exact for a pure proportional sink, and so
+    is no entry. So on and off at one iteration differ only through what the
+    other implicit term, the diffusion, does to the shares in the stage. M1 is
+    expected to be well below the off runs' M2, and to fall toward V1's level
+    by ten iterations.
+  - The off runs pass. W16 measured the region tags' 1-against-10-iteration
+    difference at 1.0e-3 to 1.2e-3 in L1 at 1 h, a tenth of the budget.
+  - V1 is at the rounding level.
+  - OD2's rule may not end the startup within 2 h: evaporation keeps the
+    column's water rising (W15), and on W16's run the rule's condition is not
+    met. The judged hour stays 1 h.
+
+**The scorer's smoke test,** before any run. It ran on W16's outputs, linked
+under the 17 names (`w0a_0m_implicit_newton1_2h` for the tagged runs,
+`..._newton10_2h` for the references, copies where a pair would otherwise
+compare one directory with itself). Every step ran. Its numbers are W16's,
+not this experiment's.
+
+**The jobs.** From the run tree `../ClimaAtmosResiDyn-wp4aj-run`, the model
+commit merged with this record commit, detached, and its own `.buildkite`:
+
+    env CONFIG=experiments/tag_closure/configs/<run>.yml \
+        experiments/tag_closure/runscripts/submit_g3.sh \
+            --account=hpda-c --partition=hpda2_compute --time=02:00:00 \
+            --cpus-per-task=2 --mem=48G --job-name=g3-<run> \
+            --output=/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/logs/%x-%j.out \
+            --error=/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/logs/%x-%j.err
+
+for the 17 runs. Then `python3 analysis/water/wp4aj_score.py`, which writes
+`output/wp4aj/`.
 
 ## 6. Tests
 

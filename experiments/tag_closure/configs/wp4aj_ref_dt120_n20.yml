@@ -1,0 +1,51 @@
+# WP4a-J, known issue 4's Jacobian switch: design/ZERO_M_SPLIT.md, section 5
+# and its completion 5.1. The raining 0M column of V-W0a (DYCOMS RF02 without
+# EDMF, the DYCOMS radiation, the decaying diffusion, implicit microphysics and
+# diffusion, ARS222, 2 h), whose initial cloud rains out in the first hour
+# (W15, W16). `water_tag_transport: tracer` is pinned, since the follower would
+# move the switch's closure change into its ledger.
+#
+# This run: the reference at dt 120 s: 20 Newton iterations, the switch off.
+job_id: "wp4aj_ref_dt120_n20"
+
+config: "column"
+initial_condition: "DYCOMS_RF02"
+z_max: 1500.0
+z_elem: 30
+z_stretch: false
+microphysics_model: "0M"
+implicit_microphysics: true
+rad: "DYCOMS"
+vert_diff: "DecayWithHeightDiffusion"
+implicit_diffusion: true
+ode_algo: "ARS222"
+max_newton_iters_ode: 20
+
+dt: "120secs"
+t_end: "2hours"
+FLOAT_TYPE: "Float64"
+
+water_tracers:
+  - name: tropo
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0, above: false}
+  - name: strat
+    region: {type: tanh_altitude, z_center: 750.0, width: 100.0}
+  - name: evap
+    source: surface_flux
+water_tag_transport: "tracer"
+water_tag_rainout_jacobian: false
+
+water_closure_check:
+  period: "360secs"
+  audit: true
+
+# Every 6 minutes, a multiple of each time step, so that every run of the
+# ladders writes at the same times.
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [rhoa, ta, hus, clw, cli, wa, pr, evspsbl, lwp]
+    period: "360secs"
+  - short_name: [q_tag_res, q_tag_tropo, q_tag_strat, q_tag_evap]
+    period: "360secs"
+  - short_name: [q_tag_fix_tropo, q_tag_fix_strat, q_tag_fix_evap]
+    period: "360secs"
