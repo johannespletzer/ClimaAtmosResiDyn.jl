@@ -94,12 +94,11 @@ transported and stay allowed.
 
 ## 4. The implicit water-microphysics attribution has no Jacobian entries
 
-**Status:** diagnosed; restated on 2026-09-24. In a scalar Newton model of a
-pure proportional sink on the grid rule, the missing entries cost nothing, and
-the diagonal alone would cost. The owner chose the pair, behind a switch that
-is off by default (2026-09-28): `water_tag_rainout_jacobian: true`, described
-below. Open: the measurement in the model, with other implicit processes in
-the same stage (WP4a-J).
+**Status:** closed on 2026-09-29 for the grid rule, by WP4a-J's measurement.
+The copies' part is open (below). The owner chose the pair of entries behind
+a switch on 2026-09-28: `water_tag_rainout_jacobian: true`, described below.
+After the measurement the owner decided on 2026-09-29 that it stays opt-in
+and off by default.
 
 **The updraft copies under 0M are affected too.** With
 `water_tag_updraft_copy: true` the copies' rain-out mirror,
@@ -173,6 +172,19 @@ Jacobians (`use_auto_jacobian` and `use_dense_jacobian`), which fill the
 blocks they hold themselves. It is refused under prognostic EDMF, where the
 rain-out is split by subdomain and neither entry is the split's derivative.
 
+**The measurement, 2026-09-29 (WP4a-J).** The raining DYCOMS RF02 0M column
+without EDMF, implicit microphysics and diffusion, ARS222, 2 h, three tags.
+Runs at one Newton iteration without the entries stay within the tag-closure
+programme's first-hour budgets of a 20-iteration reference at 1 h, at dt
+120, 60 and 30 s. The worst is 1.5e-3 in the mass-weighted L1 of a region
+tag, against 1%. With the switch on, every model field is bit for bit the
+same, and the tags move by at most 1.8e-5 in L1. That changes the
+one-iteration error by at most 1.5% of it, in either direction, depending on
+the tag. So on this column the missing entries cost little, and the
+one-iteration error of about 1e-3 comes from elsewhere. Prognostic EDMF, 1M
+and the sphere were not measured. The record is FINDINGS W51 on the branch
+`claude/tag-closure-record`.
+
 **A first measurement, 2026-09-23, which does not isolate the entry.** The
 DYCOMS RF02 column under 0M without EDMF, at `dt` 120 s, rains out its initial
 cloud (0.15 kg m⁻² of liquid) in the first hour. Four runs covered that hour:
@@ -198,7 +210,8 @@ To isolate it, compare runs with the same implicit residual and time
 integration that differ only in whether the analytic entries are present,
 across a Newton-iteration ladder with a tightly converged reference and a time
 step ladder, reading the region tags, the source tags, `q_tag_res` and the
-nonlinear convergence.
+nonlinear convergence. WP4a-J's measurement, above, did this on the same
+column.
 
 ## 5. `fill_with_nans!` would destroy the tag masks if it ever descended into the cache
 
