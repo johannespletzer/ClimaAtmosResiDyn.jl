@@ -74,7 +74,9 @@ parent, by these mechanisms:
     `q_tag_leak_<path>` gives the source each would add to an exactly closed
     partition. `water_tag_leak_correction: true` corrects the two that WP4c's
     gate retained, the EDMF vertical diffusion and its updrafts' mirror. It is
-    off by default. The other paths, on the sphere only, are not corrected.
+    experimental and off by default: its validation failed two of its
+    criteria (the record's FINDINGS W45; see `docs/src/tagged_water.md`). The
+    other paths, on the sphere only, are not corrected.
   - **The vertical advection split**, as without EDMF.
   - **The plume model.** The default mode's updraft composition is a steady
     entraining plume, not a prognostic field. The updraft copies audit it.
