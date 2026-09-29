@@ -272,6 +272,10 @@ add_rainout_increments!(ᶜdest, Y, p, model, target = nothing) =
         p.precomputed.ᶜρ_dq_tot_dt,
         :microphysics,
         _selected_tags(model.tags, target),
+        Y.c.ρq_tot,
+        # The partition tags' gain, as the bracket gives it on the path the
+        # run steps the microphysics on.
+        microphysics_gain_rule(p.atmos),
     )
 
 """

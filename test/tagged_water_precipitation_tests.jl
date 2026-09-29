@@ -318,6 +318,29 @@ end
         # The partition's `N` takes the whole loss where it holds all of its
         # compartment.
         @test ᶜYₜ.ρq_tag_low .+ ᶜYₜ.ρq_tag_high ≈ ᶜΔ
+
+        # C's revision: an explicit bracket's gain reaches the partition's `N`
+        # parts only where the non-precipitating water is not negative. In
+        # the second cell `ρq_tot` is positive but `N` is -1, so the gain
+        # fills `N`'s negative part and no `N` part changes. The source tag
+        # keeps the parent's gain.
+        ᶜY_gain = merge(ᶜY, (; ρq_tot = FT[8, 2, 8, 8], ρq_rai = FT[2, 2, 0, 4]))
+        ᶜparent_gain = CA.water_tag_parent(ᶜY_gain, model)
+        @test collect(ᶜparent_gain .+ 0) == FT[4, -1, 8, 4]
+        ᶜΔ_gain = FT[1, 2, 3, 1]
+        ᶜYₜ = map(_ -> zeros(FT, 4), (; ρq_tag_low = 0, ρq_tag_high = 0, ρq_tag_evap = 0))
+        CA._accumulate_water_tags!(
+            ᶜYₜ,
+            ᶜY_gain,
+            ᶜmasks,
+            ᶜΔ_gain,
+            :surface_flux,
+            tags,
+            ᶜparent_gain,
+        )
+        @test ᶜYₜ.ρq_tag_low[2] == 0 && ᶜYₜ.ρq_tag_high[2] == 0
+        @test ᶜYₜ.ρq_tag_low .+ ᶜYₜ.ρq_tag_high ≈ FT[1, 0, 3, 1]
+        @test ᶜYₜ.ρq_tag_evap == ᶜΔ_gain
     end
 end
 

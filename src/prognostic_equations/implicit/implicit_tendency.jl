@@ -93,7 +93,10 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
         # The water tags' rain and snow parts take the microphysics' flows.
         water_tag_precipitation_microphysics_tendency!(Yₜ, Y, p)
         close_parent_budget_event!(p.parent_budget, Yₜ, Y, p, :microphysics)
-        attribute_tagged_ρq_tot!(Yₜ, Y, p, :microphysics)
+        # The partition tags take the parent's gain here, as before. The rule
+        # that gives them only the target's gain covers the explicit brackets
+        # (the owner, 2026-09-29). Under 0M this increment is a sink anyway.
+        attribute_tagged_ρq_tot!(Yₜ, Y, p, :microphysics, ParentGain())
         attribute_energy_source_tags!(Yₜ, Y, p, :microphysics)
         accumulate_process_record!(Yₜ, p, :microphysics)
         # Surface water/energy deposition from precipitation (implicit path).

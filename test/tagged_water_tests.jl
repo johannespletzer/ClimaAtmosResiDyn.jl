@@ -2758,6 +2758,146 @@ end
     end
 end
 
+# C's revision (the owner, 2026-09-29; the record's
+# design/NEGATIVE_PARENT_WATER.md, section 11): the explicit brackets give the
+# partition tags only the target's gain. Where the parent is below zero a gain
+# fills its negative part, and no partition tag changes. FINDINGS W47 and W48
+# found the region tags gaining the forcing's water there.
+@testset "C's revision: the explicit brackets give the partition the target's gain" begin
+    for FT in (Float32, Float64)
+        # The target's gain at its edges. At zero, of either sign, the target
+        # takes the whole gain. Where the parent is not negative, the gain is
+        # the old `max(Δ, 0)`, bit for bit.
+        @test CA.water_tag_target_gain(FT(2), FT(1)) == FT(2)
+        @test CA.water_tag_target_gain(FT(2), FT(-1)) == FT(0)
+        @test CA.water_tag_target_gain(FT(-2), FT(-1)) == FT(0)
+        @test CA.water_tag_target_gain(FT(2), FT(0)) == FT(2)
+        @test CA.water_tag_target_gain(FT(2), FT(-0.0)) == FT(2)
+        for Δ in (FT(3), FT(-3), FT(0), FT(-0.0)), x in (FT(5), FT(0), FT(-0.0))
+            @test isequal(CA.water_tag_target_gain(Δ, x), max(Δ, 0))
+        end
+        # The `microphysics` bracket's rule follows its path.
+        @test CA.microphysics_gain_rule((;
+            microphysics_tendency_timestepping = CA.Implicit(),
+        )) === CA.ParentGain()
+        @test CA.microphysics_gain_rule((;
+            microphysics_tendency_timestepping = CA.Explicit(),
+        )) === CA.TargetGain()
+
+        region(inside) = CA.TanhLatitudeRegion(FT(20), FT(2), inside)
+        tags = (
+            CA.WaterTag{:tropics}(region(true)),
+            CA.WaterTag{:extratropics}(region(false)),
+            CA.WaterTag{:evap}(nothing, :surface_flux),
+            CA.WaterTag{:tropical_evap}(region(true), :surface_flux),
+        )
+        partition = (:ρq_tag_tropics, :ρq_tag_extratropics)
+        names = (partition..., :ρq_tag_evap, :ρq_tag_tropical_evap)
+        ᶜmasks = (;
+            ρq_tag_tropics = FT[1, 0.75, 0.25, 0, 0.5, 0.5],
+            ρq_tag_extratropics = FT[0, 0.25, 0.75, 1, 0.5, 0.5],
+            ρq_tag_tropical_evap = FT[1, 0.75, 0.25, 0, 0.5, 0.5],
+        )
+        # The cells: positive, below zero, -0.0, +0.0, below zero, positive.
+        # The negative cells still hold region tags, as at site 23 (W42).
+        ᶜY = (;
+            ρq_tot = FT[8, -2, -0.0, 0, -1, 3],
+            ρq_tag_tropics = FT[6, 0.3, 0, 0, 0.1, 1],
+            ρq_tag_extratropics = FT[2, 0.2, 0, 0, 0.1, 2],
+            ρq_tag_evap = FT[4, 0.5, 0, 0, 0, 1],
+            ρq_tag_tropical_evap = FT[1, 0.1, 0, 0, 0, 1],
+        )
+        below = ᶜY.ρq_tot .< 0
+        zero_tendency() = NamedTuple{names}(ntuple(_ -> zeros(FT, 6), 4))
+        function bracket(ᶜΔ, rule, ᶜY = ᶜY)
+            ᶜYₜ = zero_tendency()
+            CA._accumulate_water_tags!(
+                ᶜYₜ,
+                ᶜY,
+                ᶜmasks,
+                ᶜΔ,
+                :surface_flux,
+                tags,
+                ᶜY.ρq_tot,
+                rule,
+            )
+            return ᶜYₜ
+        end
+        ᶜΔ = FT[1, 2, 3, 4, 0.5, -1]
+        new = bracket(ᶜΔ, CA.TargetGain())
+        old = bracket(ᶜΔ, CA.ParentGain())
+        for name in partition
+            # Below zero a partition tag gains nothing. Elsewhere, at -0.0 and
+            # +0.0 too, it takes what it took before, bit for bit.
+            @test all(iszero, getproperty(new, name)[below])
+            @test all(>(0), getproperty(old, name)[below])
+            @test isequal(getproperty(new, name)[.!below], getproperty(old, name)[.!below])
+        end
+        # The tags outside the partition keep the parent's gain, also below
+        # zero.
+        for name in (:ρq_tag_evap, :ρq_tag_tropical_evap)
+            @test isequal(getproperty(new, name), getproperty(old, name))
+        end
+        @test new.ρq_tag_evap[2] == ᶜΔ[2]
+        # The parent's rule is the rule before the revision, bit for bit.
+        ᶜφ = CA.water_tag_fraction.(ᶜY.ρq_tag_tropics, ᶜY.ρq_tot)
+        expected = zeros(FT, 6)
+        @. expected += ᶜmasks.ρq_tag_tropics * max(ᶜΔ, 0) + min(ᶜΔ, 0) * ᶜφ
+        @test isequal(old.ρq_tag_tropics, expected)
+        # The loss half is the same under both rules.
+        ᶜΔ_loss = FT[-1, -2, -3, -4, -0.5, -1]
+        loss_new = bracket(ᶜΔ_loss, CA.TargetGain())
+        loss_old = bracket(ᶜΔ_loss, CA.ParentGain())
+        @test all(n -> isequal(getproperty(loss_new, n), getproperty(loss_old, n)), names)
+
+        # On a closed partition of the target, a bracket's tendency of the
+        # partition is the target's: the gain where the parent is not
+        # negative, the loss where it is positive.
+        ᶜtarget = max.(ᶜY.ρq_tot, 0)
+        ᶜY_closed = merge(
+            ᶜY,
+            (;
+                ρq_tag_tropics = ᶜmasks.ρq_tag_tropics .* ᶜtarget,
+                ρq_tag_extratropics = ᶜmasks.ρq_tag_extratropics .* ᶜtarget,
+            ),
+        )
+        closed = bracket(ᶜΔ, CA.TargetGain(), ᶜY_closed)
+        target_rate =
+            CA.water_tag_target_gain.(ᶜΔ, ᶜY.ρq_tot) .+
+            ifelse.(ᶜY.ρq_tot .> 0, min.(ᶜΔ, 0), zero(FT))
+        @test closed.ρq_tag_tropics .+ closed.ρq_tag_extratropics ≈ target_rate atol =
+            10 * eps(FT)
+
+        # One Euler step with a gain in cells that stay below zero: the
+        # partition's excess over the target stays where it was. Under the
+        # parent's gain it grows, which is the mechanism W48 found.
+        dt = FT(0.5)
+        excess(ᶜYₜ) = max.(
+            ᶜY.ρq_tag_tropics .+ dt .* ᶜYₜ.ρq_tag_tropics .+ ᶜY.ρq_tag_extratropics .+
+            dt .* ᶜYₜ.ρq_tag_extratropics .- max.(ᶜY.ρq_tot .+ dt .* ᶜΔ, 0),
+            0,
+        )
+        @test all(ᶜY.ρq_tot[below] .+ dt .* ᶜΔ[below] .< 0)
+        before = max.(ᶜY.ρq_tag_tropics .+ ᶜY.ρq_tag_extratropics .- ᶜtarget, 0)
+        @test isequal(excess(new)[below], before[below])
+        @test all(excess(old)[below] .> before[below])
+
+        # The bracket's entry takes the target's rule by default, the rule of
+        # the explicit brackets.
+        p = (;
+            atmos = (; water_tagging_model = CA.WaterTaggingModel(tags)),
+            tagging = (; ᶜwater_masks = ᶜmasks),
+            scratch = (; ᶜtagging_q_snapshot = zeros(FT, 6)),
+        )
+        Y = (; c = ᶜY)
+        for (rule, reference) in (((), new), ((CA.ParentGain(),), old))
+            Yₜ = (; c = merge((; ρq_tot = copy(ᶜΔ)), zero_tendency()))
+            CA.attribute_tagged_ρq_tot!(Yₜ, Y, p, :surface_flux, rule...)
+            @test all(n -> isequal(getproperty(Yₜ.c, n), getproperty(reference, n)), names)
+        end
+    end
+end
+
 @testset "The diffusion leak's correction (WP4c)" begin
     region(above) = CA.TanhAltitudeRegion(750.0, 100.0, above)
     tags = (
