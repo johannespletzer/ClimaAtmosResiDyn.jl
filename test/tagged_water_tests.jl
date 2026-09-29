@@ -2862,8 +2862,10 @@ end
             ),
         )
         closed = bracket(ᶜΔ, CA.TargetGain(), ᶜY_closed)
+        # Written out, not with the rule's own function, so that a mutant of
+        # the rule cannot pass it.
         target_rate =
-            CA.water_tag_target_gain.(ᶜΔ, ᶜY.ρq_tot) .+
+            ifelse.(ᶜY.ρq_tot .< 0, zero(FT), max.(ᶜΔ, 0)) .+
             ifelse.(ᶜY.ρq_tot .> 0, min.(ᶜΔ, 0), zero(FT))
         @test closed.ρq_tag_tropics .+ closed.ρq_tag_extratropics ≈ target_rate atol =
             10 * eps(FT)
@@ -2894,6 +2896,8 @@ end
             Yₜ = (; c = merge((; ρq_tot = copy(ᶜΔ)), zero_tendency()))
             CA.attribute_tagged_ρq_tot!(Yₜ, Y, p, :surface_flux, rule...)
             @test all(n -> isequal(getproperty(Yₜ.c, n), getproperty(reference, n)), names)
+            # By default, a cell below zero gives the partition nothing.
+            @test isempty(rule) == all(iszero, Yₜ.c.ρq_tag_tropics[below])
         end
     end
 end
