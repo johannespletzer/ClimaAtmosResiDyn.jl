@@ -88,6 +88,14 @@ not checked, it says so.
 
     WP4a-J, W21's surface flux and the walk-throughs come later.
 
+  - **Update, 2026-09-29: WP4a-J, draft (the `wp4aj` agent).** The pair is
+    built behind `water_tag_rainout_jacobian`, `false` by default, on
+    `claude/wp4a-j-jacobian-switch` at `f2c1e6a5` (not yet a PR). Its tests
+    and four mutant runs ran in Slurm jobs `13999575` to `13999577`, with the
+    branch's parity against `main`. The experiment's pre-registration is
+    completed in `design/ZERO_M_SPLIT.md`, section 5.1, with no new
+    tolerance. Its 17 runs, the score and W51 follow (G3_TODO, WP4a-J).
+
   - **Update, 2026-09-28: PRs merged, unpushed work found, housekeeping.**
     Written by the session that reviewed #125. `main` was at `cfc2152c`,
     and is at `d2f119ab` since #126 merged that evening.
