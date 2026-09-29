@@ -17,6 +17,13 @@
 #            schedule and tags.
 #   manual   what a manual run (`workflow_dispatch`) asks for.
 #
+# Every tier runs the tests with `check_bounds: auto`, which lets `@inbounds`
+# skip the bounds checks, except `all`, which keeps `yes`. On 2026-09-29 `auto`
+# compiled the tagged models 1.4 to 2.8 times faster on Julia 1.11 (2.2 times
+# summed over parent_budget, tagging_water and tagging_source_edmf). No test
+# checks bounds itself, so the weekly run is where an out-of-bounds access
+# still shows up.
+#
 # Environment: EVENT_NAME, GITHUB_REF, PR_DRAFT, PUSH_BEFORE, SCHEDULE,
 # DISPATCH_VERSIONS, DISPATCH_GROUPS, DISPATCH_CHECK_BOUNDS, ALLOW_FAIL, and
 # GH_TOKEN with GITHUB_REPOSITORY for the check-run lookup. For a local replay,
@@ -113,7 +120,7 @@ ci_full_green() {
 
 tier=
 reason=
-check_bounds=yes
+check_bounds=auto
 matrix='[]'
 full_scope=false
 
@@ -175,7 +182,7 @@ case "${EVENT_NAME:?}" in
         ;;
     workflow_dispatch)
         tier=manual
-        check_bounds=${DISPATCH_CHECK_BOUNDS:-yes}
+        check_bounds=${DISPATCH_CHECK_BOUNDS:-auto}
         case "$check_bounds" in yes | auto) ;; *)
             echo "check_bounds must be yes or auto, not $check_bounds" >&2
             exit 1
@@ -205,7 +212,7 @@ case "${EVENT_NAME:?}" in
                 exit 1
                 ;;
         esac
-        if [ "$requested" = all ] && [ "$check_bounds" = yes ] && [ "$versions" != 1.10 ]; then
+        if [ "$requested" = all ] && [ "$versions" != 1.10 ]; then
             full_scope=true
         fi
         reason="A manual run: groups $requested, Julia $versions, check_bounds $check_bounds."
@@ -220,7 +227,10 @@ case "$tier" in
     quick) matrix=$(jq -c --argjson g "$GROUPS_JSON" '[.[] | select(. as $q | $g | index($q))]' <<<"$QUICK" | on_version 1.11) ;;
     full) matrix=$(on_version 1.11 <<<"$GROUPS_JSON") ;;
     nightly) matrix=$(on_version 1.10 <<<"$fork_groups") ;;
-    all) matrix=$(jq -c -s 'add' <(on_version 1.11 <<<"$GROUPS_JSON") <(on_version 1.10 <<<"$fork_groups")) ;;
+    all)
+        matrix=$(jq -c -s 'add' <(on_version 1.11 <<<"$GROUPS_JSON") <(on_version 1.10 <<<"$fork_groups"))
+        check_bounds=yes
+        ;;
 esac
 case "$tier" in full | all) full_scope=true ;; esac
 
