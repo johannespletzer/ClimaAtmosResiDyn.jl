@@ -151,3 +151,197 @@ first build took about 36 minutes there (`output/w25i_smoke/`, checks only).
     variants' atmospheres drift apart. The parent's change is reported beside
     each variant, and a ratio read from a variant whose parent moved by more
     than 1% is marked so.
+
+## 7. W21's surface rule: the surface flux at the plume's start (added 2026-09-29)
+
+The owner decided on 2026-09-28 (DECISIONS.md): model the surface flux at the
+plume's start, then measure the first hour again. This section is the design.
+Section 8 pre-registers the measurement. Its finding number is W50.
+
+**The reading.** The owner answered review S4 of WP3
+(`review/agent_reviews/wp3_numerics_review_2026-09-23.md`), recorded in
+G3_PLAN 4.1 ("Added in WP3"). The default mode's plume starts at the lowest
+level from the grid mean's composition. It has no counterpart of the copies'
+fifth mirror, the surface moisture flux into `q_totʲ`. So "the plume's start"
+is the lowest level of `water_tag_plume!`, and "the surface flux" is that
+flux. The copies' own mirrors stay as they are. Mirror 3, the relaxation
+toward `q_b φ̄ᵢ`, keeps giving the buoyant excess `C√σ²` the grid mean's
+composition. The owner's decision of 2026-09-25 on the energy copies (M2,
+`design/ENERGY_COPY_MIRRORS.md` section 4) rests on that rule. The copies
+still start differently in the comparison runs, because the D4-W driver starts
+them from this plume (`start_water_tag_copies_from_plume!`). A second reading
+would give `C√σ²` to the surface-flux tags in mirror 3 (PP-SFC). It is not
+taken: it would reverse the rule M2 was decided on, and S4 is not about it.
+
+**What the plume's start misses, and so the copies' start.** The model feeds
+the updraft's lowest cell with three supplies of water, per unit mass of
+updraft air and per second:
+
+  - the relaxation toward the buoyant surface value, `r q_b`, with
+    `r = mass_flux_source / max(ρaʲ, ρʲ a_min)`
+    (`edmfx_boundary_condition_tendency!`);
+  - entrainment, `e q⁰`, with `e` the sum of the entrainment and the turbulent
+    entrainment rates (`edmfx_entr_detr_tendency!`);
+  - the surface moisture flux, `Δʲ = F / (ρʲ Δz)` (`surface_flux_tendency!`).
+    The copies' fifth mirror gives it to the tags that receive
+    `surface_flux`, by the grid tags' rule.
+
+Every loss there takes each tag by its share: the relaxation's and the
+entrainment's `−(r + e) q`, the rain-out and the fall of condensate. The plume
+starts from the grid mean's composition, as if the third supply had the grid
+mean's composition too. So the default's updraft carries no fresh surface
+water at the surface. The copies started from the plume start without it, and
+their fifth mirror adds it within the first hour. So their first hour holds a
+spin-up after all, which starting them from the plume was meant to avoid
+(G3_PLAN 4.1). By S4's estimate fresh surface water is 0.3 to 1% of the
+updraft's water there, and `evap` holds about 1% of the column in the first
+hour.
+
+**The rule.** At the lowest level the plume starts with the shares
+
+    ψᵢ = (1 − f) φ̄ᵢ + f gᵢ,   f = Δ⁺ / (r q_b + e q⁰ + Δ⁺),   Δ⁺ = max(Δʲ, 0),
+
+and it is rescaled to `q_totʲ`, as at every level. `φ̄ᵢ` is the grid mean's
+share, as the plume takes it today. `gᵢ` is the fifth mirror's weight: the
+tag's mask where the tag receives `surface_flux`, one for such a tag without a
+region, and zero for a tag that does not receive it. Dew, `Δʲ < 0`, leaves by
+share in the fifth mirror, so it gives `f = 0`. So does
+`disable_surface_flux_tendency`, under which no surface flux enters. Above the
+lowest level nothing changes. The plume mixes as before, so the surface water
+it starts with rises with it and is diluted by entrainment.
+
+**How it mirrors the model.** `ψᵢ` is the copies' steady state at the lowest
+level. There a copy's tendency is
+`r (q_b φ̄ᵢ − χᵢ) + e (χ⁰ᵢ − χᵢ) + gᵢ Δ⁺`, plus losses by share. Where the
+environment's copies have the grid mean's composition, `χ⁰ᵢ = q⁰ φ̄ᵢ`, the
+steady state is `χᵢ / q_totʲ = ψᵢ` exactly. The plume assumes that
+composition wherever it entrains. The rates are the model's own, read from the
+state and the precomputed quantities: `r` and `q_b` from the surface
+conditions, `e` as the plume's own entrainment, `q⁰` as `ᶜq_tot_nonneg⁰`, and
+`Δʲ` from the boundary operator the model and the fifth mirror use. Where the
+partition's masks sum to one, which the exchange checks, the partition's
+`gᵢ` sum to one. Then its shares still sum to one, and the plume still holds
+`q_totʲ`.
+
+**Why every parent field stays bit for bit.** The plume is the default mode's
+scratch. Only the exchange, the tags' 0M rain-out split and the audit read it.
+The new code reads the state and the precomputed quantities. It writes two
+scratch fields the tags own, `ᶜq_tag_environment` and `ᶜq_tag_room`, which
+the exchange writes again after the plume. It writes no model field and no
+model scratch. With copies the model never calls the plume. Only the driver
+does, once, before the run. Section 8's R1 checks parity against the untagged
+twin in both arms. The integration tests check it on the EDMF column.
+
+**What it cannot fix.**
+
+  - The copies' repair: 0.60% of the water a day (W21), 0.66 to 0.69% (W38).
+    The rule changes where the copies start, not their mirrors, so it is not
+    expected to move the repair. If R5 still fails, the first hour's
+    comparison stays *not assessable*, as in W38.
+  - The buoyant excess `C√σ²`. Both modes still give it the grid mean's
+    composition (WR18), and a passive tracer gets none of it. PX13 remains the
+    only independent check of that choice.
+  - The plume's dynamics above the lowest level. W38's P3 did not bound
+    `evap`'s first-hour gap to the first step.
+  - The steady state's premise. It holds exactly only for an environment with
+    the grid mean's composition, so for a vanishing updraft area. D4-W's
+    updraft covers about 10% of the lowest level (W18). The first steps after
+    a start are not steady either.
+  - The exchange's bound. Where the cell holds less of a tag than the
+    updraft's start would carry, as for `evap` early in the first hour, the
+    bound blends the updraft's share back toward the grid mean's.
+  - Energy. The energy tags' plume keeps the grid mean's start (G4).
+
+**Code and tests** (`claude/w21-surface-flux`). `water_tag_plume!` takes the
+start from `start_water_plume!` and `water_plume_surface_fraction!`. The
+default mode's integration test rebuilds `f` from the model's own tendencies
+and checks the plume's lowest level against `ψᵢ`, with `f` above rounding.
+Its one-composition check runs with the surface moisture flux set to zero,
+where the plume starts from the grid mean again. A mutant without the start's
+surface term must fail the new check.
+
+## 8. The first hour again: pre-registered (2026-09-29), before any run
+
+**The question.** With the surface flux modelled at the plume's start: are
+the copies an eligible comparator on D4-W (R5), and how far apart are the two
+modes in the first hour and at 24 h (R7)? And how much does the rule move the
+first hour's difference, on otherwise the same code?
+
+**Arms.** Two detached run trees, each the record (`claude/rec-w21s`, with
+this section and its scripts) merged into a model commit:
+
+  - *fix*: `claude/w21-surface-flux` at the commit that implements section 7,
+    in `../ClimaAtmosResiDyn-w21s-run`;
+  - *main*: `main` at `43b01ca1`, the same code without the rule, in
+    `../ClimaAtmosResiDyn-w21s-main-run`.
+
+The arms differ only in the plume's start. So a difference between them is
+the rule's effect on this case and code. The parent must be bit for bit the
+same in both.
+
+**Cases.** Section 2's D4-W, as W38 ran it: centred SGS reconstruction, one
+Newton iteration, `dt` 120 s, one day, the follower in the default mode, the
+copies started from the plume, and each tag's ledgers on.
+
+  - Plain D4-W at 30 and 60 levels: `tropo`, `strat`, `evap`, `evap_tropo`,
+    `evap_strat`.
+  - The surface pulse at 30 levels: `sfc`, `air`, `evap`. It is W21's
+    first-hour failure (`sfc` L1 14.4%).
+
+The configs are `configs/w50_d4w_{default,copies}_z{30,60}_c_{fix,main}.yml`,
+`configs/w50_d4w_pulse_{default,copies}_z30_c_{fix,main}.yml`, and the
+untagged twins `configs/w50_d4w_untagged_z{30,60}_c.yml`. Each is the
+`w25i_` config of its rung with only its `job_id` and header changed, so no
+output of W38 is overwritten. The pulse at 60 levels is left out. There its
+10 m `sfc` edge meets 25 m cells, which is ill-conditioned (PX13), and W38 ran
+it only as a probe.
+
+**Runs.** 12 tagged runs and the 2 untagged twins, each one day, with
+`analysis/water/d4w_driver.jl`. The twins run from the fix tree. Section 3's
+probes P1 to P3 are not rerun.
+
+**Scoring** (`analysis/water/w50_score.py`). Section 4's rules and OD3 rows,
+unchanged. No threshold is new.
+
+| #  | metric                                                                                                          | pass rule                                                         | OD3 row                                  |
+|:-- |:--------------------------------------------------------------------------------------------------------------- |:----------------------------------------------------------------- |:---------------------------------------- |
+| R1 | every model field of each tagged run, both arms, against the untagged twin of its rung                          | bit for bit                                                       | Parent validity: parity                  |
+| R4 | the partition's gross residual at 24 h, and the second 12 h against the first                                   | 0.2% of `∫ρq_tot`; no more in the second 12 h                     | Closure, water                           |
+| R5 | copies: their own residual, the largest hourly value; their repair's retained gross per day in established flow | 0.02%; 0.20% of `∫ρq_tot` a day                                   | Comparator: its own residual; its repair |
+| R7 | per tag, default against copies of the same arm, L1 and L∞ at 1 h and at 24 h; small tags on absolute error     | 1%, 10%, 25% in the first hour; 2% and 5% at 24 h; `2e-4 ∫ρq_tot` | Provenance rows                          |
+
+  - OD2's windows are read from each rung's untagged twin by the approved
+    rule, as in W38 (`w25_compare.py`). The pulse takes its rung's window:
+    the tags do not feed back, so its parent is the plain rung's.
+  - R7 is a provenance verdict only where R5 passes on that rung and arm, and
+    where R6 passes. W38 measured R6 before this rule. So if R5 passes in the
+    fix arm, section 3's P2 probe runs on that rung first, and R7 waits for
+    its R6. Where R5 fails, R7 is *not assessable*, and its numbers are
+    reported with the reason.
+  - *Reported, not judged: the rule's effect.* Per tag and rung, R7's L1 and
+    L∞ at 1 h and 24 h in both arms side by side. Each mode's change between
+    the arms, fix against main, at 1 h and 24 h. The copies' repair per day in
+    both arms. The effect is reported with its sign. No threshold exists for
+    it, and none is proposed.
+
+**Expected, before the runs.** R1 and R4 pass in both arms. The copies'
+repair moves little between the arms, since the rule does not touch their
+mirrors. If R5 still fails, R7 stays not assessable, and W21's verdict on
+D4-W's provenance stands. In the fix arm the first hour's L1 of `evap`, and of
+`sfc` in the pulse, between the modes is smaller than in the main arm.
+
+**Jobs.** From each run tree, after `git -C <tree> log -1` shows the merge:
+
+    CONFIG=experiments/tag_closure/configs/<config>.yml \
+    DRIVER=experiments/tag_closure/analysis/water/d4w_driver.jl \
+        experiments/tag_closure/runscripts/submit_g3.sh \
+        --account=hpda-c --partition=hpda2_compute --cpus-per-task=2 --mem=48G
+
+Limits: 3 h for the twins, 4 h at 30 levels and 6 h at 60 levels for the
+tagged runs. W38's took 40 to 60 min (default) and 1 to 1.5 h (copies) at 30
+levels, and up to twice that at 60.
+
+**What this does not do.** It changes no threshold. It does not qualify the
+sphere, or any case but D4-W. It does not rerun P1 to P3. It does not touch the
+energy tags. It compares the modes with each other, not with an independent
+reference (PX13).
