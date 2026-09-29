@@ -115,8 +115,9 @@ the other two groups' CI time exactly as already measured.
 `tagging_source_edmf` runs the energy source tags on the DYCOMS RF02 column
 under `PrognosticEDMFX`, with 1-moment microphysics and the updrafts' vertical
 diffusion on. It checks that the tags take their shares of the sub-grid mass
-flux and of the sedimentation corrections, and that the exchange of provenance
-at the mass flux sums to zero over the partition. The EDMF column is the most
+flux and of the sedimentation corrections, that the exchange of provenance
+at the mass flux sums to zero over the partition, and that its plume starts in
+the lowest cell with the updraft's surface energy (W21's rule). The EDMF column is the most
 expensive model in the suite to build, and the file builds it twice, with the
 tags and without them, to check that the model's own fields do not move.
 

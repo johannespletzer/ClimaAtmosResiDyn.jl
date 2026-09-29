@@ -558,85 +558,25 @@ function water_plume_surface_fraction!(ᶜf, Y, p)
     return nothing
 end
 
-# The surface flux's part of the three supplies of the updraft's lowest cell:
-# the increment `Δ`, the relaxation at the rate `r` toward `q_b`, and
-# entrainment at the rate `e` of the environment's water `q⁰`.
-@inline function _surface_supply_fraction(Δ, r, q_b, e, q⁰)
-    FT = typeof(Δ)
-    gain = max(Δ, zero(FT))
-    supply =
-        max(r, zero(FT)) * max(q_b, zero(FT)) +
-        max(e, zero(FT)) * max(q⁰, zero(FT)) +
-        gain
-    return supply > zero(FT) ? gain / supply : zero(FT)
-end
-
 """
     start_water_plume!(ᶜε_start, ᶜε̄, ᶜf, ᶜmasks, tags)
 
-Write where the default mode's plume starts into `ᶜε_start`: the grid mean's
-specific tag values `ᶜε̄` in every cell but the lowest. There each tag takes
-`(1 - f) ε̄ᵢ + f gᵢ Σ_P ε̄`, with `f` from
-[`water_plume_surface_fraction!`](@ref) and `Σ_P ε̄` the partition's sum. `gᵢ`
-is the fifth mirror's weight for the label `surface_flux`: the tag's mask if
-it receives the flux, one if it has no region, and zero if it does not
-receive it. The plume rescales the start to `q_totʲ`, which gives the shares
-`(1 - f) φ̄ᵢ + f gᵢ` where the partition's masks sum to one.
+Write where the default mode's plume starts into `ᶜε_start`
+([`start_plume_at_surface!`](@ref)), with the fifth mirror's weight for the
+label `surface_flux`: the tag's mask if it receives the flux, one if it has no
+region, and zero if it does not receive it. The plume rescales the start to
+`q_totʲ`, which gives the shares `(1 - f) φ̄ᵢ + f gᵢ` where the partition's
+masks sum to one.
 """
-function start_water_plume!(ᶜε_start, ᶜε̄, ᶜf, ᶜmasks, tags)
-    # A copy of the whole column, so the plume reads one field of starts.
-    parent(ᶜε_start) .= parent(ᶜε̄)
-    level_values(field) = Fields.field_values(Fields.level(field, 1))
-    _start_water_plume!(
-        ᶜε_start,
-        level_values(ᶜε̄),
-        level_values(ᶜf),
-        ᶜmasks,
-        _water_partition_flags(tags),
-        tags,
-        Val(1),
-    )
-    return nothing
-end
-_start_water_plume!(ᶜε_start, ε̄, f, ᶜmasks, flags, ::Tuple{}, ::Val) = nothing
-function _start_water_plume!(
+start_water_plume!(ᶜε_start, ᶜε̄, ᶜf, ᶜmasks, tags) = start_plume_at_surface!(
     ᶜε_start,
-    ε̄,
-    f,
+    ᶜε̄,
+    ᶜf,
     ᶜmasks,
-    flags,
-    tags::Tuple,
-    ::Val{i},
-) where {i}
-    tag = first(tags)
-    εᵢ = Fields.field_values(Fields.level(getproperty(ᶜε_start, i), 1))
-    receives = tag_receives_source(tag, :surface_flux)
-    gain = _lowest_level_values(_surface_gain_weight(ᶜmasks, tag))
-    @. εᵢ = _plume_start_value(ε̄, f, receives * gain, $(Val(i)), flags)
-    return _start_water_plume!(
-        ᶜε_start,
-        ε̄,
-        f,
-        ᶜmasks,
-        flags,
-        Base.tail(tags),
-        Val(i + 1),
-    )
-end
-_lowest_level_values(weight::Bool) = weight
-_lowest_level_values(ᶜweight::Fields.Field) =
-    Fields.field_values(Fields.level(ᶜweight, 1))
-
-# One tag's start in the lowest cell: its grid-mean value, less the surface
-# flux's part, plus that part of the partition's water by the tag's weight.
-@inline _plume_start_value(
-    ε̄,
-    f,
-    gain,
-    ::Val{i},
-    ::Val{partition},
-) where {i, partition} =
-    (1 - f) * ε̄[i] + f * gain * _partition_total(ε̄, partition)
+    tags,
+    _water_partition_flags(tags),
+    _surface_gain_weight,
+)
 
 """
     start_water_tag_copies_from_plume!(Y, p)

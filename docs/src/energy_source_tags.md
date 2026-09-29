@@ -171,7 +171,9 @@ nothing there. So the exchange needs region tags without sources that
 partition the domain, and it is refused at initialization without them, under
 every transport, unless the tags have updraft copies. The updraft's shares come from a steady entraining plume, marched up
 each column with the model's own entrainment rate and the updraft's velocity
-at the face below each cell. It is
+at the face below each cell. In the lowest cell it starts with the updraft's
+surface energy, at the share of the cell's supplies that the surface enthalpy
+flux gives the copies there. It is
 exact when the updraft adjusts faster than the shares change. See
 [`ClimaAtmos.sgs_exchange_of_energy_source_tags!`](@ref).
 
@@ -1009,6 +1011,7 @@ ClimaAtmos.write_energy_source_checkpoint_attributes!
 ClimaAtmos.check_energy_source_checkpoint
 ClimaAtmos.sgs_mass_flux_of_energy_source_tags!
 ClimaAtmos.sgs_exchange_of_energy_source_tags!
+ClimaAtmos.energy_source_plume!
 ClimaAtmos.has_energy_source_updraft_copies
 ClimaAtmos.energy_source_updraft_copy_variables
 ClimaAtmos.mirror_on_energy_source_copies!
