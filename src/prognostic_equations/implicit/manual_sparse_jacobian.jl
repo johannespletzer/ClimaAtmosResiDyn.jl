@@ -1732,9 +1732,8 @@ end
 """
     update_water_tag_rainout_jacobian!(matrix, Y, p, dtγ, diffusion_flag, water_tag_cross_flag)
 
-The water tags' entries for their implicit 0M rain-out, where
-[`uses_water_tag_rainout_jacobian`](@ref) holds (`water_tag_rainout_jacobian:
-true`, known issue 4). A no-op elsewhere.
+The water tags' entries for their implicit 0M rain-out (known issue 4), where
+[`uses_water_tag_rainout_jacobian`](@ref) holds. A no-op elsewhere.
 
 Each tag loses `min(Δ, 0) φ` in the `:microphysics` bracket, where
 `Δ = ρ dq_tot_dt` is the rain-out that `microphysics_tendency!` adds to
