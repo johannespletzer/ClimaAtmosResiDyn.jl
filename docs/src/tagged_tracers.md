@@ -1,11 +1,10 @@
 # Tagged Energy Tracers
 
-Tagged tracers decompose the total energy field ``\rho e_\mathrm{tot}`` into
-labeled prognostic components, either by **region** (via smooth spatial
-masks) or by **process** (e.g. radiation). Each tag is an ordinary
-grid-scale tracer `Y.c.ρe_tag_<name>`, transported by the automatic tracer
-machinery (see [Tracers](passive_tracers.md)), so the sum of a set of region
-tags can be checked against ``\rho e_\mathrm{tot}``.
+`energy_tracers` splits the total energy ``\rho e_\mathrm{tot}`` into named,
+transported fields `ρe_tag_<name>`. A tag either holds a region's share of the
+energy or accumulates what one process added. The key is off by default, and
+the tags do not change the simulation. Every model field is bit for bit what it
+would be without them.
 
 !!! warning "Energy, not heat and not temperature"
 
@@ -18,34 +17,34 @@ tags can be checked against ``\rho e_\mathrm{tot}``.
 ## What a tag means
 
 A tag configured with `region` and a tag configured with `source` are different
-kinds of quantity, and the difference matters more than the shared word "tag".
+kinds of quantity.
 
   - A **region tag** is a transported partition of ``\rho e_\mathrm{tot}``. It
     starts as the region's share of the energy present and receives every
-    attributed process, weighted by its mask.
-  - A **process tag** — one configured with `source` — is a **signed process
-    tag**. It starts at zero and accumulates the signed increment that one
-    labeled process adds to ``\rho e_\mathrm{tot}``. Heating adds, cooling
-    subtracts, and the accumulated value can be negative. It is deliberately
-    not called a process-change record: that name belongs to the separate
-    `prc_*` family described in [Process-Change Records](process_record.md).
+    attributed process, weighted by its mask. The sum of a set of region tags
+    can be checked against ``\rho e_\mathrm{tot}``.
+  - A **signed process tag** is a tag configured with `source`. It starts at
+    zero and accumulates the signed increment that one labeled process adds to
+    ``\rho e_\mathrm{tot}``. Heating adds and cooling subtracts, so the value
+    can be negative.
 
-A process tag is therefore a history of what a process did, not a share of the
+A signed process tag is a history of what a process did, not a share of the
 energy that is here now. Reading `e_tag_rad = -3.0e4` as "radiation supplied a
-negative amount of the local energy" is a misreading: it says radiation has
+negative amount of the local energy" is a misreading. It says radiation has
 removed that much more energy than it added since the tag started.
 
-The `source` key is spelled the same in `water_tracers`, but it does not mean
-the same thing there. The taggable process sets differ — water's is smaller,
-because `radiation` and `held_suarez` move no water — and, more importantly, so
-does the rule. The water tags share out production by mask and take loss from
-each tag in proportion to what it holds, which yields an amount of water
-actually present. The energy tags apply the whole signed increment by mask.
-Both are useful; they answer different questions.
+A process tag is also not a process-change record. A tag is transported by the
+flow. A record is never transported and has one field per process, not per tag.
+See [Process-Change Records](process_record.md).
+
+The `source` key is spelled the same in `water_tracers`, but the rule differs.
+The water tags share out production by mask and take loss from each tag in
+proportion to what it holds. The energy tags apply the whole signed increment
+by mask.
 
 ## Enabling tags
 
-Tags are configured with a single YAML block; no Julia code is required:
+Tags are configured with one YAML block. No Julia code is needed.
 
 ```yaml
 energy_tracers:
@@ -61,64 +60,24 @@ energy_tracers:
 ```
 
 Each entry needs a unique `name` and a `region`, a `source`, or both. The
-default (`energy_tracers: ~`) disables the feature entirely: no extra state
-fields, cache entries, or runtime cost.
-
-See [Configuring Tracers](tracer_configuration.md) for the full schema, the
-named regions that shorten common cases, the other two tracer families, and the
-`energy_closure_check` block, which reduces `e_tag_res` to a pair of numbers on a
-period of its own and warns while the run goes.
-
-!!! note "One partition at a time"
-
-    The closure diagnostic `e_tag_res` sums **all** pure region tags, so
-    configure exactly one partition of unity per run (a region and its
-    complement, as above) rather than several overlapping decompositions. A
-    warning is emitted at initialization when the pure region masks do not
-    sum to 1.
+default `energy_tracers: ~` adds no state fields, no cache entries and no
+runtime cost. Each tag is an ordinary grid-scale tracer `Y.c.ρe_tag_<name>`,
+transported by the automatic tracer machinery (see [Tracers](passive_tracers.md)).
+[Configuring Tracers](tracer_configuration.md) has the full entry schema and
+the `energy_closure_check` block, which warns while the run goes.
 
 ## Region tags
 
-A region tag is initialized to ``\rho e_\mathrm{tot} \, M(x)``, where the
-mask ``M \in [0, 1]`` uses smooth `tanh` transitions (step functions would
-cause Gibbs ringing in the spectral-element discretization). Supported
-region types:
+A region tag starts as ``\rho e_\mathrm{tot} \, M(x)``, where the mask
+``M \in [0, 1]`` uses smooth `tanh` transitions. A region and its complement
+sum to exactly 1, so the pair partitions ``\rho e_\mathrm{tot}`` at
+initialization to machine precision. The region types and the named regions are
+in [Configuring Tracers](tracer_configuration.md).
 
-  - `everywhere`: ``M = 1`` in the whole domain.
-  - `tanh_altitude`: ``M = (1 + \tanh((z - z_\mathrm{center}) / w)) / 2``;
-    `above: false` gives the exact complement (1 below, 0 above).
-  - `tanh_latitude`: a smooth band ``|\mathrm{lat}| \lesssim \mathrm{lat\_bound}``; `inside: false` gives the exact complement.
-    Requires spherical geometry.
-  - `tanh_box`: a smooth longitude–latitude box (`lon_min`, `lon_max`,
-    `lat_min`, `lat_max`, `width`). Requires spherical geometry.
-  - `tanh_polygon`: a smooth arbitrary polygon given by `vertices` (a list of
-    `[lon, lat]` pairs) and `width`. Requires spherical geometry.
-
-Every region type accepts `inside: false` (`above: false` for
-`tanh_altitude`) to select the exact complement, and a region plus its
-complement sum to exactly 1 — so the corresponding pair of tags partitions
-``\rho e_\mathrm{tot}`` at initialization to machine precision.
-
-### Geographic regions
-
-`tanh_box` and `tanh_polygon` both take their `width` in degrees of
-great-circle arc; the mask equals ``1/2`` on the boundary and approaches 1
-inside and 0 outside over roughly that width. Longitudes are handled modulo
-360°, so a box or polygon may cross the antimeridian (a polygon is evaluated
-in the longitude frame of its first vertex, so it must span less than 180°
-of longitude).
-
-```yaml
-  - name: tropical_atlantic
-    region: {type: tanh_box, lon_min: -60.0, lon_max: -10.0,
-             lat_min: -10.0, lat_max: 10.0, width: 2.0}
-```
-
-Published reference regions — the IPCC AR6 / ATLAS domains, SREX, PRUDENCE,
-and anything else distributed with
-[`regionmask`](https://regionmask.readthedocs.io/) — are polygons, so they
-map directly onto `tanh_polygon`. Export the vertices once and paste them
-into the config:
+Published reference regions, such as the IPCC AR6 domains, are polygons and map
+onto `tanh_polygon`. Export the vertices once with
+[`regionmask`](https://regionmask.readthedocs.io/) and paste them into the
+config:
 
 ```python
 import regionmask, yaml
@@ -128,168 +87,106 @@ vertices = [[round(x, 3), round(y, 3)] for x, y in region.polygon.exterior.coord
 print(yaml.dump({"vertices": vertices}))
 ```
 
-!!! warning "Smoothing is required, not cosmetic"
-
-    `regionmask` rasterizes regions with a point-in-polygon test, giving a
-    sharp 0/1 mask. A discontinuous mask must **not** be used here: in the
-    spectral-element discretization it produces Gibbs oscillations that
-    contaminate the tagged fields from the first step. The `width` parameter
-    is what makes a reference-region polygon usable — choose it comparable
-    to (or larger than) the horizontal grid spacing.
+`regionmask` gives a sharp 0/1 mask. Do not use it as a mask. In the
+spectral-element discretization a discontinuous mask produces Gibbs
+oscillations. Choose the `width` of the `tanh_polygon` comparable to or larger
+than the horizontal grid spacing.
 
 ## Process tags
 
-A process tag starts at zero and accumulates the tendency that a labeled
-process adds to ``\rho e_\mathrm{tot}``. It is configured with the `source`
-key, and it holds a signed running total rather than a share of the energy
-present. See [What a tag means](#What-a-tag-means).
+A tag with a `source` accumulates the tendency that a labeled process adds to
+``\rho e_\mathrm{tot}``. The `source` labels and the groups that expand to
+several of them are listed in [Configuring Tracers](tracer_configuration.md).
+`source` takes one label, a group name or a list, and the group `all` expands to
+every label.
 
-It is *not* the process-change record described in
-[Process-Change Records](process_record.md). That is a separate family with one
-field per process instead of per tag, and unlike a process tag it is never
-transported.
+A process can be attributed only if the tags do not already receive it through
+the tracer machinery. These are not taggable:
 
-### Taggable processes
+  - **Transport.** Advection, hyperdiffusion, sponges, interior vertical
+    diffusion and LES SGS diffusion act on each tag itself. Attributing the
+    ``\rho e_\mathrm{tot}`` version as well would count transport twice.
+  - **Implicit tendencies**, except precipitation sedimentation. It runs on the
+    implicit path but is attributed as `precipitation`, because it is a real
+    energy sink the tags never receive. Its increment does not depend on the
+    tags, so the identity Jacobian block the tags fall back to is exact (see
+    [Implicit Solver](implicit_solver.md)).
+  - **EDMFX SGS mass fluxes.** Tags have no updraft counterpart.
 
-| Group       | `source` label          | Process                                                                          |
-|:----------- |:----------------------- |:-------------------------------------------------------------------------------- |
-| `radiative` | `radiation`             | All radiation modes (RRTMGP, gray, DYCOMS, TRMM\_LBA, ISDAC)                     |
-| `turbulent` | `surface_flux`          | Turbulent surface energy flux                                                    |
-| `moist`     | `microphysics`          | Microphysics energy sources, when stepped explicitly (0-moment only — see below) |
-| `moist`     | `precipitation`         | Energy carried out of a level by sedimenting precipitation                       |
-| `forcing`   | `held_suarez`           | Held–Suarez relaxation forcing                                                   |
-| `forcing`   | `large_scale_advection` | Prescribed large-scale advective forcing                                         |
-| `forcing`   | `subsidence`            | Prescribed large-scale subsidence                                                |
-| `forcing`   | `external_forcing`      | Externally prescribed (e.g. GCM-driven) forcing                                  |
+These terms land in the closure residual, which is why the residual is
+monitored and not zero.
 
-!!! note "Which moist label carries the signal"
-
-    With 0-moment microphysics the moist energy sink appears in
-    `microphysics`. The 1-moment and 2-moment schemes instead change only
-    the water species, and the energy leaves with the falling precipitation,
-    so the signal appears in `precipitation`. Tagging the `moist` group
-    covers both cases.
-
-A group name may be used wherever a process label is expected, and `source`
-also accepts a list, so these are equivalent:
-
-```yaml
-  - name: forced
-    source: forcing
-  - name: forced
-    source: [held_suarez, large_scale_advection, subsidence, external_forcing]
-```
-
-The group `all` expands to every process in the table.
-
-### What is *not* taggable, and why
-
-A process can be attributed only if the tags do **not** already receive it
-through the automatic tracer machinery. Excluded, therefore:
-
-  - **Transport**: advection, hyperdiffusion, sponges, interior vertical
-    diffusion, and LES SGS diffusion all act on each tag in its own right.
-    Attributing the ``\rho e_\mathrm{tot}`` version on top of that would
-    count transport twice — this is the central correctness constraint of
-    the design.
-  - **Implicit tendencies**: implicit vertical transport and implicit
-    diffusion. Precipitation sedimentation is the exception — it also runs
-    on the implicit path but *is* attributed (as `precipitation`), because
-    it is a real energy sink the tags never receive. Bracketing it is safe
-    because the implicit tendency is rebuilt from zero on every evaluation,
-    and its attributed increment does not depend on the tags, so the
-    identity Jacobian block that tags fall back to is exactly right.
-  - **EDMFX SGS mass fluxes**: tags have no updraft counterpart.
-
-These land in the closure residual described below, which is why that
-residual is a monitored quantity rather than zero.
-
-### Regions and processes combined
-
-Pure region tags receive **every** attributed process, weighted by their
-mask, so a partition-of-unity set of region tags keeps tracking
-``\rho e_\mathrm{tot}``. A tag with both `region` and `source` also starts
-at zero and accumulates only its own processes, restricted to its region — the
-`region` restricts *where* the process is counted; it does not add the
-region's energy content to the tag.
+A pure region tag receives every attributed process, weighted by its mask, so a
+partition of unity of region tags keeps tracking ``\rho e_\mathrm{tot}``. A tag
+with both `region` and `source` starts at zero and accumulates only its own
+processes, restricted to its region. The `region` restricts where the process
+is counted. It does not add the region's energy to the tag.
 
 ## Diagnostics and closure
 
-With tagging enabled, per-tag diagnostics are registered automatically:
+Each tag registers a diagnostic automatically:
 
   - `e_tag_<name>`: specific tagged energy ``\rho e_{\mathrm{tag}} / \rho``
     (J kg⁻¹);
-  - `e_tag_res`: the closure residual ``(\rho e_\mathrm{tot} - \sum_i \rho e_{\mathrm{tag},i}) / \rho``, summed over the pure region tags.
+  - `e_tag_res`: the closure residual
+    ``(\rho e_\mathrm{tot} - \sum_i \rho e_{\mathrm{tag},i}) / \rho``, summed
+    over the pure region tags.
 
-`e_tag_res` is a **monitored residual**, not a machine-precision identity:
-``\rho e_\mathrm{tot}`` is transported as enthalpy (including pressure work)
-and has its own diffusion treatment, while tags are passive scalars. In a
-10-day dry baroclinic wave validation the residual stayed below one percent
-of the pointwise energy scale. If the configured region masks do not sum to
-1 (overlapping or incomplete regions), a warning is emitted at
-initialization and `e_tag_res` is dominated by the overlap instead of by
-attribution leakage.
+`e_tag_res` is a monitored residual, not a machine-precision identity.
+``\rho e_\mathrm{tot}`` is transported as enthalpy, including pressure work, and
+has its own diffusion treatment, while the tags are passive scalars. If the
+region masks do not sum to 1, the run warns at initialization and `e_tag_res`
+is dominated by the overlap instead of by attribution leakage. Configure one
+partition of unity per run.
 
-A sharper *process closure* check is available by splitting a process tag
-across a partition: with `rad`, `rad_stratosphere`, and `rad_troposphere`
-tags, transport linearity implies ``e_{\mathrm{tag,rad\_strat}} + e_{\mathrm{tag,rad\_tropo}} = e_{\mathrm{tag,rad}}`` to near machine
-precision at all times — any violation indicates a bug rather than expected
-leakage. `config/model_configs/baroclinic_wave_tagged_tracers.yml` and the
-integration test use this identity with the Held–Suarez source.
+Splitting a process tag across a partition gives a sharper check. With `rad`,
+`rad_stratosphere` and `rad_troposphere` tags, transport linearity gives
+``e_{\mathrm{tag,rad\_strat}} + e_{\mathrm{tag,rad\_tropo}} = e_{\mathrm{tag,rad}}``
+to near machine precision at all times. A violation is a bug and not expected
+leakage. `config/model_configs/baroclinic_wave_tagged_tracers.yml` uses this
+identity with the Held–Suarez source.
 
 ## Caveats
 
-  - Tags are **grid-scale only**: they have no sub-grid (updraft)
-    counterpart. With `PrognosticEDMFX`, the surface-flux and SGS-flux loops
-    skip tags rather than looking for a missing updraft field, so EDMFX
-    configurations run, but tagged energy is not decomposed across
-    subdomains.
-  - Tags are excluded from both tracer limiters: from the
-    vertical-water-borrowing limiter because tagged energies can be
-    legitimately negative (accumulated cooling), and from the SEM
-    quasimonotone limiter so that tags receive the same treatment as
-    ``\rho e_\mathrm{tot}``, which is not limited either.
-  - Latitude regions require spherical geometry; altitude regions also work
-    in columns and boxes.
-  - Tagged state is carried through restarts like any other prognostic
-    field; the masks are rebuilt from the configuration, so the
-    `energy_tracers` block must match the one used to write the checkpoint.
+  - Tags are grid-scale only. With `PrognosticEDMFX` the surface-flux and
+    SGS-flux loops skip tags, so EDMFX configurations run, but the tagged
+    energy is not decomposed across subdomains.
+  - Tags are excluded from both tracer limiters. The vertical-water-borrowing
+    limiter would be wrong because tagged energies can be negative
+    (accumulated cooling). The SEM quasimonotone limiter is skipped so that tags
+    are treated as ``\rho e_\mathrm{tot}`` is, which is not limited either.
+  - Latitude, box and polygon regions need spherical geometry. Altitude regions
+    also work in columns and boxes.
+  - Tagged state is carried through restarts like any other prognostic field.
+    The masks are rebuilt from the configuration, so the `energy_tracers` block
+    must match the one that wrote the checkpoint.
 
 ## Interpretation limit
 
-Closure proves one thing: that the included terms sum to the parent, as a
-signed discrete accounting. It does **not** establish that the amounts are
-non-negative, that the provenance reading is valid, that results are
-independent of the energy reference, or that the set of tracked processes is
-physically complete. Nor does it turn the tags into counterfactual
-sensitivities — tagging says what contributed to the simulated energy, not what
-would change if a process were altered. That last question is one for
-perturbation or ensemble experiments.
-
-The mask weighting, the choice of which processes are attributed, and the
-grouping of gains and losses within one bracket are modeling choices.
-Conclusions are conditional on them.
+Closure shows one thing: the included terms sum to the parent, as a signed
+discrete accounting. It does not show that the amounts are non-negative, that
+the provenance reading is valid, that results are independent of the energy
+reference, or that the set of tracked processes is physically complete. The
+tags are not counterfactual sensitivities. They say what contributed to the
+simulated energy, not what would change if a process were altered. That
+question needs perturbation or ensemble experiments. The mask weighting, the
+choice of attributed processes and the grouping of gains and losses within one
+bracket are modeling choices, and conclusions depend on them.
 
 ### Tag values depend on the energy reference
 
-Moist total energy has no physical zero. Its value depends on the chosen
-reference points for thermodynamic and gravitational energy, so a shift
+Moist total energy has no physical zero. A shift
 ``\rho e_\mathrm{tot} \to \rho e_\mathrm{tot} + c\rho`` changes what a region
-tag holds and changes every residual normalized by
-``\max|\rho e_\mathrm{tot}|``. The integration test's tolerance is normalized
-that way, so it is not comparable across configurations that use different
-references.
+tag holds, and changes every residual normalized by
+``\max|\rho e_\mathrm{tot}|``. Such residuals are not comparable across
+configurations with different references.
 
 A process tag for a process that exchanges no mass is unaffected, because it
-accumulates increments rather than shares. One that does exchange mass is not:
-under a shift `c`, the increment attributed to `precipitation`, or to the
+accumulates increments and not shares. One that does exchange mass is affected.
+Under a shift `c`, the increment attributed to `precipitation`, or to the
 moisture part of `surface_flux`, moves by `c` times the mass exchanged.
 
-Water has a physical zero and does not have this problem. That is one reason
-`q_tag_res` and `e_tag_res` are not comparable numbers; the plainer one is that
-they have different units and scales.
-
-## Where to look next
+Water has a physical zero and does not have this problem.
 
 See `config/model_configs/baroclinic_wave_tagged_tracers.yml` for a complete
 example, and `test/tagged_tracers_integration.jl` for the closure assertions.

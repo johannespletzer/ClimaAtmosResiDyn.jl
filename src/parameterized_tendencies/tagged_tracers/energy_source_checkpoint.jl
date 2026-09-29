@@ -13,8 +13,10 @@ import ClimaCore: InputOutput
     ENERGY_SOURCE_CHECKPOINT_VERSION
 
 The version of the energy source tags' checkpoint attributes. A checkpoint
-without it predates the restart guard. A checkpoint with another version is
-refused, because its attributes may mean something else.
+without the version attribute restarts with a warning that the offset, the
+tags' definitions, the transport and the repair cannot be checked. A checkpoint
+with another version is refused, because its attributes may mean something
+else.
 """
 const ENERGY_SOURCE_CHECKPOINT_VERSION = 1
 
@@ -119,10 +121,9 @@ first mismatch:
     ledger, then the tags' updraft copies, then the energy and water process
     record fields, against what `model` configures. This needs no attribute,
     so it covers every checkpoint.
- 2. The version attribute. A checkpoint without it predates this guard. Then
-    it warns that the offset, the tags' definitions, the transport and the
-    repair cannot be checked, and lets the restart go on. A checkpoint with
-    another version is refused.
+ 2. The version attribute. A checkpoint without it restarts with a warning
+    that the offset, the tags' definitions, the transport and the repair cannot
+    be checked. A checkpoint with another version is refused.
  3. The offset, then each tag's region and sources, then the transport, then
     the repair.
 
@@ -185,7 +186,7 @@ function check_energy_source_checkpoint(restart_file, model, Y, context)
         "water_process_record",
         "prc_q_",
     )
-    # The ledger per mechanism (WP6), present whenever the tags are.
+    # The ledger per mechanism is present whenever the tags are.
     check_tag_mechanism_ledgers(
         restart_file,
         Y,
@@ -194,8 +195,8 @@ function check_energy_source_checkpoint(restart_file, model, Y, context)
         "e_src_",
         "energy_source_tags",
     )
-    # Each tag's own ledgers (WP6, step 3) are in the file or are not, so a
-    # changed `energy_source_tag_ledger_per_tag` fails here.
+    # Each tag's own ledgers are in the file or are not, so a changed
+    # `energy_source_tag_ledger_per_tag` fails here.
     check_restart_fields(
         restart_file,
         Y,
@@ -207,7 +208,6 @@ function check_energy_source_checkpoint(restart_file, model, Y, context)
         "energy_source_tag_ledger_per_tag",
         "e_src_led_",
     )
-    # The fields match, so a file without tags goes with a model without them.
     isnothing(source_model) && return nothing
 
     K = ENERGY_SOURCE_CHECKPOINT_KEYS

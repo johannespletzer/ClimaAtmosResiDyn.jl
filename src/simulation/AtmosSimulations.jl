@@ -77,7 +77,7 @@ function setup_diagnostics_and_writers(
 
     # Tagged-tracer short names depend on the configured tag names, and the
     # stratospheric passive tracers depend on the configured source-region
-    # grid, so all three are registered here rather than at package load time
+    # grid. So they are registered here rather than at package load time.
     CAD.register_tagging_diagnostics!(model)
     CAD.register_water_tagging_diagnostics!(model)
     CAD.register_energy_source_tagging_diagnostics!(model)
@@ -451,8 +451,8 @@ function AtmosSimulation(
         parent_budget,
     )
     # The tags' ledgers: the cadence their audit reports, and, on a restart,
-    # the accumulators the checkpoint carried (WP6, step 3). Both write only
-    # the tags' own cache.
+    # the accumulators the checkpoint carried. Both write only the tags' own
+    # cache.
     set_tag_ledger_cadence!(p, update_constrain_state_every)
     isnothing(restart_file) ||
         restore_tag_ledger_checkpoint!(p.tagging, restart_file, context)

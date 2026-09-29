@@ -1,5 +1,5 @@
 #####
-##### The residual report of the energy source tags (G4.4)
+##### The residual report of the energy source tags
 #####
 ##### Beside the closure check's integrals, the report says where the residual
 ##### sits, how fast the loss rule flushes it and the level it would settle at,
@@ -7,7 +7,6 @@
 ##### leave their bounds. It describes the residual; it is not a verdict.
 ##### Every function here reads the state and the tags' caches and writes only
 ##### scratch fields. Each reduction is collective, so every process calls it.
-##### The design is design/RESIDUAL_REPORT.md on the record branch.
 
 # The largest and smallest value of a field over the whole domain, reduced
 # across processes. `Base.maximum` on a `Field` does not reduce across them.
@@ -42,7 +41,7 @@ end
 """
     energy_source_headroom(Y, p, model)
 
-U9, the offset's headroom, for the closure table of the energy source tags:
+Return the offset's headroom, for the closure table of the energy source tags:
 
   - `headroom_min`: the smallest `E/ρ = e_tot + c` in the domain, in J/kg,
     reduced across processes;
@@ -72,7 +71,7 @@ The energy source tags' own columns of their closure table: the headroom
     elsewhere;
   - `source_throughput`: the gross source throughput since the start of the
     run, in J ([`energy_source_throughput`](@ref));
-  - `gross_over_throughput`: the row's gross residual over it (G4.5).
+  - `gross_over_throughput`: the row's gross residual over it.
 
 Only a verified partition counts each unit of source energy once. Elsewhere
 the throughput and the ratio are `NaN`, and so is the ratio where the
@@ -145,9 +144,11 @@ check_energy_source_throughput_setup(tagging, callback_kwargs) =
 """
     energy_source_residual_report(Y, p, model, closure, t, previous)
 
-The residual report of the energy source tags, as more columns of their audit
-table (G4.4). `R = E - Σ partition tags` per cell, and `G` is `closure`'s
-`gross_residual`.
+Return the residual report of the energy source tags, as more columns of their
+audit table.
+
+`R = E - Σ partition tags` per cell, and `G` is `closure`'s `gross_residual`.
+Collective.
 
 Where the residual sits:
 
@@ -160,8 +161,8 @@ Where the residual is zero everywhere there is no peak and no maximum to
 place, so `residual_peak_level`, `residual_peak_fraction`, `residual_peak_z`
 and `residual_max_z` are `NaN`.
 
-The overlays, the tags that carry sources, against the partition they overlay
-(A5):
+The overlays are the tags that carry sources. They are compared with the
+partition they overlay:
 
   - `overlay_negative_mass_fraction`: the air mass where any overlay is
     negative, over the domain's air mass;
@@ -169,19 +170,17 @@ The overlays, the tags that carry sources, against the partition they overlay
     in J, where an overlay holds more than the partition's sum;
   - `overlay_excess_mass_fraction`: the air mass where any overlay does.
 
-Each overlay is compared with the partition's sum on its own, as the owner
-read A5. That bound holds for every valid configuration, duplicate tags
-included: an overlay holds part of the energy the partition holds (the
-tag-closure experiments' invariant "overlay at most parent"). The sum of the
-overlays has no such bound. Two tags of the same source hold the same energy,
-so together they can hold more than the partition. Only disjoint overlays
-would bound the sum, and the configuration does not declare which are, so the
-sum is not checked.
+Each overlay is compared with the partition's sum on its own. That bound holds
+for every valid configuration, duplicate tags included: an overlay holds part
+of the energy the partition holds. The sum of the overlays has no such bound.
+Two tags of the same source hold the same energy, so together they can hold
+more than the partition. Only disjoint overlays would bound the sum, and the
+configuration does not declare which are, so the sum is not checked.
 
-The flush and the settling level (synergy 4), where the tags keep their
-ledgers per tag, and so the residual's source ledger `e_src_led_src_res`. That
-ledger is the net residual source attribution. It is the loss rule's flush only
-where the pure region tags' masks are a verified partition
+The flush and the settling level need the tags' ledgers per tag, and so the
+residual's source ledger `e_src_led_src_res`. Without them these columns are
+absent. That ledger is the net residual source attribution. It is the loss
+rule's flush only where the pure region tags' masks are a verified partition
 ([`energy_source_partition_verified`](@ref)). Elsewhere every column below is
 `NaN`:
 
@@ -199,8 +198,8 @@ where the pure region tags' masks are a verified partition
 The first check, and the first after a restart, have no interval, and write
 `NaN` for the rates. A balance needs `P > 0`: where the rest of the run did
 not add to the residual, it only decays, and `settling_level` is `NaN`
-([`energy_source_forecast`](@ref)). `λ` is not constant (E74), so `G*` is an
-order of magnitude, not a prediction. Collective.
+([`energy_source_forecast`](@ref)). `λ` is not constant, so `G*` is an order
+of magnitude, not a prediction.
 """
 function energy_source_residual_report(
     Y,
@@ -297,10 +296,10 @@ end
 """
     energy_source_forecast(G₀, F₀, t₀, G, F, t)
 
-Synergy 4 from two checks, `(t₀, G₀, F₀)` and `(t, G, F)`, with `t` in
-seconds, `G` the gross residual and `F` the gross flush, both in J. It returns
-`flush_rate`, `production_rate`, `settling_level`, `settling_ratio` and
-`forecast_defined`, the rates per day.
+Return the flush and settling columns from two checks, `(t₀, G₀, F₀)` and
+`(t, G, F)`, with `t` in seconds, `G` the gross residual and `F` the gross
+flush, both in J. The columns are `flush_rate`, `production_rate`,
+`settling_level`, `settling_ratio` and `forecast_defined`, the rates per day.
 
   - `flush_rate` is `NaN` where the interval is empty, the mean gross is zero,
     or nothing was flushed, since the rate is then not defined.

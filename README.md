@@ -8,7 +8,16 @@ The atmosphere model of the CliMA Earth System Model: a GPU-capable global atmos
 
 ClimaAtmos.jl solves the compressible equations of atmospheric motion on cubed-sphere and column grids, with physics parameterizations for turbulence and convection (PROPHET, an extended prognostic EDMF scheme), cloud microphysics, and radiation. It is built on [ClimaCore.jl](https://github.com/CliMA/ClimaCore.jl) and runs on CPUs and GPUs from a single codebase.
 
-This repository is a fork of [CliMA/ClimaAtmos.jl](https://github.com/CliMA/ClimaAtmos.jl). It tracks upstream and adds tagged tracer, tagged water, energy source tag and process record work. The badges above report this fork's state, not upstream's.
+This repository is a fork of [CliMA/ClimaAtmos.jl](https://github.com/CliMA/ClimaAtmos.jl). It tracks upstream and adds diagnostics for where energy and water come from and what changes them:
+
+- tagged energy tracers
+- tagged water tracers, with rain and snow tags
+- energy source tags
+- process-change records
+- stratospheric passive tracers
+- a parent-budget audit
+
+Each is off by default, and none changes the simulation. Every model field stays bit for bit the same as upstream. See [Configuring Tracers](https://johannespletzer.github.io/ClimaAtmosResiDyn.jl/dev/tracer_configuration/) for how to switch them on. The badges below report this fork's state, not upstream's.
 
 |                   |                                                                                                                                                                                                                           |
 | -----------------:|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
