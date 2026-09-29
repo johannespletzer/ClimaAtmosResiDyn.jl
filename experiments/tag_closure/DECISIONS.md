@@ -218,6 +218,19 @@ The list as it stood before this classification, kept as written:
 >     and the copies under first-order upwinding (W25). **Waiting.**
 >     [FINDINGS W25](FINDINGS.md)
 
+## 2026-09-29
+
+  - **Option C's revision: the explicit brackets give the region tags the
+    target's gain, for every explicit process** (option 1 of
+    `design/NEGATIVE_PARENT_WATER.md` section 10, recommended). Production
+    reaches the region tags only where the parent is above zero; elsewhere
+    it goes to the negative part. **In force.** Next: a design subsection
+    with its pre-registered validation, a PR, then the validation runs.
+  - **ClimaParams v1.1.16: pin, then investigate.** Its new default switches
+    on the geometric SGS-variance term (`sgs_variance_horizontal_scale_factor`
+    3.0 where ClimaAtmos defaulted to 0) and turned `main`'s CI red. PR #128
+    caps ClimaParams at v1.1.15. **In force.**
+
 ## 2026-09-28
 
   - **The owner's answers to the open decisions, later on 2026-09-28**

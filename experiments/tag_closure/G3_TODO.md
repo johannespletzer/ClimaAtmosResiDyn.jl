@@ -46,7 +46,10 @@ The twelve criteria of the plan, section 2, in short:
 
 ## Decisions
 
-  - [ ] **Option C's revision, after W47.** The probe supports candidate 5,
+  - [x] **Option C's revision, after W47.** *Decided 2026-09-29, after W48
+    (design section 10, option 1): the explicit brackets give the region
+    tags the target's gain, for every explicit process. Next: its design
+    and pre-registered validation, a PR, the validation runs.* The probe supports candidate 5,
     the forcing's vertical fluctuation, in three of the four unrecorded
     rises. In the fourth no candidate is supported: the forcing as a whole
     attributes it (1.000, as in every rise), and that term only contributes

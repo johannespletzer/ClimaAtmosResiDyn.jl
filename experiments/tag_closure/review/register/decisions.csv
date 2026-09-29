@@ -1,4 +1,6 @@
 date,decided_by,decision,doc,section,still_in_force,superseded_by
+2026-09-29,owner,"Option C's revision: the explicit brackets give the region tags the target's gain, for every explicit process (design section 10, option 1).",design/NEGATIVE_PARENT_WATER.md,10,yes,
+2026-09-29,owner,"ClimaParams v1.1.16: pin at v1.1.15 (PR #128), then investigate.",DECISIONS.md,2026-09-29,yes,
 2026-09-28,owner,"Option C after W47: probe more before any fix (the fourth rise, cell by cell).",DECISIONS.md,2026-09-28,yes,
 2026-09-28,owner,"Rerun the option C probe on main now, with #118's per-step check; pre-register it as an amendment to design section 9.",DECISIONS.md,2026-09-28,yes,
 2026-09-28,owner,Bring the #119 and #121 follow-ups from the backups to main as two PRs; the backups stay as they are.,DECISIONS.md,2026-09-28,yes,

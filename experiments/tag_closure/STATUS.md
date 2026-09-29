@@ -147,9 +147,13 @@ not checked, it says so.
         forcing's growth goes without it), and the vertical fluctuation
         carries none. The mechanism is shown cell by cell. C's revision
         waits on the owner, with W47 and W48.
-      + *Where the next session starts:* the owner's decision on C's
-        revision (a brief is in preparation); the two PRs from the backups
-        (#127 open, the #119 follow-ups next); WP4a-J; W21's surface flux. The
+      + *2026-09-29:* the owner chose C's revision: the explicit brackets
+        give the region tags the target's gain (design section 10, option
+        1). ClimaParams v1.1.16 turned `main`'s CI red by switching on the
+        geometric SGS-variance term. #128 caps it at v1.1.15.
+      + *Where the next session starts:* #128, then #127's CI and the #119
+        follow-ups' PR; C's revision (design, pre-registration, PR); WP4a-J;
+        W21's surface flux. The
         uncommitted start of W45's investigation in `-plan2` is backed up
         as `claude/backup/plan2-2026-09-25` (`b3cd940a`). Record work now
         uses the worktree `../ClimaAtmosResiDyn-rec`, detached, pushing
