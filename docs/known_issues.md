@@ -96,9 +96,10 @@ transported and stay allowed.
 
 **Status:** diagnosed; restated on 2026-09-24. In a scalar Newton model of a
 pure proportional sink on the grid rule, the missing entries cost nothing, and
-the diagonal alone would cost. Open: which Jacobian to add, if any, which is
-the owner's choice, and a measurement in the model, with other implicit
-processes in the same stage.
+the diagonal alone would cost. The owner chose the pair, behind a switch that
+is off by default (2026-09-28): `water_tag_rainout_jacobian: true`, described
+below. Open: the measurement in the model, with other implicit processes in
+the same stage (WP4a-J).
 
 **The updraft copies under 0M are affected too.** With
 `water_tag_updraft_copy: true` the copies' rain-out mirror,
@@ -158,6 +159,19 @@ tags. Under prognostic EDMF with the 0-moment rain-out split by subdomain
 share, and neither entry is its derivative. The analysis, the review and the
 experiment's design are WP4a's note, `design/ZERO_M_SPLIT.md` on the branch
 `claude/tag-closure-record`.
+
+**The switch.** `water_tag_rainout_jacobian: true` gives each tag's row of the
+manual Jacobian the pair: `dtγ min(Δ, 0) / ρq_tot` on its diagonal, and
+`−dtγ min(Δ, 0) ρq_tag / ρq_tot²` in a diagonal block to `ρq_tot`
+(`update_water_tag_rainout_jacobian!`). Both are zero where the share is
+clamped or `ρq_tot` is not positive, since the share does not move there. The
+split solver solves each tag after the model's fields and back-substitutes the
+block to `ρq_tot`. No other row names a tag, so the model's increments, and
+every model field, are bit for bit those without the switch. The switch does
+nothing under 1M, with `implicit_microphysics: false`, and with the autodiff
+Jacobians (`use_auto_jacobian` and `use_dense_jacobian`), which fill the
+blocks they hold themselves. It is refused under prognostic EDMF, where the
+rain-out is split by subdomain and neither entry is the split's derivative.
 
 **A first measurement, 2026-09-23, which does not isolate the entry.** The
 DYCOMS RF02 column under 0M without EDMF, at `dt` 120 s, rains out its initial
