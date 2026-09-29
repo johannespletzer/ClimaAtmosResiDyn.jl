@@ -756,7 +756,9 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     17 configs `configs/wp4aj_*.yml`, the scorer
     `analysis/water/wp4aj_score.py` (smoke-tested on W16's outputs), the
     budgets reused from 6.1's first-hour row. Nothing waits for the owner.
-  - [ ] The 17 runs, from the run tree `-wp4aj-run`; the score; W51.
+  - [ ] The 17 runs, from the run tree `-wp4aj-run` at `727dba0a` (`f2c1e6a5`
+    merged with the record at `54e47d9d`): jobs `13999648` to `13999664`,
+    submitted 2026-09-29. Then the score and W51.
   - [ ] Known issue 4 closed or restated in `docs/known_issues.md`, by the
     verdict.
   - [ ] The PR (the coordinating session opens it).
