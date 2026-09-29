@@ -87,7 +87,7 @@ source tag, so the cost of a tag is that of a source tag, not of a region tag.
       compile and recompile time and GC time reported apart.
     - The first step alone. It compiles the stepper, so it is the compile cost
       that the build did not take.
-    - Step time: 4 warm-up steps after the first, then 5 blocks of 20 steps. Each
+    - Step time: 10 warm-up steps after the first, then 5 blocks of 20 steps. Each
       block is timed as a whole with its allocated bytes and GC time, after a
       `GC.gc()`. The point's step time is the minimum block, with the median and
       the maximum beside it. Block `k` covers the same model time in every arm of
@@ -98,7 +98,7 @@ source tag, so the cost of a tag is that of a source tag, not of a region tag.
     `energy_source_closure_check: false`, so the timing is the tags' own. The
     check's cost is known (T2, T3). It is not part of this measure.
   - **Builds in time.** A point builds in time if its process finishes the build
-    and its 105 steps within 4 hours (`BUILD_LIMIT=4h`, enforced by `timeout`).
+    and its 111 steps within 4 hours (`BUILD_LIMIT=4h`, enforced by `timeout`).
     Otherwise the table lists the point as not finished, with the exit status
     (124 is the timeout). The job's own time limit is set above the sum of its
     points' limits. An OOM is recorded as its exit status, and the point is

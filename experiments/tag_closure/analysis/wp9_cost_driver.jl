@@ -48,7 +48,7 @@ import YAML
 
 # The registered values. The environment overrides them for smoke tests only,
 # and the CSV records what was used.
-const WARMUP = parse(Int, get(ENV, "WP9_WARMUP", "4"))
+const WARMUP = parse(Int, get(ENV, "WP9_WARMUP", "10"))
 const STEPS = parse(Int, get(ENV, "WP9_STEPS", "20"))
 const REPEATS = parse(Int, get(ENV, "WP9_REPEATS", "5"))
 
@@ -265,7 +265,7 @@ function main(base_path)
         "commit", "host", "loadavg1", "load_s", "build_s", "build_compile_s",
         "build_gc_s", "build_gb", "first_step_s", "first_step_compile_s", "steps_per_block",
         "repeats", "step_ms_min", "step_ms_median", "step_ms_max", "bytes_per_step_min",
-        "bytes_per_step_max", "gc_fraction_max", "maxrss_build_gb", "maxrss_warm_gb",
+        "bytes_per_step_max", "gc_fraction_max", "block_compile_s_max", "maxrss_build_gb", "maxrss_warm_gb",
         "maxrss_final_gb", "step_ms_blocks", "finished",
     ]
     row = [
@@ -275,7 +275,7 @@ function main(base_path)
         build.compile_time + build.recompile_time, build.gctime, build.bytes / 1024^3,
         first_step.time, first_step.compile_time + first_step.recompile_time, STEPS, REPEATS,
         minimum(step_ms), median(step_ms), maximum(step_ms), minimum(bytes_per_step),
-        maximum(bytes_per_step), maximum(gc_fraction), build_rss, warm_rss, final_rss,
+        maximum(bytes_per_step), maximum(gc_fraction), maximum(b.compile_time + b.recompile_time for b in blocks), build_rss, warm_rss, final_rss,
         join(round.(step_ms; digits = 4), ";"), Dates.format(Dates.now(), "yyyy-mm-ddTHH:MM:SS"),
     ]
     length(header) == length(row) || error("The header and the row differ in length.")

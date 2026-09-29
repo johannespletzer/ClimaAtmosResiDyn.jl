@@ -43,7 +43,7 @@ import numpy as np
 FLOAT_COLUMNS = (
     "load_s", "build_s", "build_compile_s", "build_gc_s", "build_gb",
     "first_step_s", "first_step_compile_s", "step_ms_min", "step_ms_median",
-    "step_ms_max", "bytes_per_step_min", "bytes_per_step_max", "gc_fraction_max",
+    "step_ms_max", "block_compile_s_max", "bytes_per_step_min", "bytes_per_step_max", "gc_fraction_max",
     "maxrss_build_gb", "maxrss_warm_gb", "maxrss_final_gb", "loadavg1",
 )
 
@@ -100,6 +100,11 @@ def check_statuses(rows, statuses):
     return not_finished
 
 
+def mode_label(r):
+    # The 1M columns have no EDMF, so no updraft mode.
+    return "no EDMF" if "1m_column" in r["base"] else r["mode"]
+
+
 def fmt(x, digits=1):
     return f"{x:.{digits}f}"
 
@@ -132,12 +137,12 @@ def main():
             f"peak {base0['maxrss_final_gb']:.2f} GB.",
             "",
             "| mode | precip | variant | tags | build s | compile s | first step s | step ms min | step ms median "
-            "| block spread | x untagged (min) | ms per tag | B/step | peak GB | follower |",
-            "|:--|:--|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|:--|",
+            "| block spread | compile in blocks s | x untagged (min) | ms per tag | B/step | peak GB | follower |",
+            "|:--|:--|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|:--|",
         ]
         order = sorted(
             (r for r in points if r["ntags"] > 0),
-            key=lambda r: (r["mode"], r["precip"], r["variant"] != "none", r["variant"], r["ntags"]),
+            key=lambda r: (mode_label(r), r["precip"], r["variant"] != "none", r["variant"], r["ntags"]),
         )
         for r in order:
             blocks = np.array([float(x) for x in r["step_ms_blocks"].split(";")])
@@ -145,9 +150,9 @@ def main():
             ratio = r["step_ms_min"] / base0["step_ms_min"]
             per_tag = (r["step_ms_min"] - base0["step_ms_min"]) / r["ntags"]
             lines.append(
-                f"| {r['mode']} | {'yes' if r['precip'] == '1' else 'no'} | {r['variant']} | {r['ntags']} "
+                f"| {mode_label(r)} | {'yes' if r['precip'] == '1' else 'no'} | {r['variant']} | {r['ntags']} "
                 f"| {fmt(r['build_s'])} | {fmt(r['build_compile_s'])} | {fmt(r['first_step_s'])} "
-                f"| {r['step_ms_min']:.3f} | {r['step_ms_median']:.3f} | {100 * spread:.1f}% "
+                f"| {r['step_ms_min']:.3f} | {r['step_ms_median']:.3f} | {100 * spread:.1f}% | {r['block_compile_s_max']:.2f} "
                 f"| {ratio:.3f} | {per_tag:.4f} | {r['bytes_per_step_min']:.0f} "
                 f"| {r['maxrss_final_gb']:.2f} | {r['follower']} |"
             )
