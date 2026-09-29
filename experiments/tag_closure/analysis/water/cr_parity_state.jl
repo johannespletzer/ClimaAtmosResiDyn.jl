@@ -22,7 +22,7 @@ const DIAGNOSTIC_PREFIXES = (
     "ρq_tag_", "ρq_rtag_", "ρq_stag_", "q_tag_", "q_rtag_", "q_stag_",
     "ρe_src_", "e_src_", "ρe_tag_", "e_tag_", "prc_",
 )
-is_diagnostic(name) = startswith(string(name), DIAGNOSTIC_PREFIXES)
+is_diagnostic(name) = any(prefix -> startswith(string(name), prefix), DIAGNOSTIC_PREFIXES)
 
 function read_state(job)
     path = joinpath(ROOT, job, "output_0000", "day10.0.hdf5")
