@@ -6,7 +6,7 @@
 # The tiers (docs/clima_atmos_specific.md, "Which jobs run when"):
 #
 #   none     only this job. The change touches only paths no test reads, or
-#            the nightly finds `main` unchanged.
+#            the last green scheduled run tested this commit of `main`.
 #   quick    the load jobs and `infrastructure` on 1.11. A draft pull request.
 #   full     every group on 1.11. A pull request ready for review, and a push
 #            to `main` that merges a tree no green `ci-full` has tested.
@@ -17,11 +17,19 @@
 #            schedule and tags.
 #   manual   what a manual run (`workflow_dispatch`) asks for.
 #
+# Every tier runs the tests with `check_bounds: auto`, which lets `@inbounds`
+# skip the bounds checks, except `all`, which keeps `yes`. On 2026-09-29 `auto`
+# compiled the tagged models 1.4 to 2.8 times faster on Julia 1.11 (2.2 times
+# summed over parent_budget, tagging_water and tagging_source_edmf). No test
+# checks bounds itself, so the weekly run is where an out-of-bounds access
+# still shows up.
+#
 # Environment: EVENT_NAME, GITHUB_REF, PR_DRAFT, PUSH_BEFORE, SCHEDULE,
 # DISPATCH_VERSIONS, DISPATCH_GROUPS, DISPATCH_CHECK_BOUNDS, ALLOW_FAIL, and
 # GH_TOKEN with GITHUB_REPOSITORY for the check-run lookup. For a local replay,
 # CI_PLAN_HEAD names the commit to plan for instead of the checkout, GROUPS_JSON
-# skips Julia, and CI_PLAN_FAKE_CI_FULL (success or failure) skips the API.
+# skips Julia, and CI_PLAN_FAKE_CI_FULL (success or failure) and
+# CI_PLAN_FAKE_LAST_SCHEDULED (a SHA, or "none") skip the API.
 set -euo pipefail
 
 head=${CI_PLAN_HEAD:-HEAD}
@@ -111,9 +119,24 @@ ci_full_green() {
     [ "$last" = success ]
 }
 
+# The commit the latest green scheduled run of `ci` on `main` tested, or nothing
+# if it cannot be read. A failed run does not count, so a red nightly is run
+# again the next night on the same commit.
+last_scheduled_sha() {
+    if [ -n "${CI_PLAN_FAKE_LAST_SCHEDULED:-}" ]; then
+        [ "$CI_PLAN_FAKE_LAST_SCHEDULED" = none ] || echo "$CI_PLAN_FAKE_LAST_SCHEDULED"
+        return
+    fi
+    curl -fsS -m 30 \
+        -H "Authorization: Bearer ${GH_TOKEN:?}" \
+        -H "Accept: application/vnd.github+json" \
+        "${GITHUB_API_URL:-https://api.github.com}/repos/${GITHUB_REPOSITORY:?}/actions/workflows/ci.yml/runs?event=schedule&branch=main&status=success&per_page=1" |
+        jq -r '.workflow_runs[0].head_sha // empty'
+}
+
 tier=
 reason=
-check_bounds=yes
+check_bounds=auto
 matrix='[]'
 full_scope=false
 
@@ -165,9 +188,12 @@ case "${EVENT_NAME:?}" in
         if [ "${SCHEDULE:-}" = "$WEEKLY_CRON" ]; then
             tier=all
             reason="The weekly run of every group on both versions."
-        elif [ -z "$(git log -1 --since='25 hours ago' --format=%H "$head")" ]; then
+        # The commit, not its date: a commit made days ago can reach `main`
+        # today. When the history cannot be read, the tests run.
+        elif last=$(last_scheduled_sha) && [ -n "$last" ] &&
+            [ "$last" = "$(git rev-parse "$head")" ]; then
             tier=none
-            reason="main has not changed since the last nightly run."
+            reason="The last green scheduled run tested this commit of main, $(git rev-parse --short "$head")."
         else
             tier=nightly
             reason="The nightly run of the fork's groups on Julia 1.10."
@@ -175,7 +201,7 @@ case "${EVENT_NAME:?}" in
         ;;
     workflow_dispatch)
         tier=manual
-        check_bounds=${DISPATCH_CHECK_BOUNDS:-yes}
+        check_bounds=${DISPATCH_CHECK_BOUNDS:-auto}
         case "$check_bounds" in yes | auto) ;; *)
             echo "check_bounds must be yes or auto, not $check_bounds" >&2
             exit 1
@@ -185,7 +211,13 @@ case "${EVENT_NAME:?}" in
         if [ "$requested" = all ]; then
             selected=$GROUPS_JSON
         else
-            selected=$(jq -c -R 'split(",") | map(gsub("^ +| +$"; "")) | map(select(length > 0))' <<<"$requested")
+            selected=$(jq -c -R 'split(",") | map(gsub("^ +| +$"; ""))' <<<"$requested")
+            # An empty entry or a repeated group is a typo, and would run a
+            # matrix other than the one asked for.
+            if jq -e 'any(.[]; length == 0) or length != (unique | length)' <<<"$selected" >/dev/null; then
+                echo "groups must be names separated by single commas, each once: '$requested'" >&2
+                exit 1
+            fi
             unknown=$(jq -r --argjson known "$GROUPS_JSON" '[.[] | select(. as $g | $known | index($g) | not)] | join(", ")' <<<"$selected")
             if [ -n "$unknown" ]; then
                 echo "Unknown test groups: $unknown. Known groups: $(jq -r 'join(", ")' <<<"$GROUPS_JSON")" >&2
@@ -205,7 +237,7 @@ case "${EVENT_NAME:?}" in
                 exit 1
                 ;;
         esac
-        if [ "$requested" = all ] && [ "$check_bounds" = yes ] && [ "$versions" != 1.10 ]; then
+        if [ "$requested" = all ] && [ "$versions" != 1.10 ]; then
             full_scope=true
         fi
         reason="A manual run: groups $requested, Julia $versions, check_bounds $check_bounds."
@@ -220,7 +252,10 @@ case "$tier" in
     quick) matrix=$(jq -c --argjson g "$GROUPS_JSON" '[.[] | select(. as $q | $g | index($q))]' <<<"$QUICK" | on_version 1.11) ;;
     full) matrix=$(on_version 1.11 <<<"$GROUPS_JSON") ;;
     nightly) matrix=$(on_version 1.10 <<<"$fork_groups") ;;
-    all) matrix=$(jq -c -s 'add' <(on_version 1.11 <<<"$GROUPS_JSON") <(on_version 1.10 <<<"$fork_groups")) ;;
+    all)
+        matrix=$(jq -c -s 'add' <(on_version 1.11 <<<"$GROUPS_JSON") <(on_version 1.10 <<<"$fork_groups"))
+        check_bounds=yes
+        ;;
 esac
 case "$tier" in full | all) full_scope=true ;; esac
 

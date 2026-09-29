@@ -255,14 +255,16 @@ tiers, and the `plan` job picks one per event with `.github/ci_plan.sh`.
   - **Nightly, Monday to Saturday at 01:00 UTC.** The `load` jobs and the
     fork's groups on Julia 1.10, which `Project.toml` promises. It resolves the dependencies afresh,
     so it also catches a release that breaks `main` without a commit, as
-    ClimaParams 1.1.16 did (#128). It skips a day on which `main` did not
-    change.
+    ClimaParams 1.1.16 did (#128). It skips a night on which the last green
+    scheduled run already tested the same commit of `main`, and runs when that
+    history cannot be read.
   - **Weekly on Sunday at 01:00 UTC, and tags.** Every group on 1.11 and the
-    fork's groups on 1.10.
+    fork's groups on 1.10, with bounds checking on (see below).
   - **Manual.** `gh workflow run ci.yml --ref <branch>` tests every group on
     both versions, the upstream groups on 1.10 included. The inputs
     `versions`, `groups` and `check_bounds` narrow it, for example
-    `-f groups=parent_budget,tagging_water -f versions=1.11`.
+    `-f groups=parent_budget,tagging_water -f versions=1.11`. It runs with
+    `check_bounds: auto` unless asked for `yes`.
   - **Paths no test reads.** A change that touches only `docs/` (except
     `docs/src/parent_budget/`, which a test reads), `experiments/`,
     `runscripts/`, `calibration/`, markdown at the root,
@@ -274,12 +276,20 @@ The groups that test upstream code (`dynamics`, `dynamics_tracers`,
 `dynamics_edmfx`, `restarts`) run on 1.11 only, except in a manual run. A
 difference between Julia versions inside upstream code is upstream's to find.
 
+Every tier runs the tests with `julia-runtest`'s `check_bounds: auto`, except
+the weekly run and tags, which keep `yes`. With `yes`, Julia checks bounds
+inside `@inbounds` code too, and compiles each new model more slowly. On
+2026-09-29 `auto` compiled `parent_budget`, `tagging_water` and
+`tagging_source_edmf` 2.3, 2.8 and 1.4 times faster on Julia 1.11, 2.2 times
+summed. No test checks bounds itself, so the weekly run is where an access out
+of bounds still shows up.
+
 Three checks summarise a run:
 
   - **`ci-required`** always reports. It passes when every job the plan asked
     for passed.
-  - **`ci-full`** runs when every group ran on 1.11 with the default
-    check-bounds setting, and fails unless they all passed. A merge reads it
+  - **`ci-full`** runs when every group ran on 1.11, and fails unless they all
+    passed. A merge reads it
     on the pull request head to decide whether `main` needs its own run.
   - **A red scheduled run** opens an issue labelled `nightly-red`, with its
     tier in the title, or comments on the open one of that tier. A green run
@@ -309,8 +319,9 @@ The other workflows:
     changes, weekly (Monday 04:00 UTC), and on demand. A pull request runs it
     only when it changes the workflow.
   - **Caches.** `ci`, `Documentation` and `Downgrade` keep depot caches under
-    the paths in `DEPOT_CACHE_PATHS`. `ci` keeps one per Julia patch version
-    and day, shared by all groups.
+    the paths in `DEPOT_CACHE_PATHS`. `ci` keeps one per check-bounds setting,
+    Julia patch version and day, shared by all groups. The two settings build
+    different package images.
       + **Who saves.** Only runs on `main` save a cache, the schedules
         included. In `ci`, the first job to finish on a given day saves that
         day's cache, and later runs find the key and save nothing. Every
@@ -327,8 +338,8 @@ The other workflows:
         keep no cache. Theirs were 4.5 GB and 2.8 GB, and would push the
         others out.
       + **`load`.** It restores the test cache and never saves. It loads the
-        package with `--check-bounds=yes`, the flag `Pkg.test` sets, so the
-        test jobs' package images fit.
+        package with the tier's check-bounds setting, the flag the test jobs
+        pass to `Pkg.test`, so their package images fit.
       + **CPU target.** GitHub's runners mix Intel and AMD models. A package
         image built for one was rejected on the other, and all its
         dependencies were built again. So the cached workflows set

@@ -14,6 +14,12 @@ name: ci
 #   weekly on Sunday, tags         every group on 1.11, fork's groups on 1.10
 #   manual run                     the versions and groups it asks for
 #
+# The tests run with `check_bounds: auto`, except the weekly run and tags,
+# which keep `yes`. `auto` compiled the tagged models 2.2 times faster (see
+# .github/ci_plan.sh), and the weekly run still catches an access out of
+# bounds. Each setting has caches of its own, since their package images
+# differ.
+#
 # A change that touches only paths no test reads (docs/ except
 # docs/src/parent_budget/, experiments/, runscripts/, calibration/, markdown
 # at the root, other workflows) runs no test. To test every group on both
@@ -42,10 +48,10 @@ on:
         type: string
         default: 'all'
       check_bounds:
-        description: 'julia-runtest check_bounds (auto is for measuring its cost)'
+        description: 'julia-runtest check_bounds (yes also checks inside @inbounds)'
         type: choice
-        options: ['yes', 'auto']
-        default: 'yes'
+        options: ['auto', 'yes']
+        default: 'auto'
 
 # A newer push to a pull request cancels its older run. Nothing else is
 # cancelled. A push to `main` or a tag has a group per commit, because a later
@@ -67,7 +73,8 @@ permissions:
 # per repository. On 2026-09-17 the caches of pull request runs pushed `main`'s
 # out within half an hour.
 #
-# Each key holds the full Julia version and the UTC date. A new patch release
+# Each key holds the check-bounds setting, the full Julia version and the UTC
+# date. The two settings build different package images. A new patch release
 # then starts a new cache instead of adding its package images to the old one.
 # The first run of a day on `main` saves the day's cache, and later runs find
 # that key and save nothing, which keeps the number of caches down.
@@ -97,10 +104,12 @@ jobs:
     name: plan
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # `checks: read` lets it look up `ci-full` on a merged pull request's head.
+    # `checks: read` lets it look up `ci-full` on a merged pull request's head,
+    # and `actions: read` the commit the last green scheduled run tested.
     permissions:
       contents: read
       checks: read
+      actions: read
     outputs:
       tier: ${{ steps.plan.outputs.tier }}
       matrix: ${{ steps.plan.outputs.matrix }}
@@ -164,8 +173,8 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: ${{ env.DEPOT_CACHE_PATHS }}
-          key: julia-ci-test-haswell-${{ steps.setup-julia.outputs.julia-version }}-${{ steps.day.outputs.day }}
-          restore-keys: julia-ci-test-haswell-${{ steps.setup-julia.outputs.julia-version }}-
+          key: julia-ci-test-${{ needs.plan.outputs.check_bounds }}-haswell-${{ steps.setup-julia.outputs.julia-version }}-${{ steps.day.outputs.day }}
+          restore-keys: julia-ci-test-${{ needs.plan.outputs.check_bounds }}-haswell-${{ steps.setup-julia.outputs.julia-version }}-
       - name: Runner CPU
         run: grep -m1 'model name' /proc/cpuinfo
       - uses: julia-actions/julia-buildpkg@v1
@@ -260,24 +269,22 @@ jobs:
       # One cache per Julia version and day, shared by every group, since all
       # groups use the same test environment. On `main`, the first job to
       # finish saves it, and jobs that start later restore that exact key.
-      # Other runs only restore (see `DEPOT_CACHE_PATHS`). A manual run with
-      # `check_bounds: auto` builds other package images and saves nothing.
-      # The CPU model is printed to explain a cache that restores but still
+      # Other runs only restore (see `DEPOT_CACHE_PATHS`). The CPU model is printed to explain a cache that restores but still
       # precompiles.
       - name: Restore the Julia depot
-        if: github.ref != 'refs/heads/main' || needs.plan.outputs.check_bounds != 'yes'
+        if: github.ref != 'refs/heads/main'
         uses: actions/cache/restore@v6
         with:
           path: ${{ env.DEPOT_CACHE_PATHS }}
-          key: julia-ci-test-haswell-${{ steps.setup-julia.outputs.julia-version }}-${{ steps.day.outputs.day }}
-          restore-keys: julia-ci-test-haswell-${{ steps.setup-julia.outputs.julia-version }}-
+          key: julia-ci-test-${{ needs.plan.outputs.check_bounds }}-haswell-${{ steps.setup-julia.outputs.julia-version }}-${{ steps.day.outputs.day }}
+          restore-keys: julia-ci-test-${{ needs.plan.outputs.check_bounds }}-haswell-${{ steps.setup-julia.outputs.julia-version }}-
       - name: Restore and save the Julia depot
-        if: github.ref == 'refs/heads/main' && needs.plan.outputs.check_bounds == 'yes'
+        if: github.ref == 'refs/heads/main'
         uses: actions/cache@v6
         with:
           path: ${{ env.DEPOT_CACHE_PATHS }}
-          key: julia-ci-test-haswell-${{ steps.setup-julia.outputs.julia-version }}-${{ steps.day.outputs.day }}
-          restore-keys: julia-ci-test-haswell-${{ steps.setup-julia.outputs.julia-version }}-
+          key: julia-ci-test-${{ needs.plan.outputs.check_bounds }}-haswell-${{ steps.setup-julia.outputs.julia-version }}-${{ steps.day.outputs.day }}
+          restore-keys: julia-ci-test-${{ needs.plan.outputs.check_bounds }}-haswell-${{ steps.setup-julia.outputs.julia-version }}-
       - name: Runner CPU
         run: grep -m1 'model name' /proc/cpuinfo
       - uses: julia-actions/julia-buildpkg@v1
@@ -316,8 +323,8 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ${{ env.DEPOT_CACHE_PATHS }}
-          key: julia-ci-test-haswell-${{ steps.setup-julia.outputs.julia-version }}-${{ steps.day.outputs.day }}
-          restore-keys: julia-ci-test-haswell-${{ steps.setup-julia.outputs.julia-version }}-
+          key: julia-ci-test-${{ needs.plan.outputs.check_bounds }}-haswell-${{ steps.setup-julia.outputs.julia-version }}-${{ steps.day.outputs.day }}
+          restore-keys: julia-ci-test-${{ needs.plan.outputs.check_bounds }}-haswell-${{ steps.setup-julia.outputs.julia-version }}-
       - name: Runner CPU
         run: grep -m1 'model name' /proc/cpuinfo
       - uses: julia-actions/julia-buildpkg@v1
@@ -326,6 +333,7 @@ jobs:
       - uses: julia-actions/julia-runtest@v1
         with:
           coverage: false
+          check_bounds: ${{ needs.plan.outputs.check_bounds }}
 
   # A check that always reports. It passes when every job the plan asked for
   # passed. It is the check to require on `main` if one is ever required.
@@ -361,7 +369,7 @@ jobs:
           exit $bad
 
   # The marker that every group passed on 1.11 on this commit. It runs only
-  # when the plan ran every group with the default check-bounds, and fails
+  # when the plan ran every group on 1.11, and fails
   # unless they all passed. A push to `main` reads it on the merged pull
   # request's head to skip testing the same tree twice. On a draft it is
   # skipped, which a required check would count as passed; a draft cannot be
