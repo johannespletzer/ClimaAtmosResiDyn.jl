@@ -46,6 +46,13 @@ The twelve criteria of the plan, section 2, in short:
 
 ## Decisions
 
+  - [ ] **WP4a-J: does `water_tag_rainout_jacobian` become a default?**
+    *Open, 2026-09-29, after W51.* Proposed: no; it stays an experimental key,
+    off by default. On the raining 0M column the missing entries cost well
+    under the first-hour budgets, and the pair moves the tags by at most
+    1.75e-5 in L1, less than 1.5% of the one-iteration error, with a sign
+    that depends on the tag. It is refused under prognostic EDMF.
+    (`design/ZERO_M_SPLIT.md` 5.2.)
   - [x] **Option C's revision, after W47.** *Decided 2026-09-29, after W48
     (design section 10, option 1): the explicit brackets give the region
     tags the target's gain, for every explicit process. Next: its design
@@ -761,11 +768,14 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     17 configs `configs/wp4aj_*.yml`, the scorer
     `analysis/water/wp4aj_score.py` (smoke-tested on W16's outputs), the
     budgets reused from 6.1's first-hour row. Nothing waits for the owner.
-  - [ ] The 17 runs, from the run tree `-wp4aj-run` at `727dba0a` (`f2c1e6a5`
+  - [x] The 17 runs, from the run tree `-wp4aj-run` at `727dba0a` (`f2c1e6a5`
     merged with the record at `54e47d9d`): jobs `13999648` to `13999664`,
-    submitted 2026-09-29. Then the score and W51.
-  - [ ] Known issue 4 closed or restated in `docs/known_issues.md`, by the
-    verdict.
+    all exit 0. Scored as W51 (`output/wp4aj/`): known issue 4 closed on
+    this column. The departures are dated amendments in the note's 5.1.
+  - [ ] Known issue 4 closed in `docs/known_issues.md`: drafted in the note's
+    5.2, to go to the model branch with the PR.
+  - [ ] *Decision for the owner:* whether the switch becomes a default.
+    Proposed: no (the note's 5.2).
   - [ ] The PR (the coordinating session opens it).
 
 ## WP4b: rain and snow carry their own tags (draft PR #121)

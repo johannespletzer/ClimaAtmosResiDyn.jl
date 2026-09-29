@@ -140,6 +140,9 @@ MUST_MATCH_PROVENANCE_KEYS = ("machine", "ntasks")
 YAML_DIFF_ALLOWED_KEYS = {
     "energy_source_tag_updraft_copy",
     "water_tag_updraft_copy",
+    # WP4a-J: the tags' rain-out entries in the Jacobian. Only the tags' rows
+    # change, so a pair that differs in it can still claim parity.
+    "water_tag_rainout_jacobian",
     "diagnostics",
     "output_dir",
     "toml",

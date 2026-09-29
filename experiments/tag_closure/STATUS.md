@@ -91,10 +91,24 @@ not checked, it says so.
   - **Update, 2026-09-29: WP4a-J, draft (the `wp4aj` agent).** The pair is
     built behind `water_tag_rainout_jacobian`, `false` by default, on
     `claude/wp4a-j-jacobian-switch` at `f2c1e6a5` (not yet a PR). Its tests
-    and four mutant runs ran in Slurm jobs `13999575` to `13999577`, with the
-    branch's parity against `main`. The experiment's pre-registration is
-    completed in `design/ZERO_M_SPLIT.md`, section 5.1, with no new
-    tolerance. Its 17 runs, the score and W51 follow (G3_TODO, WP4a-J).
+    pass, each of four mutants fails its test file, and the branch without
+    the key matches `main` bit for bit (jobs `13999575` to `13999577`). The
+    pre-registration is `design/ZERO_M_SPLIT.md` section 5.1, with no new
+    tolerance. Its 17 runs (`13999648` to `13999664`) are scored as **W51:
+    known issue 4 is closed on the raining 0M column.** One Newton iteration
+    without the entries stays within the first-hour budgets at 1 h, at worst
+    1.52e-3 in L1 against 1%. The pair keeps every model field bit for bit,
+    moves the tags by at most 1.75e-5 in L1 and changes the one-iteration
+    error by at most 1.5% of it, with a sign that depends on the tag.
+
+      + *Departures from the design,* dated amendments in 5.1: the run count
+        (17, against section 5's "eleven"; its table lists thirteen, plus
+        the 40-iteration checks and an untagged twin); zero entries where
+        the share is clamped or `ρq_tot ≤ 0`; the block to `ρq_tot` a
+        diagonal row, not a tridiagonal one. After the runs, the verifier's
+        pairing allowlist gained the new key; no number changed.
+      + *For the owner:* keep the switch off by default (proposed, 5.2). A
+        draft of known issue 4's update is in 5.2, for the PR.
 
   - **Update, 2026-09-28: PRs merged, unpushed work found, housekeeping.**
     Written by the session that reviewed #125. `main` was at `cfc2152c`,

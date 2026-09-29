@@ -329,6 +329,74 @@ commit merged with this record commit, detached, and its own `.buildkite`:
 for the 17 runs. Then `python3 analysis/water/wp4aj_score.py`, which writes
 `output/wp4aj/`.
 
+**Amendments, dated.** Where the build and the runs depart from the design
+above, recorded on 2026-09-29:
+
+ 1. *2026-09-29, before the runs: the run count.* Section 5 says eleven runs;
+    its own table lists thirteen, and the 40-iteration checks make sixteen.
+    The untagged twin makes 17. It is added for OD2's window rule, which
+    reads a case's window from its untagged run, and for parity (P1).
+ 2. *2026-09-29, in the build: zero entries where the share is clamped.*
+    Section 4 gives the entries as `min(Δ, 0)/ρq_tot` and
+    `−min(Δ, 0)·ρq_tagᵢ/ρq_tot²`. As built they are the exact derivatives of
+    `water_tag_fraction`: those formulas where the unclamped share lies in
+    [0, 1], and zero where the clamp binds or `ρq_tot ≤ 0`, since the share
+    does not move there. Without this the formulas would divide by a
+    non-positive `ρq_tot`.
+ 3. *2026-09-29, in the build: the block to `ρq_tot` is a diagonal row.*
+    Section 4 names a `TridiagonalRow` block, which is the tag's diagonal,
+    shared with the diffusion's. The block to `ρq_tot` is a
+    `DiagonalMatrixRow`, since the loss is pointwise. The split solver
+    back-substitutes it as it does the tridiagonal sedimentation cross
+    blocks.
+ 4. *2026-09-29, after the runs: the verifier's pairing guard.* The scorer's
+    first pass stopped at P2: `compare_runs.py --expect-parity` refuses a
+    pair whose YAML differs outside an allowlist, and the new key was not on
+    it. It was added beside `water_tag_updraft_copy`, which likewise changes
+    only the tags. The verifier's 55 tests pass. No measure or budget
+    changed, and the first pass, which wrote no P2 or M1 numbers, was
+    discarded.
+
+### 5.2 The result, and a draft for known issue 4 (2026-09-29)
+
+W51: the verdict is **known issue 4 closed** on this column. P1, P2, V1 and
+V2 pass. The off runs at one iteration are within the first-hour budgets at
+1 h at all three steps, at worst 1.52e-3 in L1 (`strat`, dt 30 s) against 1%.
+The pair moves the tags by at most 1.75e-5 in L1 and changes the
+one-iteration error by at most 1.5% of it, with a sign that depends on the
+tag.
+
+**For the owner: should the switch become a default?** Proposed: no. Keep it
+off by default, as an experimental key. On this column the missing entries
+cost well under the budget. The pair changes the tags by 1e-5 against a
+one-iteration error of 1e-3 that comes from elsewhere, and makes `tropo`
+slightly worse at every output. It adds two blocks per tag. It does not
+apply under prognostic EDMF, G3's production configuration, where it is
+refused. The owner decides.
+
+**Draft for `docs/known_issues.md`, issue 4,** to go to the model branch with
+the PR. The status paragraph becomes:
+
+> **Status:** closed on 2026-09-29 for the grid rule, by WP4a-J's
+> measurement. The copies' part is open (below). The owner chose the pair of
+> entries behind a switch on 2026-09-28: `water_tag_rainout_jacobian: true`,
+> described below, off by default.
+
+And a paragraph follows "The switch":
+
+> **The measurement, 2026-09-29 (WP4a-J).** The raining DYCOMS RF02 0M column
+> without EDMF, implicit microphysics and diffusion, ARS222, 2 h, three tags.
+> Runs at one Newton iteration without the entries stay within the tag-closure
+> programme's first-hour budgets of a 20-iteration reference at 1 h, at dt
+> 120, 60 and 30 s. The worst is 1.5e-3 in the mass-weighted L1 of a region
+> tag, against 1%. With the switch on, every model field is bit for bit the
+> same, and the tags move by at most 1.8e-5 in L1. That changes the
+> one-iteration error by at most 1.5% of it, in either direction, depending on
+> the tag. So on this column the missing entries cost little, and the
+> one-iteration error of about 1e-3 comes from elsewhere. Prognostic EDMF,
+> 1M and the sphere were not measured. The record is FINDINGS W51 on the
+> branch `claude/tag-closure-record`.
+
 ## 6. Tests
 
   - **Unit**, on the real kernels, random states: the shares finite, in

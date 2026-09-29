@@ -1,0 +1,70 @@
+/dss/dsstbyfs01/pn56su/pn56su-dss-0020/opt/python/3.12/bin/python3 /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-wp4aj/experiments/tag_closure/analysis/evidence/compare_runs.py --reference /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n10_off/output_0000 --run /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n10_on/output_0000 --hours 0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1,1.2,1.4,1.6,1.8,2 --expect-parity --json /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-wp4aj/experiments/tag_closure/output/wp4aj/verifier/P2_M1_dt120_n10_on_vs_off.json
+
+reference: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n10_off/output_0000
+run:       /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n10_on/output_0000
+family:    water
+
+Weights: w_k = rho_ref,k * dz_k, using the reference's rhoa at each hour for both runs. z faces rebuilt from centres, top face 1500.000 m (YAML z_max 1500.000 m).
+
+Parent parity (bitwise, dtype-width unsigned-int view):
+  cli        bitwise identical (630 elements)
+  clw        bitwise identical (630 elements)
+  evspsbl    bitwise identical (21 elements)
+  hus        bitwise identical (630 elements)
+  lwp        bitwise identical (21 elements)
+  pr         bitwise identical (21 elements)
+  rhoa       bitwise identical (630 elements)
+  ta         bitwise identical (630 elements)
+  wa         bitwise identical (630 elements)
+
+tag        hour   ∫ref kg/m²        Δ∫/∫        L1        L∞     max|Δq|
+tropo       0.1   8.2628e+00   +8.17e-15  3.24e-14  2.48e-13  2.3948e-15
+tropo       0.2   8.2653e+00   +1.42e-14  2.78e-14  1.58e-13  1.5491e-15
+tropo       0.3   8.2715e+00   +1.50e-14  2.37e-14  1.35e-13  1.3340e-15
+tropo       0.4   8.2795e+00   +1.54e-14  2.23e-14  6.86e-14  6.8175e-16
+tropo       0.5   8.2884e+00   +1.52e-14  2.09e-14  6.41e-14  6.4185e-16
+tropo       0.6   8.2978e+00   +1.52e-14  1.97e-14  4.69e-14  4.7184e-16
+tropo       0.7   8.3074e+00   +1.45e-14  1.83e-14  3.96e-14  4.0072e-16
+tropo       0.8   8.3171e+00   +1.45e-14  1.76e-14  3.47e-14  3.5302e-16
+tropo       0.9   8.3269e+00   +1.47e-14  1.71e-14  3.17e-14  3.2439e-16
+tropo         1   8.3367e+00   +1.45e-14  1.67e-14  2.95e-14  3.0271e-16
+tropo       1.2   8.3561e+00   +1.47e-14  1.61e-14  2.57e-14  2.6628e-16
+tropo       1.4   8.3753e+00   +1.42e-14  1.55e-14  2.31e-14  2.4113e-16
+tropo       1.6   8.3943e+00   +1.46e-14  1.52e-14  2.09e-14  2.1944e-16
+tropo       1.8   8.4131e+00   +1.39e-14  1.49e-14  1.91e-14  2.0123e-16
+tropo         2   8.4319e+00   +1.41e-14  1.47e-14  1.77e-14  1.8735e-16
+
+strat       0.1   3.2927e+00   -1.17e-13  1.41e-13  7.91e-13  3.4720e-15
+strat       0.2   3.2851e+00   -1.20e-13  1.27e-13  5.32e-13  2.2395e-15
+strat       0.3   3.2787e+00   -1.23e-13  1.25e-13  4.16e-13  1.7109e-15
+strat       0.4   3.2729e+00   -1.24e-13  1.24e-13  3.55e-13  1.4303e-15
+strat       0.5   3.2674e+00   -1.24e-13  1.24e-13  3.16e-13  1.2494e-15
+strat       0.6   3.2622e+00   -1.24e-13  1.24e-13  2.89e-13  1.1224e-15
+strat       0.7   3.2571e+00   -1.24e-13  1.24e-13  2.68e-13  1.0252e-15
+strat       0.8   3.2521e+00   -1.24e-13  1.25e-13  2.52e-13  9.4933e-16
+strat       0.9   3.2473e+00   -1.24e-13  1.24e-13  2.39e-13  8.8861e-16
+strat         1   3.2425e+00   -1.24e-13  1.24e-13  2.28e-13  8.3700e-16
+strat       1.2   3.2332e+00   -1.25e-13  1.24e-13  2.11e-13  7.5591e-16
+strat       1.4   3.2241e+00   -1.24e-13  1.24e-13  1.98e-13  6.9346e-16
+strat       1.6   3.2154e+00   -1.24e-13  1.24e-13  1.87e-13  6.4358e-16
+strat       1.8   3.2068e+00   -1.25e-13  1.24e-13  1.78e-13  6.0368e-16
+strat         2   3.1985e+00   -1.25e-13  1.24e-13  1.71e-13  5.6899e-16
+
+evap        0.1   1.3388e-02   +0.00e+00  2.61e-24  2.41e-24  4.0390e-28
+evap        0.2   2.6775e-02   +0.00e+00  6.66e-23  4.60e-23  1.2925e-26
+evap        0.3   4.0162e-02   +0.00e+00  1.71e-21  2.44e-21  9.0473e-25
+evap        0.4   5.3548e-02   +0.00e+00  1.28e-20  2.12e-20  9.5126e-24
+evap        0.5   6.6934e-02   +0.00e+00  1.24e-19  1.76e-19  9.0990e-23
+evap        0.6   8.0320e-02   +0.00e+00  4.19e-19  3.66e-19  2.1176e-22
+evap        0.7   9.3704e-02   +0.00e+00  1.26e-18  1.33e-18  8.4703e-22
+evap        0.8   1.0709e-01   +0.00e+00  1.83e-18  1.84e-18  1.2705e-21
+evap        0.9   1.2047e-01   +0.00e+00  7.69e-19  1.14e-18  8.4703e-22
+evap          1   1.3385e-01   +0.00e+00  2.28e-19  2.68e-19  2.1176e-22
+evap        1.2   1.6061e-01   +0.00e+00  1.48e-19  2.41e-19  2.1176e-22
+evap        1.4   1.8737e-01   +0.00e+00  7.55e-19  8.82e-19  8.4703e-22
+evap        1.6   2.1412e-01   +0.00e+00  3.17e-19  8.16e-19  8.4703e-22
+evap        1.8   2.4086e-01   +0.00e+00  5.05e-19  7.63e-19  8.4703e-22
+evap          2   2.6759e-01   +0.00e+00  5.17e-20  8.98e-20  1.0588e-22
+
+json report: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-wp4aj/experiments/tag_closure/output/wp4aj/verifier/P2_M1_dt120_n10_on_vs_off.json
+

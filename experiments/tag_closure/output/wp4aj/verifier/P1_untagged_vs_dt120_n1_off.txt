@@ -1,0 +1,20 @@
+/dss/dsstbyfs01/pn56su/pn56su-dss-0020/opt/python/3.12/bin/python3 /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-wp4aj/experiments/tag_closure/analysis/evidence/compare_runs.py --reference /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_untagged/output_0000 --run /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_off/output_0000 --parity-only --json /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-wp4aj/experiments/tag_closure/output/wp4aj/verifier/P1_untagged_vs_dt120_n1_off.json
+
+reference: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_untagged/output_0000
+run:       /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_off/output_0000
+
+fields only in reference (tag-family, not compared): []
+fields only in run (tag-family, not compared): ['q_tag_evap', 'q_tag_fix_evap', 'q_tag_fix_strat', 'q_tag_fix_tropo', 'q_tag_res', 'q_tag_strat', 'q_tag_tropo']
+  cli        bitwise identical (630 elements)
+  clw        bitwise identical (630 elements)
+  hus        bitwise identical (630 elements)
+  rhoa       bitwise identical (630 elements)
+  ta         bitwise identical (630 elements)
+  wa         bitwise identical (630 elements)
+  evspsbl    bitwise identical (21 elements)
+  lwp        bitwise identical (21 elements)
+  pr         bitwise identical (21 elements)
+
+--parity-only: PASS (9 fields bit for bit)
+json report: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-wp4aj/experiments/tag_closure/output/wp4aj/verifier/P1_untagged_vs_dt120_n1_off.json
+
