@@ -41,7 +41,7 @@ concurrency:
 
 jobs:
   # The test groups are read from `test/runtests.jl`'s `KNOWN_TEST_GROUPS`, less
-  # `all` and `precompile`, by `.github/read_test_groups.jl`. It evaluates only that assignment
+  # `all`, by `.github/read_test_groups.jl`. It evaluates only that assignment
   # and fails if it is not a literal tuple of plain names. So a pull request
   # that adds a group no longer edits this file, and no longer starts the full
   # matrix below. The weekly run, main and a manual run still test every group.
