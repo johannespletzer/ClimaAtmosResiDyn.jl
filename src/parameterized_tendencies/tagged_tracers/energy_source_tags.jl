@@ -2461,7 +2461,8 @@ function _start_plume_at_surface!(
     εᵢ = Fields.field_values(Fields.level(getproperty(ᶜε_start, i), 1))
     receives = tag_receives_source(tag, :surface_flux)
     gain = _lowest_level_values(gain_weight(ᶜmasks, tag))
-    @. εᵢ = _plume_start_value(ε̄, f, receives * gain, $(Val(i)), flags)
+    start = PlumeStartValue(Val(i), flags)
+    @. εᵢ = start(ε̄, f, receives * gain)
     return _start_plume_at_surface!(
         ᶜε_start,
         ε̄,
@@ -2478,14 +2479,14 @@ _lowest_level_values(ᶜweight::Fields.Field) =
     Fields.field_values(Fields.level(ᶜweight, 1))
 
 # One tag's start in the lowest cell: its grid-mean value, less the surface
-# flux's part, plus that part of the partition's sum by the tag's weight.
-@inline _plume_start_value(
-    ε̄,
-    f,
-    gain,
-    ::Val{i},
-    ::Val{partition},
-) where {i, partition} =
+# flux's part, plus that part of the partition's sum by the tag's weight. A
+# callable type, so that the tag's index and the partition travel in the type.
+# Passed as arguments, each `Val` is wrapped in a `Ref` that allocates, 16
+# bytes per tag and call on the EDMF column.
+struct PlumeStartValue{i, partition} end
+PlumeStartValue(::Val{i}, ::Val{partition}) where {i, partition} =
+    PlumeStartValue{i, partition}()
+@inline (::PlumeStartValue{i, partition})(ε̄, f, gain) where {i, partition} =
     (1 - f) * ε̄[i] + f * gain * _partition_total(ε̄, partition)
 
 _exchange_energy_source_tags!(ᶜYₜ, subdomains, dt, upwinding, ::Tuple{}, i) =
