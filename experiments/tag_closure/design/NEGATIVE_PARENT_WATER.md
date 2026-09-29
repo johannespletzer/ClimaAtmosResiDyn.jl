@@ -655,3 +655,343 @@ explicit brackets do not.
     the rises should go;
   - a PR against `main` with the rule, its unit tests and parity;
   - the validation runs.
+
+## 11. The revision of C: the explicit brackets give the region tags the target's gain (2026-09-29)
+
+The owner chose option 1 of section 10 on 2026-09-29 (DECISIONS.md): the
+explicit brackets give the region tags only the target's gain, for every
+explicit process. Where the parent is at or below zero, the gain goes to the
+negative part. This section says how it is built, and registers its
+validation before any run. Nothing in 11.7 to 11.9 changes after the runs.
+The code is on `claude/option-c-revision`, from `main` at `43b01ca1`.
+
+### 11.1 The rule, per bracket
+
+Each explicit process that writes `ρq_tot` sits in a bracket
+(`open_applied_update!`, `close_applied_update!`). The bracket takes the
+process's tendency of `ρq_tot`, `Δ`, and gives each tag its part
+(`attribute_tagged_ρq_tot!`, whose kernel is `_accumulate_water_tag!`). Until
+now a partition tag `k` took
+
+    M_k·max(Δ, 0) + φ_k·min(Δ, 0),
+
+its mask times the gain, and its share `φ_k = ρq_tag_k / ρq_tot` of the loss.
+`φ_k` is zero where `ρq_tot ≤ 0`.
+
+The partition's target is `T = max(ρq_tot, 0)`. At the state where the
+tendency is evaluated, the process changes `T` at the rate
+
+  - `Δ` where `ρq_tot > 0`;
+  - `0` where `ρq_tot < 0`;
+  - `max(Δ, 0)` where `ρq_tot` is zero: a gain lifts the parent into the
+    positive range, and a loss takes it below zero.
+
+The loss half already follows this. Where the parent is positive, the shares
+of a closed partition sum to one. Where it is at or below zero, they are
+zero. The gain half does not follow it: it hands out `max(Δ, 0)` whatever the
+parent's sign. That is the defect W47 and W48 found.
+
+**The rule.** A partition tag's gain from a bracket is
+
+    M_k·G(Δ, ρq_tot),   G = 0 where ρq_tot < 0, and max(Δ, 0) elsewhere.
+
+So on a closed partition a bracket's tendency is the target's tendency, in
+both halves. Where the parent is below zero, the tags do not change, and the
+parent's gain fills its negative part, which `q_tag_negative` reports.
+
+  - `G` is `water_tag_target_gain(Δ, ρq_tot)`, which is
+    `ifelse(ρq_tot < 0, 0, max(Δ, 0))`. Where the parent is not negative it
+    is `max(Δ, 0)`, the same operation on the same numbers as before. So the
+    tags are unchanged there, bit for bit.
+  - A parent of `-0.0` is not below zero, so its gain goes to the tags. The
+    target keeps `-0.0` as the parent (8.1), so this is the target's gain,
+    and a run whose parent is never negative is unchanged.
+  - The rule applies to the partition tags only: those with a region and no
+    source. A source tag, or a region tag that lists sources, keeps
+    `max(Δ, 0)` (11.6).
+
+Per bracket:
+
+| bracket's label                | where                                          | what changes                                                               |
+|:------------------------------ |:---------------------------------------------- |:-------------------------------------------------------------------------- |
+| `subsidence`                   | `remaining_tendency!`                          | the rule                                                                   |
+| `large_scale_advection`        | `remaining_tendency!`                          | the rule                                                                   |
+| `external_forcing`             | `remaining_tendency!`                          | the rule, on the forcing's net `Δ`: all its terms, its subsidence included |
+| `surface_flux`                 | `remaining_tendency!`                          | the rule                                                                   |
+| `microphysics`, explicit       | `remaining_tendency!`                          | the rule. Under 0M the increment is a sink, so nothing changes in practice |
+| `microphysics`, implicit       | `implicit_tendency!`                           | nothing: the parent's gain, as before (11.6)                               |
+| `microphysics`, split rain-out | `add_split_rainout!` (0M, prognostic EDMF)     | nothing: it does not use the kernel (11.6)                                 |
+| every other label              | radiation, Held–Suarez, the diffusion closures | nothing: they move no water, or are transport, which is never attributed   |
+
+The label `microphysics` runs on the explicit path only with
+`implicit_microphysics: false`. The validation's runs step it implicitly and
+split the rain-out.
+
+### 11.2 A step that crosses zero
+
+The bracket works on tendencies. The stepper evaluates the explicit tendency
+at each stage's state and adds the stages with the tableau's weights `b_i`.
+So the rule is evaluated at each stage's parent, and the tableau splits the
+step. In a step whose parent crosses zero, the stages whose parent is at or
+above zero give the gain to the partition. The others give it to the negative
+part.
+
+Where the parent keeps its sign through the step, this is the target's gain
+exactly: all of it, or none. Where it crosses, the partition's gain over the
+step differs from the target's by a bounded amount. For one process at a
+constant rate, with the crossing placed uniformly within the step
+(`analysis/water/cr_crossing_check.py`), in units of the process's gain over
+the step:
+
+| tableau                    | largest overclaim | largest shortfall | mean over the crossing point |
+|:-------------------------- | -----------------:| -----------------:| ----------------------------:|
+| ARS222 (the validation's)  | 1.00              | 0.71              | 0                            |
+| ARS343 (the model default) | 0.44              | 0.77              | 0                            |
+
+The mean is zero because each tableau's explicit weights meet
+`Σ b_i c_i = 1/2`. These numbers are for one process alone. In the model the
+implicit solve and the other processes move the parent within the step too,
+so they illustrate the size and do not bound it. The miss lands in
+`q_tag_res`, where the closure check sees it.
+
+*Considered and not chosen:* at each stage, give the partition the target's
+gain over a whole step from that stage's parent, `max(Δ + ρq_tot/Δt, 0)`.
+Its largest miss is smaller, 0.5. But it always overclaims, by 0.5 of the
+gain per crossing on average, under both tableaux. W42's miss was an
+overclaim. A rule biased toward it would add to it.
+
+A loss that takes the parent below zero within a step is split by the stages
+in the same way, by the loss half's zero share, and is unchanged.
+
+### 11.3 Under `water_tag_precipitation: true`
+
+The tags' `ρq_tag_<name>` fields then partition the non-precipitating water,
+`N = ρq_tot − ρq_rai − ρq_sno`, and option C's target is per compartment
+(`water_tag_part_target`). The bracketed processes write `ρq_tot` and neither
+`ρq_rai` nor `ρq_sno` (read for subsidence, large-scale advection, the
+external forcing and the surface flux). So a bracket's `Δ` is `N`'s change.
+The kernel already divides the loss's shares by `N` (`water_tag_parent`). The
+rule reads the same parent:
+
+  - the gain reaches the `N` parts where `N ≥ 0`, and fills `N`'s negative
+    part where `N < 0`, whatever the sign of `ρq_tot`;
+  - the rain and snow parts take no bracketed gain, as before.
+
+Not changed: the moves between a tag's parts. These are the microphysics'
+gross flows, the net-flow rule around `tracer_nonnegativity_vapor_tendency!`
+and the limiters' follow. They move water between compartments at fixed
+`ρq_tot`, and are not a process's gain. Where one moves water into a rain or
+snow compartment that is negative, the receiving parts still gain. Whether
+these moves should also take the target's treatment is a question for the
+owner (11.10). The key is refused under EDMF, so the validation's runs do not
+use it.
+
+### 11.4 The follower, the ledgers and `q_tag_negative`
+
+  - **The follower** is unchanged. It corrects each implicit solve's
+    increment against the target (8.1). The explicit brackets add their
+    parts before the solve's snapshot, so the follower does not see them, as
+    before. With the rule the explicit parts follow the target's tendency and
+    the follower the implicit part. So both parts of a step now aim at the
+    target.
+  - **The ledgers.** The rule writes no ledger. It is not a correction: it
+    changes what a bracket attributes, as the loss half's zero share already
+    does where the parent is at or below zero. The intervention row counts
+    corrections of the tags after the fact (the rescale, the emptying, the
+    repair, the follower), and the rule adds none. The withheld gain enters
+    no tag, so each tag's own ledgers still hold what their mechanisms
+    moved. To measure the withheld gain over a run, a state ledger such as
+    `q_tag_exp_negative` would do it, weighted by the stepper as
+    `q_tag_inc_negative` is. It is proposed, not built (11.10). The
+    validation measures the rule's effect in the probe's windows instead
+    (11.7).
+  - **`q_tag_negative`** is unchanged: `min(ρq_tot, 0)`, per unit mass, the
+    parent's own. The withheld gain raises it toward zero with the parent.
+    `q_tag_res`, the target less the region tags, no longer takes the
+    brackets' gains in negative cells. W42 found it down to −3.9e-4 kg/kg
+    where the tags overshot.
+  - **The parent's negative water accumulator and #118's check** read `ρq_tot`
+    only, and are unchanged. So is the closure check, which compares the
+    partition with the target.
+
+### 11.5 Why every parent field stays bit for bit
+
+  - The change sits in one kernel, `_accumulate_water_tag!`, which writes
+    `Yₜ.c.ρq_tag_<name>` only. It reads the parent and the tags, as before.
+    The only new read is the parent's sign, a field the kernel already read
+    for the loss's share.
+  - No model field reads a tag. The tags are passive: no tendency, limiter,
+    constraint or Jacobian block of a model field reads them. The integration
+    groups `tagging_water*` test this ("The model's fields do not depend on
+    the tags").
+  - No new state field, cache field, callback or configuration key. The
+    state's layout, the Jacobian, the solver's work and the callbacks' times
+    are `main`'s.
+  - The implicit bracket and the rain-out split are not touched.
+  - Checked (11.8): the unit tests, the integration groups `tagging_water*`,
+    and a 10-day run at site 23, where the parent goes negative after day 9,
+    with and without tags, on the revision and on `main` at `43b01ca1`. The
+    prognostic state at day 10 and every model output field are compared
+    with `isequal`.
+
+### 11.6 Not changed, and why
+
+  - **Source tags** (`evap`, `fcg`) and region tags that list sources. They
+    are outside the partition and its target, so the approved rule does not
+    reach them. They keep the parent's gain. In a cell whose parent is below
+    zero such a tag gains a process's water and, since its share there is
+    zero, loses none. Question for the owner (11.10).
+  - **The implicit microphysics bracket** keeps the parent's gain. The
+    approved rule covers the explicit processes. Under 0M its increment is a
+    sink, except where a subdomain's area is negative outside the rain-out
+    split. Under `water_tag_transport: increment` the follower corrects the
+    solve's increment against the target anyway. The diagnostics' rain-out
+    (`add_rainout_increments!`, for `pr_tag`) takes the rule of the
+    `microphysics` bracket as the run steps it: the parent's gain when the
+    microphysics is implicit, the target's when explicit.
+  - **The 0M rain-out split under EDMF** (`add_split_rainout!`) is a signed
+    attribution by subdomain and does not use the kernel. Unchanged.
+  - **The updraft copies' surface flux** (`water_tag_copies_surface_flux_tendency!`)
+    is unchanged. The copies' repair closes them onto `max(q_totʲ, 0)` after
+    the filter at every step (8.1).
+  - **The moves between a tag's parts** under `water_tag_precipitation: true`
+    (11.3).
+
+### 11.7 The validation, pre-registered before any run
+
+The configuration is W42's (8.2): the GCM-driven column with the radiation's
+seed reset, prognostic EDMF, 0M, 60 levels to 40 km, `dt` 10 s, ARS222, one
+Newton iteration, 90 days, both families, the water tags `pbl`, `free`,
+`evap` and `fcg` under the follower, each tag's own ledgers every 6 hours.
+The configs are W42's and W48's with only the job id changed.
+
+| run               | site | run tree       | config                | what for                            |
+|:----------------- |:---- |:-------------- |:--------------------- |:----------------------------------- |
+| `cr_s23`          | 23   | the revision's | `cr_s23.yml`          | V1, V2, V2b, V4, V4b, V5            |
+| `cr_s23_untagged` | 23   | the revision's | `cr_s23_untagged.yml` | V4's twin                           |
+| `cr_s23_main`     | 23   | `main`'s       | `cr_s23_main.yml`     | V4b's control; reported: C as it is |
+| `cr_s26`          | 26   | the revision's | `cr_s26.yml`          | V2, V2b, V3, V4, V4b, V5            |
+| `cr_s26_untagged` | 26   | the revision's | `cr_s26_untagged.yml` | V4's twin                           |
+| `cr_s26_main`     | 26   | `main`'s       | `cr_s26_main.yml`     | V3's and V4b's control              |
+| `cr_probe_s23`    | 23   | the revision's | `cr_probe_s23.yml`    | the windows, W0 to W4               |
+
+**The run trees.** The revision's, `../ClimaAtmosResiDyn-crev-run`: the
+record at the commit that registers this section, with
+`claude/option-c-revision` merged in at the commit the owner approves.
+`main`'s, `../ClimaAtmosResiDyn-crev-main-run`: the same record commit with
+`main` at `43b01ca1` merged in. The revision branches from `43b01ca1`, so
+the two trees differ only in the revision's commits. Both hold #128's cap on
+ClimaParams and the same Manifest.
+
+**The controls.** The untagged twins test the parity with the tags on (V4).
+The runs on `main` are the same configuration without the revision. They
+test that the revision moves no model field (V4b), and at site 26 that it
+moves no tag where the parent is never negative (V3). W48's probe is the
+windows' control.
+
+**The pass rules.** Section 8.3's, with its thresholds, and V4b:
+
+| #   | what                                                                           | pass                                                                                                                                                                            |
+|:--- |:------------------------------------------------------------------------------ |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| V1  | `cr_s23` completes                                                             | it reaches day 90                                                                                                                                                               |
+| V2  | the partition against the target, at every closure check to day 90, both sites | gross relative to `∫max(ρq_tot, 0)` at most 0.2% (OD3's water closure row)                                                                                                      |
+| V2b | the named remainder                                                            | `q_tag_res + q_tag_negative + Σ region tags = q_tot` at every daily output, to 1e-12 of the column's largest `|q_tot|` at that output                                           |
+| V3  | site 26's water tags, `cr_s26` against `cr_s26_main`                           | bit for bit at every daily output; or different only in cells and after times where the untagged twin's parent was ever negative (expected: nowhere)                            |
+| V4  | every model field of each revision run against its untagged twin               | bit for bit at every daily output                                                                                                                                               |
+| V4b | every model field of each revision run against the same run on `main`          | bit for bit at every daily output                                                                                                                                               |
+| V5  | intervention, both sites, from the ledgers                                     | reported: `q_tag_inc_negative`'s per-step gross a day; the partition repair's retained gross at most 0.5% a day; each tag's `led_fix` at most 2% of its inventory, days 1 to 90 |
+
+Reported beside V2: `cr_s23_main`'s largest gross, C as it is on `main`, and
+the first check above 0.2% in each run. As in W42, the contract's
+negative-water row leaves site 23's water results unscored above 1e-4. V2 is
+registered without that exclusion, as 8.3 registered it.
+
+**How V2 fails, if it does.** As in 8.3: the ledgers (V5) and the windows
+show which path carries the rest of the miss, and the owner decides.
+
+**The windows.** `cr_probe_s23` is the probe of 9.7 on the revision's code:
+the same driver, `analysis/water/ic_miss_probe2.jl`, the same windows (days
+30.3–31.0 and 52.4–53.3) and the same five rises. Each share divides by W48's
+rise `R48` in that interval, from `ic_miss_probe2_s23`. The revision should
+remove the rises, and a share of a rise near zero has no meaning.
+
+| #  | what                                                                   | rule                                                                                                                                     |
+|:-- |:---------------------------------------------------------------------- |:---------------------------------------------------------------------------------------------------------------------------------------- |
+| W0 | the parent is W48's                                                    | the model's twelve field files match `ic_miss_probe2_s23`'s bit for bit at every common output time, all there in both runs (9.7.3, P0a) |
+| W1 | the forcing's bracket alone, in the mechanism's cells (9.7.2, point 3) | its growth of the excess is 0 at every step of both windows                                                                              |
+| W2 | the forcing's bracket alone, per rise                                  | its growth of the excess is below 0.1 of `R48`: it neither attributes nor contributes, by 9.4's levels                                   |
+| W3 | the reference's rise, per rise                                         | reported: `R` over the water beside W48's, its split in N, P and X, each probe's growth over `R48`                                       |
+| W4 | the whole explicit tendency alone, per rise                            | reported: its growth of the excess over `R48`                                                                                            |
+
+W1 holds by construction, if the rule is built as 11.1 says: a region tag's
+tendency from the forcing's bracket is zero in a cell whose parent is below
+zero, and a cell at zero whose parent stays at or below zero after the step
+had no gain. So W1 tests the build in the run.
+
+*Proposed, waiting for the owner:* "the rise goes" if `R ≤ 0.1 R48`, 9.4's
+level for a share that does not contribute. It is printed, not scored, until
+the owner sets it or another value.
+
+**The budgets.** Every threshold above is section 8.3's, OD3's or 9.4's. None
+is new, apart from the proposal just above.
+
+**Scoring.** `analysis/water/cr_validate.py` scores V1 to V5 and V4b.
+`analysis/water/cr_windows_score.py` scores W0 to W4. Both were run before
+any run on W42's and W48's outputs in place of the new ones. `cr_validate.py`
+reproduces W42's numbers (2.243e-2 at site 23, `pbl`'s `led_fix` 2.033e-2).
+`cr_windows_score.py` fails W1 and W2 on W48's own probe, as it should.
+
+### 11.8 Checks before the runs
+
+  - **Unit tests** (`test/tagged_water_tests.jl`, both float types): the
+    kernel on a column with a negative cell. The gain is zero there and bit
+    for bit the old value elsewhere, `-0.0` and `+0.0` included. The source
+    tags and the loss half are unchanged. Under the key the rule follows
+    `N`'s sign, not `ρq_tot`'s. The implicit bracket's rule is the old one,
+    bit for bit. On a closed partition, a bracket's tendency is the target's.
+    One Euler step from a closed partition, with a gain in a cell that stays
+    negative, leaves the partition's excess over the target where it was.
+  - **A mutant:** the rule removed, in its own detached worktree. The new
+    tests must fail there.
+  - **The affected test files** in a local Slurm job.
+  - **Parity:** site 23 for 10 days (`cr_parity_{tags,untagged}_{rev,main}.yml`),
+    with the state saved at day 10 and the ten model fields every 6 hours.
+    The parent first goes negative at day 9.25 (W48's closure table), so the
+    rule acts in the last day. Scored by `analysis/water/cr_parity.py` (the
+    output) and `analysis/water/cr_parity_state.jl` (the state): every model
+    field `isequal`, the revision against `main` with and without tags, and
+    tags on against off on each tree. The water tags, the revision against
+    `main`, are reported: the same until the rule acts, then different.
+
+### 11.9 The jobs
+
+From each run tree's root, with `submit_g3.sh`,
+`DRIVER=experiments/tag_closure/analysis/water/d4w_driver.jl`,
+`--account=hpda-c --partition=hpda2_compute --cpus-per-task=2 --mem=48G`:
+`--time=08:00:00` for the six 90-day runs, and for the probe
+`DRIVER=experiments/tag_closure/analysis/water/ic_miss_probe2.jl` with
+`--time=12:00:00`. W42's `ic_s23_c` took 3 h 8 min, and W48's probe 3 h 7
+min. So the seven jobs take about 22 job-hours in all, on 2 CPUs each, and
+about 3.5 hours when they run in parallel.
+
+They are submitted only after the owner has reviewed this section and the
+pre-registration.
+
+### 11.10 For the owner
+
+ 1. **The rule at zero.** A parent of exactly zero gives its gain to the
+    tags, since the target gains it all (11.1). The decision's words say
+    "at or below zero". Confirm that the target's gain decides here.
+ 2. **The stages split a crossing step** (11.2): unbiased, with a miss of up
+    to one step's gain per crossing. Accept, or ask for another split.
+ 3. **The implicit microphysics bracket** keeps the parent's gain (11.6).
+    Extend the rule to it, or leave it?
+ 4. **Source tags and region tags that list sources** keep the parent's gain
+    (11.6). Give them the rule too?
+ 5. **Transfers into a negative compartment** under
+    `water_tag_precipitation: true` (11.3). Give them the target's treatment,
+    in a later change?
+ 6. **A ledger of the withheld gain,** `q_tag_exp_negative` (11.4). Build
+    it? It adds a state field under water tags.
+ 7. **The windows' proposed rule,** "the rise goes" if `R ≤ 0.1 R48` (11.7).
+    Set it, another value, or none.
