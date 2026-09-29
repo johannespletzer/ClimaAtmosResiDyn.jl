@@ -749,9 +749,14 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     `f2c1e6a5` (from `main` at `43b01ca1`): `water_tag_rainout_jacobian`,
     `false` by default (the note's section 4, "As built"). The unit tests
     passed 134/134 on the login node.
-  - [ ] Tests in a Slurm job (`13999575`), the mutants (`13999576`: the
-    diagonal, the block to `ρq_tot`, the `−I` start, the call), and the
-    parity of the branch without the key against `main` (`13999577`).
+  - [x] Tests in a Slurm job (`13999575`): the unit file 134/134, the
+    integration file 75/75, with no allocation added to the update or the
+    solve. The four mutants (`13999576`: the diagonal, the block to
+    `ρq_tot`, the `−I` start, the call from `update_jacobian!`) each fail
+    their file. The branch without the key against `main` (`13999577`): all
+    bit for bit on three 0M columns, two tagged and one untagged
+    (`analysis/water/wp4aj_parity_run.jl`). [ ] The regression files
+    `tagged_water_tests.jl` and `tagged_water_integration.jl`, same job.
   - [x] The experiment's pre-registration completed (the note's section 5.1):
     17 configs `configs/wp4aj_*.yml`, the scorer
     `analysis/water/wp4aj_score.py` (smoke-tested on W16's outputs), the
