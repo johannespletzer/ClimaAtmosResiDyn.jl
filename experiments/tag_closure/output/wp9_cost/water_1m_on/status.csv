@@ -1,0 +1,5 @@
+point,ntags,variant,exit_status,seconds,slurm_job
+2,2,none,0,1125,13999631
+4,4,none,0,1231,13999631
+8,8,none,0,1476,13999631
+32,32,none,0,6295,13999631
