@@ -187,6 +187,8 @@ function main(base_path)
     variant in ("none", "ledgers", "records", "tracer", "increment") ||
         error("Unknown VARIANT $variant.")
     outdir = env("OUTDIR")
+    # A batch node has no git, so the submitter reads the commit and hands it on.
+    model_commit = env("MODEL_COMMIT")
     mkpath(outdir)
     ntags == 0 && (mode == "copies" || variant != "none" || precip) &&
         error("The untagged baseline has no mode, variant or precipitation.")
@@ -206,7 +208,7 @@ function main(base_path)
         "_",
     )
     println("[wp9] run $label")
-    println("[wp9] commit ", readchomp(`git -C $(pkgdir(CA)) rev-parse HEAD`))
+    println("[wp9] model commit ", model_commit)
     println("[wp9] host ", gethostname(), " threads ", Threads.nthreads(),
         " loadavg ", strip(read("/proc/loadavg", String)))
     flush(stdout)
@@ -268,7 +270,7 @@ function main(base_path)
     ]
     row = [
         label, family, base_name, ntags == 0 ? "untagged" : mode, ntags, precip ? 1 : 0,
-        variant, follower, readchomp(`git -C $(pkgdir(CA)) rev-parse HEAD`), gethostname(),
+        variant, follower, model_commit, gethostname(),
         split(read("/proc/loadavg", String))[1], load_seconds, build.time,
         build.compile_time + build.recompile_time, build.gctime, build.bytes / 1024^3,
         first_step.time, first_step.compile_time + first_step.recompile_time, STEPS, REPEATS,

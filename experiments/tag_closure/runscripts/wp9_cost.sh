@@ -6,6 +6,7 @@
 # that a point that does not build in time costs the points after it nothing
 # they had.
 #
+#   Use submit_wp9.sh. It sets RUN_TREE, REC_TREE, RUN_SHA and REC_SHA:
 #   RUN_TREE=<detached tree at the model commit> \
 #   REC_TREE=<record worktree at the pushed record commit> \
 #   FAMILY=water|energy MODE=default|copies PRECIP=0|1 \
@@ -25,19 +26,16 @@
 
 set -euo pipefail
 
-for v in RUN_TREE REC_TREE FAMILY MODE BASE POINTS ARM; do
+for v in RUN_TREE REC_TREE RUN_SHA REC_SHA FAMILY MODE BASE POINTS ARM; do
     [[ -n "${!v:-}" ]] || { echo "ERROR: set $v." >&2; exit 1; }
 done
 PRECIP="${PRECIP:-0}"
 BUILD_LIMIT="${BUILD_LIMIT:-4h}"
 
-for tree in "${RUN_TREE}" "${REC_TREE}"; do
-    [[ -d "${tree}/.git" || -f "${tree}/.git" ]] || { echo "ERROR: ${tree} is not a worktree." >&2; exit 1; }
-    if [[ -n "$(git -C "${tree}" status --porcelain --untracked-files=no)" ]]; then
-        echo "ERROR: ${tree} has uncommitted changes." >&2
-        exit 1
-    fi
-done
+# A batch node has no git. submit_wp9.sh reads both commits and checks that both
+# trees are clean on the login node, and hands the commits on in RUN_SHA and
+# REC_SHA. The trees must not change between submission and start.
+export MODEL_COMMIT="${RUN_SHA}"
 [[ -f "${RUN_TREE}/.buildkite/LocalPreferences.toml" ]] || {
     echo "ERROR: ${RUN_TREE} has no .buildkite/LocalPreferences.toml." >&2
     exit 1
@@ -62,8 +60,8 @@ STATUS="${OUT}/status.csv"
 [[ -f "${STATUS}" ]] || echo "point,ntags,variant,exit_status,seconds,slurm_job" > "${STATUS}"
 
 echo "arm ${ARM}: family ${FAMILY} mode ${MODE} precip ${PRECIP} base ${BASE}"
-echo "model ${RUN_TREE} at $(git -C "${RUN_TREE}" rev-parse HEAD)"
-echo "record ${REC_TREE} at $(git -C "${REC_TREE}" rev-parse HEAD)"
+echo "model ${RUN_TREE} at ${RUN_SHA}"
+echo "record ${REC_TREE} at ${REC_SHA}"
 echo "host $(hostname), slurm job ${SLURM_JOB_ID:-none}, start $(date -Is)"
 echo "julia $("${JULIA}" --version), build limit ${BUILD_LIMIT}"
 
