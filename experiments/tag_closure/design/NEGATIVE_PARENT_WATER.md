@@ -1002,9 +1002,12 @@ pre-registration.
 
 ### 11.10 For the owner
 
- 1. **The rule at zero.** A parent of exactly zero gives its gain to the
+ 1. ~~**The rule at zero.** A parent of exactly zero gives its gain to the
     tags, since the target gains it all (11.1). The decision's words say
-    "at or below zero". Confirm that the target's gain decides here.
+    "at or below zero". Confirm that the target's gain decides here.~~
+    *Decided 2026-09-29 by the owner:* a parent of exactly zero counts as
+    positive, as built. The tags take the whole gain there, and `-0.0` is
+    treated the same.
  2. **The stages split a crossing step** (11.2): unbiased, with a miss of up
     to one step's gain per crossing. Accept, or ask for another split.
  3. **The implicit microphysics bracket** keeps the parent's gain (11.6).
@@ -1020,4 +1023,9 @@ pre-registration.
     Set it, another value, or none.
  8. **The parity check ran to day 10, and the rule had not acted yet** (11.8).
     Rerun it longer before the validation, for example to 30 days (four
-    jobs of 1 to 2 hours)? Or let the validation's V4b carry it.
+    jobs of 1 to 2 hours)? Or let the validation's V4b carry it. For the
+    choice: on `main`, W48's closure table has C's gross at 3.8e-10 at day
+    11.25, 1.7e-6 at day 11.5 and 2.8e-4 at day 11.75. So the excess starts
+    to grow before day 12, but that does not show when the rule would first
+    act. *Waiting for the owner* (2026-09-29): 13 days, about 30 days, or
+    V4b alone.
