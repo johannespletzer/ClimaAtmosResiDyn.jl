@@ -39,12 +39,24 @@ const KNOWN_TEST_GROUPS = (
     "tagging_water_precipitation",
     "parameterizations",
     "restarts",
+    "precompile",
 )
 TEST_GROUP in KNOWN_TEST_GROUPS || error(
     "Unknown TEST_GROUP $(repr(TEST_GROUP)). Known groups: " *
     join(KNOWN_TEST_GROUPS, ", ") *
     ". An unknown group would run no tests and exit successfully.",
 )
+
+# ============================================================================
+# Precompile: no tests. `Pkg.test` precompiles the test environment before this
+# file runs, and loading the packages below checks that the images load. CI
+# runs this group on `main` when a merge skips the tests, so that the depot
+# cache it saves still holds every image the test jobs use. `Musica` loads the
+# `ClimaAtmosMusica` extension. `all` does not include it.
+# ============================================================================
+if TEST_GROUP == "precompile"
+    using ClimaAtmos, Aqua, CairoMakie, Musica
+end
 
 #! format: off
 
@@ -171,6 +183,9 @@ end
 # timeout is cancelled and reports as failed, and it also never runs the files
 # that had not started, so the loss of coverage is silent even though the job
 # is not.
+#
+# In CI each group runs on Julia 1.11 when a pull request is ready for review,
+# and on 1.10 nightly (docs/clima_atmos_specific.md, "Which jobs run when").
 #
 # Each group runs against a 90-minute timeout, so keep new work to the smallest
 # tag set that proves the claim, and prefer extending a set an existing test in

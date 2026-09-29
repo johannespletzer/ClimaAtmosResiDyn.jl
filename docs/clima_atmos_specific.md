@@ -49,7 +49,7 @@ A file under `src/parameterized_tendencies/` should not contain orchestration lo
 
 ## Test groups
 
-`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `parent_budget`, `diagnostics`, `dynamics`, `dynamics_tracers`, `dynamics_edmfx`, `tagging_energy`, `tagging_water`, `tagging_source`, `tagging_record`, `tagging_source_float32`, `tagging_source_edmf`, `tagging_source_increment`, `tagging_source_updraft`, `tagging_water_edmf`, `tagging_water_edmf_copies`, `tagging_water_edmf_0m`, `tagging_water_edmf_0m_explicit`, `tagging_water_increment`, `tagging_water_increment_explicit`, `tagging_water_leak`, `tagging_water_precipitation`, `parameterizations`, `restarts`. Map your changes to the relevant group.
+`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `parent_budget`, `diagnostics`, `dynamics`, `dynamics_tracers`, `dynamics_edmfx`, `tagging_energy`, `tagging_water`, `tagging_source`, `tagging_record`, `tagging_source_float32`, `tagging_source_edmf`, `tagging_source_increment`, `tagging_source_updraft`, `tagging_water_edmf`, `tagging_water_edmf_copies`, `tagging_water_edmf_0m`, `tagging_water_edmf_0m_explicit`, `tagging_water_increment`, `tagging_water_increment_explicit`, `tagging_water_leak`, `tagging_water_precipitation`, `parameterizations`, `restarts`. A further group, `precompile`, runs no tests; CI uses it to fill the depot cache. Map your changes to the relevant group.
 
 | Change area                         | Test group          | Example Buildkite job                    |
 |:----------------------------------- |:------------------- |:---------------------------------------- |
@@ -206,49 +206,104 @@ Each checks that the model's fields are those without tags, bit for bit.
 
 ### The package-load preflight
 
-`ci.yml` runs a `load` job on each supported Julia version before the test
-matrix starts. It does nothing but `using ClimaAtmos`. A syntax or docstring
-error only surfaces during precompilation, and without this gate one bad
-expression starts every matrix job and fails them all the same way. `test`
-depends on `load`. `ci-required` aggregates `load`, `test` and the
-minimum-compat load described below.
+`ci.yml` runs a `load` job on each supported Julia version before any test job
+starts. It does nothing but `using ClimaAtmos`. A syntax or docstring error
+only surfaces during precompilation, and without this gate one bad expression
+starts every test job and fails them all the same way. `test` depends on
+`load`.
 
 ### Which jobs run when
 
-The layout follows the CI review of 2026-09-17, which found that almost every
-test minute is compilation and that the queue, not the jobs, set the wall time.
+The account runs 20 jobs at a time on GitHub Free, shared by every run. On
+2026-09-29 one `ci` run on both Julia versions was 49 jobs and about 1,450
+job-minutes, and a pull request waited 3 to 7 hours for a green result, most
+of it in the queue. Almost every test minute is compilation. So `ci` runs in
+tiers, and the `plan` job picks one per event with `.github/ci_plan.sh`.
 
-  - **`ci`, on every pull request and every push to `main`.** The fork's own
-    groups (`infrastructure`, `parent_budget`, `diagnostics`, the `tagging_*`
-    groups) and `parameterizations` run on Julia 1.10 and 1.11. The groups that
-    test upstream code (`dynamics`, `dynamics_tracers`, `dynamics_edmfx`,
-    `restarts`) run on 1.11 only. A superseded run is cancelled, on `main` too.
-    A manual run (`gh workflow run ci.yml --ref <branch>`) tests every group
-    on both versions. Use it for a pull request that edits upstream code.
+  - **Draft pull request: quick.** The `load` jobs,
+    `load 1.10 minimum compat` and `infrastructure` on 1.11, in about half an
+    hour. Open a pull request as a draft while it still changes.
+  - **Pull request ready for review: full.** Every group on 1.11. Marking a
+    draft ready starts it, and so does every push while the pull request is
+    not a draft. When several fixes follow, convert it back to a draft first.
+  - **Push to `main`: cache or full.** A merge whose first parent is an
+    ancestor of its second, whose tree is the pull request head's tree, and
+    whose head passed `ci-full`, was tested already: GitHub's test merge of
+    that head was the same tree. It runs only the `load` jobs,
+    `load 1.10 minimum compat` and `cache-warm`, which saves the test cache
+    for the pull requests after it. Any other push runs the full tier. A push
+    to `main` is never cancelled, so a later merge cannot end the full run of
+    an earlier one.
+  - **Nightly, Monday to Saturday at 01:00 UTC.** The `load` jobs and the
+    fork's groups on Julia 1.10, which `Project.toml` promises. It resolves the dependencies afresh,
+    so it also catches a release that breaks `main` without a commit, as
+    ClimaParams 1.1.16 did (#128). It skips a day on which `main` did not
+    change.
+  - **Weekly on Sunday at 01:00 UTC, and tags.** Every group on 1.11 and the
+    fork's groups on 1.10.
+  - **Manual.** `gh workflow run ci.yml --ref <branch>` tests every group on
+    both versions, the upstream groups on 1.10 included. The inputs
+    `versions`, `groups` and `check_bounds` narrow it, for example
+    `-f groups=parent_budget,tagging_water -f versions=1.11`.
+  - **Paths no test reads.** A change that touches only `docs/` (except
+    `docs/src/parent_budget/`, which a test reads), `experiments/`,
+    `runscripts/`, `calibration/`, markdown at the root,
+    `.pre-commit-config.yaml` or a workflow other than `ci.yml` runs no test.
+    `Documentation` and `Prek checks` still run. Any other path, a new one
+    included, runs the tests.
+
+The groups that test upstream code (`dynamics`, `dynamics_tracers`,
+`dynamics_edmfx`, `restarts`) run on 1.11 only, except in a manual run. A
+difference between Julia versions inside upstream code is upstream's to find.
+
+Three checks summarise a run:
+
+  - **`ci-required`** always reports. It passes when every job the plan asked
+    for passed.
+  - **`ci-full`** runs when every group ran on 1.11 with the default
+    check-bounds setting, and fails unless they all passed. A merge reads it
+    on the pull request head to decide whether `main` needs its own run.
+  - **A red scheduled run** opens an issue labelled `nightly-red`, with its
+    tier in the title, or comments on the open one of that tier. A green run
+    of the same tier closes it, and a green weekly run closes them all. While
+    one is open, only its fix merges, since a red scheduled run is a red
+    check. The repository is public, so the issue is readable without a token:
+    `curl -s 'https://api.github.com/repos/johannespletzer/ClimaAtmosResiDyn.jl/issues?labels=nightly-red'`.
+
+`ALLOW_FAIL` in `ci.yml` quarantines a flaky job by `<version>/<group>`. The
+job still runs and shows its result, but it no longer fails the run. It is
+empty unless the owner adds a job to it.
+
+The other workflows:
+
   - **`load 1.10 minimum compat`, in `ci`.** It resolves every dependency at the
     lowest version `Project.toml` allows and loads the package. A lower bound
     that no longer fits new code usually shows up here.
   - **`Downgrade`, the full matrix at minimum compat.** It runs weekly (Monday
     03:00 UTC), on demand from the Actions tab, on tags, and when
     `Project.toml` or `downgrade.yml` changes. Its test groups are read from
-    `test/runtests.jl`'s `KNOWN_TEST_GROUPS`, less `all`, so adding a group
-    does not edit `downgrade.yml` and does not start the matrix on a pull
-    request.
+    `test/runtests.jl`'s `KNOWN_TEST_GROUPS`, less `all` and `precompile`, so
+    adding a group does not edit `downgrade.yml` and does not start the matrix
+    on a pull request.
   - **`Downstream`, ClimaCoupler's AMIP tests on 1.11.** It takes about an hour
     without a cache, so it runs after a merge, not on each pull request. It
     runs on `main` when `src/`, `ext/`, `config/`, `toml/` or `Project.toml`
     changes, weekly (Monday 04:00 UTC), and on demand. A pull request runs it
     only when it changes the workflow.
-  - **Caches.** `ci`, `Documentation` and `Downgrade` keep one depot cache per
-    Julia patch version, shared by all groups, under the paths in
-    `DEPOT_CACHE_PATHS`.
-      + **Who saves.** Only runs on `main` save a cache, the weekly schedule
-        included. The first job of such a run to finish saves it, and jobs
-        that start later in the same run restore it. Every other run, pull
-        requests and tags included, restores the newest cache from `main` and
-        saves nothing. GitHub keeps 10 GB per repository. On 2026-09-17 the
-        caches of pull request runs pushed `main`'s out within half an hour.
-      + **What fits.** A push to `main` saves about 4.4 GB: the two test
+  - **Caches.** `ci`, `Documentation` and `Downgrade` keep depot caches under
+    the paths in `DEPOT_CACHE_PATHS`. `ci` keeps one per Julia patch version
+    and day, shared by all groups.
+      + **Who saves.** Only runs on `main` save a cache, the schedules
+        included. In `ci`, the first job to finish on a given day saves that
+        day's cache, and later runs find the key and save nothing. Every
+        other run, pull requests and tags included, restores the newest cache
+        from `main` and saves nothing. GitHub keeps 10 GB per repository. On
+        2026-09-17 the caches of pull request runs pushed `main`'s out within
+        half an hour.
+      + **`precompile`.** A test group that runs no tests. `Pkg.test` builds
+        the test environment before `runtests.jl` runs, so `cache-warm` uses
+        it to save a complete cache when a merge skips the tests.
+      + **What fits.** A push to `main` saved about 4.4 GB: the two test
         depots, the minimum-compat depot and the docs depot. The weekly
         `Downgrade` run adds about 2.3 GB. `Downstream` and `Manifest compat`
         keep no cache. Theirs were 4.5 GB and 2.8 GB, and would push the
@@ -268,6 +323,9 @@ test minute is compilation and that the queue, not the jobs, set the wall time.
     package images. To restore it, set the `CODECOV_TOKEN` secret and add
     `julia-processcoverage` and `codecov/codecov-action` after `julia-runtest`,
     on the 1.11 jobs only.
+  - **No merge queue.** GitHub offers merge queues to organization-owned
+    repositories only, so `ci`, `Documentation` and `Prek checks` have no
+    `merge_group` trigger. `cla.yml` keeps upstream's, which never runs here.
 
 ### Running a single test group
 
@@ -325,7 +383,7 @@ A test runs the same column with a diagnostic off and on and compares every mode
 
 ## Local commands
 
-  - Prefer Julia 1.11.x for local work. CI runs the fork's own test groups on 1.10 and 1.11 and the upstream ones on 1.11 only (see [Which jobs run when](#which-jobs-run-when)).
+  - Prefer Julia 1.11.x for local work. CI tests every group on 1.11 when a pull request is ready for review, and the fork's groups on 1.10 nightly (see [Which jobs run when](#which-jobs-run-when)).
   - For runtime validation, prefer `julia +1.11 --project=.buildkite .buildkite/ci_driver.jl ...`.
   - For package tests, prefer `Pkg.test()` over manually `include`ing `test/runtests.jl` because test-only deps are loaded through the package test path.
 
