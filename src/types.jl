@@ -2446,7 +2446,7 @@ parameter too. See [`correct_water_tag_diffusion_leak!`](@ref).
 `rainout_jacobian`, from `water_tag_rainout_jacobian`, gives the tags' rows of
 the manual Jacobian the derivatives of their implicit 0M rain-out, in the tag
 and in `ρq_tot` (known issue 4). Off by default. A type parameter too. See
-[`has_water_tag_rainout_jacobian`](@ref).
+`has_water_tag_rainout_jacobian`.
 """
 struct WaterTaggingModel{
     T <: Tuple,
@@ -2573,7 +2573,7 @@ Whether the tags' rows of the manual Jacobian carry the derivatives of their
 implicit 0M rain-out, from the `water_tag_rainout_jacobian` config key (known
 issue 4). The entries go in only where the tags lose water by the grid rule on
 the implicit path, and only with the split solver
-([`water_tag_rainout_jacobian_names`](@ref)). `false` without water tags.
+(`water_tag_rainout_jacobian_names`). `false` without water tags.
 """
 has_water_tag_rainout_jacobian(::Nothing) = false
 has_water_tag_rainout_jacobian(

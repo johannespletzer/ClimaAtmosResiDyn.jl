@@ -434,7 +434,7 @@ water_tag_rainout_jacobian_names(atmos, water_tag_cross_flag) =
     water_tag_rainout_jacobian_blocks(Y, atmos, water_tag_cross_flag)
 
 Allocate the blocks for the water tags' implicit 0M rain-out, where
-[`uses_water_tag_rainout_jacobian`](@ref) holds: each tag's diagonal, and a
+`uses_water_tag_rainout_jacobian` holds: each tag's diagonal, and a
 diagonal block from its row to `ρq_tot`'s column.
 
 Under 0M each tag loses `min(Δ, 0) φ` in the `:microphysics` bracket, with
@@ -1733,15 +1733,15 @@ end
     update_water_tag_rainout_jacobian!(matrix, Y, p, dtγ, diffusion_flag, water_tag_cross_flag)
 
 The water tags' entries for their implicit 0M rain-out (known issue 4), where
-[`uses_water_tag_rainout_jacobian`](@ref) holds. A no-op elsewhere.
+`uses_water_tag_rainout_jacobian` holds. A no-op elsewhere.
 
 Each tag loses `min(Δ, 0) φ` in the `:microphysics` bracket, where
 `Δ = ρ dq_tot_dt` is the rain-out that `microphysics_tendency!` adds to
 `ρq_tot` and `φ` is the tag's clamped share. `dq_tot_dt` is frozen during the
 solve, so the loss moves with the tag and with `ρq_tot` only through `φ`. The
 diagonal gains `dtγ min(Δ, 0) ∂φ/∂ρq_tag`, and the block to `ρq_tot` is
-`dtγ min(Δ, 0) ∂φ/∂ρq_tot` ([`water_tag_fraction_derivative_tag`](@ref) and
-[`water_tag_fraction_derivative_parent`](@ref)). Like the parent's own sink,
+`dtγ min(Δ, 0) ∂φ/∂ρq_tot` (`water_tag_fraction_derivative_tag` and
+`water_tag_fraction_derivative_parent`). Like the parent's own sink,
 which has no entry, the loss's dependence on `ρ` through `Δ` is left out. The
 gain `max(Δ, 0)` goes to the tags by their masks and has no entries.
 

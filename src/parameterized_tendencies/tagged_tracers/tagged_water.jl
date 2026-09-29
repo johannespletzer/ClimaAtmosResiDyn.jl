@@ -332,7 +332,7 @@ rain-out entries use it (`water_tag_rainout_jacobian`, known issue 4).
 
 The derivative of [`water_tag_fraction`](@ref) in `ρq_tot`: `−ρq_tag / ρq_tot²`
 where the unclamped share lies in `[0, 1]`, and zero elsewhere, as for
-[`water_tag_fraction_derivative_tag`](@ref).
+`water_tag_fraction_derivative_tag`.
 """
 @inline water_tag_fraction_derivative_parent(ρq_tag, ρq_tot) =
     _water_tag_fraction_unclamped(ρq_tag, ρq_tot) ?

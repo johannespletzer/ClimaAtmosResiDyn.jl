@@ -1985,7 +1985,7 @@ composition (`splits_rainout`), and the switch's entries, the derivatives of
 the grid rule, are not that split's derivatives. Elsewhere the key is accepted.
 It does nothing where the tags do not lose water by the grid rule on the
 implicit path, such as under 1M or with `implicit_microphysics: false`
-([`water_tag_rainout_jacobian_names`](@ref)).
+(`water_tag_rainout_jacobian_names`).
 """
 function check_water_tag_rainout_jacobian_supported(parsed_args)
     get(parsed_args, "turbconv", nothing) == "prognostic_edmfx" && error(
