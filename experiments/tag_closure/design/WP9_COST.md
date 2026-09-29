@@ -151,3 +151,42 @@ time is recorded. Submitted 2026-09-29 from the record commit that
 `energy_copies` 13999634, `energy_copies_32` 13999635. Results go to
 `$SCRATCH/tag_closure/output/wp9_cost/<arm>/`, and the table is
 `python3 analysis/wp9_cost_table.py $SCRATCH/tag_closure/output/wp9_cost`.
+
+## 7. Amendment of 2026-09-29: exclusive nodes, and the rerun
+
+The first pass (jobs 13999627 to 13999635, results in `output/wp9_cost/`) ran
+8 of its 9 jobs on one shared node, `hpdar10c01s04`, at once, with load
+averages of 28 to 77. 19 of its 30 tagged points had a block spread over 10%,
+up to 65%, also when read as the ratio to the untagged baseline block by block
+(`output/wp9_cost/fit_first_pass.txt`). Section 4's rule was to rerun a point
+whose spread passes 10%. So many points fail it that the owner chose, on
+2026-09-29, to rerun every tagged point on exclusive nodes.
+
+What changes, and nothing else:
+
+  - Every job takes `--exclusive`, one node per arm, and no other WP9 job
+    shares it. Slurm's `--exclusive` also keeps other users' jobs off, so the
+    load average should be near the process's own.
+  - The points, tags, variants, base configs, warm-up (10), blocks (5 of 20),
+    time limits, build limit (4 h), model commit `43b01ca1` and driver are the
+    first pass's. The record commit is the one `submit_wp9.sh` logs, and it
+    differs from the first pass only in the scripts that name the results
+    directory and `--exclusive`.
+  - The untagged baselines are rerun too, since each ratio is read against a
+    baseline measured the same way. The copies arms and `water_1m_on` have no
+    baseline point of their own, since the driver refuses one with a mode or
+    with rain and snow tags. Their ratios use the baseline of the same base
+    config from the default arm of the same rerun.
+  - Energy copies at 32 tags is tried once more with the same 4 h cap.
+    Water copies at 32 stays "not built in 8 h" (W34), as the owner accepted.
+  - Results go to `$SCRATCH/tag_closure/output/wp9_cost_excl/<arm>/`, and logs
+    to `$SCRATCH/tag_closure/logs/wp9_cost_excl/`.
+  - The first pass stays as a comparison. Where the two passes differ by more
+    than the second pass's own spread, both are reported, and the ratio quoted
+    is the less favourable one.
+  - A point of the rerun whose blocks still spread over 10% is reported with
+    its spread and is not rerun again without the owner. The claim is then
+    bounded by that spread.
+
+The budget proposal of section 5 is made from the rerun, and stays marked as
+waiting for the owner.

@@ -43,7 +43,16 @@ TABLE=(
   "energy_copies energy copies 0 wp9_energy_d4_edmf 2,4,8,8:ledgers 64G 12:00:00"
   "energy_copies_32 energy copies 0 wp9_energy_d4_edmf 32 200G 05:00:00"
 )
-LOGS="${SCRATCH:?}/tag_closure/logs/wp9_cost"
+# EXCLUSIVE=1 takes the whole node for each job, and sends the results to
+# output/wp9_cost_excl (design/WP9_COST.md, amendment of 2026-09-29).
+EXTRA=()
+OUT_ROOT="${OUT_ROOT:-wp9_cost}"
+if [[ "${EXCLUSIVE:-0}" == 1 ]]; then
+    EXTRA=(--exclusive)
+    OUT_ROOT=wp9_cost_excl
+fi
+export OUT_ROOT
+LOGS="${SCRATCH:?}/tag_closure/logs/${OUT_ROOT}"
 mkdir -p "${LOGS}"
 for row in "${TABLE[@]}"; do
     read -r arm family mode precip base points mem time <<<"${row}"
@@ -52,7 +61,7 @@ for row in "${TABLE[@]}"; do
     fi
     points="${points//,/ }"
     cmd=(sbatch --parsable --account=hpda-c --partition=hpda2_compute --nodes=1 --ntasks=1
-         --cpus-per-task=4 --mem="${mem}" --time="${time}" -J "wp9_${arm}"
+         --cpus-per-task=4 --mem="${mem}" ${EXTRA[@]+"${EXTRA[@]}"} --time="${time}" -J "wp9${EXTRA[@]+x}_${arm}"
          -o "${LOGS}/%x-%j.out" "${REC_TREE}/experiments/tag_closure/runscripts/wp9_cost.sh")
     if (( DRY )); then
         echo "[dry run] ARM=${arm} FAMILY=${family} MODE=${mode} PRECIP=${precip} BASE=${base} POINTS='${points}' ${cmd[*]}"

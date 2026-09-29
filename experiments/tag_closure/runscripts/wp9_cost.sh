@@ -54,7 +54,9 @@ export CLIMACOMMS_DEVICE=CPU CLIMACOMMS_CONTEXT=SINGLETON
 JULIA="${JULIA:-${HOME}/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/bin/julia}"
 [[ -x "${JULIA}" ]] || { echo "ERROR: ${JULIA} not found." >&2; exit 1; }
 
-OUT="${SCRATCH:?SCRATCH is not set}/tag_closure/output/wp9_cost/${ARM}"
+# OUT_ROOT names the results directory. The first pass used the default. The
+# exclusive rerun of the 2026-09-29 amendment uses wp9_cost_excl.
+OUT="${SCRATCH:?SCRATCH is not set}/tag_closure/output/${OUT_ROOT:-wp9_cost}/${ARM}"
 mkdir -p "${OUT}"
 STATUS="${OUT}/status.csv"
 [[ -f "${STATUS}" ]] || echo "point,ntags,variant,exit_status,seconds,slurm_job" > "${STATUS}"
