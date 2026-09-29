@@ -107,8 +107,9 @@ not checked, it says so.
         the share is clamped or `ρq_tot ≤ 0`; the block to `ρq_tot` a
         diagonal row, not a tridiagonal one. After the runs, the verifier's
         pairing allowlist gained the new key; no number changed.
-      + *For the owner:* keep the switch off by default (proposed, 5.2). A
-        draft of known issue 4's update is in 5.2, for the PR.
+      + *Decided 2026-09-29:* the switch stays opt-in and off by default, as
+        proposed (5.2). Known issue 4's update, drafted in 5.2, is applied to
+        `docs/known_issues.md` on the model branch for the PR.
 
   - **Update, 2026-09-28: PRs merged, unpushed work found, housekeeping.**
     Written by the session that reviewed #125. `main` was at `cfc2152c`,

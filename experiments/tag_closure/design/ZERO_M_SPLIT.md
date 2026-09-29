@@ -366,13 +366,14 @@ The pair moves the tags by at most 1.75e-5 in L1 and changes the
 one-iteration error by at most 1.5% of it, with a sign that depends on the
 tag.
 
-**For the owner: should the switch become a default?** Proposed: no. Keep it
-off by default, as an experimental key. On this column the missing entries
-cost well under the budget. The pair changes the tags by 1e-5 against a
-one-iteration error of 1e-3 that comes from elsewhere, and makes `tropo`
-slightly worse at every output. It adds two blocks per tag. It does not
-apply under prognostic EDMF, G3's production configuration, where it is
-refused. The owner decides.
+**Should the switch become a default? Decided 2026-09-29: no.** The owner
+accepted the proposal: `water_tag_rainout_jacobian` stays an experimental
+key, opt-in and off by default. The reasons proposed: on this column the
+missing entries cost well under the budget. The pair changes the tags by
+1e-5 against a one-iteration error of 1e-3 that comes from elsewhere, and
+makes `tropo` slightly worse at every output. It adds two blocks per tag. It
+does not apply under prognostic EDMF, G3's production configuration, where
+it is refused.
 
 **Draft for `docs/known_issues.md`, issue 4,** to go to the model branch with
 the PR. The status paragraph becomes:
