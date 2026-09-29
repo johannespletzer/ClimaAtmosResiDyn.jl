@@ -956,12 +956,35 @@ reproduces W42's numbers (2.243e-2 at site 23, `pbl`'s `led_fix` 2.033e-2).
   - **The affected test files** in a local Slurm job.
   - **Parity:** site 23 for 10 days (`cr_parity_{tags,untagged}_{rev,main}.yml`),
     with the state saved at day 10 and the ten model fields every 6 hours.
-    The parent first goes negative at day 9.25 (W48's closure table), so the
-    rule acts in the last day. Scored by `analysis/water/cr_parity.py` (the
+    The parent first goes negative at day 9.25 (W48's closure table), ~~so the
+    rule acts in the last day~~ (it did not; below). Scored by `analysis/water/cr_parity.py` (the
     output) and `analysis/water/cr_parity_state.jl` (the state): every model
     field `isequal`, the revision against `main` with and without tags, and
     tags on against off on each tree. The water tags, the revision against
     `main`, are reported: the same until the rule acts, then different.
+
+*Checked 2026-09-29, before any validation run* (the revision at `6307091c`;
+`c756390d` changes only two tests):
+
+  - **Unit tests:** `tagged_water_tests.jl` passes (328, and the new testset
+    76 of 76), and so does `tagged_water_precipitation_tests.jl` (jobs
+    `13999599`, `14000300`).
+  - **The mutant** (`water_tag_target_gain` returning `max(Δ, 0)`): 12 of the
+    76 new tests fail, and 4 in the precipitation file. Nothing else fails
+    (jobs `13999600`, `14000301`).
+  - **The integration groups:** all nine `tagging_water*` files pass (jobs
+    `13999601` to `13999609`).
+  - **Parity:** in all four pairs, every model field is bit for bit: the 20
+    model field files at every output to day 10, and the prognostic state
+    at day 10 (10 model fields, `isequal`). `output/cr_parity/`.
+  - **But the rule did not act in these runs.** Every water tag file, and the
+    tags in the state, are the same on the revision and on `main`. The parent
+    was below zero from day 9.25 on (4 closure rows, at most 0.25% of the
+    water). So no explicit bracket gave a gain to a cell below zero by day 10.
+    The check shows parity with the new code in place, not with the rule
+    acting. When the rule first acts at site 23 is not known. W42's excess
+    first passed 0.2% at day 29.25. A longer rerun waits for the owner
+    (11.10).
 
 ### 11.9 The jobs
 
@@ -995,3 +1018,6 @@ pre-registration.
     it? It adds a state field under water tags.
  7. **The windows' proposed rule,** "the rise goes" if `R ≤ 0.1 R48` (11.7).
     Set it, another value, or none.
+ 8. **The parity check ran to day 10, and the rule had not acted yet** (11.8).
+    Rerun it longer before the validation, for example to 30 days (four
+    jobs of 1 to 2 hours)? Or let the validation's V4b carry it.

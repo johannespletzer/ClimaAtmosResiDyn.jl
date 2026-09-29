@@ -1,0 +1,9 @@
+tags on, the revision against main: 10 model fields at day 10: isequal
+    c.ρq_tag_evap: the same
+    c.ρq_tag_fcg: the same
+    c.ρq_tag_free: the same
+    c.ρq_tag_pbl: the same
+tags off, the revision against main: 10 model fields at day 10: isequal
+the revision, tags on against off: 10 model fields at day 10: isequal
+main, tags on against off: 10 model fields at day 10: isequal
+RESULT every model field isequal

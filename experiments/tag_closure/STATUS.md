@@ -532,6 +532,14 @@ to #126 were read from GitHub on 2026-09-28.
     written, the per-level sums equal to the step totals). The probe itself,
     `13996867`, was submitted at 22:22 from the run tree at `e09e0986`. It
     finished at 01:29 on 2026-09-29 and is W48.
+  - **2026-09-29, `crev` (C's revision), draft for the coordinator:** the
+    revision is built on `claude/option-c-revision` (`c756390d`) and its
+    validation is registered (`design/NEGATIVE_PARENT_WATER.md`, section 11).
+    Its checks passed: the unit tests, a mutant, all nine `tagging_water*`
+    files (jobs `13999599` to `13999609`, `14000300`, `14000301`), and a
+    10-day parity check at site 23 (`13999610` to `13999613`). The rule did
+    not act by day 10. No validation run is submitted: the owner reviews
+    section 11 and its questions (11.10) first.
 
 ## The housekeeping, H0 to H7: done
 
