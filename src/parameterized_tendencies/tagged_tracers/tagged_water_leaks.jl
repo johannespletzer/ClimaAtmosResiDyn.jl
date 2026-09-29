@@ -49,10 +49,10 @@ Zero where the path is off, or on a column for the horizontal paths. On the
 sphere the result is DSSed, as a tendency diagnostic is. See
 [`WATER_TAG_LEAK_PATHS`](@ref) for the paths.
 
-Under `water_tag_precipitation: true` only `hyperdiff` can be nonzero: where
-the partition holds none of the non-precipitating water, the tags take no
-part of `q_tot_r`. See `docs/src/tagged_water_precipitation.md`. The copies
-are refused with the key.
+Under `water_tag_precipitation: true` only `hyperdiff` can be nonzero. It is
+taken where the non-precipitating parts sum to `max(N, 0)`, for
+`N = ρq_tot - ρq_rai - ρq_sno`, and not to `ρq_tot`. See
+`docs/src/tagged_water_precipitation.md`. The copies are refused with the key.
 """
 function water_tag_leak!(ᶜleak, Y, p, path::Val)
     @. ᶜleak = 0
@@ -67,9 +67,10 @@ end
 
 # Under `water_tag_precipitation: true`. The tags hyperdiffuse on
 # `∇²(N_tag/ρ - φ q_tot_r)` and the parent on `∇²(N/ρ - q_tot_r)`, with `φ` the
-# tag's share of `N`. At a closed partition their difference is
-# `∇²((1 - Σφ) q_tot_r)`, summed over the partition's tags. `Σφ` is one, to
-# rounding, where the partition holds water, and zero where it holds none.
+# tag's share of `N`. A closed partition's parts sum to `max(N, 0)` (option C).
+# So their difference is `∇²((1 - Σφ) q_tot_r - min(N, 0)/ρ)`, with `Σφ` summed
+# over the partition's tags. `Σφ` is one, to rounding, where the partition holds
+# water, and zero where it holds none.
 _water_tag_parts_leak!(ᶜleak, Y, p, path) = nothing
 function _water_tag_parts_leak!(ᶜleak, Y, p, ::Val{:hyperdiff})
     hyperdiff = p.atmos.hyperdiff
@@ -79,7 +80,7 @@ function _water_tag_parts_leak!(ᶜleak, Y, p, ::Val{:hyperdiff})
     (; ν₄_scalar) = ν₄(hyperdiff, Y)
     (; ᶜp) = p.precomputed
     water_tag_share_norm!(p, Y)
-    # `ᶜleak` first holds `(1 - Σφ) q_tot_r`, then the rate.
+    # `ᶜleak` first holds `(1 - Σφ) q_tot_r - min(N, 0)/ρ`, then the rate.
     @. ᶜleak = q_tot_r(thermo_params, ᶜp)
     MatrixFields.unrolled_foreach(model.tags) do tag
         _is_partition_tag(tag) || return nothing
@@ -88,6 +89,8 @@ function _water_tag_parts_leak!(ᶜleak, Y, p, ::Val{:hyperdiff})
         @. ᶜleak -= ᶜshare * q_tot_r(thermo_params, ᶜp)
         return nothing
     end
+    ᶜN = water_tag_part_parent(Y.c, NonPrecipitatingPart())
+    @. ᶜleak -= water_tag_negative_part(ᶜN) / Y.c.ρ
     ᶜ∇² = p.scratch.ᶜtemp_scalar
     @. ᶜ∇² = wdivₕ(gradₕ(ᶜleak))
     do_dss(axes(Y.c)) && Spaces.weighted_dss!(ᶜ∇²)

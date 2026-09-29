@@ -892,9 +892,11 @@ end
     largest_error = zeros(length(nsubs), length(steps))
     mean_error = zeros(length(nsubs), length(steps))
     # At the state with the largest error: the difference over the rounding
-    # cut-off below, and the gross flows over the water. On Julia 1.11 the
-    # first is 2.6e7 to 5.0e8, so the largest errors are not rounding, and the
-    # error at 15 s is not an artefact of states whose flows are tiny.
+    # tolerance below, and the gross flows over the water. With one substep
+    # the difference is within the tolerance, so its row stays zero. With more,
+    # on Julia 1.11 the first is 2.6e7 to 5.0e8, so the largest errors are not
+    # rounding. The second shows whether the error at 15 s comes from states
+    # whose flows are tiny.
     over_rounding = zeros(length(nsubs), length(steps))
     gross_over_water = zeros(length(nsubs), length(steps))
     (largest_audit, largest_rounding, smallest_part) = (0.0, 0.0, Inf)
@@ -956,6 +958,9 @@ end
     # and 29 of the 100 states are expected to show them.
     @test two_way > 0
     @test melting > 0
+    # The largest errors with substeps are far above the tolerance, so they
+    # are not rounding. The bound sits 25 times below the smallest found.
+    @test minimum(over_rounding[2:end, :]) >= 1e6
     # The rounding and the smallest part are in units of eps times the water
     # and the gross water the flows move.
     microphysics = (;

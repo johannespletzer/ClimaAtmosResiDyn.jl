@@ -81,9 +81,9 @@ function check_restart_before_option_c(restart_file, Y, water_model)
     error(
         "The restart file $restart_file holds the water tags' increment \
         ledger without `q_tag_inc_negative`. It was written before known \
-        issue 7's option C (#116), under which the tags partition the \
-        parent's non-negative water, `max(ρq_tot, 0)`, and the follower keeps \
-        that ledger. The tags in the file partition `ρq_tot` itself. Restart \
+        issue 7's option C (#116), and may be older still. Under option C \
+        the tags partition the parent's non-negative water, \
+        `max(ρq_tot, 0)`, and the follower keeps that ledger. The tags in the file partition `ρq_tot` itself. Restart \
         from a checkpoint written by this version, or start a new run.",
     )
 end
