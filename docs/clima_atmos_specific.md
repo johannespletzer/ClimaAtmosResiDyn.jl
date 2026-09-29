@@ -237,8 +237,9 @@ tiers, and the `plan` job picks one per event with `.github/ci_plan.sh`.
   - **Nightly, Monday to Saturday at 01:00 UTC.** The `load` jobs and the
     fork's groups on Julia 1.10, which `Project.toml` promises. It resolves the dependencies afresh,
     so it also catches a release that breaks `main` without a commit, as
-    ClimaParams 1.1.16 did (#128). It skips a day on which `main` did not
-    change.
+    ClimaParams 1.1.16 did (#128). It skips a night on which the last green
+    scheduled run already tested the same commit of `main`, and runs when that
+    history cannot be read.
   - **Weekly on Sunday at 01:00 UTC, and tags.** Every group on 1.11 and the
     fork's groups on 1.10, with bounds checking on (see below).
   - **Manual.** `gh workflow run ci.yml --ref <branch>` tests every group on

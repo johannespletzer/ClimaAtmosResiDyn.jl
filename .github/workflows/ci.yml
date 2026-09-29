@@ -104,10 +104,12 @@ jobs:
     name: plan
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # `checks: read` lets it look up `ci-full` on a merged pull request's head.
+    # `checks: read` lets it look up `ci-full` on a merged pull request's head,
+    # and `actions: read` the commit the last green scheduled run tested.
     permissions:
       contents: read
       checks: read
+      actions: read
     outputs:
       tier: ${{ steps.plan.outputs.tier }}
       matrix: ${{ steps.plan.outputs.matrix }}
