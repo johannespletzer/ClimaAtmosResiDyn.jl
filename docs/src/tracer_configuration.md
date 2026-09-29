@@ -1,8 +1,14 @@
 # Configuring Tracers
 
 This page is the configuration reference for the tracer and tag features. Each
-one is a top-level YAML key. Each is off by default, and none changes the
-simulation: every model field stays bit for bit what it would be without it.
+one is a top-level YAML key, and each is off by default. With one on, every
+model field that exists without it stays bit for bit as in the same run with it
+off, under the default solver settings. Only the feature's own fields and
+output are added. The [parity contract](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/blob/main/docs/clima_atmos_specific.md#fork-parity-with-upstream) states the limits. It does not
+cover `use_krylov_method` or `use_newton_rtol`, whose residual norm includes the
+feature's fields, and the stratospheric passive tracers have no on/off test
+yet.
+
 Start from a block on this page, change the numbers, and run. No Julia code is
 needed. The pages linked below say how each family works and what its output
 means.
@@ -22,6 +28,12 @@ means.
 The families are independent. Switch on any one of them, or all of them, in the
 same run.
 
+The tags attribute water and energy by the rules you configure: the region
+masks, the `source` labels, and each family's transport and loss rules. Their
+results are attributions defined by those rules, not a unique physical history.
+Energy source tag results also depend on `energy_source_tag_offset`, so report
+the offset with them.
+
 ## What the words mean
 
 The [glossary](glossary.md) defines these terms. In short:
@@ -29,8 +41,8 @@ The [glossary](glossary.md) defines these terms. In short:
   - **region tag**: an entry with a `region` and no `source`. A transported part
     of the parent variable. The region tags together form one partition of it.
   - **source tag**: an entry of `water_tracers` or `energy_source_tags` with a
-    `source`. The amount of the parent that is present now and came from that
-    process. A repair puts a negative tag back, for the energy source tags
+    `source`. The amount of the parent that is present now and that the rules
+    attribute to that process. A repair puts a negative tag back, for the energy source tags
     under `energy_source_tag_repair` (on by default). Its repair ledger,
     `q_tag_fix_<name>` or `e_src_fix_<name>`, logs what it moved.
   - **signed process tag**: an `energy_tracers` entry with a `source`. It starts

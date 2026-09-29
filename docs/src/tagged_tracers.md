@@ -2,9 +2,10 @@
 
 `energy_tracers` splits the total energy ``\rho e_\mathrm{tot}`` into named,
 transported fields `ρe_tag_<name>`. A tag either holds a region's share of the
-energy or accumulates what one process added. The key is off by default, and
-the tags do not change the simulation. Every model field is bit for bit what it
-would be without them.
+energy or accumulates what one process added. The key is off by default. With
+it on, every model field that exists without the tags stays bit for bit as in
+the same run without them, under the default solver settings. See the
+[parity contract](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/blob/main/docs/clima_atmos_specific.md#fork-parity-with-upstream) for its limits.
 
 !!! warning "Energy, not heat and not temperature"
 

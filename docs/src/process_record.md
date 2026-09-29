@@ -2,9 +2,10 @@
 
 `energy_process_record` and `water_process_record` add one field per recorded
 process. Each field accumulates the signed change that process made at each
-grid point. Both keys are off by default and cost nothing when off. The records
-do not change the simulation. Every model field is bit for bit what it would be
-without them.
+grid point. Both keys are off by default and cost nothing when off. With them
+on, every model field that exists without the records stays bit for bit as in
+the same run without them, under the default solver settings. See the
+[parity contract](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/blob/main/docs/clima_atmos_specific.md#fork-parity-with-upstream) for its limits.
 
 A record answers a different question from a tag.
 

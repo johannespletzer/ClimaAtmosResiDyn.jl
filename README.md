@@ -8,16 +8,16 @@ The atmosphere model of the CliMA Earth System Model: a GPU-capable global atmos
 
 ClimaAtmos.jl solves the compressible equations of atmospheric motion on cubed-sphere and column grids, with physics parameterizations for turbulence and convection (PROPHET, an extended prognostic EDMF scheme), cloud microphysics, and radiation. It is built on [ClimaCore.jl](https://github.com/CliMA/ClimaCore.jl) and runs on CPUs and GPUs from a single codebase.
 
-This repository is a fork of [CliMA/ClimaAtmos.jl](https://github.com/CliMA/ClimaAtmos.jl). It tracks upstream and adds diagnostics for where energy and water come from and what changes them:
+This repository is a fork of [CliMA/ClimaAtmos.jl](https://github.com/CliMA/ClimaAtmos.jl). It tracks upstream and adds diagnostics that attribute energy and water to regions and processes, and that record what each process changes:
 
-- tagged energy tracers
-- tagged water tracers, with rain and snow tags
-- energy source tags
-- process-change records
-- stratospheric passive tracers
-- a parent-budget audit
+  - tagged energy tracers
+  - tagged water tracers, with rain and snow tags
+  - energy source tags
+  - process-change records
+  - stratospheric passive tracers
+  - a parent-budget audit
 
-Each is off by default, and none changes the simulation. Every model field stays bit for bit the same as upstream. See [Configuring Tracers](https://johannespletzer.github.io/ClimaAtmosResiDyn.jl/dev/tracer_configuration/) for how to switch them on. The badges below report this fork's state, not upstream's.
+Each is off by default. With one on, every model field that exists without it stays bit for bit as in the same run with it off, under the default solver settings. Only the diagnostic's own fields and output are added. [Fork parity with upstream](docs/clima_atmos_specific.md#fork-parity-with-upstream) states this contract and its limits. See [Configuring Tracers](https://johannespletzer.github.io/ClimaAtmosResiDyn.jl/dev/tracer_configuration/) for how to switch them on. The badges below report this fork's state, not upstream's.
 
 |                   |                                                                                                                                                                                                                           |
 | -----------------:|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

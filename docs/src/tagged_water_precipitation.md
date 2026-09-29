@@ -2,8 +2,9 @@
 
 `water_tag_precipitation: true` splits each water tag into three parts: the
 water that is neither rain nor snow, rain, and snow. It is off by default and
-Experimental. The tags do not change the simulation. Every model field is bit
-for bit what it would be without them. The tags themselves are described in
+Experimental. With it on, every model field that exists without the tags stays
+bit for bit as in the same run without them, under the default solver settings
+(see the [parity contract](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/blob/main/docs/clima_atmos_specific.md#fork-parity-with-upstream)). The tags themselves are described in
 [Tagged Water Tracers](tagged_water.md).
 
 ## Rain and snow parts
