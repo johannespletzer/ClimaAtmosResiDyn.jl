@@ -184,6 +184,15 @@ end
             parent(ᶜsgsʲ_plume.q_tag_tropo),
             parent(ᶜsgsʲ.q_tag_tropo),
         )
+        # In the lowest cell the plume starts with the updraft's surface water
+        # (W21's rule), so `evap`'s copy starts above its grid share of
+        # `q_totʲ` there. The default mode's test checks the start's shares.
+        lowest(ᶜx) = only(vec(Array(parent(CA.Fields.level(ᶜx, 1)))))
+        φ̄_evap =
+            lowest(Y.c.ρq_tag_evap) /
+            (lowest(Y.c.ρq_tag_tropo) + lowest(Y.c.ρq_tag_strat))
+        @test lowest(ᶜsgsʲ_plume.q_tag_evap) >
+              φ̄_evap * lowest(ᶜsgsʲ.q_tot) * (1 + 1e-6)
     end
 
     # 2. The default mode's flux and exchange do nothing, and the model's own
