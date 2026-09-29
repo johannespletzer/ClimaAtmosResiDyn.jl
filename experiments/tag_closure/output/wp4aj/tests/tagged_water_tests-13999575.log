@@ -1,0 +1,48 @@
+Precompiling ClimaAtmos...
+  40383.5 ms  ✓ ClimaAtmos
+  1 dependency successfully precompiled in 44 seconds. 277 already precompiled.
+┌ Info: The unsplit tag against the split's
+│   FT = Float32
+└   tag_differences = (0.0f0, 5.9604645f-8, 5.9604645f-8)
+┌ Info: The unsplit tag against the split's
+│   FT = Float64
+└   tag_differences = (0.0, 2.220446049250313e-16, 2.220446049250313e-16)
+┌ Warning: `update_constrain_state_every: dss`: the tags' ledgers per mechanism record what each correction retained, but their change over a step is not what the step moved, since a firing inside the step is weighted by its tableau weight, which can be negative. Their per-step gross and the audit's `_retained` columns are exact only at `step`. Each tag's own ledgers, where kept, are exact at every cadence.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp4aj-run/src/parameterized_tendencies/tagged_tracers/tag_throughput.jl:506
+┌ Warning: The restart file /dss/dsstbyfs02/scratch/0D/di38kez/di38kez/jl_CkYCzo/partial.hdf5 was written before the parent's negative water accumulator was carried in a checkpoint. It starts at zero for this segment, so the water audit's `negative_water_*` columns cover only this segment.
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp4aj-run/src/parameterized_tendencies/tagged_tracers/tag_throughput.jl:1301
+Test Summary: | Pass  Total   Time
+Tagged water  |  328    328  48.9s
+Test Summary:                 | Pass  Total   Time
+The water tags' restart guard |   25     25  10.7s
+Test Summary:                            | Pass  Total  Time
+The water plume and the exchange's bound |   20     20  0.2s
+Test Summary:                         | Pass  Total  Time
+The exchange needs a region partition |    5      5  0.3s
+Test Summary:                    | Pass  Total  Time
+The copies' names are a constant |    4      4  0.1s
+Test Summary:                                   | Pass  Total  Time
+The water tags following the implicit increment |   57     57  8.4s
+Test Summary:               | Pass  Total  Time
+The rain-out split's shares |  127    127  1.4s
+Test Summary:                                         | Pass  Total     Time
+The split solver back-substitutes a tag's cross block |   60     60  1m21.1s
+Test Summary:                                   | Pass  Total     Time
+The tags' sedimentation cross blocks, assembled |   72     72  2m01.1s
+Test Summary:                                          | Pass  Total  Time
+The tags' cross blocks come only with the split solver |   12     12  1.4s
+Test Summary:                 | Pass  Total  Time
+The ledgers' gross throughput |    9      9  4.3s
+Test Summary:                     | Pass  Total  Time
+The state ledgers' gross per step |   19     19  9.4s
+Test Summary:          | Pass  Total   Time
+Each tag's own ledgers |   45     45  15.3s
+Test Summary:                          | Pass  Total   Time
+Attempted beside retained, on a column |   62     62  29.5s
+Test Summary:                 | Pass  Total   Time
+The follower's ledger per tag |   12     12  22.5s
+Test Summary:                                                | Pass  Total     Time
+Option C: the tags partition the parent's non-negative water |   68     68  1m24.4s
+Test Summary:                          | Pass  Total  Time
+The diffusion leak's correction (WP4c) |   59     59  0.3s
+498.46 s
