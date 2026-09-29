@@ -345,3 +345,76 @@ levels, and up to twice that at 60.
 sphere, or any case but D4-W. It does not rerun P1 to P3. It does not touch the
 energy tags. It compares the modes with each other, not with an independent
 reference (PX13).
+
+## 9. The energy source tags' plume start (added 2026-09-29)
+
+The owner confirmed section 7's reading on 2026-09-29. The owner also asked
+for the energy source tags' plume to take the same rule, in the same change
+("do both now"). The energy copies' mirrors M1 and M2
+(`design/ENERGY_COPY_MIRRORS.md`, section 3) play the parts of water's fifth
+mirror and mirror 3.
+
+**What the energy plume's start misses.** The default mode's exchange
+(`sgs_exchange_of_energy_source_tags!`) marches the same steady plume. It
+starts in the lowest cell from the grid mean's composition. The model feeds
+`mseʲ` there with three supplies: the relaxation toward `mse_b` at the rate
+`r`, entrainment at the rate `e`, and the surface enthalpy flux,
+`Δʲ = −btt / ρʲ` from `ρ_flux_h_tot` (`surface_flux_tendency!`). M1 gives
+that flux to the tags that receive `surface_flux`, by the grid mean's rule.
+The plume starts without it.
+
+**The rule.** In the lowest cell the plume starts with the shares
+
+    ψᵢ = (1 − f) φ̄ᵢ + f gᵢ,   f = Δ⁺ / (r (Ā + X) + e A⁰ + Δ⁺),   Δ⁺ = max(Δʲ, 0).
+
+The supplies are in the tags' units, energy per unit mass plus the offset `c`:
+
+  - `Ā = ρe_tot / ρ + c`, the grid mean's, and `X = mse_b − mse̅`, the buoyant
+    excess. So `Ā + X` is the sum of the copies' relaxation targets under M2.
+  - `A⁰ = (E − ρaʲ Aʲ) / ρa⁰`, with `E = ρe_tot + c ρ` and
+    `Aʲ = mseʲ + Kʲ − p/ρʲ + c`. It is the partition's sum of the
+    environment's values that the copies entrain, where the copies hold `Aʲ`.
+    It is regularized as the model's environment values are.
+  - `Δ⁺` is a specific increment, so it carries no `c`.
+
+So the offset enters two of the three supplies, and `f` depends on `c`, as
+every energy share does (OD4). A cooling surface flux leaves by share in M1,
+so it gives `f = 0`. So does `disable_surface_flux_tendency`. `gᵢ` is M1's
+weight for the label `surface_flux`. The energy plume is not rescaled. Its
+partition's sum at the start stays that of `ε̄`, which is `Ā` where the tags
+close, when the partition's masks sum to one. The buoyant excess keeps the
+grid mean's composition (M2, the owner, 2026-09-25).
+
+**How it mirrors the model.** As for water. M2's target `ε̄ᵢ + φ̄ᵢ X` and the
+entrained `χ⁰ᵢ` carry the grid mean's composition, where the environment has
+it. M1 carries `gᵢ Δ⁺`. The losses, `−(r + e) χᵢ` and a cooling flux, act by
+share. So the copies' steady state in the lowest cell has the shares `ψᵢ`.
+
+**Why every parent field stays bit for bit.** The plume is the exchange's
+scratch. The new code reads the state and the precomputed quantities. It
+writes two scratch fields the tags own, `ᶜe_src_environment` and
+`ᶜe_src_room`, which the exchange writes again after the plume. It writes no
+model field and no model scratch. A parity check against `main` on the EDMF
+column with energy tags shows it.
+
+**What it cannot fix.** The energy copies are not an eligible comparator on
+D4 (E84: their repair is 3.1% of the throughput a day, against 0.20%), so
+no default-against-copies verdict follows from this rule. `f` depends on the offset. The buoyant excess stays with the
+grid mean's composition, as M2 decided. The steady state's premise is the
+same as water's: an environment with the grid mean's composition.
+
+**Code and tests.** The exchange's plume becomes a function of its own,
+`energy_source_plume!`, with the start at the surface and
+`energy_plume_surface_fraction!`. The start in the lowest cell shares its
+kernel with water's. The EDMF integration test of the energy tags rebuilds `f`
+from the model's own tendencies and checks the plume's lowest cell against
+`ψᵢ`. A mutant without the start's term must fail that check.
+
+**A measurement, proposed and waiting for the owner.** D4 (the energy tags'
+column, DYCOMS RF02 with EDMF and 1M) with its energy source tags in the
+default mode, in a fix arm and a main arm as section 8 has them, and the
+untagged twin, for one day. Reported: parity (R1), closure in OD4 units, and
+each tag's change between the arms at 1 h and 24 h. It judges nothing: the
+energy copies are not an eligible comparator, and no threshold is proposed
+for the change. Its configs and jobs are not written. **Waiting for the
+owner.**
