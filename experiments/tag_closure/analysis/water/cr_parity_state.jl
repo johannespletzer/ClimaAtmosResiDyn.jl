@@ -2,11 +2,12 @@
 C's revision: the parity check's prognostic state (design/NEGATIVE_PARENT_WATER.md,
 section 11.8).
 
-    julia --project=<an env with ClimaCore and ClimaComms> cr_parity_state.jl [OUTPUT_ROOT]
+    julia --project=<an env with ClimaCore and ClimaComms> cr_parity_state.jl [OUTPUT_ROOT [PREFIX DAY]]
 
 OUTPUT_ROOT (default $SCRATCH/tag_closure/output) holds
-`cr_parity_{tags,untagged}_{rev,main}/output_0000/day10.0.hdf5`, the state the
-runs saved at day 10. For each pair it reads both states and compares every
+`<PREFIX>_{tags,untagged}_{rev,main}/output_0000/day<DAY>.0.hdf5`, the state
+the runs saved at their end: PREFIX `cr_parity` and DAY 10 by default, or
+`cr_parity30` and 30 for the owner's rerun of 2026-09-29. For each pair it reads both states and compares every
 model field of `Y.c`, `Y.f` and the updraft's `sgsʲs` with `isequal` on the
 parent arrays, as docs/clima_atmos_specific.md ("Fork parity with upstream")
 asks. A model field is any field whose name is not a tag's, a tag part's or a
@@ -18,6 +19,8 @@ import ClimaComms
 import ClimaCore: InputOutput, Fields
 
 const ROOT = get(ARGS, 1, joinpath(ENV["SCRATCH"], "tag_closure", "output"))
+const PREFIX = get(ARGS, 2, "cr_parity")
+const DAY = get(ARGS, 3, "10")
 const DIAGNOSTIC_PREFIXES = (
     "ρq_tag_", "ρq_rtag_", "ρq_stag_", "q_tag_", "q_rtag_", "q_stag_",
     "ρe_src_", "e_src_", "ρe_tag_", "e_tag_", "prc_",
@@ -25,7 +28,7 @@ const DIAGNOSTIC_PREFIXES = (
 is_diagnostic(name) = any(prefix -> startswith(string(name), prefix), DIAGNOSTIC_PREFIXES)
 
 function read_state(job)
-    path = joinpath(ROOT, job, "output_0000", "day10.0.hdf5")
+    path = joinpath(ROOT, job, "output_0000", "day$(DAY).0.hdf5")
     reader = InputOutput.HDF5Reader(path, ClimaComms.SingletonCommsContext())
     Y = InputOutput.read_field(reader, "Y")
     Base.close(reader)
@@ -69,7 +72,7 @@ function compare(a, b, label; report_tags = false)
     end
     ok = isempty(differ) && !isempty(model_a)
     println(
-        "$label: $(length(model_a)) model fields at day 10: ",
+        "$label: $(length(model_a)) model fields at day $DAY: ",
         ok ? "isequal" : "FAIL $(differ)",
     )
     if report_tags
@@ -94,24 +97,24 @@ end
 function main()
     results = [
         compare(
-            "cr_parity_tags_rev",
-            "cr_parity_tags_main",
+            "$(PREFIX)_tags_rev",
+            "$(PREFIX)_tags_main",
             "tags on, the revision against main";
             report_tags = true,
         ),
         compare(
-            "cr_parity_untagged_rev",
-            "cr_parity_untagged_main",
+            "$(PREFIX)_untagged_rev",
+            "$(PREFIX)_untagged_main",
             "tags off, the revision against main",
         ),
         compare(
-            "cr_parity_tags_rev",
-            "cr_parity_untagged_rev",
+            "$(PREFIX)_tags_rev",
+            "$(PREFIX)_untagged_rev",
             "the revision, tags on against off",
         ),
         compare(
-            "cr_parity_tags_main",
-            "cr_parity_untagged_main",
+            "$(PREFIX)_tags_main",
+            "$(PREFIX)_untagged_main",
             "main, tags on against off",
         ),
     ]

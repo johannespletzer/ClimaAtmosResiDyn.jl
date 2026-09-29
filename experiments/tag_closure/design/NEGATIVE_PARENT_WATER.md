@@ -986,6 +986,14 @@ reproduces W42's numbers (2.243e-2 at site 23, `pbl`'s `led_fix` 2.033e-2).
     first passed 0.2% at day 29.25. A longer rerun waits for the owner
     (11.10).
 
+*The 30-day rerun* (question 8, decided 2026-09-29): configs
+`cr_parity30_{tags,untagged}_{rev,main}.yml`, the 10-day configs with
+`t_end` and the saved state at 30 days. The run trees are the same two with
+this record commit merged in, so their model code is unchanged. Scored by
+`cr_parity.py OUTPUT_ROOT cr_parity30` and
+`cr_parity_state.jl OUTPUT_ROOT cr_parity30 30`, with the pass rule of 11.10,
+question 8.
+
 ### 11.9 The jobs
 
 From each run tree's root, with `submit_g3.sh`,
@@ -1021,11 +1029,14 @@ pre-registration.
     it? It adds a state field under water tags.
  7. **The windows' proposed rule,** "the rise goes" if `R ≤ 0.1 R48` (11.7).
     Set it, another value, or none.
- 8. **The parity check ran to day 10, and the rule had not acted yet** (11.8).
-    Rerun it longer before the validation, for example to 30 days (four
-    jobs of 1 to 2 hours)? Or let the validation's V4b carry it. For the
-    choice: on `main`, W48's closure table has C's gross at 3.8e-10 at day
-    11.25, 1.7e-6 at day 11.5 and 2.8e-4 at day 11.75. So the excess starts
-    to grow before day 12, but that does not show when the rule would first
-    act. *Waiting for the owner* (2026-09-29): 13 days, about 30 days, or
-    V4b alone.
+ 8. ~~**The parity check ran to day 10, and the rule had not acted yet**
+    (11.8). Rerun it longer before the validation?~~ *Decided 2026-09-29 by
+    the owner:* rerun it to about 30 days, four jobs, the revision against
+    `main`, with and without tags, from the same run trees. It passes if
+    every model field and the day-30 state are bit for bit and a region tag
+    differs from `main`'s at the end, so that the rule acted. If no tag
+    differs, that is reported, and the run is not extended without the
+    owner. The earlier answer of 13 days rested on a date of day 12 that
+    was a misread and is replaced. For the choice: on `main`, W48's closure
+    table has C's gross at 3.8e-10 at day 11.25, 1.7e-6 at day 11.5 and
+    2.8e-4 at day 11.75.

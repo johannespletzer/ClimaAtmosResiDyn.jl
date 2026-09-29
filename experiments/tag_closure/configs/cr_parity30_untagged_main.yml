@@ -1,0 +1,52 @@
+# C's revision (design/NEGATIVE_PARENT_WATER.md, sections 11.8 and 11.10): the
+# parity check rerun to 30 days (the owner, 2026-09-29), ic_s23_untagged.yml with the state saved at the end
+# and the ten model fields every 6 hours. The parent first goes negative at
+# day 9.25 (ic_miss_probe2_s23's closure table). The 10-day check saw no tag change.
+# Run tree: main's at 43b01ca1 (../ClimaAtmosResiDyn-crev-main-run).
+
+job_id: "cr_parity30_untagged_main"
+
+initial_condition: "GCM"
+external_forcing_file: artifact"cfsite_gcm_forcing"/HadGEM2-A_amip.2004-2008.07.nc
+cfsite_number: "site23"
+turbconv: "prognostic_edmfx"
+implicit_diffusion: true
+approximate_linear_solve_iters: 2
+rayleigh_sponge: true
+edmfx_entr_model: "Generalized"
+edmfx_detr_model: "Generalized"
+edmfx_sgs_mass_flux: true
+edmfx_sgs_diffusive_flux: true
+edmfx_nh_pressure: true
+edmfx_vertical_diffusion: true
+edmfx_filter: true
+prognostic_tke: true
+microphysics_model: "0M"
+config: "column"
+z_max: 40e3
+z_elem: 60
+z_stretch: true
+dz_bottom: 30
+perturb_initstate: false
+dt: "10secs"
+dt_rad: "30mins"
+t_end: "30days"
+dt_save_state_to_disk: "30days"
+toml: [toml/prognostic_edmfx_gcmdriven.toml]
+rad: allskywithclear
+# The cloud optics sample at random. Without a reset of the seed each run draws
+# its own numbers, and the runs' atmospheres differ from the first day
+# (design section 7).
+radiation_reset_rng_seed: true
+ode_algo: "ARS222"
+FLOAT_TYPE: "Float64"
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [rhoa, ta, hus, clw, cli, wa, pr, lwp, arup, husup]
+    period: "1days"
+  # The parity check's model fields every 6 hours (section 11.8).
+  - short_name: [rhoa, hus]
+    period: "6hours"
+  - short_name: [ta, clw, cli, wa, pr, lwp, arup, husup]
+    period: "6hours"
