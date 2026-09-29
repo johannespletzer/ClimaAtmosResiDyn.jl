@@ -134,9 +134,20 @@ constant in `N`, a profile of the default mode's implicit and explicit tendency
 is the next step, and P2 and P3 are read from it. That needs no model code
 either. A hook in the model is not added by this goal.
 
-## 6. Smoke test
+## 6. Smoke test and submission
 
-Before the runs, `wp9_cost.sh` was run on `hpda2_test` with `WP9_STEPS=3`,
-`WP9_REPEATS=2` and `WP9_WARMUP=1`, for the 1M column (points 0, 2, 2:ledgers)
-and the energy column with copies (0, 2). Its result is in the progress file
-and in RUNS.md's entry.
+Before the runs, `wp9_cost.sh` ran on `hpda2_test` with `WP9_STEPS=3`,
+`WP9_REPEATS=2` and `WP9_WARMUP=1` (jobs `13999148`, `13999149` and
+`13999153` to `13999155`, output in `output/wp9_cost_smoke/`). It found that a batch
+node has no git, so the submitter now reads the commits, and that the
+untagged baseline refuses a mode other than the default, as designed. It also
+showed that a build takes about 6.5 min and the first step about 8 min on the
+smallest tagged 1M column, and that a warm-up of 1 step leaves compile in the
+timed blocks. So the registered warm-up is 10 steps, and each block's compile
+time is recorded. Submitted 2026-09-29 from the record commit that
+`submit_wp9.sh` logs, at model `43b01ca1`: `water_default` 13999627,
+`water_default_32` 13999628, `water_copies` 13999629, `water_1m_off` 13999630,
+`water_1m_on` 13999631, `energy_default` 13999632, `energy_default_32` 13999633,
+`energy_copies` 13999634, `energy_copies_32` 13999635. Results go to
+`$SCRATCH/tag_closure/output/wp9_cost/<arm>/`, and the table is
+`python3 analysis/wp9_cost_table.py $SCRATCH/tag_closure/output/wp9_cost`.
