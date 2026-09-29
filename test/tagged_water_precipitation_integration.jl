@@ -651,4 +651,73 @@ sphere_part_sum(x, prefix) =
             @info "The non-precipitating parts' residual under $label" before after
         end
     end
+
+    # Where the partition holds none of `N`, the tags take no share of
+    # `q_tot_r`, and their sum does not follow the parent's hyperdiffusion.
+    # `q_tag_leak_hyperdiff` reports that rate. On the test state the
+    # partition holds water everywhere, so it is rounding there. With every
+    # tag's non-precipitating part emptied, it is the whole reference term.
+    # The shares are renormalized over the partition, so a partition that is
+    # not closed but holds water still takes all of `q_tot_r`. The sphere has
+    # no source tag, so a source tag's own share is not tested here.
+    leak(Y) = parent(CA.water_tag_leak!(similar(Y.c.ρ), Y, p, Val(:hyperdiff)))
+    @testset "The hyperdiffusion leak where the partition holds no water" begin
+        Y_empty = copy(Y_test)
+        for name in (:ρq_tag_tropics, :ρq_tag_extratropics)
+            parent(getproperty(Y_empty.c, name)) .= 0
+        end
+        Y_unclosed = copy(Y_test)
+        parent(Y_unclosed.c.ρq_tag_tropics) .*= 1.1
+        (held, emptied) = (leak(Y_test), leak(Y_empty))
+        @test all(isfinite, held)
+        @test maximum(abs, emptied) > 0
+        @test maximum(abs, held) <= 1e-6 * maximum(abs, emptied)
+        @test maximum(abs, leak(Y_unclosed)) <= 1e-6 * maximum(abs, emptied)
+        # The other paths read zero under the key.
+        for path in (:vdiff, :hdiff, :sponge)
+            @test all(
+                iszero,
+                parent(CA.water_tag_leak!(similar(Y_empty.c.ρ), Y_empty, p, Val(path))),
+            )
+        end
+        @info "The hyperdiffusion leak, largest" held = maximum(abs, held) emptied =
+            maximum(abs, emptied)
+    end
+
+    # The leak against the model's own hyperdiffusion. Within 15° of the
+    # equator `N` is made negative, and the tags' parts of it are emptied, as
+    # option C's closed partition holds them. There the tags take no part of
+    # `q_tot_r`, and they do not diffuse `N`'s negative part. The model's leak
+    # is the tags' summed tendency minus the parent's, over `ρ`, DSSed as the
+    # stepper does. Both read the same precomputed pressure, so the
+    # thermodynamic state is not recomputed. The split's residual above is
+    # rounding at 1e-15 of the tendencies, and the bound sits well above it.
+    # Without the negative part's term the leak would miss the hyperdiffusion
+    # of `0.01 q_rai` in the band.
+    @testset "The hyperdiffusion leak against the model's hyperdiffusion" begin
+        Y_band = copy(Y_test)
+        ᶜlat = CA.Fields.coordinate_field(Y_band.c).lat
+        ᶜin_band = @. abs(ᶜlat) < 15
+        @. Y_band.c.ρq_tot = ifelse(
+            ᶜin_band,
+            Y_band.c.ρq_rai + Y_band.c.ρq_sno - 0.01 * Y_band.c.ρq_rai,
+            Y_band.c.ρq_tot,
+        )
+        for name in (:ρq_tag_tropics, :ρq_tag_extratropics)
+            ᶜρq_tag = getproperty(Y_band.c, name)
+            @. ᶜρq_tag = ifelse(ᶜin_band, zero(FT), ᶜρq_tag)
+        end
+        @test minimum(compartments(Y_band).ρq_tag_) < 0
+        expected = leak(Y_band)
+        Yₜ = hyperdiffusion(Y_band, p)
+        CA.dss!(Yₜ, p, t)
+        tagsₜ = parent(Yₜ.c.ρq_tag_tropics) .+ parent(Yₜ.c.ρq_tag_extratropics)
+        actual = (tagsₜ .- compartments(Yₜ).ρq_tag_) ./ parent(Y_band.c.ρ)
+        @test all(isfinite, actual)
+        @test maximum(abs, expected) > 0
+        mismatch = maximum(abs, actual .- expected) / maximum(abs, expected)
+        @test mismatch <= 1e-10
+        @info "The hyperdiffusion leak against the model's" largest =
+            maximum(abs, expected) mismatch
+    end
 end
