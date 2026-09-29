@@ -775,8 +775,9 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     merged with the record at `54e47d9d`): jobs `13999648` to `13999664`,
     all exit 0. Scored as W51 (`output/wp4aj/`): known issue 4 closed on
     this column. The departures are dated amendments in the note's 5.1.
-  - [ ] Known issue 4 closed in `docs/known_issues.md`: drafted in the note's
-    5.2, to go to the model branch with the PR.
+  - [x] Known issue 4 closed for the grid rule in `docs/known_issues.md`, as
+    drafted in the note's 5.2: on `claude/wp4a-j-jacobian-switch` at
+    `3c16a58b`, with NEWS.
   - [x] Whether the switch becomes a default. *Decided 2026-09-29: no; it
     stays opt-in and off by default (the note's 5.2, DECISIONS.md).*
   - [ ] The PR (the coordinating session opens it).
