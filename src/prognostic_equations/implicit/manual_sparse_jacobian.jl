@@ -776,9 +776,10 @@ so under 1-moment microphysics the tags' increments differ between the forms.
 
 # Returns
 
-`NamedTuple` with fields `matrix`, `solver` and `derivative_flags` (the flags
+`NamedTuple` with fields `matrix`, `solver`, `derivative_flags` (the flags
 from `_derivative_flags`, which `update_jacobian!` passes back to the process
-updates). Without a split, `matrix` and `solver` are the same
+updates) and `tracer_names` (the passive tracers and the sedimenting water
+tags, which `update_jacobian!` passes to `update_diffusion_jacobian!`). Without a split, `matrix` and `solver` are the same
 `MatrixFields.FieldMatrixWithSolver`. With one, `matrix` is the whole
 `MatrixFields.FieldMatrix`, whose blocks `update_jacobian!` fills, and `solver`
 is the `SplitJacobianSolver`, which shares those blocks.
@@ -855,7 +856,15 @@ function jacobian_cache(
         build_split_jacobian_solver
     (matrix, solver) =
         Base.invokelatest(build_solver, matrix, Y, full_alg, uncoupled_names)
-    return (; matrix, solver, derivative_flags)
+    # The tracers the diffusion update loops over. Julia 1.10 does not infer
+    # `passive_gs_tracer_names(Y)`, so a call that takes them and the matrix
+    # is dynamic and boxes the matrix, and each update allocated (#130's CI).
+    # Taken here once, their types are known where the update uses them.
+    tracer_names = (;
+        passive = passive_gs_tracer_names(Y),
+        sedimenting_tags = sedimenting_water_tag_names(Y),
+    )
+    return (; matrix, solver, derivative_flags, tracer_names)
 end
 
 # Without uncoupled fields, the matrix and its solver are one
@@ -1821,7 +1830,7 @@ function eddy_diffusivity_coefficients!(Y, p)
 end
 
 """
-    update_diffusion_jacobian!(matrix, Y, p, dtγ, diffusion_flag, eddy_diffusivities)
+    update_diffusion_jacobian!(matrix, Y, p, dtγ, diffusion_flag, eddy_diffusivities, tracer_names)
 
 Update the Jacobian blocks for implicit vertical diffusion of the grid-scale
 scalars (including TKE dissipation) and of `uₕ`.
@@ -1850,6 +1859,10 @@ Reuses `ᶠp_grad_matrix` as scratch space, so it must run after
 `update_advection_jacobian!`. Also writes `ᶜdiffusion_h_matrix`,
 `ᶜdiffusion_u_matrix`, and (under EDMF) `ᶜtridiagonal_matrix_scalar` in
 `p.scratch`. Mutates `matrix` and returns `nothing`.
+
+`tracer_names` holds the names of the passive tracers and of the sedimenting
+water tags, as `jacobian_cache` takes them from `Y`. They default to being
+taken from `Y` here, which allocates on Julia 1.10.
 """
 function update_diffusion_jacobian!(
     matrix,
@@ -1858,6 +1871,10 @@ function update_diffusion_jacobian!(
     dtγ,
     diffusion_flag,
     eddy_diffusivities,
+    tracer_names = (;
+        passive = passive_gs_tracer_names(Y),
+        sedimenting_tags = sedimenting_water_tag_names(Y),
+    ),
 )
     use_derivative(diffusion_flag) || return nothing
     (; params) = p
@@ -2019,18 +2036,14 @@ function update_diffusion_jacobian!(
     # for tagged water tracers under 1-moment microphysics, whose diagonals
     # `update_sedimentation_jacobian!` has already initialized with the
     # mirrored sedimentation flux, and which are accumulated into instead.
-    sedimenting_tag_names = sedimenting_water_tag_names(Y)
-    MatrixFields.unrolled_foreach(passive_gs_tracer_names(Y)) do ρχ_name
-        ρχ_state_name = center_state_name(ρχ_name)
-        ∂ᶜρχ_err_∂ᶜρχ = matrix[ρχ_state_name, ρχ_state_name]
-        if ρχ_name in sedimenting_tag_names
-            @. ∂ᶜρχ_err_∂ᶜρχ +=
-                dtγ * ᶜdiffusion_h_matrix * DiagonalMatrixRow(1 / ᶜρ)
-        else
-            @. ∂ᶜρχ_err_∂ᶜρχ =
-                dtγ * ᶜdiffusion_h_matrix * DiagonalMatrixRow(1 / ᶜρ) - (I,)
-        end
-    end
+    update_passive_diffusion_blocks!(
+        matrix,
+        tracer_names.passive,
+        tracer_names.sedimenting_tags,
+        dtγ,
+        ᶜdiffusion_h_matrix,
+        ᶜρ,
+    )
 
     if MatrixFields.has_field(Y, @name(c.ρtke))
         turbconv_params = CAP.turbconv_params(params)
@@ -2125,6 +2138,48 @@ function sgs_upwinding_operators(FT, upwinding)
         bottom = Operators.SetValue(zero(UpwindMatrixRowType{CT3{FT}})),
     ) # Need to wrap ᶠupwind_matrix in this for well-defined boundaries.
     return (; ᶠupwind, ᶠset_upwind_bcs, ᶠupwind_matrix, ᶠset_upwind_matrix_bcs)
+end
+
+# The passive tracers' diagonals, set one tracer at a time by recursion over
+# their names, in the order of the names. The names come from
+# `jacobian_cache`, so their types are known. With names Julia 1.10 cannot
+# infer, the call boxed the matrix, every block of it: 448 B per update on the
+# 0M column, and 496 B with the water tags' rain-out blocks (#130's CI).
+update_passive_diffusion_blocks!(
+    matrix,
+    ::Tuple{},
+    sedimenting_tag_names,
+    dtγ,
+    ᶜdiffusion_h_matrix,
+    ᶜρ,
+) =
+    nothing
+function update_passive_diffusion_blocks!(
+    matrix,
+    ρχ_names::Tuple,
+    sedimenting_tag_names,
+    dtγ,
+    ᶜdiffusion_h_matrix,
+    ᶜρ,
+)
+    ρχ_name = first(ρχ_names)
+    ρχ_state_name = center_state_name(ρχ_name)
+    ∂ᶜρχ_err_∂ᶜρχ = matrix[ρχ_state_name, ρχ_state_name]
+    if ρχ_name in sedimenting_tag_names
+        @. ∂ᶜρχ_err_∂ᶜρχ +=
+            dtγ * ᶜdiffusion_h_matrix * DiagonalMatrixRow(1 / ᶜρ)
+    else
+        @. ∂ᶜρχ_err_∂ᶜρχ =
+            dtγ * ᶜdiffusion_h_matrix * DiagonalMatrixRow(1 / ᶜρ) - (I,)
+    end
+    return update_passive_diffusion_blocks!(
+        matrix,
+        Base.tail(ρχ_names),
+        sedimenting_tag_names,
+        dtγ,
+        ᶜdiffusion_h_matrix,
+        ᶜρ,
+    )
 end
 
 """
@@ -2812,7 +2867,7 @@ quantities set by `set_implicit_precomputed_quantities!`, mutates
 function update_jacobian!(alg::ManualSparseJacobian, cache, Y, p, dtγ, t)
     (; topography_flag, diffusion_flag, water_tag_cross_flag) =
         cache.derivative_flags
-    (; matrix) = cache
+    (; matrix, tracer_names) = cache
 
     # Ordering contract between the process updates:
     #   - update_advection_jacobian! fills ᶠp_grad_matrix, which
@@ -2841,6 +2896,7 @@ function update_jacobian!(alg::ManualSparseJacobian, cache, Y, p, dtγ, t)
         dtγ,
         diffusion_flag,
         eddy_diffusivities,
+        tracer_names,
     )
     update_water_tag_rainout_jacobian!(
         matrix,
