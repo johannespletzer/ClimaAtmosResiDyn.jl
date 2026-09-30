@@ -151,6 +151,11 @@ not checked, it says so.
         give the region tags the target's gain (design section 10, option
         1). ClimaParams v1.1.16 turned `main`'s CI red by switching on the
         geometric SGS-variance term. #128 caps it at v1.1.15.
+      + *E89, 2026-09-30:* W21's plume start on D4 (W50), measured at
+        `10cdeebd`. R1 passes in both arms and closure is 5.3e-14. `sfc` and
+        `new_tropo` move by 7.3% and 7.1% (L∞) at 1 h. `sfc`'s column integral
+        rises by 2.3e-3 at 1 h, and the post-hoc read shows an upward shift.
+        Reported, not judged (FINDINGS E89).
       + *Where the next session starts:* #128, then #127's CI and the #119
         follow-ups' PR; C's revision (design, pre-registration, PR); WP4a-J;
         W21's surface flux. The

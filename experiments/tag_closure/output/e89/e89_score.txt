@@ -1,0 +1,15 @@
+window: OD2's rule finds no end of startup; OD2's table's first hour is used
+window: startup ends at 3600.0 s; scored to 86400.0 s
+R1 e89_d4_default_fix: 26 fields against e89_d4_untagged, bit for bit: pass
+closure e89_d4_default_fix: gross 1.0553e-06 over throughput 2.0032e+07 J/m² = 5.268e-14 (at most 0.002): pass
+R1 e89_d4_default_main: 26 fields against e89_d4_untagged, bit for bit: pass
+closure e89_d4_default_main: gross 8.4874e-07 over throughput 2.0032e+07 J/m² = 4.237e-14 (at most 0.002): pass
+the rule's effect, reported and not judged (fix against main, L1 and L∞ relative to main):
+  mp: 1 h L1 None, L∞ None, absolute L1 0.0 J/m², integral change None; 24 h L1 None, L∞ None, absolute L1 0.0 J/m², integral change None
+  new_strat: 1 h L1 5.637452573420023e-07, L∞ 2.6429546102381005e-07, absolute L1 0.006771301915945641 J/m², integral change 1.0318804025166226e-07; 24 h L1 0.0005876312582479069, L∞ 0.0005299880527267957, absolute L1 208.60695630443453 J/m², integral change 2.0583054625103156e-05
+  new_tropo: 1 h L1 0.061830581735515804, L∞ 0.07120831552962849, absolute L1 31205.552508910187 J/m², integral change 0.0020007430428370158; 24 h L1 0.00471050980625101, L∞ 0.007267420177286386, absolute L1 51341.91650020158 J/m², integral change -0.00017190368496687404
+  rad: 1 h L1 0.00014709632902765217, L∞ 0.00020100262861961395, absolute L1 11.513961390424825 J/m², integral change -7.565387624727479e-06; 24 h L1 0.0008529201535994749, L∞ 0.0013230903200479145, absolute L1 1306.795726526021 J/m², integral change 2.637658708894701e-05
+  sfc: 1 h L1 0.07283561966506662, L∞ 0.0725639688559704, absolute L1 30618.48096284463 J/m², integral change 0.0023487159281067632; 24 h L1 0.0057940643054585125, L∞ 0.00879640174653133, absolute L1 52844.237456549825 J/m², integral change -0.00021329497700101397
+  strat: 1 h L1 2.463581057591109e-07, L∞ 6.036139426795343e-07, absolute L1 12.937053671146046 J/m², integral change 8.349308857647435e-08; 24 h L1 0.0001113621138017489, L∞ 0.00015714384707161426, absolute L1 5681.869309288552 J/m², integral change 1.2302866134803333e-05
+  sub: 1 h L1 9.437752791477752e-06, L∞ 6.300121169636551e-06, absolute L1 0.1911241015171716 J/m², integral change 1.970993682151544e-06; 24 h L1 0.000681918352991478, L∞ 0.0009683121780406513, absolute L1 418.2910975807526 J/m², integral change 2.5546631169628053e-05
+  tropo: 1 h L1 2.136761261023858e-07, L∞ 5.732241648659326e-07, absolute L1 12.93705365668799 J/m², integral change -7.241685735869232e-08; 24 h L1 8.999066090025611e-05, L∞ 0.00015451478549224166, absolute L1 5681.86930931101 J/m², integral change -9.941828659161977e-06

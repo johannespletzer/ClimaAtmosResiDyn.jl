@@ -204,6 +204,11 @@ The twelve criteria of the plan, section 2, in short:
     The plume starts at the lowest level with the copies' steady state there,
     the surface flux's water by the fifth mirror's rule. The copies' mirrors
     stay as they are.*
+    *Measured 2026-09-30 (E89), at `10cdeebd`:* R1 passes in both arms, closure
+    5.3e-14 of the throughput. `sfc` and `new_tropo` move by 7.3% and 7.1%
+    (L∞) at 1 h; `sfc`'s column integral rises by 2.3e-3 at 1 h (least
+    favourable). The post-hoc read shows `sfc` shifted upward. Reported, not
+    judged (FINDINGS E89).
   - [x] **The prognostic fields of the rain and snow tags**, settled in the
     design note WP4b-D and its review. *Decided 2026-09-25:* the three parts;
     `ρq_tag_<name>` holds the non-precipitating water, beside `ρq_rtag_<name>`
