@@ -555,6 +555,24 @@ to #126 were read from GitHub on 2026-09-28.
     written, the per-level sums equal to the step totals). The probe itself,
     `13996867`, was submitted at 22:22 from the run tree at `e09e0986`. It
     finished at 01:29 on 2026-09-29 and is W48.
+  - **2026-09-29, `crev` (C's revision), draft for the coordinator:** the
+    revision is built on `claude/option-c-revision` (`c756390d`) and its
+    validation is registered (`design/NEGATIVE_PARENT_WATER.md`, section 11).
+    Its checks passed: the unit tests, a mutant, all nine `tagging_water*`
+    files (jobs `13999599` to `13999609`, `14000300`, `14000301`), and a
+    10-day parity check at site 23 (`13999610` to `13999613`). The rule did
+    not act by day 10. No validation run is submitted: the owner reviews
+    section 11 and its questions (11.10) first.
+  - **2026-09-30, `crev`:** the 30-day parity rerun (`14005271` to `14005274`)
+    passes Q8's rule. Every model field and the day-30 state are bit for bit in
+    all four pairs. The region tags differ from `main`'s from day 11.5, so the
+    rule acted (design 11.8, `output/cr_parity30/`). Nothing is extended.
+  - **2026-09-30, `crev`, after the review's fixes** (`a4b492ec`): the unit
+    tests, the mutants and eight of nine `tagging_water*` files pass, and the
+    30-day parity passes Q8 again (`14010408` to `14010411`; the tags equal
+    the first 30-day run's bit for bit). **One check fails:**
+    `tagged_water_edmf_0m_explicit_integration.jl` fails the new coupling-1
+    test (job `14010383`), not diagnosed (design 11.8).
 
 ## The housekeeping, H0 to H7: done
 
