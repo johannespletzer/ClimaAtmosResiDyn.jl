@@ -548,7 +548,11 @@ ledger `L`, named without its `q_tag_` prefix:
     since its `led_fix` ledger takes the corrections of all three. Under the
     follower most of what `led_inc` holds is the parent's vertical advection,
     which the tags no longer take explicitly, so it bounds the follower's
-    intervention from above and does not isolate it;
+    intervention from above and does not isolate it. The ratios of
+    `led_upleak_<name>`, what the leak correction gave the tag's updraft
+    copies times ``\rho a^j``, are taken against the grid-mean tag,
+    `∫ρq_tag` and `∫|ρq_tag|`, not against the copy's own water. Its
+    `_applicable` also follows the grid-mean tag;
   - `ledger_parent_scale`, with the ledgers per tag: `∫ρq_tot`, the scale of
     `_parent_fraction`;
   - `ledger_cadence_step`: 1 at `update_constrain_state_every: step`, 0
@@ -638,26 +642,9 @@ partition under 0-moment too, wherever that profile varies along a model level.
 partition. It does not read the tags, so it leaves out the path's transport of
 a residual already there.
 
-**The correction of the EDMF vertical diffusion's leak**
-(`water_tag_leak_correction: true`, WP4c). Each tag takes back the diffusion of
-its own share of the rain and snow,
-``\nabla\cdot(\rho K_h \nabla(\psi_i\, q_\mathrm{p}))`` with
-``q_\mathrm{p} = q_\mathrm{rai} + q_\mathrm{sno}``, where ``\psi_i`` is the
-share the sedimentation takes the tag's rain and snow by. The partition's
-shares sum to one wherever it holds water, so its diffusion is then the
-parent's, and the leak is charged to the tags whose water leaked. Without the
-correction, under `water_tag_transport: increment`, the follower absorbs the
-leak and spreads it by the shares of the cells its flux leaves. With copies
-each copy takes its tag's correction per unit mass, as it takes its tag's
-diffusion, so the copies no longer leak on that path either. It covers the EDMF
-vertical diffusive flux and its updrafts' mirror, the two paths the
-experiments' gate retained. The other paths are not corrected, and the key is
-refused with `vert_diff`, whose diffusion leaks the same way. It has no
-Jacobian block, so with one Newton iteration it is taken at the stage's first
-guess. Its ledgers are `q_tag_led_leaknet` and, with copies,
-`q_tag_led_upleaknet`, and under `water_tag_ledger_per_tag: true` each tag's
-`q_tag_led_leak_<name>` and `q_tag_led_upleak_<name>`. The model's fields do
-not change. See `correct_water_tag_diffusion_leak!`.
+`water_tag_leak_correction: true` corrects two of these paths, the EDMF
+vertical diffusive flux and its updrafts' mirror; see
+[The EDMF diffusion leak correction](@ref).
 
 It is not the *only* contributor, though. Any tendency that writes
 ``\rho q_\mathrm{tot}`` by name without an attribution bracket and without a
@@ -673,6 +660,76 @@ production, loss, transport and the limiter rescale implies
 indicates a bug rather than expected leakage.
 `config/model_configs/baroclinic_wave_tagged_water.yml` and the integration test use
 this identity.
+
+### The EDMF diffusion leak correction
+
+`water_tag_leak_correction: true` (WP4c) is experimental and off by default.
+It corrects the leak of the EDMF vertical diffusive flux and of its updrafts'
+mirror, the two paths the experiments' gate retained. Each tag takes back the
+diffusion of its own share of the rain and snow,
+``\nabla\cdot(\rho K_h \nabla(\psi_i\, q_\mathrm{p}))`` with
+``q_\mathrm{p} = q_\mathrm{rai} + q_\mathrm{sno}``, where ``\psi_i`` is the
+share the sedimentation takes the tag's rain and snow by. The partition's
+shares sum to one wherever it holds water, so its diffusion is then the
+parent's. Without the correction, under `water_tag_transport: increment`, the
+follower absorbs the leak and spreads it by the shares of the cells its flux
+leaves. With copies each copy takes its tag's correction per unit mass, as it
+takes its tag's diffusion, so the copies no longer leak on that path either.
+The other paths are not corrected, and the key is refused with `vert_diff`,
+whose diffusion leaks the same way. It has no Jacobian block (see below). Its
+ledgers are `q_tag_led_leaknet` and, with copies, `q_tag_led_upleaknet`, and
+under `water_tag_ledger_per_tag: true` each tag's `q_tag_led_leak_<name>` and
+`q_tag_led_upleak_<name>`. The model's fields do not change. See
+`correct_water_tag_diffusion_leak!`.
+
+  - **Each tag's share of the rain and snow is an assumption.** The tags
+    partition total water and hold no phase of their own, so the model does
+    not know whose water the rain and snow are. The correction takes them to
+    have the cell's total-water composition, ``\psi_i\, q_\mathrm{p}``, as
+    the sedimentation mirror does (see "Phases are well mixed within a
+    cell"). That is a modeling assumption, not demonstrated provenance. It
+    closes the partition's diffusion. It does not show that the tags it
+    charges are the ones whose water leaked. Where the composition changes
+    sharply, or the phases change fast, it may charge the wrong tags.
+
+  - **Where the partition holds no water, the leak is left.** The shares are
+    zero there, and so is the correction. The same holds where the parent's
+    water is not positive, since the shares are taken against it. That part
+    of the leak stays in `q_tag_res`, or under the follower in
+    `q_tag_inc_moved`, as without the correction. The integration test
+    (`test/tagged_water_leak_correction_integration.jl`) prints the fraction
+    of the leak that falls there. On the D4-W column over its first hour it
+    is zero.
+
+  - **It has no Jacobian block.** The correction is written in the implicit
+    tendency, after the tracer loop of `edmfx_sgs_diffusive_flux_tendency!`,
+    where the tags' diffusion is. But the manual Jacobian has no block for
+    it, so the Newton solve does not see it. Each iteration evaluates it
+    again, at that iteration's state. With one iteration it is taken at the
+    stage's first guess, and under the follower the follower moves what then
+    differs from the parent's increment. How much the results depend on `dt`
+    and on the number of iterations is not measured. A sweep over `dt` of
+    30, 60 and 120 s and one to three iterations is a follow-up.
+
+  - **Its validation failed two criteria.** It was pre-registered on the
+    record branch (`design/WP4C_CORRECTIONS.md`, section 8) and ran on the
+    D4-W column (the record's FINDINGS W45). The correction takes the
+    closed-form leak exactly: its ledger is 1.948% of the water a day,
+    against the closed form's 1.945%. Closure, parity and the ledgers hold.
+    But two criteria fail.
+
+      + V1, criterion 1, over a day: the follower's work that `vdiff` drives
+        does not fall. Its part 2a rises from 2.92% of the water a day
+        without the correction to 3.09% with it, where V1 required at most
+        2.42%. Why is not established.
+      + V2, criterion 4, with copies over 12 hours: the column integral of
+        `q_tag_led_upleaknet` reaches 3.1e-5 of the water, against 1e-12. The
+        copies take their tag's correction per unit mass, so the integral
+        need not vanish unless the updraft's area fraction is uniform.
+        Whether the criterion was ill-posed or the copies' correction does
+        not conserve what it should is not established.
+
+    So the key is not to be made a default on this evidence.
 
 ## Scope
 
@@ -732,91 +789,11 @@ its records are not transported.
 
 Exact closure establishes internally consistent contribution accounting; it does
 not turn the tags into counterfactual sensitivities. The donor-fraction loss
-rule, the well-mixed-phases assumption behind `qv_tag`, and the limiter rescale
-policy are modeling choices, and conclusions are conditional on them.
+rule, the well-mixed-phases assumption behind `qv_tag`, the sedimentation
+mirror and the leak correction, and the limiter rescale policy are modeling
+choices, and conclusions are conditional on them.
 
 See `config/model_configs/baroclinic_wave_tagged_water.yml` for a complete example,
 and `test/tagged_water_integration.jl` for the closure assertions.
 
-## Tagged water API
-
-Rendered here so that the `@ref` links in these docstrings resolve; Documenter
-resolves `@ref` only against docstrings a `@docs` block splices into a page.
-
-```@docs
-ClimaAtmos.WaterTaggingModel
-ClimaAtmos.WaterTag
-ClimaAtmos.KNOWN_WATER_TAG_SOURCES
-ClimaAtmos.WATER_TAG_SOURCE_GROUPS
-ClimaAtmos.water_tag_fraction
-ClimaAtmos.water_tag_partition_target
-ClimaAtmos.water_closure_total
-ClimaAtmos.water_tag_share_norm!
-ClimaAtmos.water_tag_sediment_share
-ClimaAtmos.water_tag_source_sediment_share
-ClimaAtmos.water_tag_sediment_share_field
-ClimaAtmos.sediment_water_tags!
-ClimaAtmos.snapshot_tagged_ρq_tot!
-ClimaAtmos.attribute_tagged_ρq_tot!
-ClimaAtmos.rescale_water_tags!
-ClimaAtmos.water_tag_rescale_shift
-ClimaAtmos.water_tag_source_rescale_shift
-ClimaAtmos.repair_water_tag_partition!
-ClimaAtmos.check_water_tag_exchange_partition
-ClimaAtmos.water_tag_edmf_scratch
-ClimaAtmos.sgs_mass_flux_of_water_tags!
-ClimaAtmos.sgs_exchange_of_water_tags!
-ClimaAtmos.water_exchange_inputs!
-ClimaAtmos.water_tag_plume!
-ClimaAtmos.start_water_tag_copies_from_plume!
-ClimaAtmos.water_tag_updraft_copy_names
-ClimaAtmos.with_water_tag_updraft_copies
-ClimaAtmos.rebuild_water_tag_updraft_copies!
-ClimaAtmos.water_tag_copies_microphysics_tendency!
-ClimaAtmos.sediment_water_tag_copies!
-ClimaAtmos.water_tag_copies_boundary_condition_tendency!
-ClimaAtmos.water_tag_copies_surface_flux_tendency!
-ClimaAtmos.repair_water_tag_copies!
-ClimaAtmos.water_tag_copy_sgs_names
-ClimaAtmos.water_tag_edmf_audit
-ClimaAtmos.WATER_TAG_LEAK_PATHS
-ClimaAtmos.water_tag_leak!
-ClimaAtmos.correct_water_tag_diffusion_leak!
-ClimaAtmos.apply_water_tag_leak_correction!
-ClimaAtmos.water_tag_leak_ledgers
-ClimaAtmos.has_water_tag_leak_correction
-ClimaAtmos.splits_rainout
-ClimaAtmos.add_split_rainout!
-ClimaAtmos.add_rainout_increments!
-ClimaAtmos.update_water_tag_rainouts!
-ClimaAtmos.water_tag_precipitation!
-ClimaAtmos.water_tag_precipitation_residual!
-ClimaAtmos.IncrementWaterTagTransport
-ClimaAtmos.TracerWaterTagTransport
-ClimaAtmos.follows_water_increment
-ClimaAtmos.snapshot_water_tag_increment!
-ClimaAtmos.correct_water_tag_increment!
-ClimaAtmos.WaterTagIncrementCorrection
-ClimaAtmos.tag_post_implicit
-ClimaAtmos.water_tag_post_implicit
-ClimaAtmos.check_water_tag_increment_supported
-ClimaAtmos.default_water_tag_transport
-ClimaAtmos.water_increment_partition_tolerance
-ClimaAtmos.water_increment_left_weight
-ClimaAtmos.water_tag_increment_ledger_variables
-ClimaAtmos.water_tag_extra_audit
-ClimaAtmos.TagLedgerView
-ClimaAtmos.set_tag_ledger_cadence!
-ClimaAtmos.DEFAULT_NEGATIVE_WATER_VOID_ABOVE
-ClimaAtmos.parent_negative_water
-ClimaAtmos.negative_water_relative
-ClimaAtmos.negative_water_accumulator_cache
-ClimaAtmos.accumulate_negative_water!
-ClimaAtmos.negative_water_step_relative
-ClimaAtmos.check_negative_water_step!
-ClimaAtmos.tag_ledger_normalization
-ClimaAtmos.TAG_LEDGER_SMALL_TAG_BOUND
-ClimaAtmos.WATER_TAG_CHECKPOINT_VERSION
-ClimaAtmos.write_water_tag_checkpoint_attributes!
-ClimaAtmos.check_water_tag_checkpoint
-```
+The docstrings are on the page [Tagged Water API](tagged_water_api.md).

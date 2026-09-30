@@ -1,22 +1,66 @@
 name: ci
+# The test groups run in tiers, so that a pull request does not wait hours in
+# the queue. GitHub Free runs 20 jobs at a time for the whole account, and the
+# full matrix on both Julia versions was 49 jobs and about 1,450 job-minutes.
+# The `plan` job picks the tier; .github/ci_plan.sh says which event gets which,
+# and docs/clima_atmos_specific.md ("Which jobs run when") explains why.
+#
+#   draft pull request             quick: load jobs and `infrastructure` on 1.11
+#   pull request ready for review  full: every group on 1.11
+#   push to `main`                 cache: load jobs and a cache warm-up, when
+#                                  a green `ci-full` tested this exact tree on
+#                                  the pull request; full otherwise
+#   nightly, Monday to Saturday    the fork's groups on 1.10
+#   weekly on Sunday, tags         every group on 1.11, fork's groups on 1.10
+#   manual run                     the versions and groups it asks for
+#
+# The tests run with `check_bounds: auto`, except the weekly run and tags,
+# which keep `yes`. `auto` compiled the tagged models 2.2 times faster (see
+# .github/ci_plan.sh), and the weekly run still catches an access out of
+# bounds. Each setting has caches of its own, since their package images
+# differ.
+#
+# A change that touches only paths no test reads (docs/ except
+# docs/src/parent_budget/, experiments/, runscripts/, calibration/, markdown
+# at the root, other workflows) runs no test. To test every group on both
+# versions, as before, run it by hand: `gh workflow run ci.yml --ref <branch>`.
 on:
   push:
     branches: [main]
     tags: '*'
   pull_request:
-  merge_group:
-  # A manual run tests every group on both Julia versions. Use it for a pull
-  # request that edits upstream code, since the upstream groups run on 1.11
-  # only otherwise: `gh workflow run ci.yml --ref <branch>`.
+    # Listing the types replaces the defaults, so all four are needed.
+    # `ready_for_review` starts the full tier when a draft is marked ready.
+    types: [opened, synchronize, reopened, ready_for_review]
+  schedule:
+    # Keep the second line equal to WEEKLY_CRON in .github/ci_plan.sh.
+    - cron: '0 1 * * 1-6'
+    - cron: '0 1 * * 0'
   workflow_dispatch:
+    inputs:
+      versions:
+        description: 'Julia versions to test'
+        type: choice
+        options: ['both', '1.11', '1.10']
+        default: 'both'
+      groups:
+        description: '"all", or test groups separated by commas'
+        type: string
+        default: 'all'
+      check_bounds:
+        description: 'julia-runtest check_bounds (yes also checks inside @inbounds)'
+        type: choice
+        options: ['auto', 'yes']
+        default: 'auto'
 
+# A newer push to a pull request cancels its older run. Nothing else is
+# cancelled. A push to `main` or a tag has a group per commit, because a later
+# merge that only warms the cache must not cancel the full run of an earlier
+# merge whose tree nothing tested. A merge must not end the nightly either,
+# which is what tests Julia 1.10.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  # Cancel superseded runs everywhere, `main` included. Each merged pull
-  # request was already tested on its own branch, and several merges in a
-  # row would otherwise each start the full matrix. The badge can show
-  # "cancelled" until the newest run on `main` finishes.
-  cancel-in-progress: true
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.event_name == 'schedule' && 'schedule' || format('{0}-{1}', github.event_name, github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -24,13 +68,16 @@ permissions:
 # The parts of the Julia depot that are cached. Every cache step uses this one
 # list, because a cache is only found again under the same paths.
 #
-# Only runs on `main` save a cache. Every other run restores the newest cache
-# from `main` and saves nothing. GitHub keeps 10 GB per repository. On
-# 2026-09-17 the caches of pull request runs pushed `main`'s out within half an
-# hour. A tag or merge-queue run could not reuse its own cache either.
+# Only runs on `main` save a cache, the schedules included. Every other run
+# restores the newest cache from `main` and saves nothing. GitHub keeps 10 GB
+# per repository. On 2026-09-17 the caches of pull request runs pushed `main`'s
+# out within half an hour.
 #
-# Each key holds the full Julia version. A new patch release then starts a new
-# cache instead of adding its package images to the old one.
+# Each key holds the check-bounds setting, the full Julia version and the UTC
+# date. The two settings build different package images. A new patch release
+# then starts a new cache instead of adding its package images to the old one.
+# The first run of a day on `main` saves the day's cache, and later runs find
+# that key and save nothing, which keeps the number of caches down.
 #
 # The registries are not cached. `julia-buildpkg` installs them in seconds.
 env:
@@ -47,38 +94,52 @@ env:
     ~/.julia/compiled
     ~/.julia/scratchspaces
     ~/.julia/logs
+  # Quarantined jobs, `<version>/<group>` separated by spaces, for example
+  # '1.10/tagging_water_precipitation'. Such a job still runs and shows its
+  # result, but its failure does not fail the run. Only the owner adds one.
+  ALLOW_FAIL: ''
 
 jobs:
-  # Merge-queue fast path: decide whether the matrix below can be reused from an
-  # already-green PR head (see .github/should_skip_merge_queue.sh). Always runs;
-  # only ever returns skip=true for a merge_group build that is provably
-  # identical to a PR whose "ci " checks already passed.
-  ci-decide:
-    name: ci-decide
+  plan:
+    name: plan
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # `checks: read` lets it look up `ci-full` on a merged pull request's head,
+    # and `actions: read` the commit the last green scheduled run tested.
     permissions:
       contents: read
       checks: read
-      pull-requests: read
-      statuses: read
+      actions: read
     outputs:
-      skip: ${{ steps.decide.outputs.skip }}
+      tier: ${{ steps.plan.outputs.tier }}
+      matrix: ${{ steps.plan.outputs.matrix }}
+      full_scope: ${{ steps.plan.outputs.full_scope }}
+      check_bounds: ${{ steps.plan.outputs.check_bounds }}
+      allow_fail: ${{ steps.plan.outputs.allow_fail }}
     steps:
+      # The whole history, for the merge's parents and the ancestry test.
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - id: decide
+      # For .github/read_test_groups.jl, which reads the groups from
+      # test/runtests.jl.
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1.11'
+      # `shell: bash` adds pipefail, so a failing plan fails the job rather
+      # than leaving `tee`'s exit status.
+      - id: plan
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          MERGE_GROUP_HEAD_REF: ${{ github.event.merge_group.head_ref }}
-          MERGE_GROUP_BASE_SHA: ${{ github.event.merge_group.base_sha }}
-        run: |
-          if .github/should_skip_merge_queue.sh "ci "; then
-            echo "Merge-queue CI skipped: reusing this PR's green checks."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-          fi
+          EVENT_NAME: ${{ github.event_name }}
+          PR_DRAFT: ${{ github.event.pull_request.draft }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          SCHEDULE: ${{ github.event.schedule }}
+          DISPATCH_VERSIONS: ${{ inputs.versions }}
+          DISPATCH_GROUPS: ${{ inputs.groups }}
+          DISPATCH_CHECK_BOUNDS: ${{ inputs.check_bounds }}
+        run: bash .github/ci_plan.sh | tee -a "$GITHUB_OUTPUT"
 
   # Package-load preflight. A syntax or docstring error only shows up during
   # precompilation, so without this gate one bad expression starts the whole
@@ -86,8 +147,8 @@ jobs:
   # answer that question first, and the matrix waits for them.
   load:
     name: load ${{ matrix.version }}
-    needs: ci-decide
-    if: needs.ci-decide.outputs.skip != 'true'
+    needs: plan
+    if: needs.plan.outputs.tier != 'none'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -102,26 +163,29 @@ jobs:
         id: setup-julia
         with:
           version: ${{ matrix.version }}
+      - id: day
+        run: echo "day=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
       # `load` restores the test jobs' cache and never saves. A cache of its
-      # own would take a tenth of the 10 GB. If it saved under the test jobs'
-      # key, it would save first. The test jobs would then hit that key exactly
-      # and skip their own save. `--check-bounds=yes` is the flag `Pkg.test`
-      # sets, so the restored package images fit this `using` too.
+      # own would take a tenth of the 10 GB. The check-bounds flag is the one
+      # the test jobs pass to `Pkg.test`, so the restored package images fit
+      # this `using` too.
       - name: Restore the Julia depot
         uses: actions/cache/restore@v6
         with:
           path: ${{ env.DEPOT_CACHE_PATHS }}
-          key: julia-ci-test-haswell-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: julia-ci-test-haswell-${{ steps.setup-julia.outputs.julia-version }}-
+          key: julia-ci-test-${{ needs.plan.outputs.check_bounds }}-haswell-${{ steps.setup-julia.outputs.julia-version }}-${{ steps.day.outputs.day }}
+          restore-keys: julia-ci-test-${{ needs.plan.outputs.check_bounds }}-haswell-${{ steps.setup-julia.outputs.julia-version }}-
       - name: Runner CPU
         run: grep -m1 'model name' /proc/cpuinfo
       - uses: julia-actions/julia-buildpkg@v1
         with:
           ignore-no-cache: true
       - name: using ClimaAtmos
-        run: julia --project=. --color=yes --check-bounds=yes -e 'using ClimaAtmos'
+        env:
+          CHECK_BOUNDS: ${{ needs.plan.outputs.check_bounds }}
+        run: julia --project=. --color=yes --check-bounds="$CHECK_BOUNDS" -e 'using ClimaAtmos'
 
-  # The minimum-compat check that runs on every pull request. The full
+  # The minimum-compat check. It runs in every tier except none. The full
   # `Downgrade` matrix only runs weekly and when the compat bounds change
   # (downgrade.yml). This job resolves every dependency at its lowest allowed
   # version on the oldest supported Julia and loads the package. That catches
@@ -129,8 +193,8 @@ jobs:
   # load time, such as a name imported from it.
   load-min-compat:
     name: load 1.10 minimum compat
-    needs: ci-decide
-    if: needs.ci-decide.outputs.skip != 'true'
+    needs: plan
+    if: needs.plan.outputs.tier != 'none'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -139,6 +203,8 @@ jobs:
         id: setup-julia
         with:
           version: '1.10'
+      - id: day
+        run: echo "day=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
       # A depot of its own, since the versions differ from the test jobs'.
       # Only `main` saves it, as explained at `DEPOT_CACHE_PATHS`.
       - name: Restore the Julia depot
@@ -146,14 +212,14 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: ${{ env.DEPOT_CACHE_PATHS }}
-          key: julia-ci-min-compat-haswell-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: julia-ci-min-compat-haswell-${{ steps.setup-julia.outputs.julia-version }}-${{ steps.day.outputs.day }}
           restore-keys: julia-ci-min-compat-haswell-${{ steps.setup-julia.outputs.julia-version }}-
       - name: Restore and save the Julia depot
         if: github.ref == 'refs/heads/main'
         uses: actions/cache@v6
         with:
           path: ${{ env.DEPOT_CACHE_PATHS }}
-          key: julia-ci-min-compat-haswell-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: julia-ci-min-compat-haswell-${{ steps.setup-julia.outputs.julia-version }}-${{ steps.day.outputs.day }}
           restore-keys: julia-ci-min-compat-haswell-${{ steps.setup-julia.outputs.julia-version }}-
       - name: Runner CPU
         run: grep -m1 'model name' /proc/cpuinfo
@@ -172,59 +238,24 @@ jobs:
         run: julia --project=. --color=yes -e 'using Pkg; Pkg.instantiate(); using ClimaAtmos'
 
   test:
-    name: ci ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.test_group }}
-    needs: [ci-decide, load]
-    if: needs.ci-decide.outputs.skip != 'true'
-
-    runs-on: ${{ matrix.os }}
+    name: ci ${{ matrix.version }} - ${{ matrix.test_group }}
+    needs: [plan, load]
+    # Checked before the matrix expands. A matrix with no entries is an error,
+    # and the tiers none and cache have none.
+    if: needs.plan.outputs.matrix != '[]'
+    runs-on: ubuntu-latest
     # A job killed mid-suite reports `cancelled`, which the ci-required gate
-    # cannot distinguish from a superseded run, so the time limit has to leave real
-    # headroom. The tagged-simulation files are one group per file for the same
-    # reason: they share no compilation, so combining them only adds compile
-    # time, and a job that overruns drops coverage of whatever had not started.
+    # cannot distinguish from a superseded run, so the time limit has to leave
+    # real headroom. The tagged-simulation files are one group per file for
+    # the same reason: they share no compilation, so combining them only adds
+    # compile time, and a job that overruns drops coverage of whatever had not
+    # started.
     timeout-minutes: 90
+    continue-on-error: ${{ contains(fromJSON(needs.plan.outputs.allow_fail || '[]'), format('{0}/{1}', matrix.version, matrix.test_group)) }}
     strategy:
       fail-fast: false
       matrix:
-        version:
-          - '1.10'
-          - '1.11'
-        # Ubuntu only. `main` then exercises the required jobs that gate a
-        # pull request, so the workflow badge means "the required checks are
-        # green".
-        os:
-          - ubuntu-latest
-        test_group:
-          - infrastructure
-          - parent_budget
-          - diagnostics
-          - dynamics
-          - dynamics_tracers
-          - dynamics_edmfx
-          - tagging_energy
-          - tagging_water
-          - tagging_source
-          - tagging_record
-          - tagging_source_float32
-          - tagging_source_edmf
-          - tagging_source_increment
-          - tagging_source_updraft
-          - tagging_water_edmf
-          - tagging_water_edmf_copies
-          - tagging_water_edmf_0m
-          - tagging_water_edmf_0m_explicit
-          - tagging_water_increment
-          - tagging_water_increment_explicit
-          - tagging_water_leak
-          - tagging_water_precipitation
-          - parameterizations
-          - restarts
-        # The groups that test upstream ClimaAtmos code run on 1.11 only. A
-        # difference between Julia versions inside upstream code is upstream's
-        # to find. The fork's own groups, and `parameterizations`, which holds
-        # the fork's stratospheric tracer test, keep both versions, because
-        # `Project.toml` promises 1.10. A manual run excludes nothing.
-        exclude: ${{ github.event_name == 'workflow_dispatch' && fromJSON('[]') || fromJSON('[{"version":"1.10","test_group":"dynamics"},{"version":"1.10","test_group":"dynamics_tracers"},{"version":"1.10","test_group":"dynamics_edmfx"},{"version":"1.10","test_group":"restarts"}]') }}
+        include: ${{ fromJSON(needs.plan.outputs.matrix) }}
     env:
       TEST_GROUP: ${{ matrix.test_group }}
     steps:
@@ -233,26 +264,27 @@ jobs:
         id: setup-julia
         with:
           version: ${{ matrix.version }}
-      # One cache per Julia version, shared by every group, since all groups
-      # use the same test environment. On `main`, the first job of the run to
+      - id: day
+        run: echo "day=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+      # One cache per Julia version and day, shared by every group, since all
+      # groups use the same test environment. On `main`, the first job to
       # finish saves it, and jobs that start later restore that exact key.
-      # Other runs only restore (see `DEPOT_CACHE_PATHS`). Package images are
-      # built for the runner's CPU. The model is printed to explain a cache
-      # that restores but still precompiles.
+      # Other runs only restore (see `DEPOT_CACHE_PATHS`). The CPU model is printed to explain a cache that restores but still
+      # precompiles.
       - name: Restore the Julia depot
         if: github.ref != 'refs/heads/main'
         uses: actions/cache/restore@v6
         with:
           path: ${{ env.DEPOT_CACHE_PATHS }}
-          key: julia-ci-test-haswell-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: julia-ci-test-haswell-${{ steps.setup-julia.outputs.julia-version }}-
+          key: julia-ci-test-${{ needs.plan.outputs.check_bounds }}-haswell-${{ steps.setup-julia.outputs.julia-version }}-${{ steps.day.outputs.day }}
+          restore-keys: julia-ci-test-${{ needs.plan.outputs.check_bounds }}-haswell-${{ steps.setup-julia.outputs.julia-version }}-
       - name: Restore and save the Julia depot
         if: github.ref == 'refs/heads/main'
         uses: actions/cache@v6
         with:
           path: ${{ env.DEPOT_CACHE_PATHS }}
-          key: julia-ci-test-haswell-${{ steps.setup-julia.outputs.julia-version }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: julia-ci-test-haswell-${{ steps.setup-julia.outputs.julia-version }}-
+          key: julia-ci-test-${{ needs.plan.outputs.check_bounds }}-haswell-${{ steps.setup-julia.outputs.julia-version }}-${{ steps.day.outputs.day }}
+          restore-keys: julia-ci-test-${{ needs.plan.outputs.check_bounds }}-haswell-${{ steps.setup-julia.outputs.julia-version }}-
       - name: Runner CPU
         run: grep -m1 'model name' /proc/cpuinfo
       - uses: julia-actions/julia-buildpkg@v1
@@ -265,34 +297,142 @@ jobs:
       - uses: julia-actions/julia-runtest@v1
         with:
           coverage: false
+          check_bounds: ${{ needs.plan.outputs.check_bounds }}
 
-  # Single required status check for branch protection / the merge queue. Set
-  # THIS ("ci-required") as the required check instead of the individual matrix
-  # jobs, so a reused merge-queue build (matrix skipped) still reports green.
+  # When a merge skips the tests, this job saves the day's 1.11 test cache, so
+  # pull requests keep restoring package images that match `main`. The
+  # `precompile` group runs no tests; `Pkg.test` builds the whole test
+  # environment before it.
+  cache-warm:
+    name: cache-warm 1.11
+    needs: [plan, load]
+    if: needs.plan.outputs.tier == 'cache'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      TEST_GROUP: precompile
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        id: setup-julia
+        with:
+          version: '1.11'
+      - id: day
+        run: echo "day=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+      - name: Restore and save the Julia depot
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.DEPOT_CACHE_PATHS }}
+          key: julia-ci-test-${{ needs.plan.outputs.check_bounds }}-haswell-${{ steps.setup-julia.outputs.julia-version }}-${{ steps.day.outputs.day }}
+          restore-keys: julia-ci-test-${{ needs.plan.outputs.check_bounds }}-haswell-${{ steps.setup-julia.outputs.julia-version }}-
+      - name: Runner CPU
+        run: grep -m1 'model name' /proc/cpuinfo
+      - uses: julia-actions/julia-buildpkg@v1
+        with:
+          ignore-no-cache: true
+      - uses: julia-actions/julia-runtest@v1
+        with:
+          coverage: false
+          check_bounds: ${{ needs.plan.outputs.check_bounds }}
+
+  # A check that always reports. It passes when every job the plan asked for
+  # passed. It is the check to require on `main` if one is ever required.
   ci-required:
     name: ci-required
-    needs: [ci-decide, load, load-min-compat, test]
+    needs: [plan, load, load-min-compat, test, cache-warm]
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - run: |
-          if [[ "${{ needs.ci-decide.result }}" != "success" ]]; then
-            echo "ci-decide job did not succeed"; exit 1
+      - env:
+          PLAN: ${{ needs.plan.result }}
+          TIER: ${{ needs.plan.outputs.tier }}
+          LOAD: ${{ needs.load.result }}
+          MIN_COMPAT: ${{ needs.load-min-compat.result }}
+          TEST: ${{ needs.test.result }}
+          WARM: ${{ needs.cache-warm.result }}
+        run: |
+          if [[ "$PLAN" != "success" ]]; then
+            echo "plan did not succeed ($PLAN)"; exit 1
           fi
-          if [[ "${{ needs.load.result }}" != "success" && \
-                "${{ needs.load.result }}" != "skipped" ]]; then
-            echo "package-load preflight did not succeed"; exit 1
+          bad=0
+          need() {
+            if [[ "$2" != "success" ]]; then
+              echo "$1: $2, but tier $TIER needs it"; bad=1
+            fi
+          }
+          case "$TIER" in
+            none) ;;
+            cache) need load "$LOAD"; need load-min-compat "$MIN_COMPAT"; need cache-warm "$WARM" ;;
+            *) need load "$LOAD"; need load-min-compat "$MIN_COMPAT"; need test "$TEST" ;;
+          esac
+          if [[ $bad == 0 ]]; then echo "tier $TIER passed"; fi
+          exit $bad
+
+  # The marker that every group passed on 1.11 on this commit. It runs only
+  # when the plan ran every group on 1.11, and fails
+  # unless they all passed. A push to `main` reads it on the merged pull
+  # request's head to skip testing the same tree twice. On a draft it is
+  # skipped, which a required check would count as passed; a draft cannot be
+  # merged, and marking it ready starts a run that sets it.
+  ci-full:
+    name: ci-full
+    needs: [plan, load, load-min-compat, test]
+    if: always() && needs.plan.outputs.full_scope == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          LOAD: ${{ needs.load.result }}
+          MIN_COMPAT: ${{ needs.load-min-compat.result }}
+          TEST: ${{ needs.test.result }}
+        run: |
+          echo "load: $LOAD, load-min-compat: $MIN_COMPAT, test: $TEST"
+          [[ "$LOAD" == "success" && "$MIN_COMPAT" == "success" && "$TEST" == "success" ]]
+
+  # A red scheduled run opens an issue labelled `nightly-red`, with its tier in
+  # the title, or comments on the open one of that tier. A green run of the
+  # same tier closes it, and a green weekly run closes them all. The nightly
+  # tests only the fork's groups on 1.10, so it cannot clear a weekly failure
+  # on 1.11. The repository is public, so an agent without a token can read the
+  # issue with plain curl. While one is open, only its fix merges: a red
+  # scheduled run is a red check.
+  nightly-report:
+    name: nightly-report
+    needs: [plan, load, load-min-compat, test]
+    if: always() && github.event_name == 'schedule' && needs.plan.outputs.tier != 'none'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      issues: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ALLOW_FAIL_JSON: ${{ needs.plan.outputs.allow_fail }}
+          TIER: ${{ needs.plan.outputs.tier }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          quarantined=$(jq -r '.[] | split("/") | "ci \(.[0]) - \(.[1])"' <<<"${ALLOW_FAIL_JSON:-[]}")
+          failed=$(gh api "repos/$GH_REPO/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs" --paginate \
+            --jq '.jobs[] | select(.name != "ci-required" and .name != "ci-full")
+                  | select(.conclusion == "failure" or .conclusion == "timed_out" or .conclusion == "cancelled") | .name')
+          red=$(grep -v -x -F -f <(printf '%s\n' "$quarantined" | grep -v '^$' || echo '@@none@@') <<<"$failed" | grep -v '^$' || true)
+          title="Scheduled ci run on main is red ($TIER)"
+          open=$(gh issue list --label nightly-red --state open --json number,title \
+            --jq ".[] | select(.title == \"$title\") | .number" || true)
+          if [[ -n "$red" ]]; then
+            body=$(printf 'The %s run on `main` at %s failed:\n\n%s\n\n%s\n' "$TIER" "$GITHUB_SHA" "$(sed 's/^/- /' <<<"$red")" "$RUN_URL")
+            if [[ -n "$open" ]]; then
+              gh issue comment "$(head -1 <<<"$open")" --body "$body"
+            else
+              gh label create nightly-red --color B60205 --description "The scheduled ci run on main failed" 2>/dev/null || true
+              gh issue create --title "$title" --label nightly-red --body "$body"
+            fi
+          else
+            # A green weekly run tested every group, so it closes every tier's issue.
+            if [[ "$TIER" == all ]]; then
+              open=$(gh issue list --label nightly-red --state open --json number --jq '.[].number' || true)
+            fi
+            for n in $open; do
+              gh issue close "$n" --comment "The $TIER run at $GITHUB_SHA passed: $RUN_URL"
+            done
           fi
-          if [[ "${{ needs.load-min-compat.result }}" != "success" && \
-                "${{ needs.load-min-compat.result }}" != "skipped" ]]; then
-            echo "minimum-compat load did not succeed"; exit 1
-          fi
-          if [[ "${{ needs.test.result }}" == "success" ]]; then
-            echo "ci matrix passed"; exit 0
-          fi
-          if [[ "${{ needs.test.result }}" == "skipped" && \
-                "${{ needs.ci-decide.outputs.skip }}" == "true" ]]; then
-            echo "ci matrix reused from an already-green PR head"; exit 0
-          fi
-          echo "ci matrix did not pass (result=${{ needs.test.result }})"
-          exit 1

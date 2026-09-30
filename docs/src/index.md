@@ -99,6 +99,7 @@ matches yours:
   - **Reference**: look-up material.
 
       + [API](api.md), [Configuration options](configuration_options.md), [Setups](setups.md), [Column Datasets](column_datasets_reference.md), [Grids](grids.md), [Surface conditions](surface_conditions.md), [Configuring tracers](tracer_configuration.md), [Passive tracers](passive_tracers.md), [Trace gases](trace_gases.md), [Available diagnostics](available_diagnostics.md), [Notation](notation.md), [Glossary](glossary.md), [Bibliography](references.md)
+      + Tagged tracers and records (this fork's additions): [tagged energy tracers](tagged_tracers.md), [tagged water tracers](tagged_water.md), [rain and snow tags](tagged_water_precipitation.md), [energy source tags](energy_source_tags_guide.md) ([reference](energy_source_tags.md)), [process-change records](process_record.md)
 
   - **Developer Guide**: [contributing](contributor_guide.md) and extending the model ([setups](extending_setups.md), [diagnostics](extending_diagnostics.md), [tracers](extending_tracers.md), [column datasets](extending_column_datasets.md), [surface internals](surface_conditions_internals.md))
 

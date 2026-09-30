@@ -2,32 +2,18 @@
 ##### The energy source tags' updraft copies: the mirrors of `mseʲ`
 #####
 ##### Under `energy_source_tag_updraft_copy: true` each tag has a copy
-##### `e_src_<name>`, a specific value, in every updraft. `sgs_tracer_names`
-##### finds it, so the model's updraft machinery moves it as any updraft tracer:
-##### advection, entrainment, the SGS mass flux of the grid-mean tag, the
-##### diffusion mirror, hyperdiffusion, the sponge and the filter. Four things
-##### the model does to the updraft's `mseʲ` it does not do to a tracer, and each
-##### changes the updraft's energy `Aʲ = mseʲ + Kʲ - p/ρʲ + c`. They are mirrored
-##### here, so that the partition's copies change with `Aʲ` (G4.1 and G4.11 of
-##### the tag-closure experiments):
+##### `e_src_<name>`, a specific value, in every updraft. The updraft machinery
+##### moves it as any updraft tracer. Four processes change the updraft's energy
+##### `Aʲ = mseʲ + Kʲ - p/ρʲ + c` but not a tracer, so each is mirrored here:
 #####
-#####   1. the surface enthalpy flux into the updraft's lowest cell,
-#####      `energy_source_copies_surface_flux_tendency!`;
-#####   2. the relaxation toward the buoyant surface value there,
+#####   1. the surface enthalpy flux, `energy_source_copies_surface_flux_tendency!`;
+#####   2. the relaxation toward the buoyant surface value,
 #####      `energy_source_copies_boundary_condition_tendency!`;
-#####   3. radiation, under RRTMGP, `energy_source_copies_radiation_tendency!`;
-#####   4. the updraft's 0M rain-out, `energy_source_copies_microphysics_tendency!`.
+#####   3. RRTMGP radiation, `energy_source_copies_radiation_tendency!`;
+#####   4. the 0M rain-out, `energy_source_copies_microphysics_tendency!`.
 #####
-##### Two writers of `mseʲ` get no mirror. The buoyancy term of
-##### `edmfx_sgs_vertical_advection_tendency!` is energy the updraft trades:
-##### its velocity equation takes the part `1 - α_b` of it from `Kʲ`, and the
-##### rest is work done through the non-hydrostatic pressure. No tag is
-##### labelled with either, so neither is a source to share out, and what it
-##### leaves in `Aʲ` shows in `e_src_copy_res`. And the pressure work is a no-op
-##### in the model (`pressure_work_tendency!`).
-#####
-##### Each mirror reads the state and writes only the copies' tendencies, so the
-##### model's fields do not change.
+##### The buoyancy term and the pressure work get no mirror, because no tag is
+##### labelled with either. What they leave shows in `e_src_copy_res`.
 
 """
     energy_source_copy_share(χ, S)

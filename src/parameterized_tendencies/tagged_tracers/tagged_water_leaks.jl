@@ -49,17 +49,53 @@ Zero where the path is off, or on a column for the horizontal paths. On the
 sphere the result is DSSed, as a tendency diagnostic is. See
 [`WATER_TAG_LEAK_PATHS`](@ref) for the paths.
 
-Zero under `water_tag_precipitation: true`. There the tags' `ρq_tag_<name>`
-fields hold the diffusing water and move as it does, and the hyperdiffusion
-takes each tag's share of the reference profile, so no path leaks
-(`prep_water_tag_hyperdiffusion!`). The copies are refused with the key.
+Under `water_tag_precipitation: true` only `hyperdiff` can be nonzero. It is
+taken where the non-precipitating parts sum to `max(N, 0)`, for
+`N = ρq_tot - ρq_rai - ρq_sno`, and not to `ρq_tot`. See
+`docs/src/tagged_water_precipitation.md`. The copies are refused with the key.
 """
 function water_tag_leak!(ᶜleak, Y, p, path::Val)
     @. ᶜleak = 0
-    has_water_tag_precipitation(p.atmos.water_tagging_model) ||
+    if has_water_tag_precipitation(p.atmos.water_tagging_model)
+        _water_tag_parts_leak!(ᶜleak, Y, p, path)
+    else
         _water_tag_leak!(ᶜleak, Y, p, path)
+    end
     do_dss(axes(Y.c)) && Spaces.weighted_dss!(ᶜleak)
     return ᶜleak
+end
+
+# Under `water_tag_precipitation: true`. The tags hyperdiffuse on
+# `∇²(N_tag/ρ - φ q_tot_r)` and the parent on `∇²(N/ρ - q_tot_r)`, with `φ` the
+# tag's share of `N`. A closed partition's parts sum to `max(N, 0)` (option C).
+# So their difference is `∇²((1 - Σφ) q_tot_r - min(N, 0)/ρ)`, with `Σφ` summed
+# over the partition's tags. `Σφ` is one, to rounding, where the partition holds
+# water, and zero where it holds none.
+_water_tag_parts_leak!(ᶜleak, Y, p, path) = nothing
+function _water_tag_parts_leak!(ᶜleak, Y, p, ::Val{:hyperdiff})
+    hyperdiff = p.atmos.hyperdiff
+    (isnothing(hyperdiff) || iscolumn(axes(Y.c))) && return nothing
+    model = p.atmos.water_tagging_model
+    thermo_params = CAP.thermodynamics_params(p.params)
+    (; ν₄_scalar) = ν₄(hyperdiff, Y)
+    (; ᶜp) = p.precomputed
+    water_tag_share_norm!(p, Y)
+    # `ᶜleak` first holds `(1 - Σφ) q_tot_r - min(N, 0)/ρ`, then the rate.
+    @. ᶜleak = q_tot_r(thermo_params, ᶜp)
+    MatrixFields.unrolled_foreach(model.tags) do tag
+        _is_partition_tag(tag) || return nothing
+        ᶜshare =
+            water_tag_part_share(Y.c, p.scratch, tag, NonPrecipitatingPart())
+        @. ᶜleak -= ᶜshare * q_tot_r(thermo_params, ᶜp)
+        return nothing
+    end
+    ᶜN = water_tag_part_parent(Y.c, NonPrecipitatingPart())
+    @. ᶜleak -= water_tag_negative_part(ᶜN) / Y.c.ρ
+    ᶜ∇² = p.scratch.ᶜtemp_scalar
+    @. ᶜ∇² = wdivₕ(gradₕ(ᶜleak))
+    do_dss(axes(Y.c)) && Spaces.weighted_dss!(ᶜ∇²)
+    @. ᶜleak = -ν₄_scalar * wdivₕ(Y.c.ρ * gradₕ(ᶜ∇²)) / Y.c.ρ
+    return nothing
 end
 
 # The water the parent does not move on these paths, as the tags' sum minus
@@ -219,10 +255,11 @@ _has_water_tag_copies(p, turbconv_model) = false
 ##### the grid mean's `vdiff` and the updrafts' `diffusion_up`. Each gives the
 ##### tags back the diffusion of the rain and snow, which the parent does not
 ##### diffuse. Each tag takes back the diffusion of its own share of the rain
-##### and snow, the share the sedimentation takes it by, so the leak is charged
-##### to the tags whose water leaked. Without the correction the follower
-##### absorbs the leak and spreads it by the shares of the cells its flux
-##### leaves. design/WP4C_CORRECTIONS.md on the record branch.
+##### and snow, the share the sedimentation takes it by. That share is a
+##### modeling assumption: the rain and snow take the cell's total-water
+##### composition. Without the correction the follower absorbs the leak and
+##### spreads it by the shares of the cells its flux leaves.
+##### design/WP4C_CORRECTIONS.md on the record branch.
 
 """
     correct_water_tag_diffusion_leak!(Yₜ, Y, p, ᶠρK_h, apply_sgs_updraft)
@@ -236,13 +273,17 @@ does not, the leak `q_tag_leak_vdiff`.
 
 `ψᵢ` is the share the sedimentation mirror takes a tag's rain and snow by: a
 partition tag's clamped share renormalized over the partition, a source tag's
-own clamped share. The partition's shares sum to one wherever it holds water, so
-the partition's corrections sum to `∇·(ρK_h ∇q_p)`, the leak with the opposite
-sign, and its diffusion is the parent's. Where the partition holds no water the
-shares are zero and the leak there is not corrected. It lands in `q_tag_res`, or
-under the follower in `q_tag_inc_moved`, as before. A source tag's correction
-takes back its own share, so its diffusion moves only the water that the parent
-diffuses too.
+own clamped share. `ψᵢ q_p` is a modeling assumption. The tags partition total
+water and hold no phase, so the rain and snow are taken to have the cell's
+total-water composition. That is not demonstrated provenance. The partition's
+shares sum to one wherever it holds water, so the partition's corrections sum to
+`∇·(ρK_h ∇q_p)`, the leak with the opposite sign, and its diffusion is the
+parent's. Where the partition holds no water, the shares are zero and the leak
+there is not corrected. The same holds where the parent's water is not
+positive, since the shares are taken against it. That leak lands in
+`q_tag_res`, or under the follower in `q_tag_inc_moved`, as before. A source
+tag's correction takes back its own share, so its diffusion moves only the water
+that the parent diffuses too.
 
 With `apply_sgs_updraft`, the updrafts' mirror of the diffusion is on, and with
 updraft copies each copy takes its tag's correction per unit mass, `/ρ`, as it
@@ -251,8 +292,11 @@ and their repair no longer takes out the `diffusion_up` leak.
 
 `ᶠρK_h` is the face field `ρK_h` the parent's water diffusion uses. Called from
 `edmfx_sgs_diffusive_flux_tendency!` after its tracer loop, so it is implicit
-where the diffusion is. It has no Jacobian block, so with one Newton iteration
-it is taken at the stage's first guess, and under `water_tag_transport: increment` the follower moves what differs.
+where the diffusion is. It has no Jacobian block, so the Newton solve does not
+see it. Each iteration evaluates it again, at that iteration's state. With one
+iteration it is taken at the stage's first guess, and under
+`water_tag_transport: increment` the follower moves what differs. How much the
+results depend on `dt` and on the number of iterations is not measured.
 
 Each correction is added to its ledgers: `q_tag_led_leaknet`, the partition's
 correction, and with copies `q_tag_led_upleaknet`, the copies' times `ρaʲ`; and
