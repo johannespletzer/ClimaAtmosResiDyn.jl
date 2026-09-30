@@ -3,23 +3,24 @@
 #####
 ##### A restart may not change what the water tags in a checkpoint mean. The
 ##### tag fields and their updraft copies must match the configuration, which
-##### needs no record. Each tag's region and sources are recorded in the
-##### checkpoint, as the energy source tags record theirs, and a restart that
-##### changes one stops with an error that names it. So is
+##### needs no attribute. Each tag's region and sources are recorded in the
+##### checkpoint, as the energy source tags record theirs. A restart that
+##### changes one stops with an error that names it. The same holds for
 ##### `water_tag_precipitation`, under which `ρq_tag_<name>` holds only the
 ##### water that is neither rain nor snow.
 
 """
     WATER_TAG_CHECKPOINT_VERSION
 
-The version of the water tags' checkpoint attributes. A checkpoint without it
-predates the restart guard. Version 2 adds `water_tag_precipitation`. A
-version 1 checkpoint was written before that key, so it reads as written
-without it. A checkpoint with any other version is refused.
+The version of the water tags' checkpoint attributes. A checkpoint without the
+version attribute restarts with a warning that the tags' regions and sources
+cannot be checked. Version 1 reads as written without
+`water_tag_precipitation`. Version 2 adds that key. Any other version is
+refused.
 
-The tags' own ledgers and the accumulators that a checkpoint carries since WP6,
-step 3, need no version of their own. The guard and
-`restore_tag_ledger_checkpoint!` check them by whether the file holds them.
+The tags' own ledgers and the accumulators that a checkpoint carries need no
+version of their own. The guard and `restore_tag_ledger_checkpoint!` check them
+by whether the file holds them.
 """
 const WATER_TAG_CHECKPOINT_VERSION = 2
 
@@ -29,7 +30,7 @@ const WATER_TAG_CHECKPOINT_KEYS = (;
     precipitation = "water_tag_precipitation",
 )
 
-# The versions this guard reads. Version 1 predates `water_tag_precipitation`.
+# The versions this guard reads. Version 1 has no `water_tag_precipitation`.
 const WATER_TAG_CHECKPOINT_READABLE_VERSIONS = (1, 2)
 const WATER_TAG_KEY_PREFIX = "water_tag."
 
@@ -67,11 +68,9 @@ function write_water_tag_checkpoint_attributes!(file, model::WaterTaggingModel)
     return nothing
 end
 
-# A checkpoint written under `water_tag_transport: increment` before known
-# issue 7's option C (#116) holds the follower's ledger without
-# `q_tag_inc_negative`. Its tags partition `ρq_tot`, not `max(ρq_tot, 0)`. The
-# field check that follows would say only that the ledger's fields differ, and
-# suggest a changed `water_tag_transport`. This names the real cause.
+# A checkpoint whose increment ledger lacks `q_tag_inc_negative` holds tags that
+# partition `ρq_tot` rather than `max(ρq_tot, 0)`. The field check that follows
+# would only report differing ledger fields, so this names the cause.
 check_restart_before_option_c(restart_file, Y, ::Nothing) = nothing
 function check_restart_before_option_c(restart_file, Y, water_model)
     :q_tag_inc_negative in water_tag_increment_ledger_names(water_model) ||
@@ -96,20 +95,19 @@ It checks, in this order, and stops at the first mismatch:
 
  1. The water tag fields in `Y`, the rain and snow parts, the increment's
     ledger, the tags' copies in the first updraft, then the ledgers per
-    mechanism, the leak correction's and each tag's own, then the records of
-    the microphysics audit, against what `model` configures. A checkpoint
-    written before the ledgers per mechanism is refused here. A changed
+    mechanism, the leak correction's and each tag's own, then the
+    microphysics audit's fields, against what `model` configures. A
+    checkpoint without the ledgers per mechanism is refused here. A changed
     `water_tag_precipitation`, `water_tag_transport`,
     `water_tag_updraft_copy`, `water_tag_ledger_per_tag` or
     `water_tag_leak_correction` fails here,
     because the parts, the ledgers or the copies are in the file or are not.
     This needs no attribute, so it covers every checkpoint. A checkpoint
-    written under `increment` before known issue 7's option C (#116) lacks
-    `q_tag_inc_negative`, and the error says so.
- 2. The version attribute. A checkpoint without it predates this guard. Then
-    it warns that the tags' regions and sources cannot be checked, and lets
-    the restart go on. A checkpoint with a version this guard does not read
-    is refused.
+    under `increment` whose ledger lacks `q_tag_inc_negative` is refused, and
+    the error names the cause.
+ 2. The version attribute. A checkpoint without it restarts with a warning
+    that the tags' regions and sources cannot be checked. A checkpoint with a
+    version this guard does not read is refused.
  3. The recorded `water_tag_precipitation`, which version 1 records as
     `false`.
  4. Each tag's region and sources.
@@ -120,10 +118,11 @@ the cache is built, so a refused restart fails in seconds.
 What continues through a restart:
 
   - The state ledgers: the ledgers per mechanism, the increment follower's
-    ledger, the leak correction's ledgers and each tag's own ledgers. They are fields of the state, so they
-    continue from the checkpoint. A checkpoint without the configured ones is
-    refused, in step 1. Under `water_tag_precipitation: true` the records of
-    the microphysics audit are state fields too, and continue the same way.
+    ledger, the leak correction's ledgers and each tag's own ledgers. They are
+    fields of the state, so they continue from the checkpoint. A checkpoint
+    without the configured ones is refused, in step 1. Under
+    `water_tag_precipitation: true` the microphysics audit's fields are state
+    fields too, and continue the same way.
   - The cache accumulators: the repair ledgers `q_tag_fix_<name>` and
     `q_tag_upfix_<name>`, their gross twins and counts, and each state
     ledger's per-step gross, column gross, events and attempted total. The
@@ -157,9 +156,8 @@ function check_water_tag_checkpoint(restart_file, model, Y, context)
         "water_tag_precipitation",
         "ρq_",
     )
-    # A checkpoint from before option C lacks one of the increment's ledger
-    # fields. Name that cause before the check below suggests a changed
-    # transport.
+    # A checkpoint whose increment ledger lacks `q_tag_inc_negative` gets its
+    # own error. Without it, the check below would suggest a changed transport.
     check_restart_before_option_c(restart_file, Y, water_model)
     # The increment's ledger is in the file or is not, so a changed
     # `water_tag_transport` fails here, as a changed energy transport does.
@@ -183,8 +181,8 @@ function check_water_tag_checkpoint(restart_file, model, Y, context)
         "water_tag_updraft_copy",
         "q_tag_",
     )
-    # The ledgers per mechanism (WP6). After the copies, so that a
-    # changed `water_tag_updraft_copy` is named by their check first.
+    # The ledgers per mechanism. After the copies, so that a changed
+    # `water_tag_updraft_copy` is named by their check first.
     check_tag_mechanism_ledgers(
         restart_file,
         Y,
@@ -193,8 +191,8 @@ function check_water_tag_checkpoint(restart_file, model, Y, context)
         "q_tag_",
         "water_tag_updraft_copy",
     )
-    # The leak correction's ledgers (WP4c) are in the file or are not, so a
-    # changed `water_tag_leak_correction` fails here.
+    # The leak correction's ledgers are in the file or are not, so a changed
+    # `water_tag_leak_correction` fails here.
     check_restart_fields(
         restart_file,
         Y,
@@ -204,9 +202,9 @@ function check_water_tag_checkpoint(restart_file, model, Y, context)
         "water_tag_leak_correction",
         "q_tag_led_",
     )
-    # Each tag's own ledgers (WP6, step 3) are in the file or are not, so a
-    # changed `water_tag_ledger_per_tag` fails here. Those of the leak
-    # correction depend on `water_tag_leak_correction` too.
+    # Each tag's own ledgers are in the file or are not, so a changed
+    # `water_tag_ledger_per_tag` fails here. Those of the leak correction
+    # depend on `water_tag_leak_correction` too.
     check_restart_fields(
         restart_file,
         Y,
@@ -218,7 +216,7 @@ function check_water_tag_checkpoint(restart_file, model, Y, context)
         "water_tag_ledger_per_tag` and `water_tag_leak_correction",
         "q_tag_led_",
     )
-    # The microphysics audit's records come with the rain and snow parts.
+    # The microphysics audit's fields come with the rain and snow parts.
     check_restart_fields(
         restart_file,
         Y,
@@ -305,8 +303,7 @@ function read_water_tag_checkpoint(file, tags)
                 part in 1:get_attribute(key)
             ) : nothing
     end
-    # Version 1 predates `water_tag_precipitation`, and so was written
-    # without it.
+    # Version 1 has no `water_tag_precipitation`, so it reads as `false`.
     precipitation =
         WATER_TAG_CHECKPOINT_KEYS.precipitation in keys(attributes) &&
         get_attribute(WATER_TAG_CHECKPOINT_KEYS.precipitation) == 1

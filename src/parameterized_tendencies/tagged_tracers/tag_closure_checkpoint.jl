@@ -2,10 +2,10 @@
 ##### The closure checks' void flags through a restart
 #####
 ##### Past `void_above`, a closure check marks this row and every later row of
-##### its tables with `closure_void = 1`. The flag of each tag family lives in
-##### the cache, in `p.tagging.closure_void`, and the checkpoint records it. A
-##### restarted run reads it back before its first check. So a run split into
-##### segments marks its rows as one run would.
+##### its tables with `closure_void = 1`. Each family's flag lives in the cache,
+##### in `p.tagging.closure_void`, and the checkpoint records it. A restarted
+##### run reads it back before its first check. So a run split into segments
+##### marks its rows as one run would.
 
 import ClimaCore: InputOutput
 
@@ -67,11 +67,10 @@ and before the integrator, whose start runs the first closure check. A flag
 restored as `true` stays `true` whatever `void_above` the restarted run sets,
 and this warns once, naming the families.
 
-A checkpoint written before the flags were recorded has no attribute for a
-family. That family's flag stays `false`, and this warns once, naming the
-families. If such a family's check had passed its level before the checkpoint,
-its rows after the restart are marked again only once it passes the level
-again.
+A checkpoint without a family's void flag restarts that family as not void,
+with a warning that names the family. If its check had passed the level before
+the checkpoint, its rows after the restart are marked again only once it passes
+the level again.
 """
 restore_tag_closure_void!(::Nothing, restart_file, context) = nothing
 function restore_tag_closure_void!(tagging, restart_file, context)
@@ -115,8 +114,8 @@ end
 ##### Past `negative_water_void_above`, at a row of the water closure check or
 ##### at the end of an accepted step, every later row of the check's tables is
 ##### marked `negative_water_void = 1`. The flag lives in the cache, in
-##### `p.tagging.negative_water_void`, and the checkpoint records it beside the
-##### void flags above.
+##### `p.tagging.negative_water_void`. The checkpoint records it beside the void
+##### flags above.
 
 """
     negative_water_void_flags(atmos)
@@ -172,10 +171,10 @@ built and before the integrator, whose start runs the first closure check. A
 flag restored as `true` stays `true` whatever `negative_water_void_above` the
 restarted run sets, and this warns once.
 
-A checkpoint written before the flag was recorded has no attribute for it.
-The flag then stays `false`, and this warns once. If the parent's negative
-water had passed the level before that checkpoint, the rows after the restart
-are marked again only once it passes the level again.
+A checkpoint without the negative-water flag restarts with the flag `false`,
+with a warning. If the parent's negative water had passed the level before the
+checkpoint, the rows after the restart are marked again only once it passes the
+level again.
 """
 restore_negative_water_void!(::Nothing, restart_file, context) = nothing
 function restore_negative_water_void!(tagging, restart_file, context)

@@ -163,12 +163,30 @@ makedocs(;
 # This repository is a fork of CliMA/ClimaAtmos.jl and deploys its own docs.
 # Deploying to the upstream repository would fail, and the doc-preview link
 # posted on pull requests points at this repository's GitHub Pages site.
-deploydocs(
-    repo = "github.com/johannespletzer/ClimaAtmosResiDyn.jl.git",
-    devbranch = "main",
-    push_preview = all(
-        !isempty,
-        (get(ENV, "GITHUB_TOKEN", ""), get(ENV, "DOCUMENTER_KEY", "")),
-    ),
-    forcepush = true,
-)
+#
+# Pull requests whose builds finish together push their previews to gh-pages
+# at the same time. Each push is `--force-with-lease`, so the later one is
+# refused ("stale info") rather than overwriting the other preview. The run
+# then failed although the build had passed. `deploydocs` clones gh-pages
+# afresh on every call, so a second try adds this preview to the latest tree.
+for attempt in 1:3
+    try
+        deploydocs(
+            repo = "github.com/johannespletzer/ClimaAtmosResiDyn.jl.git",
+            devbranch = "main",
+            push_preview = all(
+                !isempty,
+                (get(ENV, "GITHUB_TOKEN", ""), get(ENV, "DOCUMENTER_KEY", "")),
+            ),
+            forcepush = true,
+        )
+        break
+    catch err
+        attempt == 3 && rethrow()
+        @warn "Deploying the docs failed; trying again" attempt exception =
+            (err, catch_backtrace())
+        # A random part, so two previews that lost the same race do not
+        # retry at the same moment.
+        sleep(20 * attempt + rand(0:20))
+    end
+end

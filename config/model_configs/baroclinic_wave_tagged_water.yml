@@ -5,12 +5,14 @@ dt_save_state_to_disk: "2days"
 # A short validation job for the water tags. The tag set is chosen so each
 # check is a direct near-zero comparison.
 #
-#   1. Region closure. `tropics` and `extratropics` partition the globe, so
-#      `q_tag_res`, the specific ρq_tot minus the sum of the region tags, starts
-#      at machine precision. After that it measures the vertical advection
-#      split, since the tags are advected explicitly and ρq_tot implicitly. The
-#      diffusion and hyperdiffusion operators match, so this residual stays well
-#      below the tagged-energy `e_tag_res`.
+#   1. Region closure. `tropics` and `extratropics` partition the globe.
+#      `q_tag_res` is (max(ρq_tot, 0) - the sum of the region tags) / ρ. It
+#      starts at machine precision. Then it measures three things: the split of
+#      vertical advection, since the tags are advected explicitly and ρq_tot
+#      implicitly; the hyperdiffusion, which acts on q_tot - q_tot_r for the
+#      parent and on q_tag for the tags (see `q_tag_leak_hyperdiff`); and the
+#      repair. This config has no vertical diffusion. Otherwise the tags and
+#      ρq_tot share their operators, so the residual stays small.
 #   2. Process closure. `evap_tropics` and `evap_extratropics` split the surface
 #      moisture source by region. Every step of the attribution is linear, so
 #      `q_tag_evap_tropics + q_tag_evap_extratropics` equals `q_tag_evap` to
@@ -31,13 +33,14 @@ water_closure_check:
   # structurally broken rather than merely drifting. Read
   # `water_tag_closure.csv` from a run and tighten it.
   tolerance: 1.0e-4
-  # `void_above` is left at its default of 1.0, so the table marks its rows
-  # `closure_void` if the tags ever hold more water than exists, which is the
-  # failure mode of issue #64. The run goes on. Note that this job sets no
-  # limiter and no nonnegativity constraint, so `rescale_water_tags!` never
-  # fires here and the specific mechanism of #64 cannot arise. The level
-  # watches drift from transport and from the repair; catching the limiter
-  # path needs a job that enables it.
+  # `void_above` is left at its default of 1.0. The table marks its rows
+  # `closure_void` if the tags ever hold more water than exists. The run goes
+  # on. When a limiter changes ρq_tot, `rescale_water_tags!` gives the tags the
+  # parent's increment. It does not scale them by a factor, which would scale
+  # their closure error too and let it grow while ρq_tot stays bounded. This job
+  # sets no limiter and no nonnegativity constraint, so `rescale_water_tags!`
+  # never fires here. The level watches drift from transport and from the
+  # repair. Catching the limiter path needs a job that enables it.
 water_tracers:
   - name: tropics
     region: tropics

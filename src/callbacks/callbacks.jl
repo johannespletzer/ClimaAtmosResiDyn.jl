@@ -332,8 +332,8 @@ NVTX.@annotate function save_state_to_disk_func(integrator, output_dir)
     write_tag_closure_void_attributes!(hdfwriter.file, p.tagging)
     write_negative_water_void_attributes!(hdfwriter.file, p.tagging)
     InputOutput.write!(hdfwriter, Y, "Y")
-    # The tags' accumulators, which live in the cache, so that a restart
-    # continues them (WP6, step 3). Nothing without tags.
+    # The tags' accumulators live in the cache, so they are written apart from
+    # the state. A restart continues them. Nothing is written without tags.
     write_tag_ledger_checkpoint!(hdfwriter, p.tagging)
     Base.close(hdfwriter)
     return nothing

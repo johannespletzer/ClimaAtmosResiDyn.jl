@@ -1,5 +1,5 @@
 # The tags' state ledgers per mechanism and the per-step gross of every state
-# ledger (WP6, step 2). Their names depend on the model, so
+# ledger. Their names depend on the model, so
 # `register_tag_ledger_diagnostics!(model)` runs during simulation setup, after
 # the families' own registrations.
 
@@ -51,7 +51,9 @@ const _TAG_MECHANISM_TEXT = (;
                           "zeroed every tag, the net of its changes",
 )
 
-# A state ledger per unit mass.
+# The compute functions below read a state ledger, or an accumulator in the
+# cache, and give it per unit mass, per unit area or per unit volume. The
+# accumulators are Float64.
 function compute_tag_state_ledger!(out, state, name)
     ᶜledger = getproperty(state.c, name)
     result = isnothing(out) ? similar(state.c.ρ) : out
@@ -59,7 +61,6 @@ function compute_tag_state_ledger!(out, state, name)
     return result
 end
 
-# The per-step gross of a state ledger, per unit mass, from the Float64 cache.
 function compute_tag_ledger_gross!(out, state, cache, name)
     (; ᶜgross) = getproperty(cache.tagging.tag_ledger_steps.ledgers, name)
     result = isnothing(out) ? similar(state.c.ρ) : out
@@ -67,7 +68,6 @@ function compute_tag_ledger_gross!(out, state, cache, name)
     return result
 end
 
-# The per-step column gross of a state ledger, per unit area.
 function compute_tag_ledger_colgross!(out, state, cache, name)
     (; colgross) = getproperty(cache.tagging.tag_ledger_steps.ledgers, name)
     result =
@@ -76,8 +76,8 @@ function compute_tag_ledger_colgross!(out, state, cache, name)
     return result
 end
 
-# The parent's negative water accumulator (known issue 7), per volume, from the
-# Float64 cache: its time integral, or its count of steps with negative water.
+# The parent's negative water accumulator, per volume: its time integral, or its
+# count of steps with negative water.
 function compute_negative_water_accumulator!(out, state, cache, name)
     accumulator = cache.tagging.tag_ledger_steps.negative_water
     ᶜfield = getproperty(accumulator, name)
@@ -86,7 +86,6 @@ function compute_negative_water_accumulator!(out, state, cache, name)
     return result
 end
 
-# What a state ledger's writers attempted, per unit mass (WP6, step 3).
 function compute_tag_ledger_attempted!(out, state, cache, name)
     ᶜattempted = getproperty(cache.tagging.tag_ledger_steps.attempted, name)
     result = isnothing(out) ? similar(state.c.ρ) : out
@@ -110,8 +109,8 @@ end
 
 # The name of a diagnostic of kind `kind` (`gross`, `colgross`, `attempted`) of
 # the state ledger `name`. For a tag's own ledger the kind goes before the tag's
-# name, `q_tag_led_fixgross_<tag>`, so that no tag's name can make it collide
-# with another tag's ledger; the tag names `led_*` are reserved.
+# name, `q_tag_led_fixgross_<tag>`. So no tag's name can make it collide with
+# another tag's ledger. The tag names `led_*` are reserved.
 function tag_ledger_diagnostic_name(name, kind)
     long = string(name)
     for prefix in ("q_tag_led_", "e_src_led_"),
@@ -136,10 +135,10 @@ state ledger:
     these and for the increment corrections' ledgers;
   - `<L>_colgross`: the sum over the steps of `|∫ΔL dz|` per column.
 
-The grosses are carried through a restart by the checkpoint (WP6, step 3).
-See `tag_ledger_step_cache`.
+The checkpoint carries the grosses through a restart. See
+`tag_ledger_step_cache`.
 
-With water tags, also the parent's negative water accumulator (known issue 7; see
+With water tags, also the parent's negative water accumulator (see
 `negative_water_accumulator_cache`), which no default output writes:
 
   - `q_tag_negative_integral`: the sum over the accepted steps of

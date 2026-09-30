@@ -17,6 +17,13 @@ has the full CPU and GPU story, including the submission scripts. LRZ's
 | `levante_gpu_common.sh` | Everything the three GPU scripts do, sourced by each. |
 | `levante_gpu_rank_wrapper.sh` | Runs between `srun` and the command; pins each rank to its GPU's cores and memory. |
 | `xmodel.cpu` | Levante: CPU job, 32 ranks on one node. Standalone — see "Two stacks, one preferences file". |
+| `xmodel.amip` | Levante: one segment of the coupled AMIP stratospheric tracer campaign, which resubmits itself. Submit with `MEMBER=a` or `MEMBER=b`. |
+| `setup-julia-amip-levante.sh` | Levante: one-time depot build of the ClimaCoupler AMIP environment on a **login node**, with this fork dev'd in. |
+| `run_strat.tcsh` | Levante login node: the short stratospheric passive tracer run (the CI configuration), to check that a change still runs end to end. |
+| `run_test_as_job.sh` | Levante: one test group as a batch job on the shared partition. Edit the group at the bottom. |
+| `run_test_dynamics.sh` | Levante login node: the `dynamics` test group on the CPU stack. Pins CloudMicrophysics and changes `Manifest.toml`. |
+| `run_test_individual.sh` | Levante login node: one test file or group, chosen by uncommenting a line. |
+| `rcemipii_box_CRM_1M.jl` | Upstream's runscript for the RCEMIP-II cloud-resolving box. |
 | `select-cuda-runtime.jl` | Pins the CUDA toolkit to what the driver supports. Called by the setup script. |
 | `gpu_runscript_plan.md` | Why all of this looks the way it does, and what is still outstanding. |
 
@@ -107,10 +114,10 @@ stop with an instruction to re-run setup. Selecting the right depot is not
 enough — the preference is project-local, not depot-local.
 
 `.buildkite/LocalPreferences.toml` is **generated, and not tracked in git**. It
-records an absolute `libmpi` path, so a committed copy follows a checkout onto
-another cluster, where that path does not exist and every package downstream of
-`MPI` fails to precompile. That is what it used to do. The cost is that a fresh
-clone cannot instantiate until the setup script for that machine has run once.
+records an absolute `libmpi` path. A committed copy would follow a checkout onto
+another cluster, where that path does not exist, and every package downstream of
+`MPI` would fail to precompile. So a fresh clone cannot instantiate until the
+setup script for that machine has run once.
 
 Note also that `CUDA_Runtime_jll` and `MPIPreferences` must both stay listed in
 `.buildkite/Project.toml`. Julia resolves the names in `LocalPreferences.toml`
