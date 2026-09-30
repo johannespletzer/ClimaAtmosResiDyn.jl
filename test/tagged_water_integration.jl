@@ -402,6 +402,13 @@ end
         "void_above" => 1.0e-30,
         "audit" => true,
     )
+    # In this column the model's own cache carries two things from one
+    # evaluation to the next, and a checkpoint carries neither. The cloud fraction's Picard
+    # iteration starts from the value it last took, unless
+    # `reproducible_restart` is set. The SGS saturation adjustment reads the
+    # covariances the last evaluation left, unless `sgs_distribution` is
+    # `mean`. Without both, a restarted run does not continue the straight run
+    # below bit for bit, with or without tags.
     test_dict = base_config(
         tags;
         extra = Dict{String, Any}(
@@ -409,6 +416,8 @@ end
             "dt_save_state_to_disk" => "20secs",
             "output_dir" => mktempdir(pwd()),
             "water_closure_check" => closure_check,
+            "reproducible_restart" => true,
+            "sgs_distribution" => "mean",
         ),
     )
 
@@ -859,6 +868,56 @@ end
     @test isequal(parent(accumulator(shortened).ᶜamount), expected)
     # Weighted by the base step instead, it would not be.
     @test !isequal(parent(accumulator(shortened).ᶜamount), with_base_step)
+
+    # Parity where the rule acts (the review of 11.11, test 17). In the other
+    # parity checks the parent never goes below zero, so the rule never acts
+    # there. Here the water of the bottom five cells is made negative before
+    # the first step, in a run with the tags and in one without. The surface
+    # flux, for one, then brings water into the bottom cell, whose parent is
+    # below zero. The rule withholds that gain from the tags, and the ledger
+    # takes it. Every field the model has must still be bit for bit the same.
+    @testset "The model's fields do not depend on the tags where the rule acts" begin
+        band = 1:5
+        function band_run(dict, job_id)
+            local sim = CA.get_simulation(
+                CA.AtmosConfig(
+                    merge(dict, Dict{String, Any}("output_dir" => mktempdir(pwd())));
+                    job_id,
+                ),
+            )
+            local water = parent(sim.integrator.u.c.ρq_tot)
+            water[band] .= .-water[band] ./ 2
+            return sim
+        end
+        band_plain_dict = filter(
+            entry -> !(first(entry) in ("water_tracers", "water_closure_check")),
+            test_dict,
+        )
+        band_tagged = band_run(test_dict, "tagged_water_band")
+        band_plain = band_run(band_plain_dict, "tagged_water_band_plain")
+        @test CA.solve_atmos!(band_tagged).ret_code == :success
+        @test CA.solve_atmos!(band_plain).ret_code == :success
+        Y_band = band_tagged.integrator.u
+        Y_band_plain = band_plain.integrator.u
+        # The band stays below zero to the end, and the ledger holds the gain
+        # the rule withheld there. The surface flux's is in the bottom cell.
+        @test all(<(0), parent(Y_band_plain.c.ρq_tot)[band])
+        @test parent(Y_band.c.q_tag_exp_negative)[1] > 0
+        # Every field of the run without the tags, bit for bit.
+        for name in propertynames(Y_band_plain.c)
+            @test isequal(
+                parent(getproperty(Y_band.c, name)),
+                parent(getproperty(Y_band_plain.c, name)),
+            )
+        end
+        @test propertynames(Y_band.f) == propertynames(Y_band_plain.f)
+        for name in propertynames(Y_band_plain.f)
+            @test isequal(
+                parent(getproperty(Y_band.f, name)),
+                parent(getproperty(Y_band_plain.f, name)),
+            )
+        end
+    end
 end
 
 @testset "Tagged water rejects unsupported microphysics" begin

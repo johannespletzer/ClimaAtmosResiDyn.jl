@@ -125,6 +125,17 @@ column_integral(p, ᶜx) = (
     out
 )
 
+# A copy of the cache's precomputed fields, and a way to put it back. The
+# cache is not a function of the state alone. The cloud fraction's Picard
+# iteration, for one, starts from the value it last took.
+copy_fields(x::CA.Fields.Field) = copy(x)
+copy_fields(x::Union{NamedTuple, Tuple}) = map(copy_fields, x)
+copy_fields(x) = x
+restore_fields!(dest::CA.Fields.Field, src) = (parent(dest) .= parent(src); nothing)
+restore_fields!(dest::Union{NamedTuple, Tuple}, src) =
+    (foreach(restore_fields!, dest, src); nothing)
+restore_fields!(dest, src) = nothing
+
 function whole_tendency(Y, p, t)
     Yₜ = zero(Y)
     Yₜ_lim = zero(Y)
@@ -619,6 +630,13 @@ end
         # part left out changes only by the solver's response to the gain
         # less the gain, `∫ΔP - ∫δL`. Without the ledger it would change by
         # the whole response.
+        #
+        # Both stages start from the same cache. A stage leaves the cache at
+        # its own solve, and the next evaluation starts from there: the cloud
+        # fraction's Picard iteration from the value it last took, the SGS
+        # saturation adjustment from the covariances left. Without the reset
+        # the second stage differs from the first in every cell, and so do
+        # the tags'.
         @testset "A real implicit stage: the follower reads the withheld gain" begin
             jacobian = default.integrator.sol.prob.f.T_imp!.jac_prototype
             @test jacobian.cache.solver isa CA.SplitJacobianSolver
@@ -628,7 +646,9 @@ end
             @test hook isa CA.WaterTagIncrementCorrection
             dtγ = 60.0
             k = 15
+            saved_cache = copy_fields(p_default.precomputed)
             function stage(gain)
+                restore_fields!(p_default.precomputed, saved_cache)
                 Ŷ = copy(Y_default)
                 parent(Ŷ.c.ρq_tot)[k] = -1e-6
                 CA.set_precomputed_quantities!(Ŷ, p_default, t_default)
@@ -654,6 +674,20 @@ end
             with_gain = stage(1e-8)
             without = stage(0.0)
             ∫(ᶜx) = parent(column_integral(p_default, ᶜx))[1]
+            # The two stages differ only in cell `k`'s tendency. So the tags'
+            # own solve is the same in both, and none of the gain reaches it.
+            others = setdiff(1:size(parent(Y_default.c), 1), k)
+            @test isequal(
+                selectdim(parent(with_gain.Yₜ.c), 1, others),
+                selectdim(parent(without.Yₜ.c), 1, others),
+            )
+            @test isequal(parent(with_gain.Yₜ.f), parent(without.Yₜ.f))
+            for name in (:ρq_tag_tropo, :ρq_tag_strat, :ρq_tag_evap)
+                @test isequal(
+                    parent(getproperty(with_gain.U.c, name)),
+                    parent(getproperty(without.U.c, name)),
+                )
+            end
             # The bracket withheld the gain, and the ledger's row took it.
             ᶜw = with_gain.Yₜ.c.q_tag_exp_negative
             @test parent(ᶜw)[k] > 0
@@ -674,6 +708,7 @@ end
             left(run) = ∫(dtγ .* run.dY.c.q_tag_inc_left)
             @test abs((left(with_gain) - left(without)) - (response - δL)) <=
                   1e-4 * δL
+            restore_fields!(p_default.precomputed, saved_cache)
             CA.set_precomputed_quantities!(Y_default, p_default, t_default)
         end
     end
