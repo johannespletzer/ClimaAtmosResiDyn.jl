@@ -664,7 +664,8 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
                        "state. It is the raw difference: the path's tendency " *
                        "of the tags' sum minus its tendency of total water. " *
                        "It is taken where the partition is closed to option " *
-                       "C's target, max(ρq_tot, 0). The path moves the tags " *
+                       "C's target, max(ρq_tot, 0), and on the updrafts' " *
+                       "paths max(q_totʲ, 0). The path moves the tags " *
                        "on their whole value, and total water only by the " *
                        "water that diffuses, without rain and snow. The " *
                        "hyperdiffusion also takes total water as a " *

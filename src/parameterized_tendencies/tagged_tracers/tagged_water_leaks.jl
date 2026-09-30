@@ -45,8 +45,9 @@ is the path's source of `q_tag_res + q_tag_negative`, with the opposite sign.
 Where the parent is negative, the closed partition already differs from it by
 `-min(ρq_tot, 0)/ρ`. The leak includes the path's transport of that
 difference. It does not include the path's transport of any other residual.
-Where the parent is never negative, the values are those of a partition that
-sums to `ρq_tot`, bit for bit.
+Where neither `ρq_tot` nor, on the updrafts' paths, `q_totʲ` is negative, the
+values are those of a partition that sums to its parent, bit for bit.
+`hyperdiff_up` is taken at `max(q_totʲ, 0)`.
 
 The hyperdiffusion takes the parent as a perturbation from the reference
 profile `q_tot_r`, and the tags not. So its leak also holds the reference
