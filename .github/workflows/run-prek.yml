@@ -4,6 +4,14 @@ on:
     branches: [main]
   pull_request:
 
+# A newer push to a pull request cancels its older run. Each run on `main`
+# has a group of its own. With one shared group, GitHub keeps only one waiting
+# run and cancels the one before it, so a merge between two others would get
+# no result.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   prek:
     runs-on: ubuntu-latest
