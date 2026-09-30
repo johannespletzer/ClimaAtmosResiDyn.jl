@@ -720,12 +720,27 @@ Per bracket:
 | `surface_flux`                 | `remaining_tendency!`                          | the rule                                                                   |
 | `microphysics`, explicit       | `remaining_tendency!`                          | the rule. Under 0M the increment is a sink, so nothing changes in practice |
 | `microphysics`, implicit       | `implicit_tendency!`                           | nothing: the parent's gain, as before (11.6)                               |
-| `microphysics`, split rain-out | `add_split_rainout!` (0M, prognostic EDMF)     | nothing: it does not use the kernel (11.6)                                 |
+| `microphysics`, split rain-out | `add_split_rainout!` (0M, prognostic EDMF)     | explicit, in copies mode: the rule on the updraft's part (amended, below)  |
 | every other label              | radiation, Held–Suarez, the diffusion closures | nothing: they move no water, or are transport, which is never attributed   |
 
 The label `microphysics` runs on the explicit path only with
 `implicit_microphysics: false`. The validation's runs step it implicitly and
 split the rain-out.
+
+*Amended 2026-09-30 (the review's coupling-1; the owner asked for the fix).*
+The split's row read "nothing: it does not use the kernel". But with updraft
+copies and the microphysics stepped explicitly, the bracket returned through
+the split before the rule was read, and the copies' kernel gave each
+partition tag `Δʲ·φʲ`, `φʲ = clamp(χʲ/q_totʲ)`, whatever the grid parent's
+sign. `Δʲ = ρaʲ·∂ₜq_totʲ` is a gain where the updraft's area is negative.
+Now the bracket's rule reaches the split. Under the explicit rule a partition
+tag's gain from the updraft's part is withheld where the grid parent is below
+zero (`water_tag_split_change`), and its loss is kept. A partition tag's
+environment part is zero there already: its share is scaled by `S`, the grid
+shares' sum, which is zero where the parent is not positive. In the default
+mode every partition share carries `S`, so the split gave the partition
+nothing there before and still does. On the implicit path the rule is the
+parent's, as before. The copies' own terms are unchanged (11.6).
 
 ### 11.2 A step that crosses zero
 
@@ -762,6 +777,31 @@ overclaim. A rule biased toward it would add to it.
 
 A loss that takes the parent below zero within a step is split by the stages
 in the same way, by the loss half's zero share, and is unchanged.
+
+*Added 2026-09-30 (the review's kernel-1), as facts of the rule as built:*
+
+  - **The sign.** The tableaux' explicit weights include negative ones.
+    ARS222 has `b = (-0.7071, 1.7071, 0)`, and ARS343
+    `b = (0, 1.2085, -0.6444, 0.4359)`. So in a crossing step the partition's
+    gain from a pure source can be negative, and a partition tag that holds
+    nothing can end the step below zero, which `main` cannot do. With
+    ARS343, a gain that lifts the parent from `-s·G·Δt`, `s` in
+    `(0.436, 0.718]`, reaches only stages 3 and 4, and every partition tag
+    takes `-0.2085·M_k·G·Δt`. With ARS222, a
+    parent at or above zero at the step's start that another process takes
+    below zero by stage 2 gives `δ·M_k·G·Δt = -0.7071·M_k·G·Δt`. The miss's
+    size is within the table above (ARS343's shortfall of 0.77 is
+    `(1 - 0.436) + 0.2085`). The negative values go to the partition repair
+    (`led_fix`, which V5 scores) or to `q_tag_res`.
+  - **The jump at zero.** With ARS222, a parent a rounding amount below zero
+    at the step's start (`-1e-30`) gives the partition `1.7071·G·Δt`, while
+    `+0.0` or `-0.0` gives `G·Δt`. So the mean of zero over the crossing
+    point holds only where crossing points spread evenly through the step.
+  - Both are pinned by a unit test that runs one ARS222 step and one ARS343
+    step on a scalar cell (`test/tagged_water_tests.jl`). The rule is not
+    changed: that is question 2 (11.10). One option the review names: read
+    the sign once per step, from the parent at the step's start. That needs
+    a tags-only cache field, and gives up the mean of zero.
 
 ### 11.3 Under `water_tag_precipitation: true`
 
@@ -850,7 +890,16 @@ use it.
     `microphysics` bracket as the run steps it: the parent's gain when the
     microphysics is implicit, the target's when explicit.
   - **The 0M rain-out split under EDMF** (`add_split_rainout!`) is a signed
-    attribution by subdomain and does not use the kernel. Unchanged.
+    attribution by subdomain and does not use the kernel. ~~Unchanged.~~
+    *Amended 2026-09-30:* stepped explicitly in copies mode, it withholds a
+    partition tag's gain from the updraft's part where the grid parent is
+    below zero, and keeps its loss (11.1, the amendment). What the copies
+    do is unchanged: each copy loses its share of `q_totʲ`'s rain-out
+    (`water_tag_copies_microphysics_tendency!`), and the copies' repair
+    closes them onto `max(q_totʲ, 0)` after the filter at every step. Where
+    the grid parent is below zero, a loss from the updraft's part still
+    takes water from the partition, by the copies' shares. The rule does
+    not cover losses, so that is left as it is.
   - **The updraft copies' surface flux** (`water_tag_copies_surface_flux_tendency!`)
     is unchanged. The copies' repair closes them onto `max(q_totʲ, 0)` after
     the filter at every step (8.1).
@@ -1065,6 +1114,14 @@ pre-registration.
     treated the same.
  2. **The stages split a crossing step** (11.2): unbiased, with a miss of up
     to one step's gain per crossing. Accept, or ask for another split.
+    *Facts added 2026-09-30 (the review's kernel-1; 11.2):* the miss has
+    either sign. A pure source can give the partition a negative gain over a
+    crossing step (ARS343: `-0.2085·G·Δt`; ARS222, when another process
+    takes the parent below zero: `-0.7071·G·Δt`), so an empty tag can end
+    the step below zero. With ARS222 the gain jumps at zero: `1.7071·G·Δt`
+    from `-1e-30`, `G·Δt` from `±0.0`. A unit test pins these values. The
+    option of reading the sign once per step, at its start, keeps the gain
+    in `[0, G·Δt]` but gives up the mean of zero.
  3. **The implicit microphysics bracket** keeps the parent's gain (11.6).
     Extend the rule to it, or leave it?
  4. **Source tags and region tags that list sources** keep the parent's gain
@@ -1087,3 +1144,13 @@ pre-registration.
     was a misread and is replaced. For the choice: on `main`, W48's closure
     table has C's gross at 3.8e-10 at day 11.25, 1.7e-6 at day 11.5 and
     2.8e-4 at day 11.75.
+ 9. **V3's fallback clause** (added 2026-09-30, the review's kernel-2). V3's
+    rule is bit for bit at site 26, or different "only in cells and after
+    times where the untagged twin's parent was ever negative" (11.7). The
+    tags are transported, so a gain withheld in one cell changes the tags in
+    other cells, whose parent was never negative. So the fallback clause
+    could fail at site 26 with correct code, if its parent went below zero
+    in one cell once. The primary rule, bit for bit, is not affected. The
+    review proposes to compare by column and time, from the first time the
+    parent is negative anywhere in the column. V3 is pre-registered, so it
+    is not changed here. Change the fallback clause, or leave it?
