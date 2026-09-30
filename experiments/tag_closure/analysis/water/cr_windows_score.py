@@ -19,11 +19,19 @@ should remove the rises and a share of a rise near zero has no meaning.
     less than 0.1 of R48, section 9.4's level below which a share does not
     contribute.
   - W3, reported: per rise, the reference's rise `R` over the water beside
-    W48's, its split in N, P and X, and each probe's share of R48. The rule
-    "the rise goes if R <= 0.1 R48" is proposed and waits for the owner; it
-    is printed, not scored.
+    W48's, its split in N, P and X, and each probe's share of R48.
   - W4, reported: per rise, the whole explicit tendency's growth over R48.
-It exits 1 if W0, W1 or W2 fails or the data are missing.
+  - W5, scored (set by the owner on 2026-09-30, question 7, before any run):
+    per rise, the rise goes if R <= 0.1 R48. `R` is the sum of the probe's
+    per-step `ref_total` over the rise's interval, `R48` the same sum in W48's
+    probe. All five rises are scored, the control included. A rise with
+    R <= 0 goes. A rise whose R48 is not above zero cannot be scored, and W5
+    (and W2, whose share divides by R48) then fail for missing data.
+W2 and W5 score the revision's bundle: the explicit rule, the implicit
+microphysics bracket, the source tags, the follower's amendment and, if built,
+q_tag_exp_negloss (11.7, "What V2 and W5 score"). They bound the rule's part
+and do not isolate it.
+It exits 1 if W0, W1, W2 or W5 fails or the data are missing.
 """
 import csv
 import glob
@@ -48,8 +56,8 @@ RISES = [
 WINDOWS = [(30.3, 31.0), (52.4, 53.3)]
 # Section 9.4's level below which a share does not contribute, unchanged.
 CONTRIBUTES = 0.1
-# Proposed in section 11.7, waiting for the owner: printed, not scored.
-PROPOSED_RISE_GOES = 0.1
+# Set by the owner on 2026-09-30 (question 7), before any run. It is 9.4's level.
+RISE_GOES = 0.1
 MODEL_FIELDS = ("rhoa", "ta", "hus", "clw", "cli", "wa", "pr", "lwp", "arup", "husup")
 MODEL_FILES = tuple(f"{v}_1d_inst.nc" for v in MODEL_FIELDS) + ("rhoa_6h_inst.nc", "hus_6h_inst.nc")
 failed = []
@@ -111,18 +119,24 @@ def score_rise(a, b, kind, rows, rows48):
     sel, sel48 = in_interval(rows, a, b), in_interval(rows48, a, b)
     print(f"\n== rise {a:.2f}-{b:.2f} days ({kind}), {len(sel)} steps (W48: {len(sel48)})")
     if not sel or len(sel) != len(sel48):
-        print(f"  the steps do not match W48's: {verdict(f'W2 {a}-{b}', False)}")
+        print(f"  the steps do not match W48's: {verdict(f'W2 {a}-{b}', False)}, "
+              f"W5: {verdict(f'W5 {a}-{b}', False)}")
         return
     S = lambda c: sum(r[c] for r in sel)
     R48 = sum(r["ref_total"] for r in sel48)
     R = S("ref_total")
     water, water48 = sel[-1]["water"], sel48[-1]["water"]
+    if not R48 > 0:
+        # A share of a rise that is not above zero has no meaning, and W5 cannot be scored.
+        print(f"  W48's rise R48 = {R48:+.3e} is not above zero, so no share can be formed: "
+              f"W2 {verdict(f'W2 {a}-{b}', False)}, W5 {verdict(f'W5 {a}-{b}', False)} (missing data)")
+        return
     forcing = S("probe_forcing_total") / R48
     print(f"  W2: the forcing's bracket alone grows the excess by {forcing:+.3e} of W48's rise: "
           f"{verdict(f'W2 {a}-{b}', forcing < CONTRIBUTES)}")
-    goes = R <= PROPOSED_RISE_GOES * R48
-    print(f"  W3 (reported): rise {R / water:+.3e} of the water, W48 {R48 / water48:+.3e}; R/R48 {R / R48:+.3e}; "
-          f"proposed rule R <= {PROPOSED_RISE_GOES} R48, waiting for the owner: {'met' if goes else 'not met'}")
+    print(f"  W5: R/R48 {R / R48:+.3e}, the rise goes if R <= {RISE_GOES} R48: "
+          f"{verdict(f'W5 {a}-{b}', R <= RISE_GOES * R48)}")
+    print(f"  W3 (reported): rise {R / water:+.3e} of the water, W48 {R48 / water48:+.3e}; R/R48 {R / R48:+.3e}")
     print(f"    of R48: in N {S('ref_N') / R48:+.3e}, in P {S('ref_P') / R48:+.3e}, in X {S('ref_X') / R48:+.3e}; "
           f"the mechanism's cells in the reference's step {(S('ref_M5_up') + S('ref_M5_down')) / R48:+.3e}")
     probes = sorted({c[len("probe_"): -len("_total")] for c in sel[0] if c.startswith("probe_") and c.endswith("_total")})
@@ -145,7 +159,7 @@ def main():
     w1(rows)
     for a, b, kind in RISES:
         score_rise(a, b, kind, rows, rows48)
-    print("\nRESULT", "W0 to W2 pass" if not failed else f"failed: {failed}")
+    print("\nRESULT", "W0 to W2 and W5 pass" if not failed else f"failed: {failed}")
     sys.exit(1 if failed else 0)
 
 

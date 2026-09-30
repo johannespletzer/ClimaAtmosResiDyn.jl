@@ -56,6 +56,7 @@ const LEDGERS = (
     :q_tag_inc_negative,
     :q_tag_inc_moved,
     :q_tag_inc_left,
+    :q_tag_exp_negative,
     :q_tag_led_repair,
     :q_tag_led_rescale,
     :q_tag_led_empty,

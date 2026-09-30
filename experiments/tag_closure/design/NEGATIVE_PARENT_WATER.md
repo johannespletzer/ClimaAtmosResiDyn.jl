@@ -1006,10 +1006,12 @@ the owner sets it or another value.~~ *Set by the owner on 2026-09-30
 is 9.4's (amended 2026-09-30).
 
 **Scoring.** `analysis/water/cr_validate.py` scores V1 to V5 and V4b.
-`analysis/water/cr_windows_score.py` scores W0 to W4. Both were run before
+`analysis/water/cr_windows_score.py` scores W0 to W5. Both were run before
 any run on W42's and W48's outputs in place of the new ones. `cr_validate.py`
 reproduces W42's numbers (2.243e-2 at site 23, `pbl`'s `led_fix` 2.033e-2).
-`cr_windows_score.py` fails W1 and W2 on W48's own probe, as it should.
+`cr_windows_score.py` fails W1, W2 and W5 on W48's own probe, as it should.
+The amended scripts' checks, made on 2026-09-30 before any run, are in the
+last item of the list below.
 
 **Amendments of 2026-09-30, made before any run.** The owner decided
 questions 6, 7 and 9 of 11.10 on 2026-09-30, and the extension of 11.11
@@ -1093,8 +1095,14 @@ read.)*
     diagnostics changed.
 
 **The score scripts' changes for these amendments.** They are made, and
-checked, before any run (11.11.11, recheck 8). The scripts are not changed
-yet.
+checked, before any run (11.11.11, recheck 8). Items 1 to 7 are made, in the
+commit that carries this text. Item 8 is run and its result is at the end of
+the list. The scripts add two behaviours that the list does not state. First,
+a rise with `R48 ≤ 0` also fails W2, since its share divides by `R48` and has
+no meaning (the old script would divide by zero, or pass a negative share).
+Second, the thickness in V5's source-tag item is rebuilt by faces half way
+between the cell centres, with the end cells mirrored. On site 23 it gives
+`∫ρ max(q_tot, 0) dz` within 0.4% of the closure table's `total`.
 
  1. `cr_windows_score.py`, its docstring: W5 is scored, with the owner's
     date, and the text "proposed … waits for the owner" goes.
@@ -1146,6 +1154,31 @@ yet.
     reports the audit's `exp_negative_retained` missing, without failing.
     `cr_windows_score.py` fails W1, W2 and W5 for every rise. The result goes
     into the Scoring paragraph above.
+
+    *Result, 2026-09-30.* Run with W42's runs (`ic_s{23,26}_{c,untagged,
+    before}`) standing in for `cr_s{23,26}{,_untagged,_main}`, and W48's probe
+    for `cr_probe_s23`, through links under
+    `$SCRATCH/claude_work/crev_score_smoke`. `cr_validate.py` gives the same
+    lines as before its change, apart from the added ones: V2 at site 23
+    2.243e-2 (fails, first above 0.2% at day 29.25), `pbl`'s `led_fix`
+    2.033e-2 (fails), the control's 1.293 from day 10, V2b, V4, V4b and V3
+    bit for bit at 91 outputs. The added lines say "not available" for
+    `exp_negative_retained`, and skip `negative_water_interval_events` and
+    `exp_negative_retained` as "not in the table". W42's audit has neither
+    column. Site 26's `t*` is none. The source tags' negative water: `evap`
+    at site 23 −3.9e-7 of its positive water at most, `fcg` −2.3e-2, first
+    below zero at days 11 and 2. `cr_windows_score.py` passes W0 (12 of 12
+    files), fails W1 in both windows, and fails W2 and W5 for all five rises
+    (`R/R48` = 1, as the probe is W48's own). Its other lines are as before.
+    The synthetic checks hold: `cr_windows_score_synthetic.py` (W5 passes at
+    0.05, 0.10 and −1 of `R48`, fails at 0.15 and at `R48` = 0) and
+    `cr_validate_v3_synthetic.py` (13 cases). Mutant M7, W5 printed but not
+    scored, fails the `R = 0.15 R48` case. Mutant M9, V3's old clause per
+    cell, fails 7 of the 13 cases, among them the difference after `t*` in a
+    cell never negative. To exercise the fallback on a real run, V3 was also
+    pointed at site 23's W42 run against its control: `t*` is day 9.25
+    (`hus` 6-hourly), the first difference is at day 10, and all four tags
+    pass.
 
 ### 11.8 Checks before the runs
 

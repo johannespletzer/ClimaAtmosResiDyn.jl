@@ -114,3 +114,9 @@ diagnostics:
     period: "6hours"
   - short_name: [q_tag_negative]
     period: "1days"
+  # Added 2026-09-30, before any run (design section 11.7): the ledger of the
+  # gain that the rule withholds (section 11.11.6). `main` has no such field.
+  - short_name: [q_tag_exp_negative, q_tag_exp_negative_gross]
+    period: "6hours"
+  - short_name: [q_tag_exp_negative, q_tag_exp_negative_gross]
+    period: "1days"
