@@ -49,7 +49,7 @@ A file under `src/parameterized_tendencies/` should not contain orchestration lo
 
 ## Test groups
 
-`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `parent_budget`, `diagnostics`, `dynamics`, `dynamics_tracers`, `dynamics_edmfx`, `tagging_energy`, `tagging_water`, `tagging_source`, `tagging_record`, `tagging_source_float32`, `tagging_source_edmf`, `tagging_source_increment`, `tagging_source_updraft`, `tagging_water_edmf`, `tagging_water_edmf_copies`, `tagging_water_edmf_0m`, `tagging_water_edmf_0m_explicit`, `tagging_water_increment`, `tagging_water_increment_explicit`, `tagging_water_leak`, `tagging_water_precipitation`, `parameterizations`, `restarts`. A further group, `precompile`, runs no tests; CI uses it to fill the depot cache. Map your changes to the relevant group.
+`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `parent_budget`, `diagnostics`, `dynamics`, `dynamics_tracers`, `dynamics_edmfx`, `tagging_energy`, `tagging_water`, `tagging_source`, `tagging_record`, `tagging_source_float32`, `tagging_source_edmf`, `tagging_source_increment`, `tagging_source_updraft`, `tagging_water_edmf`, `tagging_water_edmf_copies`, `tagging_water_edmf_copies_leak`, `tagging_water_edmf_0m`, `tagging_water_edmf_0m_explicit`, `tagging_water_increment`, `tagging_water_increment_explicit`, `tagging_water_leak`, `tagging_water_precipitation`, `tagging_water_precipitation_sphere`, `parameterizations`, `restarts`. A further group, `precompile`, runs no tests; CI uses it to fill the depot cache. Map your changes to the relevant group.
 
 | Change area                         | Test group          | Example Buildkite job                    |
 |:----------------------------------- |:------------------- |:---------------------------------------- |
@@ -85,24 +85,31 @@ runs `test/energy_source_tags_edmf_integration.jl`,
 `tagging_source_increment` runs
 `test/energy_source_tags_increment_integration.jl`, `tagging_source_updraft`
 runs `test/energy_source_tags_updraft_integration.jl`,
-`tagging_water_edmf`, `tagging_water_edmf_copies`, `tagging_water_edmf_0m` and
+`tagging_water_edmf`, `tagging_water_edmf_copies`,
+`tagging_water_edmf_copies_leak`, `tagging_water_edmf_0m` and
 `tagging_water_edmf_0m_explicit` run `test/tagged_water_edmf_integration.jl`,
 `test/tagged_water_edmf_copies_integration.jl`,
+`test/tagged_water_edmf_copies_leak_integration.jl`,
 `test/tagged_water_edmf_0m_integration.jl` and
 `test/tagged_water_edmf_0m_explicit_integration.jl`, and `tagging_water_increment`
 and `tagging_water_increment_explicit` run
 `test/tagged_water_increment_integration.jl` and
 `test/tagged_water_increment_explicit_integration.jl`, `tagging_water_leak`
 runs `test/tagged_water_leak_correction_integration.jl`, and
-`tagging_water_precipitation` runs
-`test/tagged_water_precipitation_integration.jl`. They are split because a tag
+`tagging_water_precipitation` and `tagging_water_precipitation_sphere` run
+`test/tagged_water_precipitation_integration.jl` and
+`test/tagged_water_precipitation_sphere_integration.jl`. They are split because a tag
 name is a type parameter, so each tag set recompiles the whole tendency and
 solve pipeline, roughly seven minutes per simulation on Julia 1.11, and the
 files share no compilation between them. Combined they overran the 90-minute
 job timeout on Julia 1.11, which cancelled the job before the last two files
-ran at all. Keep new tagged-simulation tests here, and prefer reusing a tag set
-another test in the same file already builds: a second simulation with an
-identical tag signature costs seconds instead of minutes.
+ran at all. Memory splits them too. A GitHub runner has 16 GB, and every
+model type a process compiles stays in its memory: an EDMF build holds about
+12 to 14 GiB. A job that runs out is shut down and reads "The operation was
+canceled.", not a failed test. Keep new tagged-simulation tests here, and
+prefer reusing a tag set another test in the same file already builds: a
+second simulation with an identical tag signature costs seconds instead of
+minutes.
 
 `tagging_source_float32` runs the energy source tags and the process records
 together, in `FLOAT_TYPE: Float32`, through one real solve with 1-moment
@@ -156,6 +163,10 @@ builds it twice.
     the rebuild and the start from the plume, that the default mode's flux
     does nothing, the copies' residual, the surface-flux mirror, and that one
     composition moves with `q_totʲ` up to the diffusion's leak.
+  - `tagging_water_edmf_copies_leak` runs the same copies with
+    `water_tag_leak_correction: true` for five steps. It checks that the
+    correction runs in the model's tendency, the copies' leak ledgers and the
+    audit's columns. As a third EDMF model type it has a process of its own.
   - `tagging_water_edmf_0m` runs the copies under 0M, with the microphysics
     implicit, the default, and a passive chemistry tracer. It checks that the
     tracer, set to a copy's values, takes the copy's tendency apart from its
@@ -200,8 +211,10 @@ upwinding, the parts' diagnostics, `pr_tag` against `pr`, a tag that holds all
 the water moving as the parent operator by operator, the split solver and the
 audit, the restart guard, and the default transport. It builds the column
 three times: with the parts under each transport, and without tags. A column
-has no horizontal operators, so it also builds a small sphere with the viscous
-sponge on, twice, with the parts and without tags. There hyperdiffusion and the
+has no horizontal operators, so `tagging_water_precipitation_sphere` builds a
+small sphere with the viscous sponge on, twice, with the parts and without
+tags, in a process of its own: after the column's builds it took Julia 1.10
+past a runner's 16 GB. There hyperdiffusion and the
 sponge are checked one at a time: rain and snow parts take nothing, the
 non-precipitating parts add up to the tendency of the parent's diffusing water
 before and after DSS, each part moves by its own gradients rather than by a

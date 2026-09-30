@@ -31,12 +31,14 @@ const KNOWN_TEST_GROUPS = (
     "tagging_source_updraft",
     "tagging_water_edmf",
     "tagging_water_edmf_copies",
+    "tagging_water_edmf_copies_leak",
     "tagging_water_edmf_0m",
     "tagging_water_edmf_0m_explicit",
     "tagging_water_increment",
     "tagging_water_increment_explicit",
     "tagging_water_leak",
     "tagging_water_precipitation",
+    "tagging_water_precipitation_sphere",
     "parameterizations",
     "restarts",
     "precompile",
@@ -191,6 +193,14 @@ end
 # tag set that proves the claim, and prefer extending a set an existing test in
 # the same file already builds. A second simulation with an identical tag
 # signature costs seconds instead of minutes.
+#
+# Memory limits a group as well. A GitHub runner has 16 GB, and every model
+# type a process compiles stays in its memory. An EDMF build holds about
+# 12 to 14 GiB, and ClimaAtmos logs the process's memory after each solve
+# ("Memory currently used ... (RSS)"). A job that runs out is not reported as
+# a failed test: the runner is shut down and the job reads "The operation was
+# canceled." Before adding a build to a group, check those lines in a local
+# run, and keep the group well below 16 GiB.
 # ============================================================================
 if TEST_GROUP in ("tagging_energy", "all")
     @safetestset "Tagged tracers integration" begin @time include("tagged_tracers_integration.jl") end
@@ -269,6 +279,15 @@ if TEST_GROUP in ("tagging_water_edmf_copies", "all")
     end
 end
 
+# The copies with `water_tag_leak_correction: true` are a third EDMF model type.
+# With the copies' own two builds in one process, it came close to the 16 GB a
+# GitHub runner has, so it has a group of its own.
+if TEST_GROUP in ("tagging_water_edmf_copies_leak", "all")
+    @safetestset "Water tags with updraft copies and the leak correction" begin
+        @time include("tagged_water_edmf_copies_leak_integration.jl")
+    end
+end
+
 if TEST_GROUP in ("tagging_water_edmf_0m", "all")
     @safetestset "Water tags with updraft copies under 0M" begin
         @time include("tagged_water_edmf_0m_integration.jl")
@@ -311,11 +330,21 @@ end
 
 # The water tags' rain and snow parts (`water_tag_precipitation: true`) on a
 # 1-moment column without EDMF. The file builds the column three times: with
-# the parts under each transport, and without tags. For the horizontal
-# operators it builds a small sphere twice, with the parts and without tags.
+# the parts under each transport, and without tags.
 if TEST_GROUP in ("tagging_water_precipitation", "all")
     @safetestset "Water tags with rain and snow parts" begin
         @time include("tagged_water_precipitation_integration.jl")
+    end
+end
+
+# The same parts under the horizontal operators, on a small sphere built twice,
+# with the parts and without tags. It was part of the group above. After the
+# column's three builds, the sphere took the process past the 16 GB a GitHub
+# runner has, and on Julia 1.10 the runner was shut down during the first
+# sphere's solve, in 3 of 7 runs. So the sphere runs in a process of its own.
+if TEST_GROUP in ("tagging_water_precipitation_sphere", "all")
+    @safetestset "Water tags with rain and snow parts on a sphere" begin
+        @time include("tagged_water_precipitation_sphere_integration.jl")
     end
 end
 
