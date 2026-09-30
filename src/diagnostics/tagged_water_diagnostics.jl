@@ -658,22 +658,30 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
             short_name,
             units = "kg kg^-1 s^-1",
             long_name = "Tagged Water Leak by $title",
-            comments = "The rate at which $what would move the sum of " *
-                       "a partition of water tags away from total water if " *
-                       "the partition were exactly closed, per unit mass of " *
-                       "grid-mean air, in closed form from the state. The " *
-                       "path moves the tags on their whole value, and total " *
-                       "water only by the water that diffuses, without rain " *
-                       "and snow. Under `water_tag_precipitation: true` the " *
-                       "tags' non-precipitating parts diffuse as that water. " *
-                       "Where it is negative they partition zero, so the " *
+            comments = "The rate at which $what moves the sum of a " *
+                       "partition of water tags away from total water, per " *
+                       "unit mass of grid-mean air, in closed form from the " *
+                       "state. It is the raw difference: the path's tendency " *
+                       "of the tags' sum minus its tendency of total water. " *
+                       "It is taken where the partition is closed to option " *
+                       "C's target, max(ρq_tot, 0). The path moves the tags " *
+                       "on their whole value, and total water only by the " *
+                       "water that diffuses, without rain and snow. The " *
+                       "hyperdiffusion also takes total water as a " *
+                       "perturbation from a reference profile. Where total " *
+                       "water is negative, the closed partition differs from " *
+                       "it by the negative part, and the leak includes the " *
+                       "path's transport of that difference. It does not " *
+                       "include the transport of any other residual. So it " *
+                       "is the path's source of q_tag_res + q_tag_negative, " *
+                       "with the opposite sign. Under " *
+                       "`water_tag_precipitation: true` the tags' " *
+                       "non-precipitating parts diffuse as that water, and " *
+                       "the target is the non-negative part of the water " *
+                       "that is neither rain nor snow. Then only the " *
                        "vertical diffusion, the hyperdiffusion and the " *
-                       "sponge leak its negative part. The hyperdiffusion " *
-                       "also leaks where the partition holds none of that " *
-                       "water. It is the source the path adds to the " *
-                       "closure residual; the path's transport of a residual " *
-                       "already there is not in it. Zero where the path is " *
-                       "off. See `water_tag_leak!`.",
+                       "sponge leak. Zero where the path is off. See " *
+                       "`water_tag_leak!`.",
             compute! = (out, u, p, t) ->
                 compute_q_tag_leak!(out, u, p, t, Val(path)),
         )

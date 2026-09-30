@@ -83,6 +83,13 @@ parts on their values and the parent on the diffusing water, so where that
 water is negative they too move the parent by its negative part and the tags
 not. `q_tag_leak_vdiff` and `q_tag_leak_sponge` report those rates. The other
 leak diagnostics read zero, since EDMF and the copies are refused with the key.
+Each leak is the raw difference, as without the key: the path's tendency of the
+parts' sum minus its tendency of the parent. It is taken where the parts sum to
+the target ``\max(N, 0)``, with ``N`` the water that is neither rain nor snow.
+So it includes the path's transport of the negative part, and it is the path's
+source of `q_tag_res + q_tag_negative`, with the opposite sign. For the
+hyperdiffusion it also holds the reference-profile term
+``(1 - \sum_i \varphi_i) q_\mathrm{tot,r}``.
 
 The donor's composition is taken over the step
 ([`ClimaAtmos.water_tag_pool_shares`](@ref)): the compartment's water at the
