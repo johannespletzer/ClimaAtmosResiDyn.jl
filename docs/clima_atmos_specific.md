@@ -49,7 +49,7 @@ A file under `src/parameterized_tendencies/` should not contain orchestration lo
 
 ## Test groups
 
-`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `parent_budget`, `diagnostics`, `dynamics`, `dynamics_tracers`, `dynamics_edmfx`, `tagging_energy`, `tagging_water`, `tagging_source`, `tagging_record`, `tagging_source_float32`, `tagging_source_edmf`, `tagging_source_increment`, `tagging_source_updraft`, `tagging_water_edmf`, `tagging_water_edmf_copies`, `tagging_water_edmf_copies_leak`, `tagging_water_edmf_0m`, `tagging_water_edmf_0m_explicit`, `tagging_water_increment`, `tagging_water_increment_explicit`, `tagging_water_leak`, `tagging_water_precipitation`, `tagging_water_precipitation_sphere`, `parameterizations`, `restarts`. A further group, `precompile`, runs no tests; CI uses it to fill the depot cache. Map your changes to the relevant group.
+`test/runtests.jl` groups tests by `TEST_GROUP`: `infrastructure`, `parent_budget`, `diagnostics`, `dynamics`, `dynamics_tracers`, `dynamics_edmfx`, `tagging_energy`, `tagging_water`, `tagging_source`, `tagging_record`, `tagging_source_float32`, `tagging_source_edmf`, `tagging_source_increment`, `tagging_source_updraft`, `tagging_water_edmf`, `tagging_water_edmf_copies`, `tagging_water_edmf_copies_leak`, `tagging_water_edmf_0m`, `tagging_water_edmf_0m_explicit`, `tagging_water_increment`, `tagging_water_increment_explicit`, `tagging_water_leak`, `tagging_water_precipitation`, `tagging_water_precipitation_sphere`, `tagging_water_rainout_jacobian`, `parameterizations`, `restarts`. A further group, `precompile`, runs no tests; CI uses it to fill the depot cache. Map your changes to the relevant group.
 
 | Change area                         | Test group          | Example Buildkite job                    |
 |:----------------------------------- |:------------------- |:---------------------------------------- |
@@ -95,10 +95,12 @@ runs `test/energy_source_tags_updraft_integration.jl`,
 and `tagging_water_increment_explicit` run
 `test/tagged_water_increment_integration.jl` and
 `test/tagged_water_increment_explicit_integration.jl`, `tagging_water_leak`
-runs `test/tagged_water_leak_correction_integration.jl`, and
+runs `test/tagged_water_leak_correction_integration.jl`,
 `tagging_water_precipitation` and `tagging_water_precipitation_sphere` run
 `test/tagged_water_precipitation_integration.jl` and
-`test/tagged_water_precipitation_sphere_integration.jl`. They are split because a tag
+`test/tagged_water_precipitation_sphere_integration.jl`, and
+`tagging_water_rainout_jacobian` runs
+`test/tagged_water_rainout_jacobian_integration.jl`. They are split because a tag
 name is a type parameter, so each tag set recompiles the whole tendency and
 solve pipeline, roughly seven minutes per simulation on Julia 1.11, and the
 files share no compilation between them. Combined they overran the 90-minute
