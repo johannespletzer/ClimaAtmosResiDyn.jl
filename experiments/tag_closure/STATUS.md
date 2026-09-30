@@ -540,6 +540,10 @@ to #126 were read from GitHub on 2026-09-28.
     10-day parity check at site 23 (`13999610` to `13999613`). The rule did
     not act by day 10. No validation run is submitted: the owner reviews
     section 11 and its questions (11.10) first.
+  - **2026-09-30, `crev`:** the 30-day parity rerun (`14005271` to `14005274`)
+    passes Q8's rule. Every model field and the day-30 state are bit for bit in
+    all four pairs. The region tags differ from `main`'s from day 11.5, so the
+    rule acted (design 11.8, `output/cr_parity30/`). Nothing is extended.
 
 ## The housekeeping, H0 to H7: done
 

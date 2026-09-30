@@ -1,0 +1,9 @@
+tags on, the revision against main: 10 model fields at day 30: isequal
+    c.ρq_tag_evap: differs, largest difference 0.0012168993115440603 of its largest value
+    c.ρq_tag_fcg: differs, largest difference 0.0098157817934125 of its largest value
+    c.ρq_tag_free: differs, largest difference 0.07223147374154962 of its largest value
+    c.ρq_tag_pbl: differs, largest difference 0.0017272453029050685 of its largest value
+tags off, the revision against main: 10 model fields at day 30: isequal
+the revision, tags on against off: 10 model fields at day 30: isequal
+main, tags on against off: 10 model fields at day 30: isequal
+RESULT every model field isequal

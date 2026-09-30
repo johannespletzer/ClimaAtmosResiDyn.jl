@@ -994,6 +994,43 @@ this record commit merged in, so their model code is unchanged. Scored by
 `cr_parity_state.jl OUTPUT_ROOT cr_parity30 30`, with the pass rule of 11.10,
 question 8.
 
+*Result of the 30-day rerun, 2026-09-30* (jobs `14005271` to `14005274`, all
+exit status 0; `output/cr_parity30/`). Two independent scorings agree on every
+verdict. Against Q8's rule:
+
+  - **Model fields: pass.** In all four pairs (revision against `main`, with
+    and without tags; tags on against off, on each tree) the 20 model field
+    files are bit for bit at every output to day 30. The day-30 state agrees
+    in all 10 model fields. The state script compares with `isequal`. A second
+    scoring found the 116 variables and the 11 state components byte
+    identical.
+  - **Region tags: they differ, so the rule acted.** Revision against `main`,
+    tags on. The last identical outputs are day 11.0 (daily) and day 11.25
+    (6-hourly). The first differing ones are day 12.0 and day 11.5. So the
+    onset lies within one output spacing before those times, about day 11.5 at
+    the finest. The `ledger` tags first differ at day 11.75 and the closure
+    file at `t = 993600 s`. From day 11.5 the region tags differ at every
+    6-hourly output to day 30.
+  - **Size at day 30.** The state, each of its field's largest value:
+    `ρq_tag_free` 7.2e-02, `ρq_tag_fcg` 9.8e-03, `ρq_tag_pbl` 1.7e-03,
+    `ρq_tag_evap` 1.2e-03. The least favourable file-wise numbers are 5.24 of
+    the largest value for `q_tag_fix_free` and `q_tag_fix_pbl`, and 1.00 for
+    `q_tag_res`. The pointwise ratios in `q_tag_free` and `q_tag_pbl` sit on
+    near-zero denominators and say little. In column totals, revision minus
+    `main` over `main` is -8.8e-04 for pbl and -9.7e-03 for free. The region
+    tags exceed the non-negative target by 4.7e-07 of it on the revision and
+    by 4.9e-03 on `main`.
+  - **Not affected.** The energy tags are bit for bit. So are the evap and
+    fcg fix tags and the `negative`, `led_empty` and `led_rescale` tags. The
+    tags-off pairs and the tags-on-against-off pairs show no difference.
+  - **Not known.** The source tags `q_tag_evap`, `q_tag_fcg` and `q_tag_res`
+    also differ from day 11.5. Section 11.6 keeps the parent's gain for them,
+    so the change is indirect. Its path was not traced. The onset is not
+    localised inside the output spacing. The rule was not read from the
+    tendency directly, only from the tags.
+
+The rule of Q8 is met. No run was extended.
+
 ### 11.9 The jobs
 
 From each run tree's root, with `submit_g3.sh`,
