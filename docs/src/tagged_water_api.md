@@ -30,6 +30,8 @@ ClimaAtmos.sgs_mass_flux_of_water_tags!
 ClimaAtmos.sgs_exchange_of_water_tags!
 ClimaAtmos.water_exchange_inputs!
 ClimaAtmos.water_tag_plume!
+ClimaAtmos.water_plume_surface_fraction!
+ClimaAtmos.start_water_plume!
 ClimaAtmos.start_water_tag_copies_from_plume!
 ClimaAtmos.water_tag_updraft_copy_names
 ClimaAtmos.with_water_tag_updraft_copies
