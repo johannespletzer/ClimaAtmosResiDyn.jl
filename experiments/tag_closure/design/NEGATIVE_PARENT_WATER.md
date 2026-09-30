@@ -2337,3 +2337,27 @@ cell typical. That is possible, and how often it happens is not measured.
 13. **Order:** the autodiff check, the restart check and the 30-day parity
     rerun, all before the 90-day runs. The runs of 11.9 are submitted only
     after the owner has reviewed this section and the amended 11.7.
+
+*Decided 2026-09-30 by the owner, point by point:*
+
+ 1. The follower's amendment goes into this PR.
+ 2. The loss-side defect stays registered in 11.7. `q_tag_exp_negloss` is
+    not built now.
+ 3. Q4 is definition A. B, C and E were walked through first; D is excluded
+    by the owner's earlier decision.
+ 4. A crossing step's source-tag overshoot is accepted and reported in V5.
+    There is no floor.
+ 5. Q5: the outflow beyond the inflow lands in `q_tag_res`. Flows are read
+    in their actual direction.
+ 6. Q6 as proposed: `q_tag_exp_negative`, one `q_tag_exp_negative_precip`,
+    old checkpoints refused, the version stays 2.
+ 7. The options not proposed stay off.
+ 8. The default split at `P = ±0` is left as it is.
+ 9. Q7: W5 is scored on all five rises, the control included.
+10. Q9: `t*`'s three sources, as proposed.
+11. The dated amendments in 11.7 are accepted as recorded. The owner
+    accepted "the remaining proposals as recorded"; the 90-day runs still
+    wait for the rechecks of point 13.
+12. The minor points are left as proposed.
+13. The order is as proposed: the autodiff check, the restart check and the
+    30-day parity rerun before the 90-day runs.
