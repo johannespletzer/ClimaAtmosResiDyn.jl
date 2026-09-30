@@ -208,6 +208,11 @@ The twelve criteria of the plan, section 2, in short:
     from 6 h (W21). Whether the plume's start should model the surface flux
     (plan 4.1, review S4) is the owner's. *Open (DECISIONS.md, "Waiting for
     the owner").*
+    *Designed and pre-registered 2026-09-29 (W50):
+    [design/W25_ISOLATION.md](design/W25_ISOLATION.md), sections 7 and 8.
+    The plume starts at the lowest level with the copies' steady state there,
+    the surface flux's water by the fifth mirror's rule. The copies' mirrors
+    stay as they are.*
   - [x] **The prognostic fields of the rain and snow tags**, settled in the
     design note WP4b-D and its review. *Decided 2026-09-25:* the three parts;
     `ρq_tag_<name>` holds the non-precipitating water, beside `ρq_rtag_<name>`
