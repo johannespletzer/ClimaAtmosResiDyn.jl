@@ -191,18 +191,18 @@ base_config(tags; extra = Dict{String, Any}()) = merge(
         )
     end
 
-    # C's revision: the implicit microphysics bracket keeps the parent's gain.
-    # The rule that withholds the gain where the parent is below zero covers
-    # the explicit brackets (the owner, 2026-09-29), and this column steps the
-    # microphysics implicitly. In one cell, the parent is made negative and
-    # the cached 0M rain-out a gain. The implicit tendency is taken with and
-    # without that gain. The partition tags take all of it, by mask. Under
-    # the explicit rule they would take none.
-    @testset "The implicit microphysics bracket keeps the parent's gain" begin
+    # C's revision, extended (the owner, 2026-09-30; the design note,
+    # 11.11.2): the implicit microphysics bracket gives the target's gain too.
+    # This column steps the microphysics implicitly. In one cell, the parent
+    # is made negative and the cached 0M rain-out a gain. The implicit
+    # tendency is taken with and without that gain. No tag takes any of it,
+    # and the ledger of the withheld gain takes all of it. Under the parent's
+    # rule the partition tags would take it, by mask.
+    @testset "The implicit microphysics bracket gives the target's gain" begin
         integrator = simulation.integrator
         p = integrator.p
         @test p.atmos.microphysics_tendency_timestepping == CA.Implicit()
-        @test CA.microphysics_gain_rule(p.atmos) === CA.ParentGain()
+        @test CA.microphysics_gain_rule(p.atmos) === CA.TargetGain()
         Y_negative = copy(integrator.u)
         k = 20
         parent(Y_negative.c.ρq_tot)[k] = -1e-6
@@ -220,10 +220,25 @@ base_config(tags; extra = Dict{String, Any}()) = merge(
         at(ᶜx) = parent(ᶜx)[k]
         Δ = at(with_gain.c.ρq_tot) - at(without.c.ρq_tot)
         @test Δ > 0
-        partition_gain =
-            at(with_gain.c.ρq_tag_upper) - at(without.c.ρq_tag_upper) +
-            at(with_gain.c.ρq_tag_lower) - at(without.c.ρq_tag_lower)
-        @test partition_gain ≈ Δ rtol = 1e-10
+        # The tags' tendencies at `k` do not change, the partition's and the
+        # source tags'.
+        for name in tag_names
+            @test at(getproperty(with_gain.c, name)) ==
+                  at(getproperty(without.c, name))
+        end
+        # The ledger's tendency at `k` changes by the gain, to rounding, and
+        # nowhere else.
+        @test at(with_gain.c.q_tag_exp_negative) -
+              at(without.c.q_tag_exp_negative) ≈ Δ rtol = 1e-8
+        @test all(iszero, parent(without.c.q_tag_exp_negative))
+        # Every other cell's tag tendencies are the same, bit for bit.
+        others = setdiff(1:length(parent(Y_negative.c.ρq_tot)), k)
+        for name in (tag_names..., :q_tag_exp_negative)
+            @test isequal(
+                parent(getproperty(with_gain.c, name))[others],
+                parent(getproperty(without.c, name))[others],
+            )
+        end
     end
 end
 
@@ -426,7 +441,8 @@ end
             name ->
                 hasproperty(Y_plain.c, name) ||
                 CA.is_tagged_tracer_name(name) ||
-                CA.is_tag_mechanism_ledger_name(name),
+                CA.is_tag_mechanism_ledger_name(name) ||
+                CA.is_water_tag_exp_ledger_name(name),
             propertynames(Y.c),
         )
         @test propertynames(Y.f) == propertynames(Y_plain.f)
@@ -491,6 +507,25 @@ end
         @test parent(getproperty(Y_restart.c, name)) ==
               parent(getproperty(Y.c, name))
     end
+    # So do the ledger of the withheld gain and its accumulators (the owner,
+    # 2026-09-30): the per-step gross, the column gross and the events.
+    @test hasproperty(Y.c, :q_tag_exp_negative)
+    @test isequal(
+        parent(Y_restart.c.q_tag_exp_negative),
+        parent(Y.c.q_tag_exp_negative),
+    )
+    CA.InputOutput.HDF5Reader(restart_file, context) do reader
+        for kind in ("gross", "colgross", "events")
+            @test haskey(reader.file, "fields/tag_ledger.$kind.q_tag_exp_negative")
+        end
+    end
+    exp_ledger(sim) = sim.integrator.p.tagging.tag_ledger_steps.ledgers.q_tag_exp_negative
+    for field in (:ᶜgross, :colgross, :ᶜevents)
+        @test isequal(
+            parent(getproperty(exp_ledger(restarted), field)),
+            parent(getproperty(exp_ledger(simulation), field)),
+        )
+    end
     for name in (:ρq_tag_upper, :ρq_tag_lower)
         @test parent(
             getproperty(restarted.integrator.p.tagging.ᶜwater_masks, name),
@@ -502,6 +537,29 @@ end
     # The first row, written when the restarted run starts, and every later
     # row of both tables stay void (the owner's review of #112).
     @test CA.solve_atmos!(restarted).ret_code == :success
+    # The restarted run continues the straight run bit for bit, the tags, the
+    # ledger of the withheld gain and its accumulators included.
+    straight = CA.get_simulation(
+        CA.AtmosConfig(
+            merge(
+                test_dict,
+                Dict{String, Any}(
+                    "t_end" => "40secs",
+                    "output_dir" => mktempdir(pwd()),
+                ),
+            );
+            job_id = "tagged_water_restart_straight",
+        ),
+    )
+    @test CA.solve_atmos!(straight).ret_code == :success
+    @test isequal(parent(restarted.integrator.u.c), parent(straight.integrator.u.c))
+    @test isequal(parent(restarted.integrator.u.f), parent(straight.integrator.u.f))
+    for field in (:ᶜgross, :colgross, :ᶜevents)
+        @test isequal(
+            parent(getproperty(exp_ledger(restarted), field)),
+            parent(getproperty(exp_ledger(straight), field)),
+        )
+    end
     @test table_column(closure_table(restarted), "time") ==
           ["20.0", "30.0", "40.0"]
     @test all(

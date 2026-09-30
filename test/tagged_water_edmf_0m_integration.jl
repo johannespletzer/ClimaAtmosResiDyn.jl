@@ -65,6 +65,7 @@ function test_same_model_fields(Y, Y_plain)
     is_tag(name) =
         startswith(string(name), "ρq_tag_") ||
         CA.is_water_tag_ledger_name(name) ||
+        CA.is_water_tag_exp_ledger_name(name) ||
         CA.is_tag_mechanism_ledger_name(name)
     @test Set(filter(!is_tag, propertynames(Y.c))) ==
           Set(propertynames(Y_plain.c))
@@ -402,6 +403,51 @@ end
         @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "pr_tag_tropo")
         @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "prsn_tag_evap")
         @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "pr_tag_res")
+
+        # C's revision, extended (the owner, 2026-09-30; questions 3 and 4):
+        # on the implicit path too the split withholds every tag's gain from
+        # the updraft's part where the grid parent is below zero, the source
+        # tag's included. In the cell with the updraft's strongest rain-out
+        # the grid parent is made negative and the updraft's area too, so the
+        # updraft's rain-out is a gain. The diagnostics' rain-out follows the
+        # bracket's rule. Elsewhere the rules agree bit for bit.
+        @test p.atmos.microphysics_tendency_timestepping == CA.Implicit()
+        @test CA.microphysics_gain_rule(p.atmos) === CA.TargetGain()
+        Y_negative = copy(Y)
+        ᶜdqʲ = p.precomputed.ᶜmp_tendencyʲs.:(1).dq_tot_dt
+        k = argmin(vec(parent(ᶜdqʲ)))
+        @test parent(ᶜdqʲ)[k] < 0
+        parent(Y_negative.c.ρq_tot)[k] = -1e-6
+        ᶜρaʲ = parent(Y_negative.c.sgsʲs.:(1).ρa)
+        ᶜρaʲ[k] = -abs(ᶜρaʲ[k])
+        at(ᶜx) = parent(ᶜx)[k]
+        Δʲ = at(copy(CA._rainout_updraft(Y_negative, p)))
+        @test Δʲ > 0
+        function split_with(rule)
+            ᶜdest = CA._water_fix_fields(Y_negative.c.ρ, model.tags)
+            CA.add_split_rainout!(ᶜdest, Y_negative, p, model, nothing, rule)
+            return ᶜdest
+        end
+        target = split_with(CA.TargetGain())
+        before = split_with(CA.ParentGain())
+        diagnosed = CA._water_fix_fields(Y_negative.c.ρ, model.tags)
+        CA.add_rainout_increments!(diagnosed, Y_negative, p, model)
+        others = [i for i in eachindex(vec(parent(Y_negative.c.ρ))) if i != k]
+        ᶜsgsʲ_negative = Y_negative.c.sgsʲs.:(1)
+        source_gain = 0.0
+        for tag in model.tags
+            new_part = vec(parent(CA.tag_field(target, tag)))
+            old_part = vec(parent(CA.tag_field(before, tag)))
+            @test isequal(vec(parent(CA.tag_field(diagnosed, tag))), new_part)
+            @test isequal(new_part[others], old_part[others])
+            φʲ = CA.water_tag_fraction(
+                at(CA.updraft_copy_field(ᶜsgsʲ_negative, tag)),
+                at(ᶜsgsʲ_negative.q_tot),
+            )
+            @test new_part[k] ≈ old_part[k] - Δʲ * φʲ atol = 1e-12 * Δʲ
+            CA._is_partition_tag(tag) || (source_gain += Δʲ * φʲ)
+        end
+        @test source_gain > 0
     end
 
     # 4. The model's own fields.
@@ -562,5 +608,73 @@ end
         @info "The default mode's split allocates" split_bytes
         @test split_bytes <= 64 broken = VERSION < v"1.11"
         test_same_model_fields(Y_default, Y_plain)
+
+        # 6. A real implicit stage under the follower (the owner, 2026-09-30;
+        # the design note, 11.11.3 and test 18 of 11.11.10): through the split
+        # solver's `-I` row, the DSS and the post-solve hook. In cell `k` the
+        # parent is made negative and the environment's cached 0M rain-out a
+        # gain, so the implicit bracket withholds it. The stage is taken with
+        # and without the gain. The ledger's row takes `dtγ w` exactly. The
+        # follower takes the withheld gain into its negative part, so its
+        # part left out changes only by the solver's response to the gain
+        # less the gain, `∫ΔP - ∫δL`. Without the ledger it would change by
+        # the whole response.
+        @testset "A real implicit stage: the follower reads the withheld gain" begin
+            jacobian = default.integrator.sol.prob.f.T_imp!.jac_prototype
+            @test jacobian.cache.solver isa CA.SplitJacobianSolver
+            uncoupled = Set(map(field -> field.name, jacobian.cache.solver.uncoupled))
+            @test CA.MatrixFields.FieldName(:c, :q_tag_exp_negative) in uncoupled
+            hook = default.integrator.sol.prob.f.T_post_imp!
+            @test hook isa CA.WaterTagIncrementCorrection
+            dtγ = 60.0
+            k = 15
+            function stage(gain)
+                Ŷ = copy(Y_default)
+                parent(Ŷ.c.ρq_tot)[k] = -1e-6
+                CA.set_precomputed_quantities!(Ŷ, p_default, t_default)
+                parent(p_default.precomputed.ᶜmp_tendency⁰.dq_tot_dt)[k] = gain
+                parent(p_default.precomputed.ᶜmp_tendencyʲs.:(1).dq_tot_dt)[k] = 0
+                CA.initialize_implicit_stage_problem!(Ŷ, p_default, dtγ)
+                CA.set_implicit_precomputed_quantities!(Ŷ, p_default, t_default)
+                Yₜ = zero(Ŷ)
+                CA.implicit_tendency!(Yₜ, Ŷ, p_default, t_default)
+                CA.update_jacobian!(jacobian, Ŷ, p_default, dtγ, t_default)
+                R = similar(Ŷ)
+                @. R = dtγ * Yₜ
+                ΔY = zero(Ŷ)
+                CA.LinearAlgebra.ldiv!(ΔY, jacobian, R)
+                U = similar(Ŷ)
+                @. U = Ŷ - ΔY
+                CA.dss!(U, p_default, t_default)
+                CA.set_implicit_precomputed_quantities!(U, p_default, t_default)
+                dY = zero(U)
+                hook(dY, U, p_default, t_default)
+                return (; Ŷ, Yₜ, U, dY)
+            end
+            with_gain = stage(1e-8)
+            without = stage(0.0)
+            ∫(ᶜx) = parent(column_integral(p_default, ᶜx))[1]
+            # The bracket withheld the gain, and the ledger's row took it.
+            ᶜw = with_gain.Yₜ.c.q_tag_exp_negative
+            @test parent(ᶜw)[k] > 0
+            @test count(!iszero, parent(ᶜw)) == 1
+            @test all(iszero, parent(without.Yₜ.c.q_tag_exp_negative))
+            @test isequal(
+                parent(with_gain.U.c.q_tag_exp_negative),
+                parent(with_gain.Ŷ.c.q_tag_exp_negative .+ dtγ .* ᶜw),
+            )
+            δL = ∫(dtγ .* ᶜw)
+            # The negative part is placed in both stages, so the part left
+            # out is `M' - N'`.
+            for run in (with_gain, without)
+                @test any(!iszero, parent(run.dY.c.q_tag_inc_negative))
+            end
+            response = ∫(with_gain.U.c.ρq_tot .- without.U.c.ρq_tot)
+            @test response > 0
+            left(run) = ∫(dtγ .* run.dY.c.q_tag_inc_left)
+            @test abs((left(with_gain) - left(without)) - (response - δL)) <=
+                  1e-4 * δL
+            CA.set_precomputed_quantities!(Y_default, p_default, t_default)
+        end
     end
 end

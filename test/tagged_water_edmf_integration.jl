@@ -242,7 +242,8 @@ relative_difference(a, b) =
         @test isnothing(plain.integrator.p.atmos.water_tagging_model)
         is_tag(name) =
             startswith(string(name), "ρq_tag_") ||
-            CA.is_tag_mechanism_ledger_name(name)
+            CA.is_tag_mechanism_ledger_name(name) ||
+            CA.is_water_tag_exp_ledger_name(name)
         @test Set(filter(!is_tag, propertynames(Y.c))) ==
               Set(propertynames(Y_plain.c))
         for name in propertynames(Y_plain.c)

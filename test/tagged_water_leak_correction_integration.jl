@@ -123,6 +123,7 @@ largest(ᶜf) = maximum(abs, parent(ᶜf))
     is_diagnostic(name) =
         CA.is_water_tag_name(name) ||
         CA.is_water_tag_ledger_name(name) ||
+        CA.is_water_tag_exp_ledger_name(name) ||
         CA.is_tag_mechanism_ledger_name(name) ||
         CA.is_water_tag_leak_mechanism_name(name) ||
         CA.is_tag_per_tag_ledger_name(name)

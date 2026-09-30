@@ -148,6 +148,7 @@ altitude_region(above) = Dict{String, Any}(
     is_diagnostic(name) =
         CA.is_water_tag_name(name) ||
         CA.is_water_tag_ledger_name(name) ||
+        CA.is_water_tag_exp_ledger_name(name) ||
         CA.is_tag_mechanism_ledger_name(name) ||
         CA.is_energy_source_tag_name(name) ||
         CA.is_energy_source_ledger_name(name) ||
@@ -371,6 +372,7 @@ altitude_region(above) = Dict{String, Any}(
         for name in (
             :q_tag_inc_left,
             :q_tag_inc_moved,
+            :q_tag_exp_negative,
             CA.water_tag_per_tag_ledger_names(model)...,
             CA.energy_source_per_tag_ledger_names(energy_model)...,
         )

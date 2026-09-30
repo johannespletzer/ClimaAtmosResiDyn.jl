@@ -135,6 +135,7 @@ function test_parity(Y, Y_plain)
             CA.is_tagged_tracer_name(name) ||
             CA.is_tag_mechanism_ledger_name(name) ||
             CA.is_water_tag_ledger_name(name) ||
+            CA.is_water_tag_exp_ledger_name(name) ||
             CA.is_water_tag_audit_name(name),
         propertynames(Y.c),
     )

@@ -3,6 +3,21 @@ import Random
 import ClimaAtmos as CA
 import ClimaCore.MatrixFields: @name
 
+# A checksum of the bits of an array's values, the same on every Julia version:
+# FNV-1a over the values' bit patterns.
+function bits_checksum(x)
+    h = UInt64(14695981039346656037)
+    for v in x
+        h = (h ⊻ UInt64(reinterpret(Unsigned, v))) * UInt64(1099511628211)
+    end
+    return h
+end
+# The follower's `dY` in its test's case 3 at 210eeece, before the ledger of the
+# withheld gain, per float type. Taken on Julia 1.11.9 and 1.10.12, which agree
+# (jobs 14014980 and 14014981).
+const PINNED_FOLLOWER_CHECKSUMS =
+    Dict(Float32 => 0x17aa0d9912c41cb0, Float64 => 0x8e64397ce4839aa9)
+
 # `AtmosModel` takes a grid. These tests read only the model's tagging fields,
 # so the smallest column serves.
 column_atmos_model(; kwargs...) =
@@ -883,6 +898,33 @@ column_atmos_model(; kwargs...) =
             nothing,
             0.0,
         ) ≈ [0.004, 0.002]
+
+        # The ledger of the withheld gain, per unit mass at the current
+        # density, and its per-step grosses are registered with water tags.
+        # Registering a model without them drops them, as for the increment
+        # ledgers.
+        exp_names = (
+            "q_tag_exp_negative",
+            "q_tag_exp_negative_gross",
+            "q_tag_exp_negative_colgross",
+        )
+        CA.Diagnostics.register_tag_ledger_diagnostics!(
+            column_atmos_model(; water_tagging_model = CA.WaterTaggingModel(tags)),
+        )
+        for short_name in exp_names
+            @test haskey(CA.Diagnostics.ALL_DIAGNOSTICS, short_name)
+        end
+        @test !haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "q_tag_exp_negative_precip")
+        @test !haskey(CA.Diagnostics.ALL_DIAGNOSTICS, "q_tag_exp_negative_attempted")
+        exp_ledger = CA.Diagnostics.get_diagnostic_variable("q_tag_exp_negative")
+        @test exp_ledger.units == "kg kg^-1"
+        @test exp_ledger.long_name == "Water Withheld from the Tags"
+        ledger_state = (; c = (; ρ = [2.0, 4.0], q_tag_exp_negative = [1.0, 1.0]))
+        @test exp_ledger.compute!(nothing, ledger_state, nothing, 0.0) == [0.5, 0.25]
+        CA.Diagnostics.register_tag_ledger_diagnostics!(column_atmos_model())
+        for short_name in exp_names
+            @test !haskey(CA.Diagnostics.ALL_DIAGNOSTICS, short_name)
+        end
     end
 
     @testset "Tagged name predicate" begin
@@ -932,15 +974,19 @@ end
             CA.water_tag_mechanism_names(water_model(; copies)),
         ),
     )
+    # And one written with C's revision extended holds the ledger of the
+    # withheld gain.
     state(
         names...;
         updrafts = (),
         copies = !isempty(updrafts) && length(first(updrafts)) > 1,
         with_ledgers = true,
+        with_exp = true,
     ) = (;
         c = (;
             NamedTuple{(:ρ, :ρq_tot, names...)}(Tuple(zeros(2 + length(names))))...,
             (with_ledgers ? ledgers(copies) : (;))...,
+            (with_exp ? (; q_tag_exp_negative = 0.0) : (;))...,
             (isempty(updrafts) ? (;) : (; sgsʲs = updrafts))...,
         ),
     )
@@ -1027,6 +1073,31 @@ end
         water_model(),
         state(names...; with_ledgers = false),
     )
+
+    # A checkpoint from before the ledger of the withheld gain is refused, and
+    # the message names it (the owner, 2026-09-30). Under either transport.
+    # The version of the format stays 2.
+    for model in (water_model(), increment_model)
+        without_exp = (;
+            c = (;
+                state(names...; with_exp = false).c...,
+                (
+                    CA.follows_water_increment(model) ?
+                    (;
+                        q_tag_inc_left = 0.0,
+                        q_tag_inc_moved = 0.0,
+                        q_tag_inc_negative = 0.0,
+                    ) : (;)
+                )...,
+            ),
+        )
+        @test_throws r"before the water tags kept the ledger of the withheld gain \(q_tag_exp_negative\)" check(
+            written,
+            model,
+            without_exp,
+        )
+    end
+    @test CA.WATER_TAG_CHECKPOINT_VERSION == 2
 
     # Each tag's own ledgers (WP6, step 3) are in the file or are not, so a
     # changed `water_tag_ledger_per_tag` is refused either way.
@@ -1282,6 +1353,55 @@ end
                 transport = CA.IncrementWaterTagTransport(),
             ),
         )
+    end
+
+    # The ledger of the withheld gain (question 6): with every water tag,
+    # under either transport, and its rain and snow twin only with the key.
+    @testset "The ledger of the withheld gain" begin
+        tracer = CA.WaterTaggingModel(tags)
+        increment = CA.WaterTaggingModel(
+            tags;
+            transport = CA.IncrementWaterTagTransport(),
+        )
+        keyed = CA.WaterTaggingModel(tags; precipitation = true)
+        for model in (tracer, increment)
+            @test CA.water_tag_exp_ledger_names(model) == (:q_tag_exp_negative,)
+            @test CA.water_tag_exp_ledger_variables(1.0f0, model) ===
+                  (; q_tag_exp_negative = 0.0f0)
+        end
+        @test CA.water_tag_exp_ledger_names(keyed) ==
+              (:q_tag_exp_negative, :q_tag_exp_negative_precip)
+        @test CA.water_tag_exp_ledger_variables(1.0, keyed) ===
+              (; q_tag_exp_negative = 0.0, q_tag_exp_negative_precip = 0.0)
+        @test CA.water_tag_exp_ledger_names(nothing) == ()
+        @test CA.water_tag_exp_ledger_variables(1.0, nothing) == (;)
+        # Not tracers, so no transport reaches them. The split solves them
+        # apart, with their `-I` block.
+        c(name) = CA.MatrixFields.FieldName(:c, name)
+        for name in CA.WATER_TAG_EXP_LEDGER_NAMES
+            @test CA.is_water_tag_exp_ledger_name(name)
+            @test !CA.is_tracer_var(name)
+            @test CA.is_splittable_jacobian_field(c(name))
+        end
+        @test !CA.is_water_tag_exp_ledger_name(:q_tag_inc_negative)
+        minus_I = -1 * CA.LinearAlgebra.I
+        pairs = (
+            (c(:ρq_tot), c(:ρq_tot)) => minus_I,
+            (c(:q_tag_exp_negative), c(:q_tag_exp_negative)) => minus_I,
+            (c(:q_tag_exp_negative_precip), c(:q_tag_exp_negative_precip)) =>
+                minus_I,
+        )
+        @test CA.uncoupled_jacobian_names(pairs) ==
+              (c(:q_tag_exp_negative), c(:q_tag_exp_negative_precip))
+        # The per-step gross follows them. They are a tendency's, so they have
+        # no attempted total.
+        for model in (tracer, increment, keyed)
+            atmos = (; water_tagging_model = model, energy_source_tagging_model = nothing)
+            for name in CA.water_tag_exp_ledger_names(model)
+                @test name in CA.tag_state_ledger_names(atmos)
+                @test !(name in CA.tag_attempted_ledger_names(atmos))
+            end
+        end
     end
 
     # The owner's review of #102, point 4: on two equal cells with mismatch
@@ -2093,7 +2213,8 @@ end
         :q_tag_led_repairnet,
     )
     # The callback counts a change as an event against the parent's water.
-    ᶜnames = (:ρ, :ρq_tot, names...)
+    # With water tags the state also holds the ledger of the withheld gain.
+    ᶜnames = (:ρ, :ρq_tot, names..., :q_tag_exp_negative)
     Y = CC.Fields.FieldVector(;
         c = similar(
             CC.Fields.coordinate_field(column(CC.CommonSpaces.CellCenter())),
@@ -2330,6 +2451,7 @@ end
         :ρq_tag_tropo,
         :ρq_tag_strat,
         CA.water_tag_mechanism_names(model)...,
+        CA.water_tag_exp_ledger_names(model)...,
         CA.water_tag_per_tag_ledger_names(model)...,
     )
     Y = CC.Fields.FieldVector(;
@@ -2364,6 +2486,7 @@ end
     @test keys(steps.ledgers) ==
           (
         CA.water_tag_mechanism_names(model)...,
+        :q_tag_exp_negative,
         CA.water_tag_per_tag_ledger_names(model)...,
     )
 
@@ -2420,6 +2543,12 @@ end
     @test audit.ledger_parent_scale == parent_scale
     # The ledgers per mechanism have no ratios to a tag.
     @test !haskey(audit, :led_rescale_burden_fraction)
+    # The ledger of the withheld gain is a tendency's, as the leak
+    # correction's: its columns come by its prefix, with no attempted total.
+    @test audit.exp_negative_retained == 0
+    @test audit.exp_negative_events == 0
+    @test isnan(audit.exp_negative_attempted)
+    @test !haskey(audit, :exp_negative_burden_fraction)
     @test audit.ledger_cadence_step == 1
     CA.set_tag_ledger_cadence!(p, "dss")
     @test (@test_logs (:warn, r"exact\s+only at `step`") match_mode = :any CA.set_tag_ledger_cadence!(
@@ -2460,8 +2589,13 @@ end
     written = CA.tag_ledger_checkpoint_fields(tagging)
     restored = CA.tag_ledger_checkpoint_fields(fresh)
     @test first.(written) == first.(restored)
-    # The parent's negative water accumulator adds its two fields, last.
-    @test length(written) == 6 + 3 * 6 + 4 + 2
+    # The parent's negative water accumulator adds its two fields, last. The
+    # ledger of the withheld gain adds its gross, column gross and events.
+    @test length(written) == 6 + 3 * 7 + 4 + 2
+    for kind in ("gross", "colgross", "events")
+        @test "tag_ledger.$kind.q_tag_exp_negative" in first.(written)
+    end
+    @test !("tag_ledger.attempted.q_tag_exp_negative" in first.(written))
     @test first.(written[(end - 1):end]) ==
           ["tag_ledger.negative_water.amount", "tag_ledger.negative_water.events"]
     for ((_, a), (_, b)) in zip(written, restored)
@@ -2602,6 +2736,7 @@ end
             :q_tag_inc_left,
             :q_tag_inc_moved,
             :q_tag_inc_negative,
+            :q_tag_exp_negative,
             :q_tag_led_inc_tropo,
             :q_tag_led_inc_strat,
             :q_tag_led_inc_evap,
@@ -2634,6 +2769,7 @@ end
             atmos = (; water_tagging_model = model),
             tagging = (;
                 CA._water_tag_increment_cache(state(), model)...,
+                ᶜwater_masks = CA._tag_masks(CC.Fields.coordinate_field(ᶜspace), tags),
                 ᶜwater_parent = similar(ᶜbase),
                 ᶜwater_pos = similar(ᶜbase),
             ),
@@ -2759,11 +2895,13 @@ end
 end
 
 # C's revision (the owner, 2026-09-29; the record's
-# design/NEGATIVE_PARENT_WATER.md, section 11): the explicit brackets give the
-# partition tags only the target's gain. Where the parent is below zero a gain
-# fills its negative part, and no partition tag changes. FINDINGS W47 and W48
-# found the region tags gaining the forcing's water there.
-@testset "C's revision: the explicit brackets give the partition the target's gain" begin
+# design/NEGATIVE_PARENT_WATER.md, section 11): the brackets give the tags only
+# the target's gain. Where the parent is below zero a gain fills its negative
+# part, and no tag changes. FINDINGS W47 and W48 found the region tags gaining
+# the forcing's water there. Extended on 2026-09-30 (11.11) to the implicit
+# bracket and to every tag that receives the label, with a ledger of the
+# withheld gain.
+@testset "C's revision: every bracket and every tag take the target's gain" begin
     for FT in (Float32, Float64)
         # The target's gain at its edges. At zero, of either sign, the target
         # takes the whole gain. Where the parent is not negative, the gain is
@@ -2776,10 +2914,11 @@ end
         for Δ in (FT(3), FT(-3), FT(0), FT(-0.0)), x in (FT(5), FT(0), FT(-0.0))
             @test isequal(CA.water_tag_target_gain(Δ, x), max(Δ, 0))
         end
-        # The `microphysics` bracket's rule follows its path.
+        # The `microphysics` bracket takes the target's rule on both paths
+        # (question 3).
         @test CA.microphysics_gain_rule((;
             microphysics_tendency_timestepping = CA.Implicit(),
-        )) === CA.ParentGain()
+        )) === CA.TargetGain()
         @test CA.microphysics_gain_rule((;
             microphysics_tendency_timestepping = CA.Explicit(),
         )) === CA.TargetGain()
@@ -2809,14 +2948,14 @@ end
         )
         below = ᶜY.ρq_tot .< 0
         zero_tendency() = NamedTuple{names}(ntuple(_ -> zeros(FT, 6), 4))
-        function bracket(ᶜΔ, rule, ᶜY = ᶜY)
+        function bracket(ᶜΔ, rule, ᶜY = ᶜY; source = :surface_flux)
             ᶜYₜ = zero_tendency()
             CA._accumulate_water_tags!(
                 ᶜYₜ,
                 ᶜY,
                 ᶜmasks,
                 ᶜΔ,
-                :surface_flux,
+                source,
                 tags,
                 ᶜY.ρq_tot,
                 rule,
@@ -2833,12 +2972,41 @@ end
             @test all(>(0), getproperty(old, name)[below])
             @test isequal(getproperty(new, name)[.!below], getproperty(old, name)[.!below])
         end
-        # The tags outside the partition keep the parent's gain, also below
-        # zero.
-        for name in (:ρq_tag_evap, :ρq_tag_tropical_evap)
-            @test isequal(getproperty(new, name), getproperty(old, name))
+        # Question 4, definition A: a source tag is a part of the target. A
+        # tag without a region and a region tag that lists the source gain
+        # nothing below zero. Elsewhere, at -0.0 and +0.0 too, they take their
+        # mask times `max(Δ, 0)` and their loss, bit for bit as before. The
+        # expected values are written out, not taken from the rule.
+        ᶜone = ones(FT, 6)
+        for (name, ᶜmask) in (
+            (:ρq_tag_evap, ᶜone),
+            (:ρq_tag_tropical_evap, ᶜmasks.ρq_tag_tropical_evap),
+        )
+            ᶜφ = CA.water_tag_fraction.(getproperty(ᶜY, name), ᶜY.ρq_tot)
+            gain = ifelse.(ᶜY.ρq_tot .< 0, zero(FT), max.(ᶜΔ, 0))
+            expected =
+                name === :ρq_tag_evap ? gain .+ min.(ᶜΔ, 0) .* ᶜφ :
+                ᶜmask .* gain .+ min.(ᶜΔ, 0) .* ᶜφ
+            @test isequal(getproperty(new, name), expected)
+            @test all(iszero, getproperty(new, name)[below])
+            @test all(>(0), getproperty(old, name)[below])
+            @test isequal(
+                getproperty(new, name)[.!below],
+                getproperty(old, name)[.!below],
+            )
         end
-        @test new.ρq_tag_evap[2] == ᶜΔ[2]
+        # A tag that does not list the label takes only its loss.
+        for rule in (CA.TargetGain(), CA.ParentGain())
+            other = bracket(ᶜΔ, rule; source = :subsidence)
+            for name in (:ρq_tag_evap, :ρq_tag_tropical_evap)
+                ᶜφ = CA.water_tag_fraction.(getproperty(ᶜY, name), ᶜY.ρq_tot)
+                @test isequal(getproperty(other, name), min.(ᶜΔ, 0) .* ᶜφ)
+            end
+        end
+        # Every kind of tag takes the bracket's rule.
+        for tag in tags, rule in (CA.TargetGain(), CA.ParentGain())
+            @test CA._tag_gain_rule(rule, tag) === rule
+        end
         # The parent's rule is the rule before the revision, bit for bit.
         ᶜφ = CA.water_tag_fraction.(ᶜY.ρq_tag_tropics, ᶜY.ρq_tot)
         expected = zeros(FT, 6)
@@ -2885,20 +3053,87 @@ end
         @test all(excess(old)[below] .> before[below])
 
         # The bracket's entry takes the target's rule by default, the rule of
-        # the explicit brackets.
+        # every bracket.
         p = (;
             atmos = (; water_tagging_model = CA.WaterTaggingModel(tags)),
             tagging = (; ᶜwater_masks = ᶜmasks),
             scratch = (; ᶜtagging_q_snapshot = zeros(FT, 6)),
         )
         Y = (; c = ᶜY)
+        entry_tendency(ᶜΔ) = (;
+            c = merge(
+                (; ρq_tot = copy(ᶜΔ), q_tag_exp_negative = zeros(FT, 6)),
+                zero_tendency(),
+            ),
+        )
         for (rule, reference) in (((), new), ((CA.ParentGain(),), old))
-            Yₜ = (; c = merge((; ρq_tot = copy(ᶜΔ)), zero_tendency()))
+            Yₜ = entry_tendency(ᶜΔ)
             CA.attribute_tagged_ρq_tot!(Yₜ, Y, p, :surface_flux, rule...)
             @test all(n -> isequal(getproperty(Yₜ.c, n), getproperty(reference, n)), names)
             # By default, a cell below zero gives the partition nothing.
             @test isempty(rule) == all(iszero, Yₜ.c.ρq_tag_tropics[below])
+            # The ledger takes the withheld gain, whatever the tags hold, and
+            # nothing under the parent's rule (question 6). Written out.
+            ledger =
+                isempty(rule) ? ifelse.(ᶜY.ρq_tot .< 0, max.(ᶜΔ, 0), zero(FT)) :
+                zeros(FT, 6)
+            @test isequal(Yₜ.c.q_tag_exp_negative, ledger)
         end
+        @test any(>(0), entry_tendency(ᶜΔ).c.ρq_tot[below])
+        # On a closed partition, with the grid kernel, a bracket's tendency is
+        # the partition's parts plus the ledger (the closure identity I2),
+        # where no loss is unshared.
+        Yₜ = entry_tendency(ᶜΔ)
+        CA.attribute_tagged_ρq_tot!(Yₜ, (; c = ᶜY_closed), p, :surface_flux)
+        @test ᶜΔ ≈
+              Yₜ.c.ρq_tag_tropics .+ Yₜ.c.ρq_tag_extratropics .+
+              Yₜ.c.q_tag_exp_negative atol = 10 * eps(FT)
+        @test sum(Yₜ.c.q_tag_exp_negative) > 0
+
+        # The rule on duals, as an autodiff Jacobian evaluates it: the branch
+        # follows the value, the gain carries `Δ`'s partials or none, and the
+        # values are the real evaluation's (the design note, 11.11.2).
+        Dual = CA.ForwardDiff.Dual{CA.Jacobian}
+        for (Δ, x) in ((FT(2), FT(-1)), (FT(2), FT(1)), (FT(-2), FT(-1)), (FT(2), FT(-0.0)))
+            dΔ = Dual(Δ, FT(3))
+            dx = Dual(x, FT(5))
+            for f in (CA.water_tag_withheld_gain, CA.water_tag_gain)
+                real_value = f(CA.TargetGain(), Δ, x)
+                dual_value = @inferred f(CA.TargetGain(), dΔ, dx)
+                @test isequal(CA.ForwardDiff.value(dual_value), real_value)
+            end
+            @test @inferred(CA.water_tag_withheld_gain(CA.TargetGain(), Δ, x)) isa FT
+            @test @inferred(CA.water_tag_withheld_gain(CA.ParentGain(), Δ, x)) isa FT
+            gain_partial = CA.ForwardDiff.partials(
+                CA.water_tag_gain(CA.TargetGain(), dΔ, dx),
+            )[1]
+            @test gain_partial == (x < 0 || Δ < 0 ? 0 : 3)
+        end
+        # The kernel on duals: values as the real kernel's, bit for bit.
+        dual_Y = map(v -> Dual.(v, one(FT)), ᶜY)
+        dual_Yₜ = map(v -> Dual.(zero(v), zero(FT)), zero_tendency())
+        CA._accumulate_water_tags!(
+            dual_Yₜ,
+            dual_Y,
+            ᶜmasks,
+            Dual.(ᶜΔ, one(FT)),
+            :surface_flux,
+            tags,
+            dual_Y.ρq_tot,
+            CA.TargetGain(),
+        )
+        for name in names
+            @test isequal(
+                CA.ForwardDiff.value.(getproperty(dual_Yₜ, name)),
+                getproperty(new, name),
+            )
+        end
+        # A partition tag's gain has no partials where the parent is below
+        # zero.
+        @test all(
+            iszero,
+            CA.ForwardDiff.partials.(dual_Yₜ.ρq_tag_tropics[below], 1),
+        )
     end
 end
 
@@ -2933,18 +3168,21 @@ end
         [0, b1, b2, γ],
     )
     tag = CA.WaterTag{:all}(CA.TanhLatitudeRegion(20.0, 2.0, true))
+    # A source tag without a region takes the same rule (question 4).
+    source_tag = CA.WaterTag{:src}(nothing, :surface_flux)
     ᶜmasks = (; ρq_tag_all = [1.0])
     # One step of `dt = 1` for one cell. A bracketed process gains `G`, and a
-    # process outside any bracket loses `L`. The tag starts empty, so its
-    # value after the step is the partition's gain over the step.
-    function one_step((a, b), P₀, G, L, rule)
+    # process outside any bracket loses `L`. The tag starts at `T₀`, empty by
+    # default, so its change over the step is its gain over the step.
+    function one_step((a, b), P₀, G, L, rule; tag = tag, T₀ = 0.0)
         s = length(b)
         (dP, dT) = (zeros(s), zeros(s))
+        name = Symbol(:ρq_tag_, CA.tag_name(tag))
         for i in 1:s
             Pᵢ = P₀ + sum(a[i, j] * dP[j] for j in 1:(i - 1); init = 0.0)
-            Tᵢ = sum(a[i, j] * dT[j] for j in 1:(i - 1); init = 0.0)
-            ᶜY = (; ρq_tot = [Pᵢ], ρq_tag_all = [Tᵢ])
-            ᶜYₜ = (; ρq_tag_all = [0.0])
+            Tᵢ = T₀ + sum(a[i, j] * dT[j] for j in 1:(i - 1); init = 0.0)
+            ᶜY = NamedTuple{(:ρq_tot, name)}(([Pᵢ], [Tᵢ]))
+            ᶜYₜ = NamedTuple{(name,)}(([0.0],))
             CA._accumulate_water_tags!(
                 ᶜYₜ,
                 ᶜY,
@@ -2956,9 +3194,9 @@ end
                 rule,
             )
             dP[i] = G - L
-            dT[i] = ᶜYₜ.ρq_tag_all[1]
+            dT[i] = getproperty(ᶜYₜ, name)[1]
         end
-        return sum(b[i] * dT[i] for i in 1:s)
+        return T₀ + sum(b[i] * dT[i] for i in 1:s)
     end
     target = CA.TargetGain()
     # ARS343, a gain lifts the parent from -0.5 or -0.6 of the step's gain.
@@ -2987,6 +3225,207 @@ end
     for tableau in (ars222, ars343)
         @test one_step(tableau, 5.0, 1.0, 0.0, target) ≈ 1
         @test one_step(tableau, -5.0, 1.0, 0.0, target) == 0
+    end
+
+    # A source tag without a region, a part of the target (question 4,
+    # definition A), takes the same stages. The design note, 11.11.4.
+    src(args...; kwargs...) = one_step(args...; tag = source_tag, kwargs...)
+    for P₀ in (-0.5, -0.6)
+        @test src(ars343, P₀, 1.0, 0.0, target) ≈ b2 + γ
+        @test src(ars343, P₀, 1.0, 0.0, target) ≈ -0.2085 atol = 1e-4
+    end
+    for P₀ in (0.05, 0.2)
+        @test src(ars222, P₀, 1.0, 3.0, target) ≈ δ
+    end
+    # An up-crossing from -0.1 of the step's gain: stage 2 alone gives it,
+    # with the weight 1 - δ, above the target's gain of 0.9.
+    up = src(ars222, -0.1, 1.0, 0.0, target)
+    @test up ≈ 1 - δ
+    @test up > 0.9
+    # The jump at zero.
+    @test src(ars222, -1e-30, 1.0, 0.0, target) ≈ 1 - δ
+    @test src(ars222, 0.0, 1.0, 0.0, target) ≈ 1
+    # A negative value then stays through steps with a positive parent and a
+    # sink: the tag's share of the loss is zero, and nothing removes it.
+    negative = src(ars343, -0.5, 1.0, 0.0, target)
+    @test negative < 0
+    for tableau in (ars222, ars343)
+        @test src(tableau, 5.0, -1.0, 0.0, target; T₀ = negative) == negative
+    end
+end
+
+# The follower reads the ledger of the withheld gain (the owner, 2026-09-30;
+# the design note, 11.11.3). A gain the rule withheld inside the solve reached
+# the parent and not the partition. Without the ledger the follower's negative
+# part would take it from the partition a second time.
+@testset "C's revision extended: the follower reads the withheld gain" begin
+    CC = CA.ClimaCore
+    for FT in (Float32, Float64)
+        column(staggering) = CC.CommonSpaces.ColumnSpace(
+            FT;
+            z_min = 0,
+            z_max = 1200,
+            z_elem = 6,
+            staggering,
+        )
+        ᶜspace = column(CC.CommonSpaces.CellCenter())
+        ᶠspace = column(CC.CommonSpaces.CellFace())
+        ᶜz = CC.Fields.coordinate_field(ᶜspace).z
+        region(above) = CA.TanhAltitudeRegion(FT(600), FT(100), above)
+        tags = (
+            CA.WaterTag{:tropo}(region(false)),
+            CA.WaterTag{:strat}(region(true)),
+            CA.WaterTag{:evap}(nothing, :surface_flux),
+        )
+        model = CA.WaterTaggingModel(
+            tags;
+            transport = CA.IncrementWaterTagTransport(),
+            ledger_per_tag = true,
+        )
+        ᶜnames = (
+            :ρ,
+            :ρq_tot,
+            :ρq_tag_tropo,
+            :ρq_tag_strat,
+            :ρq_tag_evap,
+            :q_tag_inc_left,
+            :q_tag_inc_moved,
+            :q_tag_inc_negative,
+            :q_tag_exp_negative,
+            :q_tag_led_inc_tropo,
+            :q_tag_led_inc_strat,
+            :q_tag_led_inc_evap,
+        )
+        state() = CC.Fields.FieldVector(;
+            c = similar(
+                CC.Fields.coordinate_field(ᶜspace),
+                NamedTuple{ᶜnames, NTuple{length(ᶜnames), FT}},
+            ),
+            f = similar(
+                CC.Fields.coordinate_field(ᶠspace),
+                NamedTuple{(:u₃,), Tuple{FT}},
+            ),
+        )
+        ᶜmasks = CA._tag_masks(CC.Fields.coordinate_field(ᶜspace), tags)
+        # A closed partition of the target, a source tag beside it, and the
+        # ledger at a value exact in binary.
+        function closed!(Y, ᶜρq)
+            fill!(parent(Y.c), 0)
+            fill!(parent(Y.f), 0)
+            @. Y.c.ρ = FT(1.1)
+            Y.c.ρq_tot .= ᶜρq
+            ᶜtarget = @. CA.water_tag_partition_target(Y.c.ρq_tot)
+            @. Y.c.ρq_tag_tropo = ᶜmasks.ρq_tag_tropo * ᶜtarget
+            @. Y.c.ρq_tag_strat = ᶜtarget - Y.c.ρq_tag_tropo
+            @. Y.c.ρq_tag_evap = FT(0.1) * ᶜtarget
+            @. Y.c.q_tag_exp_negative = FT(2)^-8
+            return Y
+        end
+        ᶜbase = @. FT(0.012) - FT(4e-6) * ᶜz
+        cache() = (;
+            atmos = (; water_tagging_model = model),
+            tagging = (;
+                CA._water_tag_increment_cache(state(), model)...,
+                ᶜwater_masks = ᶜmasks,
+                ᶜwater_parent = similar(ᶜbase),
+                ᶜwater_pos = similar(ᶜbase),
+            ),
+            scratch = (;
+                ᶜtagging_q_share_norm = similar(ᶜbase),
+                ᶜtemp_scalar = similar(ᶜbase),
+            ),
+        )
+        at(field, k) = parent(field)[k]
+        set!(field, k, value) = (parent(field)[k] = value; field)
+        dtγ = FT(60)
+        # One stage from `Y` to `U`, with the parent's post-solve `dY` zero.
+        function stage(Y, U)
+            p = cache()
+            CA.snapshot_water_tag_increment!(Y, p, dtγ)
+            dY = zero(U)
+            CA.correct_water_tag_increment!(dY, U, p)
+            after = copy(U)
+            for name in (:ρq_tag_tropo, :ρq_tag_strat, :ρq_tag_evap)
+                getproperty(after.c, name) .+= dtγ .* getproperty(dY.c, name)
+            end
+            return after, dY
+        end
+        partition(Y) = Y.c.ρq_tag_tropo .+ Y.c.ρq_tag_strat
+        target(Y) = CA.water_tag_partition_target.(Y.c.ρq_tot)
+        Δz = FT(200)
+        tol = 100 * eps(FT) * maximum(abs, parent(ᶜbase))
+        u = FT(2)^-10
+
+        # Case 1: cell 3 stays below zero. The bracket withheld `x` inside the
+        # solve: the ledger and the parent rise by it, and the partition does
+        # not change. A transport mismatch in cells 4 and 5 has both signs and
+        # no column total. Every number is exact in binary at cell 3, so the
+        # negative part's column total is zero.
+        x = u / 4
+        Y1 = closed!(state(), set!(copy(ᶜbase), 3, -u))
+        U1 = copy(Y1)
+        set!(U1.c.ρq_tot, 3, -u + x)
+        set!(U1.c.q_tag_exp_negative, 3, FT(2)^-8 + x)
+        set!(U1.c.ρq_tot, 4, at(Y1.c.ρq_tot, 4) + u)
+        set!(U1.c.ρq_tot, 5, at(Y1.c.ρq_tot, 5) - u)
+        after1, dY1 = stage(Y1, U1)
+        @test sum(dY1.c.q_tag_inc_negative) == 0
+        @test all(iszero, parent(dY1.c.q_tag_inc_negative))
+        # The partition's column change equals the target's.
+        @test abs(sum(partition(after1) .- partition(Y1)) - sum(target(U1) .- target(Y1))) *
+              Δz <= tol * Δz
+        # No cell's correction exceeds its mismatch, which here is the target's
+        # change, since the partition's own tendencies are zero.
+        ᶜmismatch = target(U1) .- target(Y1)
+        ᶜcorrection = partition(after1) .- partition(Y1)
+        @test all(abs.(parent(ᶜcorrection)) .<= abs.(parent(ᶜmismatch)) .+ tol)
+        @test abs(at(ᶜcorrection, 3)) <= tol
+
+        # Case 2, the crossing (the review's S2): cell 3 goes from -u/2 to
+        # 3u/8 through a withheld gain of 7u/8. Its partition and that of the
+        # cell above are empty. The crossing's positive part, 3u/8, goes to
+        # the partition in cell 3, by mask, and no cell ends above its target.
+        Y2 = closed!(state(), set!(copy(ᶜbase), 3, -u / 2))
+        for name in (:ρq_tag_tropo, :ρq_tag_strat, :ρq_tag_evap)
+            set!(getproperty(Y2.c, name), 4, zero(FT))
+        end
+        U2 = copy(Y2)
+        set!(U2.c.ρq_tot, 3, 3u / 8)
+        set!(U2.c.q_tag_exp_negative, 3, FT(2)^-8 + 7u / 8)
+        after2, dY2 = stage(Y2, U2)
+        g = 3u / 8
+        @test at(partition(after2), 3) ≈ g rtol = 100 * eps(FT)
+        @test at(after2.c.ρq_tag_tropo, 3) ≈ at(ᶜmasks.ρq_tag_tropo, 3) * g rtol =
+            100 * eps(FT)
+        @test all(parent(partition(after2)) .<= parent(target(U2)) .+ tol)
+        @test dtγ * at(dY2.c.q_tag_inc_negative, 3) ≈ g rtol = 100 * eps(FT)
+        # Each tag's own ledger is its change, bit for bit.
+        for name in (:tropo, :strat, :evap)
+            @test isequal(
+                parent(getproperty(dY2.c, Symbol(:q_tag_led_inc_, name))),
+                parent(getproperty(dY2.c, Symbol(:ρq_tag_, name))),
+            )
+        end
+        # The source tag takes no part of `g`.
+        @test at(dY2.c.ρq_tag_evap, 3) == 0
+
+        # Case 3: the rule did not act, `δL = 0`. A solve takes cell 3 below
+        # zero and changes the column's total, so the negative part and the
+        # part left out are both in play. The ledger is not zero but does not
+        # change. `dY` is the code's before the extension, bit for bit: its
+        # checksum was taken at 210eeece, on Julia 1.11 and 1.10.
+        Y3 = closed!(state(), ᶜbase)
+        x3 = at(ᶜbase, 3)
+        U3 = closed!(state(), ᶜbase)
+        @. U3.c.ρq_tot = ᶜbase
+        set!(U3.c.ρq_tot, 3, -FT(3e-3))
+        set!(U3.c.ρq_tot, 4, at(ᶜbase, 4) + x3 + FT(3e-3))
+        set!(U3.c.ρq_tot, 1, at(ᶜbase, 1) + FT(1e-4))
+        set!(U3.c.ρq_tot, 6, at(ᶜbase, 6) - FT(3e-4))
+        _, dY3 = stage(Y3, U3)
+        @test any(!iszero, parent(dY3.c.q_tag_inc_negative))
+        @test any(!iszero, parent(dY3.c.q_tag_inc_left))
+        @test bits_checksum(parent(dY3.c)) == PINNED_FOLLOWER_CHECKSUMS[FT]
     end
 end
 
