@@ -1,0 +1,45 @@
+code f4a5108d; host hpdar03c06s02; start 2026-09-30T08:56:09+02:00
+== probe2 (1.10) 2026-09-30T08:56:09+02:00
+julia 1.10.12
+== on  blocks 25  matrix type length 44229
+  update_jacobian!            0
+  copy with the call          7392
+  copy without the call       7392
+  advection                   0
+  sedimentation               0
+  eddy diffusivities          0
+  diffusion                   7392
+  rain-out                    0
+  sgs (five)                  0
+  zero velocity               0
+== off  blocks 22  matrix type length 37888
+  update_jacobian!            0
+  copy with the call          7360
+  copy without the call       7360
+  advection                   0
+  sedimentation               0
+  eddy diffusivities          0
+  diffusion                   7360
+  rain-out                    0
+  sgs (five)                  0
+  zero velocity               0
+== j110_unit: tagged_water_rainout_jacobian_tests.jl in /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj with wp4aj_ci110_env 2026-09-30T09:03:28+02:00
+exit=0 j110_unit 2026-09-30T09:04:19+02:00
+Test Summary:           | Pass  Total  Time
+The share's derivatives |   38     38  0.2s
+Test Summary:                        | Pass  Total   Time
+The tags' rain-out blocks, assembled |   62     62  32.7s
+Test Summary:                 | Pass  Total  Time
+Where the switch does nothing |   22     22  0.5s
+Test Summary:            | Pass  Total   Time
+The key and its refusals |   12     12  10.2s
+== j110_integration: tagged_water_rainout_jacobian_integration.jl in /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj with wp4aj_ci110_env 2026-09-30T09:04:19+02:00
+exit=0 j110_integration 2026-09-30T09:11:18+02:00
+│   update_bytes = 0
+│   update_bytes_off = 0
+│   split_bytes = 1056
+└   split_bytes_off = 1056
+┌ Info: Making AtmosConfig with config files: 
+Test Summary:               | Pass  Total     Time
+The tags' rain-out Jacobian |   75     75  6m51.0s
+end 2026-09-30T09:11:18+02:00

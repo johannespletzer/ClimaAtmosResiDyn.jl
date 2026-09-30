@@ -86,6 +86,11 @@ not checked, it says so.
         `update_diffusion_jacobian!`). Other sessions merged #131 to #134
         (tiered CI, split memory groups, docs simplification, CI for other
         workflows).
+      + **WP4a-J is closed** (2026-09-30), by the checklist in README.md: W51
+        in FINDINGS, the 17 runs in RUNS, `output/wp4aj/` with the #130 fix's
+        checks in `tests_130/`, and the decision (off by default) in
+        DECISIONS. Its follow-up, the copies' part of known issue 4 and UP1,
+        waits for the owner.
       + **Open PR #135** (the WP4b review's transport-2):
         `q_tag_leak_vdiff` and `q_tag_leak_sponge` report under the rain and
         snow key. After the owner's review, the leak means the raw

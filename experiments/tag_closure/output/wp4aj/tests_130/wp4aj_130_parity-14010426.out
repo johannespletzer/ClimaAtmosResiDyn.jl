@@ -1,0 +1,67 @@
+code f4a5108d; host hpdar03c05s08; start 2026-09-30T08:56:10+02:00
+Precompiling ClimaAtmos...
+    ClimaAtmos Being precompiled by another process (pid: 81083, pidfile: /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu/compiled/v1.11/ClimaAtmos/4EXdy_nHqaE.ji.pidfile)
+  31155.6 ms  ✓ ClimaAtmos
+  1 dependency successfully precompiled in 34 seconds. 277 already precompiled.
+parity runs: main 0, fix 0 2026-09-30T09:07:15+02:00
+switch-on runs: prefix 0, fix 0 2026-09-30T09:15:44+02:00
+== compare: main against the fix, no key
+   implicit.f      bit for bit
+   remaining.c     bit for bit
+   remaining.f     bit for bit
+   lim.c           bit for bit
+   lim.f           bit for bit
+== tags_0m.jls
+   a: (julia = "1.11.9", host = "hpdar03c05s08", cpu = "Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30GHz", climaatmos = "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mainref", commit = "4060c782", manifest_sha1 = "none")
+   b: (julia = "1.11.9", host = "hpdar03c05s08", cpu = "Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30GHz", climaatmos = "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj", commit = "f4a5108d", manifest_sha1 = "none")
+   field names and time equal: true
+   state.c         bit for bit
+   state.f         bit for bit
+   implicit.c      bit for bit
+   implicit.f      bit for bit
+   remaining.c     bit for bit
+   remaining.f     bit for bit
+   lim.c           bit for bit
+   lim.f           bit for bit
+== tags_0m_vdiff.jls
+   a: (julia = "1.11.9", host = "hpdar03c05s08", cpu = "Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30GHz", climaatmos = "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mainref", commit = "4060c782", manifest_sha1 = "none")
+   b: (julia = "1.11.9", host = "hpdar03c05s08", cpu = "Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30GHz", climaatmos = "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj", commit = "f4a5108d", manifest_sha1 = "none")
+   field names and time equal: true
+   state.c         bit for bit
+   state.f         bit for bit
+   implicit.c      bit for bit
+   implicit.f      bit for bit
+   remaining.c     bit for bit
+   remaining.f     bit for bit
+   lim.c           bit for bit
+   lim.f           bit for bit
+ALL BIT FOR BIT
+compare exit 0
+== compare: before the fix against the fix, the switch on
+== tags_0m_on.jls
+   a: (julia = "1.11.9", host = "hpdar03c05s08", cpu = "Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30GHz", climaatmos = "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-prefix", commit = "79ba1435", manifest_sha1 = "none")
+   b: (julia = "1.11.9", host = "hpdar03c05s08", cpu = "Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30GHz", climaatmos = "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj", commit = "f4a5108d", manifest_sha1 = "none")
+   field names and time equal: true
+   state.c         bit for bit
+   state.f         bit for bit
+   implicit.c      bit for bit
+   implicit.f      bit for bit
+   remaining.c     bit for bit
+   remaining.f     bit for bit
+   lim.c           bit for bit
+   lim.f           bit for bit
+== tags_0m_vdiff_on.jls
+   a: (julia = "1.11.9", host = "hpdar03c05s08", cpu = "Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30GHz", climaatmos = "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-prefix", commit = "79ba1435", manifest_sha1 = "none")
+   b: (julia = "1.11.9", host = "hpdar03c05s08", cpu = "Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30GHz", climaatmos = "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj", commit = "f4a5108d", manifest_sha1 = "none")
+   field names and time equal: true
+   state.c         bit for bit
+   state.f         bit for bit
+   implicit.c      bit for bit
+   implicit.f      bit for bit
+   remaining.c     bit for bit
+   remaining.f     bit for bit
+   lim.c           bit for bit
+   lim.f           bit for bit
+ALL BIT FOR BIT
+compare exit 0
+end 2026-09-30T09:15:48+02:00

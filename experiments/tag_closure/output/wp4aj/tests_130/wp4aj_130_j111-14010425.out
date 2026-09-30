@@ -1,0 +1,39 @@
+code f4a5108d; host hpdar03c05s08; start 2026-09-30T08:56:10+02:00
+== j111_unit: tagged_water_rainout_jacobian_tests.jl in /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj with wp4aj_ci111_env 2026-09-30T08:56:10+02:00
+exit=0 j111_unit 2026-09-30T08:58:18+02:00
+Test Summary:           | Pass  Total  Time
+The share's derivatives |   38     38  0.5s
+Test Summary:                        | Pass  Total   Time
+The tags' rain-out blocks, assembled |   62     62  36.9s
+Test Summary:                 | Pass  Total  Time
+Where the switch does nothing |   22     22  0.6s
+Test Summary:            | Pass  Total   Time
+The key and its refusals |   12     12  13.8s
+== j111_integration: tagged_water_rainout_jacobian_integration.jl in /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj with wp4aj_ci111_env 2026-09-30T08:58:18+02:00
+exit=0 j111_integration 2026-09-30T09:06:36+02:00
+│   update_bytes = 0
+│   update_bytes_off = 0
+│   split_bytes = 0
+└   split_bytes_off = 0
+┌ Info: Making AtmosConfig with config files: 
+Test Summary:               | Pass  Total     Time
+The tags' rain-out Jacobian |   75     75  8m06.8s
+== j111_mut1_unit: tagged_water_rainout_jacobian_tests.jl in /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1 with wp4aj_mut1_ci111_env 2026-09-30T09:06:36+02:00
+exit=1 j111_mut1_unit 2026-09-30T09:08:24+02:00
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:227
+  Expression: ≈(added[:, 2], diffusion_values[:, 2] .+ vec(parent(ᶜentry)), rtol = 10 * eps(FT))
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:259
+  Expression: scale > 0
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:260
+  Expression: maximum(abs, parent(ᶜJv) .- parent(ᶜexpected)) <= 1.0e-7scale
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:259
+  Expression: scale > 0
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:260
+  Expression: maximum(abs, parent(ᶜJv) .- parent(ᶜexpected)) <= 1.0e-7scale
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:259
+  Expression: scale > 0
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:260
+  Expression: maximum(abs, parent(ᶜJv) .- parent(ᶜexpected)) <= 1.0e-7scale
+Test Summary:                        | Pass  Fail  Total   Time
+The tags' rain-out blocks, assembled |   44    18     62  35.1s
+end 2026-09-30T09:08:24+02:00

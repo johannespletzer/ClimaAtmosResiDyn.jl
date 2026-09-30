@@ -1,0 +1,243 @@
+Precompiling ClimaAtmos...
+  40476.5 ms  ✓ ClimaAtmos
+  1 dependency successfully precompiled in 60 seconds. 277 already precompiled.
+ERROR: LoadError: Some tests did not pass: 44 passed, 18 failed, 0 errored, 0 broken.
+in expression starting at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:148
+Test Summary:           | Pass  Total  Time
+The share's derivatives |   38     38  0.5s
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:192
+  Expression: maximum(abs, parent(ᶜdiagonal_v) .- parent(ᶜexpected_diagonal)) <= 10 * eps(FT) * scale
+   Evaluated: 2.1707732f-5 <= 1.4875777f-8
+
+Stacktrace:
+ [1] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:680 [inlined]
+ [2] macro expansion
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:192 [inlined]
+ [3] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:1709 [inlined]
+ [4] top-level scope
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:149
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:192
+  Expression: maximum(abs, parent(ᶜdiagonal_v) .- parent(ᶜexpected_diagonal)) <= 10 * eps(FT) * scale
+   Evaluated: 0.00014784187f0 <= 1.4875777f-8
+
+Stacktrace:
+ [1] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:680 [inlined]
+ [2] macro expansion
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:192 [inlined]
+ [3] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:1709 [inlined]
+ [4] top-level scope
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:149
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:192
+  Expression: maximum(abs, parent(ᶜdiagonal_v) .- parent(ᶜexpected_diagonal)) <= 10 * eps(FT) * scale
+   Evaluated: 0.00014784187f0 <= 1.4875777f-8
+
+Stacktrace:
+ [1] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:680 [inlined]
+ [2] macro expansion
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:192 [inlined]
+ [3] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:1709 [inlined]
+ [4] top-level scope
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:149
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:227
+  Expression: ≈(added[:, 2], diffusion_values[:, 2] .+ vec(parent(ᶜentry)), rtol = 10 * eps(FT))
+   Evaluated: Float32[-1.009614, -1.0075098, -0.99850124, -0.99087054, -0.9916334, -1.0000886, -1.0084622, -1.0090557, -1.0013235, -0.9923744, -0.99043626, -0.99729097, -1.0066364, -1.0098803, -1.0040404, -0.99448574] ≈ Float32[-1.009614, -1.0075098, -0.99850124, -0.99087054, -0.9916334, -1.0133412, -1.0084622, -1.0176814, -1.0068377, -0.9949918, -0.9910209, -0.99729097, -1.0081031, -1.0150579, -1.0152525, -1.0138264] (rtol=1.1920929e-6)
+
+Stacktrace:
+ [1] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:680 [inlined]
+ [2] macro expansion
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:227 [inlined]
+ [3] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:1709 [inlined]
+ [4] top-level scope
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:149
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:227
+  Expression: ≈(added[:, 2], diffusion_values[:, 2] .+ vec(parent(ᶜentry)), rtol = 10 * eps(FT))
+   Evaluated: Float32[-1.009614, -1.0075098, -0.99850124, -0.99087054, -0.9916334, -1.0000886, -1.0084622, -1.0090557, -1.0013235, -0.9923744, -0.99043626, -0.99729097, -1.0066364, -1.0098803, -1.0040404, -0.99448574] ≈ Float32[-1.0168036, -1.0173726, -1.0106341, -1.004486, -1.0056628, -1.0133412, -1.0084622, -1.0176814, -1.0068377, -0.9949918, -0.9910209, -0.99729097, -1.0081031, -1.0150579, -1.0152525, -1.0138264] (rtol=1.1920929e-6)
+
+Stacktrace:
+ [1] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:680 [inlined]
+ [2] macro expansion
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:227 [inlined]
+ [3] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:1709 [inlined]
+ [4] top-level scope
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:149
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:227
+  Expression: ≈(added[:, 2], diffusion_values[:, 2] .+ vec(parent(ᶜentry)), rtol = 10 * eps(FT))
+   Evaluated: Float32[-1.009614, -1.0075098, -0.99850124, -0.99087054, -0.9916334, -1.0000886, -1.0084622, -1.0090557, -1.0013235, -0.9923744, -0.99043626, -0.99729097, -1.0066364, -1.0098803, -1.0040404, -0.99448574] ≈ Float32[-1.0168036, -1.0173726, -1.0106341, -1.004486, -0.9916334, -1.0133412, -1.0084622, -1.0176814, -1.0013235, -0.9949918, -0.9910209, -0.99729097, -1.0081031, -1.0150579, -1.0152525, -1.0138264] (rtol=1.1920929e-6)
+
+Stacktrace:
+ [1] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:680 [inlined]
+ [2] macro expansion
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:227 [inlined]
+ [3] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:1709 [inlined]
+ [4] top-level scope
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:149
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:192
+  Expression: maximum(abs, parent(ᶜdiagonal_v) .- parent(ᶜexpected_diagonal)) <= 10 * eps(FT) * scale
+   Evaluated: 2.1707549278750238e-5 <= 2.7708291009139282e-17
+
+Stacktrace:
+ [1] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:680 [inlined]
+ [2] macro expansion
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:192 [inlined]
+ [3] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:1709 [inlined]
+ [4] top-level scope
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:149
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:192
+  Expression: maximum(abs, parent(ᶜdiagonal_v) .- parent(ᶜexpected_diagonal)) <= 10 * eps(FT) * scale
+   Evaluated: 0.00014784144394671891 <= 2.7708291009139282e-17
+
+Stacktrace:
+ [1] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:680 [inlined]
+ [2] macro expansion
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:192 [inlined]
+ [3] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:1709 [inlined]
+ [4] top-level scope
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:149
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:192
+  Expression: maximum(abs, parent(ᶜdiagonal_v) .- parent(ᶜexpected_diagonal)) <= 10 * eps(FT) * scale
+   Evaluated: 0.00014784144394671891 <= 2.7708291009139282e-17
+
+Stacktrace:
+ [1] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:680 [inlined]
+ [2] macro expansion
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:192 [inlined]
+ [3] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:1709 [inlined]
+ [4] top-level scope
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:149
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:227
+  Expression: ≈(added[:, 2], diffusion_values[:, 2] .+ vec(parent(ᶜentry)), rtol = 10 * eps(FT))
+   Evaluated: [-1.0096139749187956, -1.0075098724677167, -0.9985012279033705, -0.9908705474927237, -0.9916334436146395, -1.000088513092904, -1.0084622040417517, -1.0090557836200662, -1.0013235175009778, -0.992374415495204, -0.9904362407159549, -0.9972909421169213, -1.0066363388421298, -1.0098803162409287, -1.0040403764532306, -0.994485733187583] ≈ [-1.0096139749187956, -1.0075098724677167, -0.9985012279033705, -0.9908705474927237, -0.9916334436146395, -1.0133410762171149, -1.0084622040417517, -1.0176814117965576, -1.0068378328782668, -0.9949917553447629, -0.9910208994624635, -0.9972909421169213, -1.0081030552945083, -1.015057886240939, -1.015252498022279, -1.0138263856741083] (rtol=2.220446049250313e-15)
+
+Stacktrace:
+ [1] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:680 [inlined]
+ [2] macro expansion
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:227 [inlined]
+ [3] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:1709 [inlined]
+ [4] top-level scope
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:149
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:227
+  Expression: ≈(added[:, 2], diffusion_values[:, 2] .+ vec(parent(ᶜentry)), rtol = 10 * eps(FT))
+   Evaluated: [-1.0096139749187956, -1.0075098724677167, -0.9985012279033705, -0.9908705474927237, -0.9916334436146395, -1.000088513092904, -1.0084622040417517, -1.0090557836200662, -1.0013235175009778, -0.992374415495204, -0.9904362407159549, -0.9972909421169213, -1.0066363388421298, -1.0098803162409287, -1.0040403764532306, -0.994485733187583] ≈ [-1.016803597826745, -1.0173726999437906, -1.0106339973047533, -1.0044859415425846, -1.0056627774313245, -1.0133410762171149, -1.0084622040417517, -1.0176814117965576, -1.0068378328782668, -0.9949917553447629, -0.9910208994624635, -0.9972909421169213, -1.0081030552945083, -1.015057886240939, -1.015252498022279, -1.0138263856741083] (rtol=2.220446049250313e-15)
+
+Stacktrace:
+ [1] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:680 [inlined]
+ [2] macro expansion
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:227 [inlined]
+ [3] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:1709 [inlined]
+ [4] top-level scope
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:149
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:227
+  Expression: ≈(added[:, 2], diffusion_values[:, 2] .+ vec(parent(ᶜentry)), rtol = 10 * eps(FT))
+   Evaluated: [-1.0096139749187956, -1.0075098724677167, -0.9985012279033705, -0.9908705474927237, -0.9916334436146395, -1.000088513092904, -1.0084622040417517, -1.0090557836200662, -1.0013235175009778, -0.992374415495204, -0.9904362407159549, -0.9972909421169213, -1.0066363388421298, -1.0098803162409287, -1.0040403764532306, -0.994485733187583] ≈ [-1.016803597826745, -1.0173726999437906, -1.0106339973047533, -1.0044859415425846, -0.9916334436146395, -1.0133410762171149, -1.0084622040417517, -1.0176814117965576, -1.0013235175009778, -0.9949917553447629, -0.9910208994624635, -0.9972909421169213, -1.0081030552945083, -1.015057886240939, -1.015252498022279, -1.0138263856741083] (rtol=2.220446049250313e-15)
+
+Stacktrace:
+ [1] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:680 [inlined]
+ [2] macro expansion
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:227 [inlined]
+ [3] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:1709 [inlined]
+ [4] top-level scope
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:149
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:259
+  Expression: scale > 0
+   Evaluated: 0.0 > 0
+
+Stacktrace:
+ [1] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:680 [inlined]
+ [2] macro expansion
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:259 [inlined]
+ [3] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:1709 [inlined]
+ [4] top-level scope
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:149
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:260
+  Expression: maximum(abs, parent(ᶜJv) .- parent(ᶜexpected)) <= 1.0e-7scale
+   Evaluated: 1.2413794151227504e-5 <= 0.0
+
+Stacktrace:
+ [1] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:680 [inlined]
+ [2] macro expansion
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:260 [inlined]
+ [3] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:1709 [inlined]
+ [4] top-level scope
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:149
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:259
+  Expression: scale > 0
+   Evaluated: 0.0 > 0
+
+Stacktrace:
+ [1] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:680 [inlined]
+ [2] macro expansion
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:259 [inlined]
+ [3] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:1709 [inlined]
+ [4] top-level scope
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:149
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:260
+  Expression: maximum(abs, parent(ᶜJv) .- parent(ᶜexpected)) <= 1.0e-7scale
+   Evaluated: 2.0582438363283424e-5 <= 0.0
+
+Stacktrace:
+ [1] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:680 [inlined]
+ [2] macro expansion
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:260 [inlined]
+ [3] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:1709 [inlined]
+ [4] top-level scope
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:149
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:259
+  Expression: scale > 0
+   Evaluated: 0.0 > 0
+
+Stacktrace:
+ [1] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:680 [inlined]
+ [2] macro expansion
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:259 [inlined]
+ [3] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:1709 [inlined]
+ [4] top-level scope
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:149
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:260
+  Expression: maximum(abs, parent(ᶜJv) .- parent(ᶜexpected)) <= 1.0e-7scale
+   Evaluated: 4.4352433181493414e-5 <= 0.0
+
+Stacktrace:
+ [1] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:680 [inlined]
+ [2] macro expansion
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:260 [inlined]
+ [3] macro expansion
+   @ ~/.julia/juliaup/julia-1.11.9+0.x64.linux.gnu/share/julia/stdlib/v1.11/Test/src/Test.jl:1709 [inlined]
+ [4] top-level scope
+   @ ~/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:149
+Test Summary:                        | Pass  Fail  Total   Time
+The tags' rain-out blocks, assembled |   44    18     62  35.1s

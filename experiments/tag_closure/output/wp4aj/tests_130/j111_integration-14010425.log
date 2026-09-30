@@ -1,0 +1,265 @@
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj/src/config/../../config/default_configs/default_config.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:none}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.EquilibriumMicrophysics0M, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, Nothing, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`ClimaAtmos.DecayWithHeightDiffusion{false, Float64}`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{Nothing}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, ClimaAtmos.WaterTaggingModel{Tuple{ClimaAtmos.WaterTag{:tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:evap, Nothing, Tuple{Symbol}}}, false, ClimaAtmos.TracerWaterTagTransport, false, false, false, false}, Nothing, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+[ Info: Single-process ClimaAtmos run on CPUSingleThreaded
+[ Info: Using ODE config: `ClimaTimeSteppers.ARS222`
+[ Info: Initialized state (66.964 μs, 3.32 KiB)
+[ Info: Built cache (40.589 s, 7.96 GiB)
+[ Info: Assembled callbacks (180.64 ms, 17.7 MiB)
+┌ Info: Jacobian algorithm: ManualSparseJacobian(
+│   approximate_solve_iters = 1,
+└ )
+[ Info: Jacobian derivative flags: topography_flag = IgnoreDerivative, diffusion_flag = UseDerivative, water_tag_cross_flag = UseDerivative
+[ Info: Built tendency function (23.14 s, 1.26 GiB)
+[ Info: Initialized integrator (14.723 s, 1.54 GiB)
+[ Info: Set up diagnostics (8.341 s, 309.22 MiB)
+┌ Info: Simulation info
+│   job_id = "rainout_jacobian_off"
+└   output_dir = "/dss/dsstbyfs02/scratch/0D/di38kez/claude_work/wp4aj_run/run/j111_integration/jl_wpfVyi/output_0000"
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj/src/config/../../config/default_configs/default_config.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:none}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.EquilibriumMicrophysics0M, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, Nothing, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`ClimaAtmos.DecayWithHeightDiffusion{false, Float64}`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{Nothing}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, ClimaAtmos.WaterTaggingModel{Tuple{ClimaAtmos.WaterTag{:tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:evap, Nothing, Tuple{Symbol}}}, false, ClimaAtmos.TracerWaterTagTransport, false, false, false, true}, Nothing, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+[ Info: Single-process ClimaAtmos run on CPUSingleThreaded
+[ Info: Using ODE config: `ClimaTimeSteppers.ARS222`
+[ Info: Initialized state (68.285 μs, 3.32 KiB)
+[ Info: Built cache (9.784 s, 1.14 GiB)
+[ Info: Assembled callbacks (90.296 ms, 6.1 MiB)
+┌ Info: Jacobian algorithm: ManualSparseJacobian(
+│   approximate_solve_iters = 1,
+└ )
+[ Info: Jacobian derivative flags: topography_flag = IgnoreDerivative, diffusion_flag = UseDerivative, water_tag_cross_flag = UseDerivative
+[ Info: Built tendency function (3.035 s, 138.26 MiB)
+[ Info: Initialized integrator (10.62 s, 873.68 MiB)
+[ Info: Set up diagnostics (4.486 s, 9.9 MiB)
+┌ Info: Simulation info
+│   job_id = "rainout_jacobian_on"
+└   output_dir = "/dss/dsstbyfs02/scratch/0D/di38kez/claude_work/wp4aj_run/run/j111_integration/jl_qEViOF/output_0000"
+┌ Info: Running
+│   job_id = "rainout_jacobian_off"
+│   output_dir = "/dss/dsstbyfs02/scratch/0D/di38kez/claude_work/wp4aj_run/run/j111_integration/jl_wpfVyi/output_0000"
+└   tspan = (0.0 seconds (2010-01-01T00:00:00) [counter = 0, period = 1 second, epoch = 2010-01-01T00:00:00], 600.0 seconds (2010-01-01T00:10:00) [counter = 600, period = 1 second, epoch = 2010-01-01T00:00:00])
+┌ Info: Progress
+│   simulation_time = "2 minutes"
+│   n_steps_completed = 1
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "20.0%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "0.0 (sdpd_estimate = 0.0)"
+│   date_now = 2026-09-30T09:05:23.126
+└   estimated_finish_date = 2026-09-30T09:05:23.126
+┌ Info: Progress
+│   simulation_time = "4 minutes"
+│   n_steps_completed = 2
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "40.0%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "0.247"
+│   date_now = 2026-09-30T09:05:24.387
+└   estimated_finish_date = 2026-09-30T09:05:24.387
+┌ Info: Progress
+│   simulation_time = "8 minutes"
+│   n_steps_completed = 4
+│   wall_time_per_step = "6 milliseconds, 35 microseconds"
+│   wall_time_total = "30 milliseconds, 177 microseconds"
+│   wall_time_remaining = "6 milliseconds, 35 microseconds"
+│   wall_time_spent = "24 milliseconds, 141 microseconds"
+│   percent_complete = "80.0%"
+│   estimated_sypd = "54.435"
+│   instantaneous_sypd = "54.435"
+│   date_now = 2026-09-30T09:05:24.636
+└   estimated_finish_date = 2026-09-30T09:05:25.636
+[ Info: Saving state to HDF5 file on day 0 second 600
+[ Info: solve! walltime = 2.878
+[ Info: sypd: 0.571
+[ Info: wall_time_per_timestep: 575 milliseconds, 516 microseconds
+[ Info: Memory currently used (after solve!) by the process (RSS): 4.99 GiB
+┌ Info: Running
+│   job_id = "rainout_jacobian_on"
+│   output_dir = "/dss/dsstbyfs02/scratch/0D/di38kez/claude_work/wp4aj_run/run/j111_integration/jl_qEViOF/output_0000"
+└   tspan = (0.0 seconds (2010-01-01T00:00:00) [counter = 0, period = 1 second, epoch = 2010-01-01T00:00:00], 600.0 seconds (2010-01-01T00:10:00) [counter = 600, period = 1 second, epoch = 2010-01-01T00:00:00])
+┌ Info: Progress
+│   simulation_time = "2 minutes"
+│   n_steps_completed = 1
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "20.0%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "0.0 (sdpd_estimate = 0.0)"
+│   date_now = 2026-09-30T09:06:09.658
+└   estimated_finish_date = 2026-09-30T09:06:09.658
+┌ Info: Progress
+│   simulation_time = "4 minutes"
+│   n_steps_completed = 2
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "40.0%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "0.358"
+│   date_now = 2026-09-30T09:06:10.577
+└   estimated_finish_date = 2026-09-30T09:06:10.577
+┌ Info: Progress
+│   simulation_time = "8 minutes"
+│   n_steps_completed = 4
+│   wall_time_per_step = "1 millisecond, 399 microseconds"
+│   wall_time_total = "6 milliseconds, 999 microseconds"
+│   wall_time_remaining = "1 millisecond, 399 microseconds"
+│   wall_time_spent = "5 milliseconds, 599 microseconds"
+│   percent_complete = "80.0%"
+│   estimated_sypd = "234.674"
+│   instantaneous_sypd = "234.674"
+│   date_now = 2026-09-30T09:06:10.580
+└   estimated_finish_date = 2026-09-30T09:06:11.580
+[ Info: solve! walltime = 0.011
+[ Info: sypd: 143.725
+[ Info: wall_time_per_timestep: 2 milliseconds, 287 microseconds
+[ Info: Memory currently used (after solve!) by the process (RSS): 4.99 GiB
+┌ Info: Jacobian allocations per call
+│   update_bytes = 0
+│   update_bytes_off = 0
+│   split_bytes = 0
+└   split_bytes_off = 0
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj/src/config/../../config/default_configs/default_config.yml
+┌ Info: numerics 
+│               `energy_q_tot_upwinding`::`Val{:vanleer_limiter}`
+│                     `tracer_upwinding`::`Val{:vanleer_limiter}`
+│            `edmfx_mse_q_tot_upwinding`::`Val{:first_order}`
+│              `edmfx_sgsflux_upwinding`::`Val{:none}`
+│               `edmfx_tracer_upwinding`::`Val{:first_order}`
+│              `test_dycore_consistency`::`Nothing`
+│                 `reproducible_restart`::`Nothing`
+│                              `limiter`::`Nothing`
+│                            `diff_mode`::`ClimaAtmos.Implicit`
+│                            `hyperdiff`::`ClimaAtmos.Hyperdiffusion{Float64}`
+└     `vertical_water_borrowing_species`::`Nothing`
+┌ Info: AtmosModel: 
+│ 
+│                             `water`::`ClimaAtmos.AtmosWater{ClimaAtmos.EquilibriumMicrophysics0M, ClimaAtmos.QuadratureCloud, ClimaAtmos.Implicit, Nothing, ClimaAtmos.SGSQuadrature{3, StaticArraysCore.SVector{3, Float64}, StaticArraysCore.SVector{3, Float64}, ClimaAtmos.GaussianSGS, Float64}, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.FixedTerminalVelocity, ClimaAtmos.DiagnosticTerminalVelocity, ClimaAtmos.FixedTerminalVelocity}`
+│                         `scm_setup`::`ClimaAtmos.SCMSetup{ClimaAtmos.LargeScaleSubsidence{ClimaAtmos.Setups.var"#27#28"{Float64}}, Nothing, Nothing, Bool, @NamedTuple{prof_ug::Returns{Float64}, prof_vg::Returns{Float64}, coriolis_param::Float64}}`
+│                         `radiation`::`ClimaAtmos.AtmosRadiation{ClimaAtmos.RadiationDYCOMS{Float64}, ClimaAtmos.IdealizedInsolation, Tuple{}, Tuple{}}`
+│                          `turbconv`::`ClimaAtmos.AtmosTurbconv{ClimaAtmos.EDMFXModel{ClimaAtmos.InvZEntrainment, ClimaAtmos.BuoyancyVelocityDetrainment, Val{false}, Val{false}, ClimaAtmos.SmoothMinimumBlending}, Nothing, Nothing, Nothing, Nothing}`
+│                   `prescribed_flow`::`Nothing`
+│                      `gravity_wave`::`ClimaAtmos.AtmosGravityWave{Nothing, Nothing}`
+│                `vertical_diffusion`::`ClimaAtmos.DecayWithHeightDiffusion{false, Float64}`
+│                            `sponge`::`ClimaAtmos.AtmosSponge{Nothing, Nothing}`
+│                           `surface`::`ClimaAtmos.AtmosSurface{ClimaAtmos.SurfaceConditions.MoninObukhov{Float64, ClimaAtmos.SurfaceConditions.HeatFluxes{Float64, Float64}, Float64}, ClimaAtmos.SurfaceConditions.AnalyticTemperature{Returns{Float64}}, ClimaAtmos.SurfaceConditions.SurfaceBoundaryOverrides{Float64, Float64, Nothing, Nothing, Nothing, Nothing}, ClimaAtmos.ConstantAlbedo{Float64}}`
+│                          `numerics`::`ClimaAtmos.AtmosNumerics{Val{:vanleer_limiter}, Val{:vanleer_limiter}, Val{:first_order}, Val{:none}, Val{:first_order}, Nothing, Nothing, Nothing, ClimaAtmos.Implicit, ClimaAtmos.Hyperdiffusion{Float64}, Nothing}`
+│                         `chemistry`::`ClimaAtmos.AtmosChem{Nothing}`
+│                           `tagging`::`ClimaAtmos.AtmosTagging{Nothing, ClimaAtmos.WaterTaggingModel{Tuple{ClimaAtmos.WaterTag{:tropo, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:strat, ClimaAtmos.TanhAltitudeRegion{Float64}, Tuple{}}, ClimaAtmos.WaterTag{:evap, Nothing, Tuple{Symbol}}}, false, ClimaAtmos.TracerWaterTagTransport, false, false, false, true}, Nothing, Nothing, Nothing}`
+└                              `cosp`::`Nothing`
+[ Info: Single-process ClimaAtmos run on CPUSingleThreaded
+[ Info: Using ODE config: `ClimaTimeSteppers.ARS222`
+┌ Warning: Restart file /dss/dsstbyfs02/scratch/0D/di38kez/claude_work/wp4aj_run/run/j111_integration/jl_wpfVyi/output_0000/day0.600.hdf5 was constructed with a different AtmosModel
+└ @ ClimaAtmos ~/git/Clima/ClimaAtmosResiDyn-wp4aj/src/simulation/restart.jl:41
+┌ Info: Restarting simulation from file
+│   restart_file = "/dss/dsstbyfs02/scratch/0D/di38kez/claude_work/wp4aj_run/run/j111_integration/jl_wpfVyi/output_0000/day0.600.hdf5"
+└   restart_time = "10.0 minutes (2010-01-01T00:10:00) [counter = 10, period = 1 minute, epoch = 2010-01-01T00:00:00]"
+[ Info: Loaded restart file (6.993 s, 263.77 MiB)
+[ Info: Built cache (460.502 μs, 159.3 KiB)
+[ Info: Assembled callbacks (116.029 μs, 67.89 KiB)
+┌ Info: Jacobian algorithm: ManualSparseJacobian(
+│   approximate_solve_iters = 1,
+└ )
+[ Info: Jacobian derivative flags: topography_flag = IgnoreDerivative, diffusion_flag = UseDerivative, water_tag_cross_flag = UseDerivative
+[ Info: Built tendency function (1.07 ms, 254.23 KiB)
+[ Info: Initialized integrator (377.874 μs, 90.42 KiB)
+[ Info: Set up diagnostics (336.831 μs, 66.98 KiB)
+┌ Info: Simulation info
+│   job_id = "rainout_jacobian_restart"
+└   output_dir = "/dss/dsstbyfs02/scratch/0D/di38kez/claude_work/wp4aj_run/run/j111_integration/jl_gxaEUq/output_0000"
+┌ Info: Running
+│   job_id = "rainout_jacobian_restart"
+│   output_dir = "/dss/dsstbyfs02/scratch/0D/di38kez/claude_work/wp4aj_run/run/j111_integration/jl_gxaEUq/output_0000"
+└   tspan = (600.0 seconds (2010-01-01T00:10:00) [counter = 600, period = 1 second, epoch = 2010-01-01T00:00:00], 840.0 seconds (2010-01-01T00:14:00) [counter = 840, period = 1 second, epoch = 2010-01-01T00:00:00])
+┌ Info: Progress
+│   simulation_time = "12 minutes"
+│   n_steps_completed = 1
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "50.0%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "0.0 (sdpd_estimate = 0.0)"
+│   date_now = 2026-09-30T09:06:34.145
+└   estimated_finish_date = 2026-09-30T09:06:34.145
+┌ Info: Progress
+│   simulation_time = "14 minutes"
+│   n_steps_completed = 2
+│   wall_time_per_step = "0 seconds"
+│   wall_time_total = "0 seconds"
+│   wall_time_remaining = "0 seconds"
+│   wall_time_spent = "0 seconds"
+│   percent_complete = "100.0%"
+│   estimated_sypd = "Inf"
+│   instantaneous_sypd = "0.412"
+│   date_now = 2026-09-30T09:06:34.942
+└   estimated_finish_date = 2026-09-30T09:06:34.942
+[ Info: solve! walltime = 0.005
+[ Info: sypd: 138.944
+[ Info: wall_time_per_timestep: 2 milliseconds, 366 microseconds
+[ Info: Memory currently used (after solve!) by the process (RSS): 4.99 GiB
+Test Summary:               | Pass  Total     Time
+The tags' rain-out Jacobian |   75     75  8m06.8s

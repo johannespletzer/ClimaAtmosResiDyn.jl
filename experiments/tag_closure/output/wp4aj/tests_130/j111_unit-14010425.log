@@ -1,0 +1,21 @@
+Precompiling ClimaAtmos...
+  38936.7 ms  ✓ ClimaAtmos
+  1 dependency successfully precompiled in 66 seconds. 277 already precompiled.
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj/src/config/../../config/default_configs/default_config.yml
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj/src/config/../../config/default_configs/default_config.yml
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj/src/config/../../config/default_configs/default_config.yml
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj/src/config/../../config/default_configs/default_config.yml
+┌ Info: Making AtmosConfig with config files: 
+└    /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj/src/config/../../config/default_configs/default_config.yml
+Test Summary:           | Pass  Total  Time
+The share's derivatives |   38     38  0.5s
+Test Summary:                        | Pass  Total   Time
+The tags' rain-out blocks, assembled |   62     62  36.9s
+Test Summary:                 | Pass  Total  Time
+Where the switch does nothing |   22     22  0.6s
+Test Summary:            | Pass  Total   Time
+The key and its refusals |   12     12  13.8s
