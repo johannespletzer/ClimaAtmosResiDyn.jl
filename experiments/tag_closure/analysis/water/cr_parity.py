@@ -1,12 +1,14 @@
 """C's revision: the parity check's output (design/NEGATIVE_PARENT_WATER.md,
 section 11.8).
 
-    python3 cr_parity.py [OUTPUT_ROOT [PREFIX]]
+    python3 cr_parity.py [OUTPUT_ROOT [PREFIX [OUTPUT]]]
 
 OUTPUT_ROOT (default $SCRATCH/tag_closure/output) holds
 `<PREFIX>_{tags,untagged}_{rev,main}/output_0000`: site 23 for 10 days
 (PREFIX `cr_parity`, the default) or 30 days (`cr_parity30`, the owner's
-rerun of 2026-09-29), on the revision's run tree and on main's. For each pair it compares every
+rerun of 2026-09-29), on the revision's run tree and on main's. OUTPUT is
+the run's output directory, `output_0000` by default; a rerun with the same
+configs writes `output_0001`. For each pair it compares every
 NetCDF file both runs wrote, as bit patterns, at every output time:
 
   - the revision against main, with tags and without: every model field must
@@ -33,13 +35,14 @@ import numpy as np
 
 ROOT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.environ["SCRATCH"], "tag_closure", "output")
 PREFIX = sys.argv[2] if len(sys.argv) > 2 else "cr_parity"
+OUTPUT = sys.argv[3] if len(sys.argv) > 3 else "output_0000"
 DAY = 86400.0
 MODEL_FIELDS = ("rhoa", "ta", "hus", "clw", "cli", "wa", "pr", "lwp", "arup", "husup")
 failed = []
 
 
 def out(job):
-    return os.path.join(ROOT, job, "output_0000")
+    return os.path.join(ROOT, job, OUTPUT)
 
 
 def bits(a):

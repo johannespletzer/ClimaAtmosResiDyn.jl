@@ -2,7 +2,7 @@
 C's revision: the parity check's prognostic state (design/NEGATIVE_PARENT_WATER.md,
 section 11.8).
 
-    julia --project=<an env with ClimaCore and ClimaComms> cr_parity_state.jl [OUTPUT_ROOT [PREFIX DAY]]
+    julia --project=<an env with ClimaCore and ClimaComms> cr_parity_state.jl [OUTPUT_ROOT [PREFIX DAY [OUTPUT]]]
 
 OUTPUT_ROOT (default $SCRATCH/tag_closure/output) holds
 `<PREFIX>_{tags,untagged}_{rev,main}/output_0000/day<DAY>.0.hdf5`, the state
@@ -21,6 +21,8 @@ import ClimaCore: InputOutput, Fields
 const ROOT = get(ARGS, 1, joinpath(ENV["SCRATCH"], "tag_closure", "output"))
 const PREFIX = get(ARGS, 2, "cr_parity")
 const DAY = get(ARGS, 3, "10")
+# The run's output directory. A rerun with the same configs writes `output_0001`.
+const OUTPUT = get(ARGS, 4, "output_0000")
 const DIAGNOSTIC_PREFIXES = (
     "ρq_tag_", "ρq_rtag_", "ρq_stag_", "q_tag_", "q_rtag_", "q_stag_",
     "ρe_src_", "e_src_", "ρe_tag_", "e_tag_", "prc_",
@@ -28,7 +30,7 @@ const DIAGNOSTIC_PREFIXES = (
 is_diagnostic(name) = any(prefix -> startswith(string(name), prefix), DIAGNOSTIC_PREFIXES)
 
 function read_state(job)
-    path = joinpath(ROOT, job, "output_0000", "day$(DAY).0.hdf5")
+    path = joinpath(ROOT, job, OUTPUT, "day$(DAY).0.hdf5")
     reader = InputOutput.HDF5Reader(path, ClimaComms.SingletonCommsContext())
     Y = InputOutput.read_field(reader, "Y")
     Base.close(reader)
