@@ -25,7 +25,15 @@ Always read the ClimaAtmos-specific guide before working in this repository:
   fields and output may differ. A change that moves model output is a defect
   here, not a new reference. See
   [Fork parity with upstream](docs/clima_atmos_specific.md#fork-parity-with-upstream).
-- Prefer Julia 1.11.x for local work. CI runs the fork's own test groups on 1.10 and 1.11 and the upstream ones on 1.11 only. See [Which jobs run when](docs/clima_atmos_specific.md#which-jobs-run-when).
+- Prefer Julia 1.11.x for local work. CI runs in tiers. A draft pull request
+  gets the load jobs and `infrastructure` on 1.11. A pull request ready for
+  review gets every group on 1.11. The fork's groups run on 1.10 nightly. See
+  [Which jobs run when](docs/clima_atmos_specific.md#which-jobs-run-when).
+- Open a pull request as a draft and mark it ready once the local checks
+  pass. Every push to a pull request that is not a draft runs every group.
+  Locally, run the test files a change touches, and leave whole groups to CI.
+- A red scheduled run opens an issue labelled `nightly-red`. While it is open,
+  only its fix merges.
 - For runtime validation, prefer `julia +1.11 --project=.buildkite .buildkite/ci_driver.jl ...`.
 - That command needs a prepared environment on a cluster, and it fails in
   confusing ways without one. `.buildkite/LocalPreferences.toml` is generated,
