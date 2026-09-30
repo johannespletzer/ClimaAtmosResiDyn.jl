@@ -283,10 +283,14 @@ column_integral(p, ᶜx) = (
                 @test CA.microphysics_gain_rule(p.atmos) === CA.TargetGain()
                 @test iszero(at(partition(target)))
                 @test at(partition(before)) > 0
-                others = [i for i in eachindex(parent(Y_negative.c.ρ)) if i != k]
+                # Linear indices, as `k` is. `eachindex` of the 5-d parent array
+                # gives Cartesian indices, which never equal `k`, so the
+                # cell `k` itself, where the rules differ by design, would
+                # be among `others`.
+                others = [i for i in eachindex(vec(parent(Y_negative.c.ρ))) if i != k]
                 for tag in model.tags
-                    new_part = parent(CA.tag_field(target, tag))
-                    old_part = parent(CA.tag_field(before, tag))
+                    new_part = vec(parent(CA.tag_field(target, tag)))
+                    old_part = vec(parent(CA.tag_field(before, tag)))
                     if CA._is_partition_tag(tag)
                         @test isequal(new_part[others], old_part[others])
                     else
