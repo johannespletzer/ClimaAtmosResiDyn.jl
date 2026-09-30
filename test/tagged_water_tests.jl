@@ -2881,3 +2881,76 @@ end
         )
     end
 end
+
+# W21's plume start in the lowest cell, at its edges (the owner's review of
+# #136). `energy_source_tags_tests.jl` checks the fraction itself. Here the
+# water tags' start takes the fraction's edge values: a supply that is not
+# positive, dew, and nothing supplied at all.
+@testset "The water plume's start at the fraction's edges" begin
+    CC = CA.ClimaCore
+    for FT in (Float32, Float64)
+        space = CC.CommonSpaces.ColumnSpace(
+            FT;
+            z_min = 0,
+            z_max = 1500,
+            z_elem = 4,
+            staggering = CC.CommonSpaces.CellCenter(),
+        )
+        region(above) = CA.TanhAltitudeRegion(FT(750), FT(100), above)
+        tags = (
+            CA.WaterTag{:tropo}(region(false)),
+            CA.WaterTag{:strat}(region(true)),
+            CA.WaterTag{:evap}(nothing, (:surface_flux,)),
+        )
+        masks = CA._tag_masks(CC.Fields.coordinate_field(space), tags)
+        mask = parent(masks.ρq_tag_tropo)[1]
+        # The values by level, one column per tuple entry.
+        by_level(ᶜx) = reshape(parent(ᶜx), 4, :)
+        function start(ε̄_value, f)
+            ᶜε̄ = fill(FT.(ε̄_value), space)
+            ᶜε_start = similar(ᶜε̄)
+            CA.start_water_plume!(ᶜε_start, ᶜε̄, fill(f, space), masks, tags)
+            # Above the lowest cell the start is the grid mean's.
+            @test by_level(ᶜε_start)[2:end, :] == by_level(ᶜε̄)[2:end, :]
+            return by_level(ᶜε_start)[1, :]
+        end
+        fraction(Δ, r, q_b, e, q⁰) =
+            CA._surface_supply_fraction(FT(Δ), FT(r), FT(q_b), FT(e), FT(q⁰))
+        # The water of the grid mean, per unit mass: the partition holds 0.008.
+        ε̄ = (0.006, 0.002, 0.001)
+        edges = (
+            fraction(1e-7, 1e-3, 0.01, 1e-3, 0.008),
+            # A negative `q_b`, as a slightly negative `q̄` could give.
+            fraction(1e-7, 1e-3, -1e-6, 1e-3, 0.008),
+            # Dew.
+            fraction(-1e-7, 1e-3, 0.01, 1e-3, 0.008),
+            # Nothing supplied.
+            fraction(0, 0, 0, 0, 0),
+        )
+        @test 0 < edges[1] < edges[2] < 1
+        @test edges[3] == edges[4] == 0
+        for f in edges
+            ε = start(ε̄, f)
+            shares = ε ./ (ε̄[1] + ε̄[2])
+            @test all(isfinite, shares)
+            # The partition's shares sum to one, and each start is the
+            # mixture of the grid mean's share and the surface flux's.
+            @test shares[1] + shares[2] ≈ 1 rtol = 4 * eps(FT)
+            @test shares[1] ≈ (1 - f) * FT(3 / 4) + f * mask rtol = 4 * eps(FT)
+            @test shares[3] ≈ (1 - f) * FT(1 / 8) + f rtol = 4 * eps(FT)
+        end
+        # Without the flux's part the start is the grid mean's, bit for bit.
+        @test start(ε̄, FT(0)) == collect(FT.(ε̄))
+        # An empty partition starts empty, without `0 / 0`.
+        @test start((0, 0, 0.001), FT(1)) == FT[0, 0, 0]
+
+        # `disable_surface_flux_tendency` gives `f = 0` in every cell.
+        ᶜf = fill(FT(0.5), space)
+        CA.water_plume_surface_fraction!(
+            ᶜf,
+            (; c = (; ρ = ones(space))),
+            (; atmos = (; disable_surface_flux_tendency = true)),
+        )
+        @test all(iszero, parent(ᶜf))
+    end
+end

@@ -10,8 +10,10 @@ on the DYCOMS RF02 EDMF column with 1-moment microphysics, after an hour:
 
  1. the partition stays closed;
  2. the partition's sub-grid tendencies sum to the parent's;
- 3. with one composition everywhere, each tag takes exactly its share of the
-    parent's sub-grid flux, and the exchange moves nothing;
+ 3. with one composition everywhere and no surface moisture flux, each tag
+    takes exactly its share of the parent's sub-grid flux, and the exchange
+    moves nothing. With the flux, the plume starts in the lowest cell with the
+    updraft's surface water, at the shares the model's own supplies give;
  4. the vertical diffusion's leak, in closed form, is the difference the
     diffusion makes between the partition and the parent, also where the
     parent is negative and the partition is closed to option C's target;
@@ -190,7 +192,8 @@ end
         ) < 1e-12
     end
 
-    # With one composition everywhere, the plume's is the grid mean's.
+    # With one composition everywhere, the plume's is the grid mean's, except
+    # for the surface water it starts with (3b).
     shares = (; ρq_tag_tropo = 0.3, ρq_tag_strat = 0.7, ρq_tag_evap = 0.2)
     Y_uniform = copy(Y)
     for (name, share) in pairs(shares)
@@ -199,15 +202,75 @@ end
 
     # 3. Each tag then takes exactly its share of the parent's flux, and the
     # exchange, which moves only a difference of composition, moves nothing.
+    # That holds without the surface moisture flux, whose water the plume
+    # starts with, so the flux is set to zero here and restored after.
     @testset "One composition moves as the parent" begin
+        ᶠρ_flux_q_tot = parent(p.precomputed.sfc_conditions.ρ_flux_q_tot)
+        saved = copy(ᶠρ_flux_q_tot)
+        fill!(ᶠρ_flux_q_tot, 0)
         Yₜ = zero(Y)
         CA.sgs_mass_flux_of_water_tags!(Yₜ, Y_uniform, p, turbconv_model)
+        ᶠρ_flux_q_tot .= saved
         for (name, share) in pairs(shares)
             @test relative_difference(
                 getproperty(Yₜ.c, name),
                 share .* ᶜparent_flux,
             ) < 1e-12
         end
+    end
+
+    # 3b. W21's surface rule (the owner, 2026-09-28): in the lowest cell the
+    # plume starts with the updraft's surface water. Its shares there are
+    # `(1 - f) φ̄ᵢ + f gᵢ`, where `f` is the surface flux's part of the three
+    # supplies of that cell, and `gᵢ` the surface flux's weight: the mask of a
+    # region tag, one for `evap`. That is the copies' steady state there.
+    # Here `f` is rebuilt from the model's own tendencies.
+    @testset "The plume starts with the updraft's surface water" begin
+        lowest(ᶜx) = vec(Array(parent(CA.Fields.level(ᶜx, 1))))
+        lowest_one(ᶜx) = only(lowest(ᶜx))
+        ᶜsgsʲ = Y_uniform.c.sgsʲs.:(1)
+        q_totʲ = lowest_one(ᶜsgsʲ.q_tot)
+        (; ᶜρʲs, sfc_mass_flux_sourceʲs, sfc_q_tot_buoyantʲs) = p.precomputed
+        # The surface flux's increment of `q_totʲ`.
+        Yₜ = zero(Y)
+        CA.surface_flux_tendency!(Yₜ, Y_uniform, p, t)
+        Δ = lowest_one(Yₜ.c.sgsʲs.:(1).q_tot)
+        # The relaxation's rate, as the model's tendency has it.
+        q_b = only(vec(Array(parent(sfc_q_tot_buoyantʲs))))
+        a_min = CA.CAP.min_area(CA.CAP.turbconv_params(p.params))
+        r =
+            only(vec(Array(parent(sfc_mass_flux_sourceʲs)))) /
+            max(lowest_one(ᶜsgsʲ.ρa), lowest_one(ᶜρʲs.:(1)) * a_min)
+        Yₜ = zero(Y)
+        CA.edmfx_boundary_condition_tendency!(Yₜ, Y_uniform, p, t, turbconv_model)
+        @test lowest_one(Yₜ.c.sgsʲs.:(1).q_tot) ≈ r * (q_b - q_totʲ) rtol = 1e-12
+        # Entrainment's rate, from the model's tendency.
+        ᶜq⁰ = similar(Y.c.ρ)
+        ᶜq⁰ .= CA.ᶜspecific_env_value(CA.@name(q_tot), Y_uniform, p)
+        q⁰ = lowest_one(ᶜq⁰)
+        @test q⁰ ≈ lowest_one(p.precomputed.ᶜq_tot_nonneg⁰) rtol = 1e-12
+        Yₜ = zero(Y)
+        CA.edmfx_entr_detr_tendency!(Yₜ, Y_uniform, p, t, turbconv_model)
+        e = lowest_one(Yₜ.c.sgsʲs.:(1).q_tot) / (q⁰ - q_totʲ)
+        f = max(Δ, 0) / (r * q_b + e * q⁰ + max(Δ, 0))
+        @info "The surface flux's part of the lowest cell's supplies" Δ r * q_b e * q⁰ f
+        # A part well above rounding, so the check below can fail.
+        @test f > 1e-4
+        # The plume's start, rescaled to the updraft's water.
+        masks = p.tagging.ᶜwater_masks
+        gains = (
+            lowest_one(masks.ρq_tag_tropo),
+            lowest_one(masks.ρq_tag_strat),
+            1.0,
+        )
+        φ̄ = (0.3, 0.7, 0.2)
+        ψ = map((φ, g) -> (1 - f) * φ + f * g, φ̄, gains)
+        expected = map(s -> s * q_totʲ / (ψ[1] + ψ[2]), ψ)
+        inputs = CA.water_exchange_inputs!(Y_uniform, p, turbconv_model, model)
+        plume = lowest(inputs.ᶜεʲ)
+        @test isapprox(collect(plume), collect(expected); rtol = 1e-10)
+        # `evap` holds more in the updraft than its grid share.
+        @test plume[3] > φ̄[3] * q_totʲ * (1 + f / 2)
     end
 
     # 4. The diffusion moves the tags at `K_h + K_e` on their whole value, and

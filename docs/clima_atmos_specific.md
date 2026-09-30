@@ -124,8 +124,9 @@ the other two groups' CI time exactly as already measured.
 `tagging_source_edmf` runs the energy source tags on the DYCOMS RF02 column
 under `PrognosticEDMFX`, with 1-moment microphysics and the updrafts' vertical
 diffusion on. It checks that the tags take their shares of the sub-grid mass
-flux and of the sedimentation corrections, and that the exchange of provenance
-at the mass flux sums to zero over the partition. The EDMF column is the most
+flux and of the sedimentation corrections, that the exchange of provenance
+at the mass flux sums to zero over the partition, and that its plume starts in
+the lowest cell with the updraft's surface energy (W21's rule). The EDMF column is the most
 expensive model in the suite to build, and the file builds it twice, with the
 tags and without them, to check that the model's own fields do not move.
 
@@ -155,8 +156,11 @@ builds it twice.
 
   - `tagging_water_edmf` runs the default mode under 1M. It checks that the
     partition's sub-grid tendencies sum to the parent's, that one composition
-    everywhere moves as the parent does, that the vertical diffusion's leak in
-    closed form is the difference the diffusion makes, and the audit's columns.
+    everywhere moves as the parent does without the surface moisture flux,
+    that the plume starts in the lowest cell with the updraft's surface water
+    at the shares the model's own supplies give (W21's rule), that the
+    vertical diffusion's leak in closed form is the difference the diffusion
+    makes, and the audit's columns.
   - `tagging_water_edmf_copies` runs the copies under 1M, with the
     microphysics explicit, so that parity covers the explicit path, and ten
     Newton iterations: with one, the tags lag the parent's solve there by

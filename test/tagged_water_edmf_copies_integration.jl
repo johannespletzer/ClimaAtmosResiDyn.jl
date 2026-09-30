@@ -19,7 +19,9 @@ so that parity covers the tags' brackets on the explicit path, after an hour:
     partition's copies take all of the updraft's surface flux. The diffusion
     leak's correction, called on its own, closes the partition's diffusion
     and the copies'. The updraft's leaking water includes the negative part
-    of `q_totʲ`, and keeps its old value where `q_totʲ` is not negative;
+    of `q_totʲ`, and keeps its old value where `q_totʲ` is not negative.
+    Set on the copies, the default mode's plume start leaves them a smaller
+    share tendency in the lowest cell than the grid mean's composition does;
  5. the copies' own code allocates next to nothing;
  6. the model's fields are those of the same column without tags, bit for bit;
  7. the partition copies' sedimentation cross blocks to each updraft species
@@ -107,6 +109,15 @@ end
             parent(ᶜsgsʲ_plume.q_tag_tropo),
             parent(ᶜsgsʲ.q_tag_tropo),
         )
+        # In the lowest cell the plume starts with the updraft's surface water
+        # (W21's rule), so `evap`'s copy starts above its grid share of
+        # `q_totʲ` there. The default mode's test checks the start's shares.
+        lowest(ᶜx) = only(vec(Array(parent(CA.Fields.level(ᶜx, 1)))))
+        φ̄_evap =
+            lowest(Y.c.ρq_tag_evap) /
+            (lowest(Y.c.ρq_tag_tropo) + lowest(Y.c.ρq_tag_strat))
+        @test lowest(ᶜsgsʲ_plume.q_tag_evap) >
+              φ̄_evap * lowest(ᶜsgsʲ.q_tot) * (1 + 1e-6)
     end
 
     # 2. The default mode's flux and exchange do nothing, and the model's own
@@ -343,6 +354,77 @@ end
             parent(ᶜold_0M)[not_negative],
         )
         @test all(parent(ᶜleaking_0M)[negative] .> 0)
+    end
+
+    # 4e. The plume's start against the copies' own supplies in the lowest
+    # cell (the owner's review of #136). The grid mean holds one composition
+    # `φ̄`, and the copies are set to the start's shares
+    # `ψᵢ = (1 - f) φ̄ᵢ + f gᵢ`. The surface flux, the relaxation and
+    # entrainment then leave each copy a share tendency
+    # `(χ̇ᵢ - ψᵢ q̇_totʲ) / q_totʲ`. Holding the grid mean fixed moves the
+    # environment's composition off `φ̄` by the updraft's part of the cell. So
+    # the remainder is not zero. It is compared with the share tendency the
+    # grid mean's composition, `ψ = φ̄`, leaves.
+    @testset "The plume's start against the copies' supplies" begin
+        lowest(ᶜx) = only(vec(Array(parent(CA.Fields.level(ᶜx, 1)))))
+        names = (:tropo, :strat, :evap)
+        φ̄ = (0.3, 0.7, 0.2)
+        ᶜf = similar(Y.c.ρ)
+        CA.water_plume_surface_fraction!(ᶜf, Y, p)
+        f = lowest(ᶜf)
+        @test 1e-4 < f < 1
+        masks = p.tagging.ᶜwater_masks
+        gains = (lowest(masks.ρq_tag_tropo), lowest(masks.ρq_tag_strat), 1.0)
+        ψ = map((φ, g) -> (1 - f) * φ + f * g, φ̄, gains)
+        function share_tendencies(shares)
+            Y_set = copy(Y)
+            ᶜsgsʲ_set = Y_set.c.sgsʲs.:(1)
+            for (name, φ, share) in zip(names, φ̄, shares)
+                getproperty(Y_set.c, Symbol(:ρq_tag_, name)) .= φ .* Y.c.ρq_tot
+                getproperty(ᶜsgsʲ_set, Symbol(:q_tag_, name)) .=
+                    share .* ᶜsgsʲ.q_tot
+            end
+            Yₜ = zero(Y)
+            CA.surface_flux_tendency!(Yₜ, Y_set, p, t)
+            CA.water_tag_copies_surface_flux_tendency!(
+                Yₜ,
+                Y_set,
+                p,
+                turbconv_model,
+            )
+            CA.edmfx_boundary_condition_tendency!(
+                Yₜ,
+                Y_set,
+                p,
+                t,
+                turbconv_model,
+            )
+            CA.water_tag_copies_boundary_condition_tendency!(
+                Yₜ,
+                Y_set,
+                p,
+                turbconv_model,
+            )
+            CA.edmfx_entr_detr_tendency!(Yₜ, Y_set, p, t, turbconv_model)
+            ᶜsgsʲₜ = Yₜ.c.sgsʲs.:(1)
+            q_totʲ = lowest(ᶜsgsʲ.q_tot)
+            q_totʲₜ = lowest(ᶜsgsʲₜ.q_tot)
+            return map(names, shares) do name, share
+                χₜ = lowest(getproperty(ᶜsgsʲₜ, Symbol(:q_tag_, name)))
+                (χₜ - share * q_totʲₜ) / q_totʲ
+            end
+        end
+        remainder = share_tendencies(ψ)
+        from_grid_mean = share_tendencies(φ̄)
+        ratio = maximum(abs, remainder) / maximum(abs, from_grid_mean)
+        @info "The share tendencies in the lowest cell (1/s)" f remainder from_grid_mean ratio
+        @test all(isfinite, remainder)
+        # The partition's shares keep summing to one.
+        @test abs(remainder[1] + remainder[2]) <
+              1e-8 * maximum(abs, from_grid_mean)
+        # The start is nearer the copies' steady state than the grid mean's
+        # composition is, for every tag.
+        @test all(abs.(remainder) .< abs.(from_grid_mean))
     end
 
     # 4b. The sedimentation mirror takes the updraft's share for the falling

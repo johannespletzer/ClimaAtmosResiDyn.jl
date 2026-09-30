@@ -275,8 +275,9 @@ flux of water, from the donor cell. The partition's shares are renormalized to
 sum to one, so the partition's fluxes sum to the parent's. That share is the
 grid mean's composition, not the updraft's. So an exchange of provenance at
 the updraft's mass flux adds the difference between the two. The updraft's
-composition comes from a steady entraining plume. The plume starts from the
-grid mean's composition at the lowest level. It mixes in the grid mean's
+composition comes from a steady entraining plume. It starts at the lowest
+level with the grid mean's composition and the updraft's surface water, by
+region and source. It mixes in the grid mean's
 composition at the entrainment rate, and at each level it is rescaled to the
 updraft's water ``q_\mathrm{tot}^j``. The exchange sums to zero over the
 partition. It is bounded, so that no tag moves more water than a subdomain
