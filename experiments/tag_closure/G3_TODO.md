@@ -213,6 +213,12 @@ The twelve criteria of the plan, section 2, in short:
     The plume starts at the lowest level with the copies' steady state there,
     the surface flux's water by the fifth mirror's rule. The copies' mirrors
     stay as they are.*
+    *Measured 2026-09-29 (FINDINGS W50, at `03eb4dbd`, not the PR head).
+    The rule lowers the first hour's L1 of `evap` and of `sfc` (14.3% to
+    13.1%, still 13 times its budget), but R5 fails on every rung (the
+    copies' repair 0.37% to 0.45% a day against 0.20%, unchanged by the
+    rule). So the first hour stays not assessable. What remains open: the
+    copies' repair.*
   - [x] **The prognostic fields of the rain and snow tags**, settled in the
     design note WP4b-D and its review. *Decided 2026-09-25:* the three parts;
     `ρq_tag_<name>` holds the non-precipitating water, beside `ρq_rtag_<name>`

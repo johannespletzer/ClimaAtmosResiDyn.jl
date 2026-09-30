@@ -1,0 +1,4 @@
+R1 {'pass': 12}
+R4 {'pass': 24}
+R5 {'pass': 6, 'fail': 6, 'reported': 6}
+R7 {'not assessable': 52}

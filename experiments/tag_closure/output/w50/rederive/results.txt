@@ -1,0 +1,136 @@
+RESULT window rung=z30 startup_end_s=6600.0 level=2.022306e-06
+RESULT window rung=z60 startup_end_s=7200.0 level=1.741664e-06
+RESULT R1 z30/fix/default files=40 vars=229 mismatches=0 max_abs_diff=0.000e+00 pass=True
+RESULT R4 z30/fix/default gross24=7.2719e-06 add1=3.7065e-06 add2=3.5654e-06 pass24=True pass_half=True void=False negvoid=False
+RESULT R1 z30/fix/copies files=40 vars=229 mismatches=0 max_abs_diff=0.000e+00 pass=True
+RESULT R4 z30/fix/copies gross24=1.9475e-03 add1=2.2069e-03 add2=-2.5946e-04 pass24=True pass_half=True void=False negvoid=False
+RESULT R5 z30/fix residual_max=4.9425e-05@3600s residual_max_est=1.1260e-05 repair_per_day=4.2102e-03 (after 3.9413e-03, before 4.2102e-03) whole_day=4.1493e-03 pass=False
+RESULT R1 z30/main/default files=40 vars=229 mismatches=0 max_abs_diff=0.000e+00 pass=True
+RESULT R4 z30/main/default gross24=7.2460e-06 add1=3.6947e-06 add2=3.5513e-06 pass24=True pass_half=True void=False negvoid=False
+RESULT R1 z30/main/copies files=40 vars=229 mismatches=0 max_abs_diff=0.000e+00 pass=True
+RESULT R4 z30/main/copies gross24=1.9475e-03 add1=2.2069e-03 add2=-2.5946e-04 pass24=True pass_half=True void=False negvoid=False
+RESULT R5 z30/main residual_max=4.9425e-05@3600s residual_max_est=1.1260e-05 repair_per_day=4.2102e-03 (after 3.9413e-03, before 4.2102e-03) whole_day=4.1493e-03 pass=False
+RESULT R1 z60/fix/default files=40 vars=229 mismatches=0 max_abs_diff=0.000e+00 pass=True
+RESULT R4 z60/fix/default gross24=1.0393e-05 add1=5.1694e-06 add2=5.2236e-06 pass24=True pass_half=False void=False negvoid=False
+RESULT R1 z60/fix/copies files=40 vars=229 mismatches=0 max_abs_diff=0.000e+00 pass=True
+RESULT R4 z60/fix/copies gross24=1.5627e-03 add1=1.6558e-03 add2=-9.3116e-05 pass24=True pass_half=True void=False negvoid=False
+RESULT R5 z60/fix residual_max=5.4177e-05@3600s residual_max_est=1.2260e-05 repair_per_day=4.5756e-03 (after 4.5756e-03, before 4.5756e-03) whole_day=5.0814e-03 pass=False
+RESULT R1 z60/main/default files=40 vars=229 mismatches=0 max_abs_diff=0.000e+00 pass=True
+RESULT R4 z60/main/default gross24=1.0350e-05 add1=5.1462e-06 add2=5.2039e-06 pass24=True pass_half=False void=False negvoid=False
+RESULT R1 z60/main/copies files=40 vars=229 mismatches=0 max_abs_diff=0.000e+00 pass=True
+RESULT R4 z60/main/copies gross24=1.5627e-03 add1=1.6558e-03 add2=-9.3116e-05 pass24=True pass_half=True void=False negvoid=False
+RESULT R5 z60/main residual_max=5.4177e-05@3600s residual_max_est=1.2260e-05 repair_per_day=4.5756e-03 (after 4.5756e-03, before 4.5756e-03) whole_day=5.0814e-03 pass=False
+RESULT R1 pulse_z30/fix/default files=40 vars=229 mismatches=0 max_abs_diff=0.000e+00 pass=True
+RESULT R4 pulse_z30/fix/default gross24=1.1288e-04 add1=7.1433e-05 add2=4.1450e-05 pass24=True pass_half=True void=False negvoid=False
+RESULT R1 pulse_z30/fix/copies files=40 vars=229 mismatches=0 max_abs_diff=0.000e+00 pass=True
+RESULT R4 pulse_z30/fix/copies gross24=1.7343e-03 add1=2.2091e-03 add2=-4.7489e-04 pass24=True pass_half=True void=False negvoid=False
+RESULT R5 pulse_z30/fix residual_max=1.0396e-05@43200s residual_max_est=1.0396e-05 repair_per_day=3.7014e-03 (after 3.7014e-03, before 3.5527e-03) whole_day=4.5671e-03 pass=False
+RESULT R1 pulse_z30/main/default files=40 vars=229 mismatches=0 max_abs_diff=0.000e+00 pass=True
+RESULT R4 pulse_z30/main/default gross24=1.1247e-04 add1=7.1116e-05 add2=4.1351e-05 pass24=True pass_half=True void=False negvoid=False
+RESULT R1 pulse_z30/main/copies files=40 vars=229 mismatches=0 max_abs_diff=0.000e+00 pass=True
+RESULT R4 pulse_z30/main/copies gross24=1.7343e-03 add1=2.2091e-03 add2=-4.7489e-04 pass24=True pass_half=True void=False negvoid=False
+RESULT R5 pulse_z30/main residual_max=1.0396e-05@43200s residual_max_est=1.0396e-05 repair_per_day=3.7014e-03 (after 3.7014e-03, before 3.5527e-03) whole_day=4.5671e-03 pass=False
+RESULT R7 z30/fix tag=evap t=1h L1=4.5906e-02 Linf=1.0228e-01 abs=5.2506e-04 share=1.1438e-02 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z30/fix tag=evap t=24h L1=1.9214e-03 Linf=1.0638e-02 abs=4.5587e-04 share=2.3727e-01 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z30/fix tag=evap_strat t=1h L1=4.5906e-02 Linf=1.0228e-01 abs=2.6481e-10 share=5.7687e-09 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z30/fix tag=evap_strat t=24h L1=1.9214e-03 Linf=1.0638e-02 abs=2.2992e-10 share=1.1966e-07 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z30/fix tag=evap_tropo t=1h L1=4.5906e-02 Linf=1.0228e-01 abs=5.2506e-04 share=1.1438e-02 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z30/fix tag=evap_tropo t=24h L1=1.9214e-03 Linf=1.0638e-02 abs=4.5587e-04 share=2.3727e-01 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z30/fix tag=strat t=1h L1=6.3094e-03 Linf=3.5301e-02 abs=1.7755e-03 share=2.8140e-01 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z30/fix tag=strat t=24h L1=4.1295e-03 Linf=1.3410e-02 abs=9.4731e-04 share=2.2940e-01 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z30/fix tag=tropo t=1h L1=2.7696e-03 Linf=1.6684e-02 abs=1.9902e-03 share=7.1860e-01 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z30/fix tag=tropo t=24h L1=2.5757e-03 Linf=6.3877e-03 abs=1.9840e-03 share=7.7025e-01 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z30/main tag=evap t=1h L1=6.4919e-02 Linf=7.0381e-02 abs=7.4254e-04 share=1.1438e-02 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z30/main tag=evap t=24h L1=4.0060e-03 Linf=7.1502e-03 abs=9.5047e-04 share=2.3727e-01 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z30/main tag=evap_strat t=1h L1=6.4919e-02 Linf=7.0381e-02 abs=3.7450e-10 share=5.7687e-09 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z30/main tag=evap_strat t=24h L1=4.0060e-03 Linf=7.1502e-03 abs=4.7937e-10 share=1.1966e-07 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z30/main tag=evap_tropo t=1h L1=6.4919e-02 Linf=7.0381e-02 abs=7.4254e-04 share=1.1438e-02 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z30/main tag=evap_tropo t=24h L1=4.0060e-03 Linf=7.1502e-03 abs=9.5047e-04 share=2.3727e-01 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z30/main tag=strat t=1h L1=6.3097e-03 Linf=3.5302e-02 abs=1.7755e-03 share=2.8140e-01 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z30/main tag=strat t=24h L1=4.0912e-03 Linf=1.3407e-02 abs=9.3855e-04 share=2.2940e-01 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z30/main tag=tropo t=1h L1=2.7697e-03 Linf=1.6685e-02 abs=1.9903e-03 share=7.1860e-01 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z30/main tag=tropo t=24h L1=2.6083e-03 Linf=6.6044e-03 abs=2.0091e-03 share=7.7025e-01 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT effect z30 mode=default tag=evap t=1h L1(fix,main)=7.3590e-02 Linf=7.6913e-02 signed_inventory=+3.7266e-04
+RESULT effect z30 mode=default tag=evap t=24h L1(fix,main)=3.9017e-03 Linf=7.9122e-03 signed_inventory=+5.5648e-04
+RESULT effect z30 mode=default tag=evap_strat t=1h L1(fix,main)=7.3590e-02 Linf=7.6913e-02 signed_inventory=+3.7266e-04
+RESULT effect z30 mode=default tag=evap_strat t=24h L1(fix,main)=3.9017e-03 Linf=7.9122e-03 signed_inventory=+5.5648e-04
+RESULT effect z30 mode=default tag=evap_tropo t=1h L1(fix,main)=7.3590e-02 Linf=7.6913e-02 signed_inventory=+3.7266e-04
+RESULT effect z30 mode=default tag=evap_tropo t=24h L1(fix,main)=3.9017e-03 Linf=7.9122e-03 signed_inventory=+5.5648e-04
+RESULT effect z30 mode=default tag=strat t=1h L1(fix,main)=1.5309e-06 Linf=4.2491e-06 signed_inventory=+2.2031e-09
+RESULT effect z30 mode=default tag=strat t=24h L1(fix,main)=3.7013e-04 Linf=7.4804e-04 signed_inventory=-3.8370e-05
+RESULT effect z30 mode=default tag=tropo t=1h L1(fix,main)=5.9772e-07 Linf=1.8174e-06 signed_inventory=-9.3954e-10
+RESULT effect z30 mode=default tag=tropo t=24h L1(fix,main)=1.0964e-04 Linf=2.4266e-04 signed_inventory=+1.1394e-05
+RESULT effect z30 mode=copies tag=evap t=1h L1(fix,main)=7.3411e-09 Linf=9.9235e-09 signed_inventory=-3.8500e-10
+RESULT effect z30 mode=copies tag=evap t=24h L1(fix,main)=1.1473e-11 Linf=1.0966e-11 signed_inventory=-1.1473e-11
+RESULT effect z30 mode=copies tag=evap_strat t=1h L1(fix,main)=7.3411e-09 Linf=9.9235e-09 signed_inventory=-3.8500e-10
+RESULT effect z30 mode=copies tag=evap_strat t=24h L1(fix,main)=1.1472e-11 Linf=1.0965e-11 signed_inventory=-1.1472e-11
+RESULT effect z30 mode=copies tag=evap_tropo t=1h L1(fix,main)=7.3411e-09 Linf=9.9235e-09 signed_inventory=-3.8500e-10
+RESULT effect z30 mode=copies tag=evap_tropo t=24h L1(fix,main)=1.1475e-11 Linf=1.0967e-11 signed_inventory=-1.1475e-11
+RESULT effect z30 mode=copies tag=strat t=1h L1(fix,main)=0.0000e+00 Linf=0.0000e+00 signed_inventory=+0.0000e+00
+RESULT effect z30 mode=copies tag=strat t=24h L1(fix,main)=0.0000e+00 Linf=0.0000e+00 signed_inventory=+0.0000e+00
+RESULT effect z30 mode=copies tag=tropo t=1h L1(fix,main)=0.0000e+00 Linf=0.0000e+00 signed_inventory=+0.0000e+00
+RESULT effect z30 mode=copies tag=tropo t=24h L1(fix,main)=0.0000e+00 Linf=0.0000e+00 signed_inventory=+0.0000e+00
+RESULT R7 z60/fix tag=evap t=1h L1=8.0626e-02 Linf=1.5634e-01 abs=9.1631e-04 share=1.1365e-02 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z60/fix tag=evap t=24h L1=4.6280e-03 Linf=7.3030e-03 abs=1.0962e-03 share=2.3687e-01 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z60/fix tag=evap_strat t=1h L1=8.0626e-02 Linf=1.5634e-01 abs=3.5991e-10 share=4.4640e-09 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z60/fix tag=evap_strat t=24h L1=4.6280e-03 Linf=7.3030e-03 abs=4.3058e-10 share=9.3039e-08 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z60/fix tag=evap_tropo t=1h L1=8.0626e-02 Linf=1.5634e-01 abs=9.1631e-04 share=1.1365e-02 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z60/fix tag=evap_tropo t=24h L1=4.6280e-03 Linf=7.3030e-03 abs=1.0962e-03 share=2.3687e-01 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z60/fix tag=strat t=1h L1=1.3571e-02 Linf=1.7695e-01 abs=3.9263e-03 share=2.8930e-01 within=False verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z60/fix tag=strat t=24h L1=1.7216e-02 Linf=1.5214e-02 abs=3.9148e-03 share=2.2738e-01 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z60/fix tag=tropo t=1h L1=5.6624e-03 Linf=8.1750e-02 abs=4.0242e-03 share=7.1069e-01 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z60/fix tag=tropo t=24h L1=3.9255e-03 Linf=5.1857e-03 abs=3.0316e-03 share=7.7228e-01 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z60/main tag=evap t=1h L1=1.1830e-01 Linf=1.9655e-01 abs=1.3445e-03 share=1.1365e-02 within=False verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z60/main tag=evap t=24h L1=2.3535e-03 Linf=3.5350e-03 abs=5.5746e-04 share=2.3687e-01 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z60/main tag=evap_strat t=1h L1=1.1830e-01 Linf=1.9655e-01 abs=5.2810e-10 share=4.4640e-09 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z60/main tag=evap_strat t=24h L1=2.3535e-03 Linf=3.5350e-03 abs=2.1896e-10 share=9.3039e-08 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z60/main tag=evap_tropo t=1h L1=1.1830e-01 Linf=1.9655e-01 abs=1.3445e-03 share=1.1365e-02 within=False verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z60/main tag=evap_tropo t=24h L1=2.3535e-03 Linf=3.5350e-03 abs=5.5746e-04 share=2.3687e-01 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z60/main tag=strat t=1h L1=1.3571e-02 Linf=1.7695e-01 abs=3.9263e-03 share=2.8930e-01 within=False verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z60/main tag=strat t=24h L1=1.7219e-02 Linf=1.3838e-02 abs=3.9154e-03 share=2.2738e-01 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z60/main tag=tropo t=1h L1=5.6624e-03 Linf=8.1750e-02 abs=4.0242e-03 share=7.1069e-01 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 z60/main tag=tropo t=24h L1=3.9264e-03 Linf=5.4882e-03 abs=3.0323e-03 share=7.7228e-01 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT effect z60 mode=default tag=evap t=1h L1(fix,main)=5.9138e-02 Linf=7.5881e-02 signed_inventory=+5.1921e-04
+RESULT effect z60 mode=default tag=evap t=24h L1(fix,main)=6.7779e-03 Linf=1.0800e-02 signed_inventory=+2.9099e-04
+RESULT effect z60 mode=default tag=evap_strat t=1h L1(fix,main)=5.9138e-02 Linf=7.5881e-02 signed_inventory=+5.1921e-04
+RESULT effect z60 mode=default tag=evap_strat t=24h L1(fix,main)=6.7779e-03 Linf=1.0800e-02 signed_inventory=+2.9099e-04
+RESULT effect z60 mode=default tag=evap_tropo t=1h L1(fix,main)=5.9138e-02 Linf=7.5881e-02 signed_inventory=+5.1921e-04
+RESULT effect z60 mode=default tag=evap_tropo t=24h L1(fix,main)=6.7779e-03 Linf=1.0800e-02 signed_inventory=+2.9099e-04
+RESULT effect z60 mode=default tag=strat t=1h L1(fix,main)=2.2649e-07 Linf=1.1396e-06 signed_inventory=+4.4872e-08
+RESULT effect z60 mode=default tag=strat t=24h L1(fix,main)=9.3771e-04 Linf=1.4372e-03 signed_inventory=-2.9903e-06
+RESULT effect z60 mode=default tag=tropo t=1h L1(fix,main)=9.3399e-08 Linf=5.1380e-07 signed_inventory=-1.8529e-08
+RESULT effect z60 mode=default tag=tropo t=24h L1(fix,main)=2.8100e-04 Linf=4.8231e-04 signed_inventory=+9.5552e-07
+RESULT effect z60 mode=copies tag=evap t=1h L1(fix,main)=6.6093e-09 Linf=5.1352e-09 signed_inventory=-3.2017e-10
+RESULT effect z60 mode=copies tag=evap t=24h L1(fix,main)=8.5052e-12 Linf=8.0702e-12 signed_inventory=-8.5052e-12
+RESULT effect z60 mode=copies tag=evap_strat t=1h L1(fix,main)=6.6093e-09 Linf=5.1352e-09 signed_inventory=-3.2017e-10
+RESULT effect z60 mode=copies tag=evap_strat t=24h L1(fix,main)=8.5055e-12 Linf=8.0703e-12 signed_inventory=-8.5055e-12
+RESULT effect z60 mode=copies tag=evap_tropo t=1h L1(fix,main)=6.6093e-09 Linf=5.1352e-09 signed_inventory=-3.2017e-10
+RESULT effect z60 mode=copies tag=evap_tropo t=24h L1(fix,main)=8.5062e-12 Linf=8.0712e-12 signed_inventory=-8.5062e-12
+RESULT effect z60 mode=copies tag=strat t=1h L1(fix,main)=0.0000e+00 Linf=0.0000e+00 signed_inventory=+0.0000e+00
+RESULT effect z60 mode=copies tag=strat t=24h L1(fix,main)=0.0000e+00 Linf=0.0000e+00 signed_inventory=+0.0000e+00
+RESULT effect z60 mode=copies tag=tropo t=1h L1(fix,main)=0.0000e+00 Linf=0.0000e+00 signed_inventory=+0.0000e+00
+RESULT effect z60 mode=copies tag=tropo t=24h L1(fix,main)=0.0000e+00 Linf=0.0000e+00 signed_inventory=+0.0000e+00
+RESULT R7 pulse_z30/fix tag=air t=1h L1=8.7655e-03 Linf=2.1412e-02 abs=8.2334e-03 share=9.3930e-01 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 pulse_z30/fix tag=air t=24h L1=2.4254e-03 Linf=6.3391e-03 abs=1.7641e-03 share=7.2731e-01 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 pulse_z30/fix tag=evap t=1h L1=4.5924e-02 Linf=1.0236e-01 abs=5.2527e-04 share=1.1438e-02 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 pulse_z30/fix tag=evap t=24h L1=1.9543e-03 Linf=1.0844e-02 abs=4.6368e-04 share=2.3727e-01 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 pulse_z30/fix tag=sfc t=1h L1=1.3064e-01 Linf=1.5473e-01 abs=7.9315e-03 share=6.0711e-02 within=False verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 pulse_z30/fix tag=sfc t=24h L1=2.2737e-03 Linf=9.5102e-03 abs=6.1962e-04 share=2.7252e-01 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 pulse_z30/main tag=air t=1h L1=9.5803e-03 Linf=2.4053e-02 abs=8.9988e-03 share=9.3930e-01 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 pulse_z30/main tag=air t=24h L1=1.9812e-03 Linf=5.9763e-03 abs=1.4409e-03 share=7.2731e-01 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 pulse_z30/main tag=evap t=1h L1=6.4934e-02 Linf=7.0425e-02 abs=7.4271e-04 share=1.1438e-02 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 pulse_z30/main tag=evap t=24h L1=4.0374e-03 Linf=7.3550e-03 abs=9.5794e-04 share=2.3727e-01 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 pulse_z30/main tag=sfc t=1h L1=1.4326e-01 Linf=1.7380e-01 abs=8.6974e-03 share=6.0711e-02 within=False verdict=not assessable (R5 fails on this rung and arm)
+RESULT R7 pulse_z30/main tag=sfc t=24h L1=4.4494e-03 Linf=9.8378e-03 abs=1.2125e-03 share=2.7252e-01 within=True verdict=not assessable (R5 fails on this rung and arm)
+RESULT effect pulse_z30 mode=default tag=air t=1h L1(fix,main)=8.1592e-04 Linf=2.6345e-03 signed_inventory=-2.9491e-05
+RESULT effect pulse_z30 mode=default tag=air t=24h L1(fix,main)=1.1955e-03 Linf=3.3054e-03 signed_inventory=-1.9309e-04
+RESULT effect pulse_z30 mode=default tag=evap t=1h L1(fix,main)=7.3590e-02 Linf=7.6914e-02 signed_inventory=+3.7263e-04
+RESULT effect pulse_z30 mode=default tag=evap t=24h L1(fix,main)=3.9020e-03 Linf=7.9130e-03 signed_inventory=+5.5648e-04
+RESULT effect pulse_z30 mode=default tag=sfc t=1h L1(fix,main)=1.2474e-02 Linf=1.8557e-02 signed_inventory=+4.5217e-04
+RESULT effect pulse_z30 mode=default tag=sfc t=24h L1(fix,main)=3.1850e-03 Linf=6.3854e-03 signed_inventory=+5.1590e-04
+RESULT effect pulse_z30 mode=copies tag=air t=1h L1(fix,main)=0.0000e+00 Linf=0.0000e+00 signed_inventory=+0.0000e+00
+RESULT effect pulse_z30 mode=copies tag=air t=24h L1(fix,main)=0.0000e+00 Linf=0.0000e+00 signed_inventory=+0.0000e+00
+RESULT effect pulse_z30 mode=copies tag=evap t=1h L1(fix,main)=7.3411e-09 Linf=9.9235e-09 signed_inventory=-3.8500e-10
+RESULT effect pulse_z30 mode=copies tag=evap t=24h L1(fix,main)=1.1473e-11 Linf=1.0966e-11 signed_inventory=-1.1473e-11
+RESULT effect pulse_z30 mode=copies tag=sfc t=1h L1(fix,main)=0.0000e+00 Linf=0.0000e+00 signed_inventory=+0.0000e+00
+RESULT effect pulse_z30 mode=copies tag=sfc t=24h L1(fix,main)=0.0000e+00 Linf=0.0000e+00 signed_inventory=+0.0000e+00
