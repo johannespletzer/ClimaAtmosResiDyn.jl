@@ -186,9 +186,14 @@ split solver, and parity.
 
 `tagging_water_leak` runs `water_tag_leak_correction: true` on the same column
 under the follower, with each tag's ledgers. It checks that the partition's
-EDMF diffusion is the parent's, that each tag's correction and ledger is the
-diffusion of its share of the rain and snow, the ledgers after an hour, the
-audit and the split solver, and parity. It also builds the column twice.
+EDMF diffusion is the parent's, with one composition everywhere and with one
+that varies in space, that each tag's correction and ledger is the diffusion of
+its share of the rain and snow, the ledgers after an hour, the audit and the
+split solver, and parity. It then steps the column with the correction off
+beside a corrected run. It checks that the leak the partition takes falls by a
+set factor, that the closure stays within its bound and that the model's fields
+are the same, and it prints the follower's and the repairs' ledgers. So it
+builds the column three times.
 
 `tagging_water_precipitation` runs the water tags' rain and snow parts
 (`water_tag_precipitation: true`) on a 1-moment precipitating column without
