@@ -341,6 +341,30 @@ end
         @test ᶜYₜ.ρq_tag_low[2] == 0 && ᶜYₜ.ρq_tag_high[2] == 0
         @test ᶜYₜ.ρq_tag_low .+ ᶜYₜ.ρq_tag_high ≈ FT[1, 0, 3, 1]
         @test ᶜYₜ.ρq_tag_evap == ᶜΔ_gain
+        # The same through the bracket's entry point, which reads the sign
+        # from the parent the key gives (`water_tag_parent`). With the key the
+        # second cell's gain is withheld, since `N` is -1. Without it the sign
+        # is that of `ρq_tot`, 2, and the partition takes the gain.
+        for (tagging_model, withheld) in ((model, true), (plain, false))
+            p = (;
+                atmos = (; water_tagging_model = tagging_model),
+                tagging = (; ᶜwater_masks = ᶜmasks),
+                scratch = (; ᶜtagging_q_snapshot = zeros(FT, 4)),
+            )
+            Yₜ = (;
+                c = merge(
+                    (; ρq_tot = copy(ᶜΔ_gain)),
+                    map(
+                        _ -> zeros(FT, 4),
+                        (; ρq_tag_low = 0, ρq_tag_high = 0, ρq_tag_evap = 0),
+                    ),
+                ),
+            )
+            CA.attribute_tagged_ρq_tot!(Yₜ, (; c = ᶜY_gain), p, :surface_flux)
+            @test iszero(Yₜ.c.ρq_tag_low[2] + Yₜ.c.ρq_tag_high[2]) == withheld
+            @test Yₜ.c.ρq_tag_low[2] + Yₜ.c.ρq_tag_high[2] ≈
+                  (withheld ? 0 : ᶜΔ_gain[2]) atol = 10 * eps(FT)
+        end
     end
 end
 

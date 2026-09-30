@@ -190,6 +190,41 @@ base_config(tags; extra = Dict{String, Any}()) = merge(
             parent(getproperty(simulation.integrator.p.tagging.ᶜwater_fix, name)),
         )
     end
+
+    # C's revision: the implicit microphysics bracket keeps the parent's gain.
+    # The rule that withholds the gain where the parent is below zero covers
+    # the explicit brackets (the owner, 2026-09-29), and this column steps the
+    # microphysics implicitly. In one cell, the parent is made negative and
+    # the cached 0M rain-out a gain. The implicit tendency is taken with and
+    # without that gain. The partition tags take all of it, by mask. Under
+    # the explicit rule they would take none.
+    @testset "The implicit microphysics bracket keeps the parent's gain" begin
+        integrator = simulation.integrator
+        p = integrator.p
+        @test p.atmos.microphysics_tendency_timestepping == CA.Implicit()
+        @test CA.microphysics_gain_rule(p.atmos) === CA.ParentGain()
+        Y_negative = copy(integrator.u)
+        k = 20
+        parent(Y_negative.c.ρq_tot)[k] = -1e-6
+        ᶜdq_tot_dt = p.precomputed.ᶜmp_tendency.dq_tot_dt
+        function implicit_tendency_with(gain)
+            saved = parent(ᶜdq_tot_dt)[k]
+            parent(ᶜdq_tot_dt)[k] = gain
+            Yₜ = zero(Y_negative)
+            CA.implicit_tendency!(Yₜ, Y_negative, p, integrator.t)
+            parent(ᶜdq_tot_dt)[k] = saved
+            return Yₜ
+        end
+        with_gain = implicit_tendency_with(1e-6)
+        without = implicit_tendency_with(0.0)
+        at(ᶜx) = parent(ᶜx)[k]
+        Δ = at(with_gain.c.ρq_tot) - at(without.c.ρq_tot)
+        @test Δ > 0
+        partition_gain =
+            at(with_gain.c.ρq_tag_upper) - at(without.c.ρq_tag_upper) +
+            at(with_gain.c.ρq_tag_lower) - at(without.c.ρq_tag_lower)
+        @test partition_gain ≈ Δ rtol = 1e-10
+    end
 end
 
 # The column above trips no limiter, so `rescale_water_tags!` and its three call

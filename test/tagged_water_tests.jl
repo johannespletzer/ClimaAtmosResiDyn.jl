@@ -2902,6 +2902,94 @@ end
     end
 end
 
+# C's revision, over one step (the review of 2026-09-30, kernel-1). The rule is
+# read at each stage's parent, and the tableau adds the stages. Its explicit
+# weights include negative ones, so in a step whose parent crosses zero the
+# partition's gain can be negative, and at zero ARS222 jumps. These are facts
+# of the rule as built (the design note, section 11.2, and question 2 of
+# 11.10), pinned here so that a change of the rule shows.
+@testset "C's revision: one ARS222 and one ARS343 step split a crossing by stage" begin
+    # The explicit tableaux of ClimaTimeSteppers 1.0.1
+    # (src/solvers/imex_tableaus.jl), explicit part only.
+    γ₂ = 1 - √2 / 2
+    δ = 1 - 1 / (2γ₂)
+    ars222 = ([0 0 0; γ₂ 0 0; δ (1 - δ) 0], [δ, 1 - δ, 0])
+    γ = 0.4358665215084590
+    a42 = 0.5529291480359398
+    a43 = a42
+    b1 = -3 / 2 * γ^2 + 4 * γ - 1 / 4
+    b2 = 3 / 2 * γ^2 - 5 * γ + 5 / 4
+    a31 =
+        (1 - 9 / 2 * γ + 3 / 2 * γ^2) * a42 +
+        (11 / 4 - 21 / 2 * γ + 15 / 4 * γ^2) * a43 - 7 / 2 + 13 * γ -
+        9 / 2 * γ^2
+    a32 =
+        (-1 + 9 / 2 * γ - 3 / 2 * γ^2) * a42 +
+        (-11 / 4 + 21 / 2 * γ - 15 / 4 * γ^2) * a43 + 4 - 25 / 2 * γ +
+        9 / 2 * γ^2
+    a41 = 1 - a42 - a43
+    ars343 = (
+        [0 0 0 0; γ 0 0 0; a31 a32 0 0; a41 a42 a43 0],
+        [0, b1, b2, γ],
+    )
+    tag = CA.WaterTag{:all}(CA.TanhLatitudeRegion(20.0, 2.0, true))
+    ᶜmasks = (; ρq_tag_all = [1.0])
+    # One step of `dt = 1` for one cell. A bracketed process gains `G`, and a
+    # process outside any bracket loses `L`. The tag starts empty, so its
+    # value after the step is the partition's gain over the step.
+    function one_step((a, b), P₀, G, L, rule)
+        s = length(b)
+        (dP, dT) = (zeros(s), zeros(s))
+        for i in 1:s
+            Pᵢ = P₀ + sum(a[i, j] * dP[j] for j in 1:(i - 1); init = 0.0)
+            Tᵢ = sum(a[i, j] * dT[j] for j in 1:(i - 1); init = 0.0)
+            ᶜY = (; ρq_tot = [Pᵢ], ρq_tag_all = [Tᵢ])
+            ᶜYₜ = (; ρq_tag_all = [0.0])
+            CA._accumulate_water_tags!(
+                ᶜYₜ,
+                ᶜY,
+                ᶜmasks,
+                [G],
+                :surface_flux,
+                (tag,),
+                ᶜY.ρq_tot,
+                rule,
+            )
+            dP[i] = G - L
+            dT[i] = ᶜYₜ.ρq_tag_all[1]
+        end
+        return sum(b[i] * dT[i] for i in 1:s)
+    end
+    target = CA.TargetGain()
+    # ARS343, a gain lifts the parent from -0.5 or -0.6 of the step's gain.
+    # Only stages 3 and 4 see a parent at or above zero, and their weights sum
+    # to b₃ + b₄ = -0.2085: an empty tag ends the step below zero.
+    for P₀ in (-0.5, -0.6)
+        @test one_step(ars343, P₀, 1.0, 0.0, target) ≈ b2 + γ
+        @test one_step(ars343, P₀, 1.0, 0.0, target) ≈ -0.2085 atol = 1e-4
+        @test one_step(ars343, P₀, 1.0, 0.0, CA.ParentGain()) ≈ 1
+    end
+    # ARS222, a loss outside the bracket takes the parent below zero by stage
+    # 2: only stage 1 gives the gain, with the weight δ = -0.7071.
+    for P₀ in (0.05, 0.2)
+        @test one_step(ars222, P₀, 1.0, 3.0, target) ≈ δ
+        @test one_step(ars222, P₀, 1.0, 3.0, target) ≈ -0.7071 atol = 1e-4
+        @test one_step(ars222, P₀, 1.0, 3.0, CA.ParentGain()) ≈ 1
+    end
+    # ARS222 jumps at zero: a parent a rounding amount below zero gives
+    # 1 - δ = 1.7071 of the gain, and +0.0 or -0.0 gives all of it.
+    @test one_step(ars222, -1e-30, 1.0, 0.0, target) ≈ 1 - δ
+    @test one_step(ars222, -1e-30, 1.0, 0.0, target) ≈ 1.7071 atol = 1e-4
+    @test one_step(ars222, 0.0, 1.0, 0.0, target) ≈ 1
+    @test one_step(ars222, -0.0, 1.0, 0.0, target) ≈ 1
+    # Where the parent keeps its sign through the step, the rule gives the
+    # target's gain exactly: all of it, or none.
+    for tableau in (ars222, ars343)
+        @test one_step(tableau, 5.0, 1.0, 0.0, target) ≈ 1
+        @test one_step(tableau, -5.0, 1.0, 0.0, target) == 0
+    end
+end
+
 @testset "The diffusion leak's correction (WP4c)" begin
     region(above) = CA.TanhAltitudeRegion(750.0, 100.0, above)
     tags = (
