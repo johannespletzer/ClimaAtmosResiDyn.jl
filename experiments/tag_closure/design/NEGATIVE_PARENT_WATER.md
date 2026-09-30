@@ -1007,27 +1007,37 @@ verdict. Against Q8's rule:
   - **Region tags: they differ, so the rule acted.** Revision against `main`,
     tags on. The last identical outputs are day 11.0 (daily) and day 11.25
     (6-hourly). The first differing ones are day 12.0 and day 11.5. So the
-    onset lies within one output spacing before those times, about day 11.5 at
-    the finest. The `ledger` tags first differ at day 11.75 and the closure
-    file at `t = 993600 s`. From day 11.5 the region tags differ at every
-    6-hourly output to day 30.
-  - **Size at day 30.** The state, each of its field's largest value:
-    `ρq_tag_free` 7.2e-02, `ρq_tag_fcg` 9.8e-03, `ρq_tag_pbl` 1.7e-03,
-    `ρq_tag_evap` 1.2e-03. The least favourable file-wise numbers are 5.24 of
-    the largest value for `q_tag_fix_free` and `q_tag_fix_pbl`, and 1.00 for
-    `q_tag_res`. The pointwise ratios in `q_tag_free` and `q_tag_pbl` sit on
-    near-zero denominators and say little. In column totals, revision minus
-    `main` over `main` is -8.8e-04 for pbl and -9.7e-03 for free. The region
-    tags exceed the non-negative target by 4.7e-07 of it on the revision and
-    by 4.9e-03 on `main`.
+    tags first differ after day 11.25 and by day 11.5. Most of the ledgers
+    that differ also do so from day 11.5. The `repairnet` ledgers first
+    differ at day 11.75. The closure file first differs at `t = 993600 s`,
+    day 11.5. From day 11.5 the region tags differ at every 6-hourly output
+    to day 30.
+  - **Size.** The state at day 30, each field against `main`'s largest
+    value: `ρq_tag_free` 7.2e-02, `ρq_tag_fcg` 9.8e-03, `ρq_tag_pbl`
+    1.7e-03, `ρq_tag_evap` 1.2e-03. The least favourable number is in the
+    state's fix ledgers: `q_tag_led_fix_pbl` and `q_tag_led_fix_free` differ
+    by 6.1 of `main`'s largest value (second scoring). In the output files,
+    over all outputs to day 30, it is 5.24 of the largest value for
+    `q_tag_fix_free` and `q_tag_fix_pbl`, and 1.00 for `q_tag_res`. At day 30
+    `q_tag_pbl` differs most at z = 435 m (second scoring). There the revision
+    has 0 and `main` 2.87e-5 kg/kg, so the difference is all of `main`'s value,
+    and 1.8e-3 of `main`'s column maximum. `q_tag_free`'s pointwise ratio of
+    2.8e14 sits on a near-zero denominator (`main` 3.3e-32 kg/kg) and says
+    little. In column totals from the day-30 state, revision minus `main`
+    over `main` is -8.8e-04 for pbl and -9.7e-03 for free (second scoring,
+    with `dz` rebuilt from the cell centres). The closure file at day 30 has
+    the region tags above the non-negative target by 4.7e-07 of it on the
+    revision and by 4.9e-03 on `main`.
   - **Not affected.** The energy tags are bit for bit. So are the evap and
     fcg fix tags and the `negative`, `led_empty` and `led_rescale` tags. The
-    tags-off pairs and the tags-on-against-off pairs show no difference.
-  - **Not known.** The source tags `q_tag_evap`, `q_tag_fcg` and `q_tag_res`
-    also differ from day 11.5. Section 11.6 keeps the parent's gain for them,
-    so the change is indirect. Its path was not traced. The onset is not
-    localised inside the output spacing. The rule was not read from the
-    tendency directly, only from the tags.
+    tags-off pairs and the tags-on-against-off pairs show no difference in
+    any model field.
+  - **Not known.** The source tags `q_tag_evap` and `q_tag_fcg` also differ
+    from day 11.5. Section 11.6 keeps the parent's gain for them, so the
+    change is indirect. Its path was not traced. `q_tag_res` differs too, but
+    it is the target less the region tags (11.4), so it follows them. The
+    onset is not localised inside the output spacing. The rule was not read
+    from the tendency directly, only from the tags.
 
 The rule of Q8 is met. No run was extended.
 

@@ -15,10 +15,12 @@ exit status 0. Run data: `$SCRATCH/tag_closure/output/cr_parity30_*/output_0000`
 Commands, from the record worktree:
 
     python3 experiments/tag_closure/analysis/water/cr_parity.py \
-        $SCRATCH/tag_closure/output cr_parity30 > output/cr_parity30/parity_output.txt
+        $SCRATCH/tag_closure/output cr_parity30 \
+        > experiments/tag_closure/output/cr_parity30/parity_output.txt
     julia --project=$SCRATCH/claude_work/crev_testenv \
         experiments/tag_closure/analysis/water/cr_parity_state.jl \
-        $SCRATCH/tag_closure/output cr_parity30 30 > output/cr_parity30/state_output.txt
+        $SCRATCH/tag_closure/output cr_parity30 30 \
+        > experiments/tag_closure/output/cr_parity30/state_output.txt
 
 The Julia call needs `JULIA_DEPOT_PATH=$SCRATCH/julia-depots/terrabyte-cpu` and
 `module load gcc/13.2.0 openmpi/4.1.8-gcc13`.
@@ -26,7 +28,9 @@ The Julia call needs `JULIA_DEPOT_PATH=$SCRATCH/julia-depots/terrabyte-cpu` and
 Result: every model field is bit for bit in all four pairs, and the water
 region tags differ from `main`'s from day 11.5. See 11.8. A second scoring,
 `$SCRATCH/claude_work/crev_parity30_rederive/rederive_parity30.py`, agrees.
+Its output, `rederive_output.txt` beside it, holds the numbers that 11.8
+gives as the second scoring's.
 
 No file over 2 MB is kept on scratch only. The largest run file is the
-tagged `day30.0.hdf5` at 0.2 MB, and the tagged output directory is 13 MB in
-all. So there are no checksums to record.
+tagged runs' `energy_source_tag_audit.csv` at 0.3 MB, and the tagged output
+directory is 13 MB in all. So there are no checksums to record.
