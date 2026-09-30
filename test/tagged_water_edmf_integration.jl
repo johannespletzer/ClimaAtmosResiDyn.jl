@@ -13,7 +13,8 @@ on the DYCOMS RF02 EDMF column with 1-moment microphysics, after an hour:
  3. with one composition everywhere, each tag takes exactly its share of the
     parent's sub-grid flux, and the exchange moves nothing;
  4. the vertical diffusion's leak, in closed form, is the difference the
-    diffusion makes between the partition and the parent;
+    diffusion makes between the partition and the parent, also where the
+    parent is negative and the partition is closed to option C's target;
  5. the audit reports where the exchange's bound binds;
  6. the tags' sub-grid flux allocates next to nothing of its own;
  7. the model's fields are those of the same column without tags, bit for bit.
@@ -58,10 +59,38 @@ altitude_region(above) = Dict{String, Any}(
 relative_difference(a, b) =
     maximum(abs, parent(a) .- parent(b)) / maximum(abs, parent(b))
 
+# The vertical diffusion's leak with the EDMF flux at `K_h` only, of the water
+# `ᶜq_p`, as `water_tag_leak!` took it before option C's target.
+function vertical_leak_at_K_h(Y, p, ᶜq_p)
+    ᶜleak = similar(Y.c.ρ)
+    ᶜleak .= 0
+    ᶠρK_h = CA.Fields.Field(eltype(Y), axes(Y.f))
+    @. ᶠρK_h = CA.ᶠinterp(Y.c.ρ) * p.precomputed.ᶠK_h
+    ᶜdivergence = CA.ᶜdiffusive_flux_divergenceᵥ(ᶠρK_h, ᶜq_p)
+    @. ᶜleak -= ᶜdivergence / Y.c.ρ
+    CA._add_boundary_layer_leak!(ᶜleak, Y, p, p.atmos.vertical_diffusion, ᶜq_p)
+    return ᶜleak
+end
+
 @testset "Water tags under PrognosticEDMFX" begin
     # `config/model_configs/prognostic_edmfx_dycoms_rf02_column.yml` as a
     # single column with 1-moment microphysics, for an hour. It drizzles, so
     # the diffusion's leak is not zero.
+    #
+    # Test 4b needs the entrainment diffusivity `K_e`. ClimaParams 1.1.15 sets
+    # its efficiency `EDMF_interface_entr_efficiency` to 0, which switches
+    # `K_e` off. The other versions checked, 1.1.6, 1.1.9, 1.1.11, 1.1.13
+    # and 1.1.17, set 0.4. So this file sets 0.4 itself, and `K_e` acts under
+    # each of them.
+    entrainment_toml = joinpath(mktempdir(pwd()), "interface_entrainment.toml")
+    write(
+        entrainment_toml,
+        """
+        [EDMF_interface_entr_efficiency]
+        value = 0.4
+        type = "float"
+        """,
+    )
     edmf_dict = Dict{String, Any}(
         "config" => "column",
         "initial_condition" => "DYCOMS_RF02",
@@ -83,7 +112,10 @@ relative_difference(a, b) =
         "z_stretch" => false,
         "perturb_initstate" => false,
         "rad" => "DYCOMS",
-        "toml" => [joinpath(pkgdir(CA), "toml", "prognostic_edmfx_1M.toml")],
+        "toml" => [
+            joinpath(pkgdir(CA), "toml", "prognostic_edmfx_1M.toml"),
+            entrainment_toml,
+        ],
         "ode_algo" => "ARS222",
         "dt" => "120secs",
         "t_end" => "1hours",
@@ -206,6 +238,65 @@ relative_difference(a, b) =
             CA.water_tag_leak!(ᶜleak, Y_uniform, p, Val(path))
             @test all(iszero, parent(ᶜleak))
         end
+    end
+
+    # 4b. The leak is taken where the partition sums to option C's target,
+    # `max(ρq_tot, 0)`. Where the parent is never negative, that is `ρq_tot`
+    # itself, and the leak is the diffusion of the rain and snow at `K_h`, as
+    # before, bit for bit. Where it is negative, the partition exceeds the
+    # parent by `-min(ρq_tot, 0)`. The tags diffuse that at `K_h + K_e` and the
+    # parent not, and the leak includes it.
+    @testset "The vertical diffusion's leak at option C's target" begin
+        @test all(>=(0), parent(Y_uniform.c.ρq_tot))
+        ᶜleak = similar(Y.c.ρ)
+        CA.water_tag_leak!(ᶜleak, Y_uniform, p, Val(:vdiff))
+        ᶜrain_and_snow = CA._precipitating_water(Y_uniform, p)
+        @test isequal(
+            parent(ᶜleak),
+            parent(vertical_leak_at_K_h(Y_uniform, p, ᶜrain_and_snow)),
+        )
+
+        # The parent negative across the inversion, where `K_e` acts, and the
+        # partition closed to its target there. The checks below need `K_e`,
+        # so a `K_e` of zero everywhere fails here first.
+        @test CA.Parameters.interface_entr_efficiency(p.params) == 0.4
+        @test maximum(abs, parent(p.precomputed.ᶠK_entr)) > 0
+        ᶜz = CA.Fields.coordinate_field(Y.c).z
+        Y_negative = copy(Y_uniform)
+        @. Y_negative.c.ρq_tot =
+            ifelse(500 < ᶜz < 1000, -Y.c.ρq_tot, Y.c.ρq_tot)
+        @test any(<(0), parent(Y_negative.c.ρq_tot))
+        ᶜtarget = CA.water_tag_partition_target.(Y_negative.c.ρq_tot)
+        for (name, share) in pairs(shares)
+            getproperty(Y_negative.c, name) .= share .* ᶜtarget
+        end
+        Yₜ = zero(Y)
+        CA.edmfx_sgs_diffusive_flux_tendency!(Yₜ, Y_negative, p, t, turbconv_model)
+        ᶜρgap = Yₜ.c.ρq_tag_tropo .+ Yₜ.c.ρq_tag_strat .- Yₜ.c.ρq_tot
+        CA.water_tag_leak!(ᶜleak, Y_negative, p, Val(:vdiff))
+        @info "The vertical diffusion's leak where the parent is negative" relative_difference(
+            ᶜρgap,
+            ᶜleak .* Y.c.ρ,
+        )
+        @test relative_difference(ᶜρgap, ᶜleak .* Y.c.ρ) < 1e-8
+        # Without the negative part, or without its `K_e` diffusion, the closed
+        # form would miss the model's difference.
+        ᶜwithout_negative_part = vertical_leak_at_K_h(
+            Y_negative,
+            p,
+            CA._precipitating_water(Y_negative, p),
+        )
+        ᶜwithout_K_e = vertical_leak_at_K_h(
+            Y_negative,
+            p,
+            CA._leaking_water(Y_negative, p),
+        )
+        @info "Relative errors without the negative part and without its K_e term" relative_difference(
+            ᶜρgap,
+            ᶜwithout_negative_part .* Y.c.ρ,
+        ) relative_difference(ᶜρgap, ᶜwithout_K_e .* Y.c.ρ)
+        @test relative_difference(ᶜρgap, ᶜwithout_negative_part .* Y.c.ρ) > 1e-6
+        @test relative_difference(ᶜρgap, ᶜwithout_K_e .* Y.c.ρ) > 1e-6
     end
 
     # 5. The audit's own columns.

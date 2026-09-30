@@ -459,8 +459,9 @@ is neither rain nor snow, the rain and the snow. They have a page of their own,
     outputs, and a time *average* of it is not meaningful;
   - `q_tag_upfix_<name>` and `q_tag_copy_res`: with updraft copies, the copies'
     repair, cumulative as `q_tag_fix` is, and the residual it found;
-  - `q_tag_leak_<path>`: the rate at which one path drifts the partition's sum
-    from ``\rho q_\mathrm{tot}``, computed from the state; see below;
+  - `q_tag_leak_<path>`: the rate at which one path moves the partition's sum
+    away from ``\rho q_\mathrm{tot}``, computed from the state at option C's
+    target; see below;
   - `pr_tag_<name>`, `prra_tag_<name>` and `prsn_tag_<name>`, under 0-moment
     microphysics: the tag's part of `pr`, `prra` and `prsn`, the column
     integral of its part of the rain-out (`water_tag_precipitation!`). It is
@@ -636,10 +637,17 @@ Under 1-moment microphysics the rain and snow make the difference. The
 hyperdiffusion also takes ``\rho q_\mathrm{tot}`` as a perturbation from a
 reference profile ``q_\mathrm{tot,r}(p)`` and the tags not, so it drifts the
 partition under 0-moment too, wherever that profile varies along a model level.
-`q_tag_leak_<path>` is each path's source, in closed form from the state
-(`water_tag_leak!`): the rate at which the path would drift an exactly closed
-partition. It does not read the tags, so it leaves out the path's transport of
-a residual already there.
+And where ``\rho q_\mathrm{tot}`` is negative, the partition holds only its
+non-negative part (option C). So there every path moves the parent by the
+negative part and the tags not.
+`q_tag_leak_<path>` is each path's rate, in closed form from the state
+(`water_tag_leak!`). It is the raw difference: the path's tendency of the tags'
+sum minus its tendency of ``\rho q_\mathrm{tot}``, over ``\rho``. It is taken
+at a partition closed to option C's target, ``\max(\rho q_\mathrm{tot}, 0)``.
+Where the parent is negative, that partition already differs from it by the
+negative part, and the leak includes the path's transport of that difference.
+So it is the path's source of `q_tag_res + q_tag_negative`, with the opposite
+sign. It leaves out the path's transport of any other residual.
 
 `water_tag_leak_correction: true` corrects two of these paths, the EDMF
 vertical diffusive flux and its updrafts' mirror; see

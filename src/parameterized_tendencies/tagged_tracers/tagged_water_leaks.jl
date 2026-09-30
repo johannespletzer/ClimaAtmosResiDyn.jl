@@ -5,11 +5,12 @@
 ##### They move the parent only by the water that diffuses,
 ##### `q_tot_eff = q_tot - q_rai - q_sno` (`ᶜdiffusing_water`). The
 ##### hyperdiffusion also takes the parent as a perturbation from the reference
-##### profile `q_tot_r(p)`, and the tags not. So on each path the tags' sum
-##### drifts from the parent at a rate that the state alone decides (G3_PLAN
-##### 4.2). These functions compute that rate, to size each path before any
-##### correction is written. They only read the state and write scratch, so a
-##### run's fields do not change.
+##### profile `q_tot_r(p)`, and the tags not. And under option C a closed
+##### partition sums to `max(ρq_tot, 0)`, not to `ρq_tot`. So on each path the
+##### tags' sum drifts from the parent at a rate that the state alone decides
+##### (G3_PLAN 4.2). These functions compute that rate, to size each path
+##### before any correction is written. They only read the state and write
+##### scratch, so a run's fields do not change.
 
 """
     WATER_TAG_LEAK_PATHS
@@ -31,28 +32,44 @@ const WATER_TAG_LEAK_PATHS =
 """
     water_tag_leak!(ᶜleak, Y, p, ::Val{path})
 
-Write into `ᶜleak` the rate at which `path` would move the sum of a partition
-of water tags away from the parent if the partition were exactly closed, per
-unit mass of grid-mean air, in kg kg⁻¹ s⁻¹. It is the path's tendency of
-`Σᵢ ρq_tagᵢ` minus its tendency of `ρq_tot`, over `ρ`, evaluated at
-`Σᵢ ρq_tagᵢ = ρq_tot`. So it is the source the path adds to the closure
-residual. It does not read the tags: the path's transport of a residual already
-there, `L(Σᵢ q_tagᵢ - q_tot)` for the path's operator `L`, is not in it. A
-positive value means the tags gain water the parent does not.
+Write into `ᶜleak` the rate at which `path` moves the sum of a partition of
+water tags away from the parent, per unit mass of grid-mean air, in
+kg kg⁻¹ s⁻¹. It is the raw difference: the path's tendency of `Σᵢ ρq_tagᵢ`
+minus its tendency of `ρq_tot`, over `ρ`. It is taken at a partition closed to
+option C's target, so the tags sum to `max(ρq_tot, 0)`. It reads the tags only
+for their shares, under `water_tag_precipitation: true`. A positive value
+means the tags gain water the parent does not.
+
+The tags' sum minus the parent is `-(q_tag_res + q_tag_negative)`. So the leak
+is the path's source of `q_tag_res + q_tag_negative`, with the opposite sign.
+Where the parent is negative, the closed partition already differs from it by
+`-min(ρq_tot, 0)/ρ`. The leak includes the path's transport of that
+difference. It does not include the path's transport of any other residual.
+Where neither `ρq_tot` nor, on the updrafts' paths, `q_totʲ` is negative, the
+values are those of a partition that sums to its parent, bit for bit.
+`hyperdiff_up` is taken at `max(q_totʲ, 0)`.
+
+The hyperdiffusion takes the parent as a perturbation from the reference
+profile `q_tot_r`, and the tags not. So its leak also holds the reference
+profile's hyperdiffusion: `q_tot_r` without the key, and `(1 - Σφ) q_tot_r`
+under the key, with `Σφ` the partition's shares of the water that is neither
+rain nor snow.
 
 For the updrafts' paths, the tendency is the copies' `Σᵢ χᵢʲ` minus `q_totʲ`,
-evaluated at `Σᵢ χᵢʲ = q_totʲ`, times `ρaʲ / ρ`, summed over the updrafts. That is the water the copies gain
-that the updraft does not, per unit mass of grid-mean air. The copies' repair
-takes it out again, into `q_tag_upfix_<name>`.
+times `ρaʲ / ρ`, summed over the updrafts. `diffusion_up` gives each copy its
+grid-mean tag's tendency, so it is taken at the grid mean's target.
+`hyperdiff_up` is taken at `Σᵢ χᵢʲ = max(q_totʲ, 0)`, the target of the
+copies' repair. The repair takes the leak out again, into
+`q_tag_upfix_<name>`.
 
 Zero where the path is off, or on a column for the horizontal paths. On the
 sphere the result is DSSed, as a tendency diagnostic is. See
 [`WATER_TAG_LEAK_PATHS`](@ref) for the paths.
 
-Under `water_tag_precipitation: true` only `hyperdiff` can be nonzero. It is
-taken where the non-precipitating parts sum to `max(N, 0)`, for
-`N = ρq_tot - ρq_rai - ρq_sno`, and not to `ρq_tot`. See
-`docs/src/tagged_water_precipitation.md`. The copies are refused with the key.
+Under `water_tag_precipitation: true` only `hyperdiff`, `vdiff` and `sponge`
+can be nonzero. There the target is `max(N, 0)`, for
+`N = ρq_tot - ρq_rai - ρq_sno`. See `docs/src/tagged_water_precipitation.md`.
+The copies and EDMF are refused with the key.
 """
 function water_tag_leak!(ᶜleak, Y, p, path::Val)
     @. ᶜleak = 0
@@ -98,18 +115,55 @@ function _water_tag_parts_leak!(ᶜleak, Y, p, ::Val{:hyperdiff})
     return nothing
 end
 
-# The water the parent does not move on these paths, as the tags' sum minus
-# the diffusing water. Zero without rain and snow.
+# The vertical diffusion and the sponge take the parts on their values and the
+# parent on `N/ρ`. A closed partition's parts sum to `max(N, 0)`, so the tags'
+# sum departs from the parent by the path's operator on `-min(N, 0)/ρ`. That is
+# zero where `N` is not negative. EDMF is refused with the key, so the boundary
+# layer's diffusion is the only vertical path.
+function _negative_nonprecipitating_water(Y)
+    ᶜN = water_tag_part_parent(Y.c, NonPrecipitatingPart())
+    return @. lazy(-water_tag_negative_part(ᶜN) / Y.c.ρ)
+end
+_water_tag_parts_leak!(ᶜleak, Y, p, ::Val{:vdiff}) = _add_boundary_layer_leak!(
+    ᶜleak,
+    Y,
+    p,
+    p.atmos.vertical_diffusion,
+    _negative_nonprecipitating_water(Y),
+)
+_water_tag_parts_leak!(ᶜleak, Y, p, ::Val{:sponge}) =
+    _add_sponge_leak!(ᶜleak, Y, p, _negative_nonprecipitating_water(Y))
+
+# The water the tags carry and the parent does not move on these paths: the
+# tags' sum at option C's target, `max(ρq_tot, 0)/ρ`, minus the diffusing
+# water. Where `ρq_tot` is not negative the target is `ρq_tot` itself, bit for
+# bit, so this is the rain and snow there.
 function _leaking_water(Y, p)
+    ᶜq_tot_eff = ᶜdiffusing_water(Y, p)
+    return @. lazy(
+        specific(water_tag_partition_target(Y.c.ρq_tot), Y.c.ρ) - ᶜq_tot_eff,
+    )
+end
+
+# The rain and snow, `q_tot - q_tot_eff`, that the leak's correction takes
+# back. Zero without rain and snow.
+function _precipitating_water(Y, p)
     ᶜq_tot_eff = ᶜdiffusing_water(Y, p)
     return @. lazy(specific(Y.c.ρq_tot, Y.c.ρ) - ᶜq_tot_eff)
 end
 
-# The updraft's counterpart, `q_raiʲ + q_snoʲ`, or zero without them.
+# The closed partition's excess over the parent, `-min(ρq_tot, 0)/ρ`.
+_negative_water(Y) = @. lazy(-water_tag_negative_part(Y.c.ρq_tot) / Y.c.ρ)
+
+# The updraft's counterpart, `q_raiʲ + q_snoʲ - min(q_totʲ, 0)`. The copies'
+# repair aims at `max(q_totʲ, 0)`. Where `q_totʲ` is not negative,
+# `water_tag_negative_part` returns `+0.0`, and subtracting it changes no bit.
 _leaking_updraft_water(ᶜsgsʲ, microphysics_model) =
     microphysics_model isa
     Union{NonEquilibriumMicrophysics1M, NonEquilibriumMicrophysics2M} ?
-    (@. lazy(ᶜsgsʲ.q_rai + ᶜsgsʲ.q_sno)) : (@. lazy(0 * ᶜsgsʲ.q_tot))
+    (@. lazy(
+        ᶜsgsʲ.q_rai + ᶜsgsʲ.q_sno - water_tag_negative_part(ᶜsgsʲ.q_tot),
+    )) : (@. lazy(0 * ᶜsgsʲ.q_tot - water_tag_negative_part(ᶜsgsʲ.q_tot)))
 
 _edmf_diffuses(p, ::Union{EDOnlyEDMFX, PrognosticEDMFX}) =
     p.atmos.edmfx_model.sgs_diffusive_flux
@@ -121,15 +175,26 @@ _edmf_diffuses_horizontally(Y, p, turbconv_model) = false
 
 # The EDMF vertical flux diffuses the tags at `K_h + K_e` and the parent at
 # `K_h` on `q_tot_eff` plus `K_e` on `q_tot` (`edmfx_sgs_diffusive_flux_tendency!`).
+# At the target the tags' sum departs from `q_tot_eff` by `_leaking_water` and
+# from `q_tot` by `_negative_water`. The `K_e` term is added only where it is
+# not zero, so where the parent is never negative no bit changes.
 function _add_edmf_vertical_leak!(ᶜleak, Y, p)
     ᶠρK_h = @. lazy(ᶠinterp(Y.c.ρ) * p.precomputed.ᶠK_h)
     ᶜdivergence = ᶜdiffusive_flux_divergenceᵥ(ᶠρK_h, _leaking_water(Y, p))
     @. ᶜleak -= ᶜdivergence / Y.c.ρ
+    ᶠρK_e = @. lazy(ᶠinterp(Y.c.ρ) * p.precomputed.ᶠK_entr)
+    ᶜentrainment = ᶜdiffusive_flux_divergenceᵥ(ᶠρK_e, _negative_water(Y))
+    @. ᶜleak = ifelse(
+        iszero(ᶜentrainment),
+        ᶜleak,
+        ᶜleak - ᶜentrainment / Y.c.ρ,
+    )
     return nothing
 end
 
 # The horizontal flux diffuses the tags at `K_h` and the parent at `K_h` on
-# `q_tot_eff` (`edmfx_sgs_horizontal_diffusive_flux_tendency!`).
+# `q_tot_eff` (`edmfx_sgs_horizontal_diffusive_flux_tendency!`). One
+# diffusivity, so the one term `_leaking_water` holds the negative part too.
 function _add_edmf_horizontal_leak!(ᶜleak, Y, p)
     (; ᶜK_h_h) = p.precomputed
     ᶜq_p = _leaking_water(Y, p)
@@ -140,18 +205,26 @@ end
 function _water_tag_leak!(ᶜleak, Y, p, ::Val{:vdiff})
     _edmf_diffuses(p, p.atmos.turbconv_model) &&
         _add_edmf_vertical_leak!(ᶜleak, Y, p)
-    _add_boundary_layer_leak!(ᶜleak, Y, p, p.atmos.vertical_diffusion)
+    _add_boundary_layer_leak!(
+        ᶜleak,
+        Y,
+        p,
+        p.atmos.vertical_diffusion,
+        _leaking_water(Y, p),
+    )
     return nothing
 end
 
-_add_boundary_layer_leak!(ᶜleak, Y, p, vertical_diffusion) = nothing
-# As `vertical_diffusion_boundary_layer_tendency!`: the same harmonic-mean face
-# diffusivity for the tags and for `q_tot_eff`.
+# The boundary layer's diffusion of the water `ᶜq_p` that the tags carry and
+# the parent does not. As `vertical_diffusion_boundary_layer_tendency!`: the
+# same harmonic-mean face diffusivity for the tags and for `q_tot_eff`.
+_add_boundary_layer_leak!(ᶜleak, Y, p, vertical_diffusion, ᶜq_p) = nothing
 function _add_boundary_layer_leak!(
     ᶜleak,
     Y,
     p,
     vertical_diffusion::Union{VerticalDiffusion, DecayWithHeightDiffusion},
+    ᶜq_p,
 )
     FT = eltype(Y)
     ᶜK_h = p.scratch.ᶜtemp_scalar
@@ -165,7 +238,6 @@ function _add_boundary_layer_leak!(
         )
     end
     ᶠρK = @. lazy(ᶠinterp(Y.c.ρ) / ᶠinterp(1 / max(ᶜK_h, eps(FT))))
-    ᶜq_p = _leaking_water(Y, p)
     @. ᶜleak -= ᶜdiffdivᵥ(-(ᶠρK * ᶠgradᵥ(ᶜq_p))) / Y.c.ρ
     return nothing
 end
@@ -177,8 +249,10 @@ function _water_tag_leak!(ᶜleak, Y, p, ::Val{:hdiff})
 end
 
 # The tags hyperdiffuse on `∇²q_tag`, the parent on `∇²(q_tot_eff - q_tot_r)`
-# (`apply_tracer_hyperdiffusion_tendency!`). The Laplacian is DSSed before the
-# outer operator, as in the model.
+# (`apply_tracer_hyperdiffusion_tendency!`). At the target the difference is
+# `∇²(_leaking_water + q_tot_r)`: the rain and snow, the negative part and the
+# reference profile. The Laplacian is DSSed before the outer operator, as in
+# the model.
 function _water_tag_leak!(ᶜleak, Y, p, ::Val{:hyperdiff})
     hyperdiff = p.atmos.hyperdiff
     (isnothing(hyperdiff) || iscolumn(axes(Y.c))) && return nothing
@@ -194,18 +268,23 @@ function _water_tag_leak!(ᶜleak, Y, p, ::Val{:hyperdiff})
 end
 
 # The sponge diffuses the tags on their value and the parent on `q_tot_eff`
-# (`viscous_sponge_tendency!`).
-function _water_tag_leak!(ᶜleak, Y, p, ::Val{:sponge})
+# (`viscous_sponge_tendency!`), at one coefficient.
+_water_tag_leak!(ᶜleak, Y, p, ::Val{:sponge}) =
+    _add_sponge_leak!(ᶜleak, Y, p, _leaking_water(Y, p))
+
+# The sponge's diffusion of the water `ᶜq_p` that the tags carry and the parent
+# does not.
+function _add_sponge_leak!(ᶜleak, Y, p, ᶜq_p)
     sponge = p.atmos.viscous_sponge
     (isnothing(sponge) || iscolumn(axes(Y.c))) && return nothing
-    ᶜtendency = viscous_sponge_tendency_tracer(Y.c.ρ, _leaking_water(Y, p), sponge)
+    ᶜtendency = viscous_sponge_tendency_tracer(Y.c.ρ, ᶜq_p, sponge)
     @. ᶜleak += ᶜtendency / Y.c.ρ
     return nothing
 end
 
 # Each copy takes its grid-mean tag's specific diffusive tendency, and `q_totʲ`
 # the parent's. So the copies' sum leaks as the grid mean's does, on the EDMF
-# paths the updrafts mirror.
+# paths the updrafts mirror, at the grid mean's target.
 function _water_tag_leak!(ᶜleak, Y, p, ::Val{:diffusion_up})
     turbconv_model = p.atmos.turbconv_model
     _has_water_tag_copies(p, turbconv_model) || return nothing
@@ -224,7 +303,7 @@ function _water_tag_leak!(ᶜleak, Y, p, ::Val{:diffusion_up})
 end
 
 # The copies hyperdiffuse on `∇²χᵢʲ`, `q_totʲ` on `∇²(q_tot_effʲ - q_tot_r)`,
-# without density weighting.
+# without density weighting. Taken where the copies sum to `max(q_totʲ, 0)`.
 function _water_tag_leak!(ᶜleak, Y, p, ::Val{:hyperdiff_up})
     turbconv_model = p.atmos.turbconv_model
     hyperdiff = p.atmos.hyperdiff
@@ -269,7 +348,9 @@ Under `water_tag_leak_correction: true`, add to each water tag's tendency
 and snow `q_p = q_tot - q_tot_eff`. The tags diffuse their whole value at
 `K_h + K_e`, and the parent diffuses `q_tot_eff` at `K_h` and `q_tot` at `K_e`.
 So without the correction the partition gains `-∇·(ρK_h ∇q_p)` that the parent
-does not, the leak `q_tag_leak_vdiff`.
+does not. Where the parent is never negative, that is the leak
+`q_tag_leak_vdiff`. Where it is negative, the leak also holds the diffusion of
+option C's negative part, which the correction does not take back.
 
 `ψᵢ` is the share the sedimentation mirror takes a tag's rain and snow by: a
 partition tag's clamped share renormalized over the partition, a source tag's
@@ -277,13 +358,13 @@ own clamped share. `ψᵢ q_p` is a modeling assumption. The tags partition tota
 water and hold no phase, so the rain and snow are taken to have the cell's
 total-water composition. That is not demonstrated provenance. The partition's
 shares sum to one wherever it holds water, so the partition's corrections sum to
-`∇·(ρK_h ∇q_p)`, the leak with the opposite sign, and its diffusion is the
-parent's. Where the partition holds no water, the shares are zero and the leak
-there is not corrected. The same holds where the parent's water is not
-positive, since the shares are taken against it. That leak lands in
-`q_tag_res`, or under the follower in `q_tag_inc_moved`, as before. A source
-tag's correction takes back its own share, so its diffusion moves only the water
-that the parent diffuses too.
+`∇·(ρK_h ∇q_p)`, the rain and snow's part of the leak with the opposite sign,
+and its diffusion is the parent's. Where the partition holds no water, the
+shares are zero and the leak there is not corrected. The same holds where the
+parent's water is not positive, since the shares are taken against it. That leak
+lands in `q_tag_res`, or under the follower in `q_tag_inc_moved`, as before. A
+source tag's correction takes back its own share, so its diffusion moves only
+the water that the parent diffuses too.
 
 With `apply_sgs_updraft`, the updrafts' mirror of the diffusion is on, and with
 updraft copies each copy takes its tag's correction per unit mass, `/ρ`, as it
@@ -383,7 +464,7 @@ function apply_water_tag_leak_correction!(
     model = p.atmos.water_tagging_model
     water_tag_share_norm!(p, Y)
     ᶜnorm = p.scratch.ᶜtagging_q_share_norm
-    ᶜq_p = _leaking_water(Y, p)
+    ᶜq_p = _precipitating_water(Y, p)
     n = mirror ? n_mass_flux_subdomains(p.atmos.turbconv_model) : 0
     _apply_water_tag_leak_correction!(
         Yₜ,
