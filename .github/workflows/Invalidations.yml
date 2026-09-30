@@ -51,8 +51,18 @@ jobs:
       run: |
         echo "Invalidations on default branch: ${{ steps.invs_default.outputs.total }} (${{ steps.invs_default.outputs.deps }} via deps)" >> $GITHUB_STEP_SUMMARY
         echo "This branch: ${{ steps.invs_pr.outputs.total }} (${{ steps.invs_pr.outputs.deps }} via deps)" >> $GITHUB_STEP_SUMMARY
-    # Step outputs are strings, and two strings compare as text, where '1002'
-    # is less than '998'. `fromJSON` makes them numbers.
+    # The action writes the counts zero-padded, such as `000004009`, which
+    # `fromJSON` rejects, and two strings compare as text. So the step checks
+    # that each count has only digits and compares them as base-10 integers.
     - name: Check if the PR does increase number of invalidations
-      if: fromJSON(steps.invs_pr.outputs.total) > fromJSON(steps.invs_default.outputs.total)
-      run: exit 1
+      env:
+        PR_TOTAL: ${{ steps.invs_pr.outputs.total }}
+        DEFAULT_TOTAL: ${{ steps.invs_default.outputs.total }}
+      run: |
+        for count in "$PR_TOTAL" "$DEFAULT_TOTAL"; do
+          [[ "$count" =~ ^[0-9]+$ ]] || { echo "Not a count: $count"; exit 1; }
+        done
+        if (( 10#$PR_TOTAL > 10#$DEFAULT_TOTAL )); then
+          echo "The PR adds invalidations: $((10#$PR_TOTAL)) against $((10#$DEFAULT_TOTAL))."
+          exit 1
+        fi
