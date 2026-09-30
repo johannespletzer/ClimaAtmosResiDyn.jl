@@ -29,20 +29,22 @@ Marks: `[ ]` open, `[~]` under way, `[x]` done, `[!]` waiting for a decision.
 
 The twelve criteria of the plan, section 2, in short:
 
-| #  | Criterion                                                                                      | Status                   |
-|:-- |:---------------------------------------------------------------------------------------------- |:------------------------ |
-| 1  | Evidence: every headline number goes through the verifier and a manifest                       | tools built; review open |
-| 2  | Refusals with tests, known issues settled, a file-based start, restart round trips             | open                     |
-| 3  | Parity in both modes: 1M and 0M EDMF columns, explicit microphysics, two MPI ranks             | open                     |
-| 4  | Closure on D4-W, including the copies' own residual and the rain and snow parts                | open                     |
-| 5  | Per-tag accuracy against the copies, at 24 h and in the first hour                             | open                     |
-| 6  | Convergence of the default's error and of the copies                                           | open                     |
-| 7  | Precipitation provenance: the 0M split, rain and snow tags, `Σ pr_tag = pr`, the audit         | open                     |
-| 8  | Held-out columns: RICO, BOMEX, ARM SGP, GCM-driven 0M                                          | open                     |
-| 9  | Float32 twin                                                                                   | open                     |
-| 10 | Cost, both modes and both families                                                             | open                     |
-| 11 | Ten days on the sphere (superseded 2026-09-24: 90 days at 60 levels), a copies twin, a restart | open                     |
-| 12 | Reviews, CI, draft PRs, docs                                                                   | open                     |
+| #  | Criterion                                                                                      | Status                                                                                                                                                                                                                                  |
+|:-- |:---------------------------------------------------------------------------------------------- |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1  | Evidence: every headline number goes through the verifier and a manifest                       | partial: verifier, manifest, inventory and tools review done (WP0); R8, R9 and S6 not built                                                                                                                                             |
+| 2  | Refusals with tests, known issues settled, a file-based start, restart round trips             | partial: refusals merged (#100); KI1 closed (W19); KI4 closed for the grid rule (W51, #130); file-based start passes (W22); restart only for ledgers (W27) and a rain/snow column (W43); KI7 open                                       |
+| 3  | Parity in both modes: 1M and 0M EDMF columns, explicit microphysics, two MPI ranks             | partial: every tagged column run is bit for bit its twin (W17–W51); two MPI ranks not run                                                                                                                                               |
+| 4  | Closure on D4-W, including the copies' own residual and the rain and snow parts                | partial: default passes (W24 1.5e-4; W38 at most 3.0e-5); second-half rule fails on 4 W38 rungs (up to 1.7e-5); copies' repair fails (0.66%/day, W38); rain/snow shown only on 1M without EDMF (W43)                                    |
+| 5  | Per-tag accuracy against the copies, at 24 h and in the first hour                             | not assessable: copies ineligible on D4-W (W21, W38 R5, R7); first hour 13.1% (W50 rule) against 14.3% (main), budget 1%; R5 fails on all rungs (W50)                                                                                   |
+| 6  | Convergence of the default's error and of the copies                                           | not assessable: no eligible comparator (W38); centred rows R6, R9, R10 pass; first-order breaks the copies (R4, R6)                                                                                                                     |
+| 7  | Precipitation provenance: the 0M split, rain and snow tags, `Σ pr_tag = pr`, the audit         | partial: 0M split validated (W26); WP4a-V passes (W32); rain/snow stage 1 without EDMF (W43); stages 2 and 3, V-W5 and the audit's acceptance open                                                                                      |
+| 8  | Held-out columns: RICO, BOMEX, ARM SGP, GCM-driven 0M                                          | not started: waits on V-W5 and OD14                                                                                                                                                                                                     |
+| 9  | Float32 twin                                                                                   | not started: the Float64-twin helper exists                                                                                                                                                                                             |
+| 10 | Cost, both modes and both families                                                             | in progress: WP9 first pass noisy (19 of 30 points spread over 10%, W52); exclusive-node rerun pending (jobs 14005213–21); 32 water copies not built in 8 h; rain/snow under EDMF not buildable at 43b01ca1; budget waits for the owner |
+| 11 | Ten days on the sphere (superseded 2026-09-24: 90 days at 60 levels), a copies twin, a restart | not started: waits on step 8a (crev) and step 8 (WP9)                                                                                                                                                                                   |
+| 12 | Reviews, CI, draft PRs, docs                                                                   | partial: reviews WP1–WP6 on file; WP4b stage-1 review done (12 findings, none moving a model field; transport-2 in #135); CI green on main; water claim contract (WP8) and final docs pass open                                         |
+
+Restated 2026-09-30 from the findings; the plan's section 2 holds the criteria's full text.
 
 ## Decisions
 
@@ -219,6 +221,14 @@ The twelve criteria of the plan, section 2, in short:
     copies' repair 0.37% to 0.45% a day against 0.20%, unchanged by the
     rule). So the first hour stays not assessable. What remains open: the
     copies' repair.*
+    *2026-09-30: R1 and R4 pass; R5 fails on all rungs (3.9e-3 to 4.6e-3 a
+    day against 2e-3), so R7 is not assessable and D4-W's provenance stays
+    not assessable. The pulse's surface first hour is 13.1% (fix) against
+    14.3% (main), budget 1%. The water fix and the energy plume are on
+    `claude/w21-surface-flux` (local head `16453638`). The Julia 1.10
+    allocation gate passes after a fix. The coverage and parity reruns are
+    running. E89, the energy measurement, is pre-registered and approved, not
+    run. The PR is to follow.*
   - [x] **The prognostic fields of the rain and snow tags**, settled in the
     design note WP4b-D and its review. *Decided 2026-09-25:* the three parts;
     `ρq_tag_<name>` holds the non-precipitating water, beside `ρq_rtag_<name>`
@@ -464,7 +474,15 @@ jobs from frozen snapshot worktrees under `claude_work/g3/wp3/`.
         `../ClimaAtmosResiDyn-issue7-probe-run` (the record, #109 and
         `claude/long-run-samesign`; one conflict, resolved). Not submitted.
       + [ ] The owner's choice among B, C and D, then the fix and its tests,
-        before the sphere (step 8a).
+        before the sphere (step 8a). *2026-09-30: C was chosen and is built
+        on `claude/option-c-revision` (`a4b492ec`; W49, design section 11):
+        the rule, coupling-1 and the review's wording fixes. The 30-day
+        parity passes Q8 twice (`cfb72587`, `a4b492ec`): every model field is
+        bit for bit, and the tags differ from `main` from about day 11.5. The
+        rule review (`review/agent_reviews/crev_rule_review_2026-09-30.md`)
+        found no blocker. One test bug in the coupling-1 test is being
+        fixed. The owner's review of section 11 (Q2 to Q9) is pending, and
+        the 90-day validation waits for it.*
 
   - [x] **V-W3:**
 
@@ -679,7 +697,9 @@ rule: each subdomain's rain-out `Δᵏ` goes by `φᵏ` for both signs (review S
   - [x] Under copies, one rule for the grid tags and the copies (WP3 review,
     N6): the grid tags' updraft part goes by the copies' shares.
   - [x] Known issue 4 restated in `docs/known_issues.md` (review B1).
-  - [ ] Isolate known issue 4: the switch and the experiment (the note's
+  - [x] *Done 2026-09-30: WP4a-J (W51) closed known issue 4 for the grid
+    rule, merged as #130. The copies' part stays open.* Isolate known issue
+    4: the switch and the experiment (the note's
     sections 4 and 5), after the owner picks (i) the pair or (ii) the
     diagonal alone. Moved out of #104 to the follow-up WP4a-J below (the
     owner's review of #104, finding 6).
@@ -791,7 +811,8 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     `3c16a58b`, with NEWS.
   - [x] Whether the switch becomes a default. *Decided 2026-09-29: no; it
     stays opt-in and off by default (the note's 5.2, DECISIONS.md).*
-  - [ ] The PR (the coordinating session opens it).
+  - [x] The PR (the coordinating session opens it). *Merged 2026-09-30 as
+    #130, with a Julia 1.10 allocation fix in `update_diffusion_jacobian!`.*
 
 ## WP4b: rain and snow carry their own tags (draft PR #121)
 
@@ -823,7 +844,12 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     What it shows is W43; where the build departs from the note is its
     section 17.
 
-  - [ ] Review (xhigh) of stage 1.
+  - [x] Review (xhigh) of stage 1. *Done 2026-09-30
+    (`review/agent_reviews/wp4b_stage1_review_2026-09-30.md`): 12 findings
+    kept, none moving a model field. The should-fix ones are micro-1,
+    transport-1, transport-2, state-1 and state-2. transport-2 is being fixed
+    in PR #135 (open, its tests running). No fix is recorded for the others. The
+    walk-through with the owner is open.*
 
   - [ ] The hyperdiffusion correction (note section 3) is built, but no model
     run exercises it: the test column has no horizontal extent. A sphere or
@@ -1107,7 +1133,13 @@ owner's points in the note's section 8.
   - [ ] WP8: docs. `tagged_water.md` gets the EDMF section, precipitation, and
     the corrected claim about diffusion operators under 1M. Also a claim
     contract for tagged water, `known_issues.md` and NEWS. Review (high).
-  - [ ] WP9 and **V-W10**: cost at 2, 4, 8 and 32 tags where they build in
+  - [ ] *2026-09-30: the first pass was noisy (19 of 30 points spread over
+    10%, node contention). The exclusive-node rerun (jobs 14005213 to
+    14005221) is pending, with an estimated start of 2026-10-01. The energy
+    finding number is E88 (E79 is taken). The owner decided that 32 water
+    copies count as "not built in 8 h" and that rain/snow with modes counts
+    as not buildable at `43b01ca1`. The budget waits for the owner.*
+    WP9 and **V-W10**: cost at 2, 4, 8 and 32 tags where they build in
     time, both modes, with and without rain and snow tags, both families. P2
     and P3 only if the profile shows them. Then propose the default mode's
     cost budget to the owner, before V-W11.

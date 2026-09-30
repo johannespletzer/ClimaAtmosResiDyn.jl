@@ -218,6 +218,23 @@ The list as it stood before this classification, kept as written:
 >     and the copies under first-order upwinding (W25). **Waiting.**
 >     [FINDINGS W25](FINDINGS.md)
 
+## 2026-09-29/30
+
+  - **Option C's 90-day trees, as pre-registered, without W21.** **In force.**
+  - **A parent of exactly zero counts as positive** (design
+    `NEGATIVE_PARENT_WATER.md` 11.10, Q1). The tags take the whole gain
+    there. **In force.**
+  - **The 30-day parity rerun** (Q8): the revision against `main`, four jobs.
+    **Done:** it passed twice (`cfb72587`, `a4b492ec`).
+  - **The review's small fixes and coupling-1 go in now.** **Done** on
+    `claude/option-c-revision` (`a4b492ec`).
+  - **WP4a-J stays off by default.** **In force.**
+  - **WP9: 32 water copies count as "not built in 8 h", and rain/snow with
+    modes counts as not buildable at `43b01ca1`.** **In force.**
+  - **E89 is approved, to run after the PR head is final.** **Waiting** for
+    the head.
+  - **The verifier stream (R8, R9, S6) comes later.** **In force.**
+
 ## 2026-09-29
 
   - **Option C's revision: the explicit brackets give the region tags the
