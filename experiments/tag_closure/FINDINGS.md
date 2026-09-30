@@ -87,21 +87,21 @@ changes, which [RUNS.md](RUNS.md) records.
 
 ## Index
 
-| IDs                                                   | section                                             |
-|:----------------------------------------------------- |:--------------------------------------------------- |
-| W1–W48, W50 (W46 reserved for PX7, W49 for C's revision)                 | 1. Water tags                                       |
-| E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48, E85 | 2. Energy source tags: closure by transport         |
-| E1–E6, E9b, E9c, E10–E19, E71, R1–R11                 | 3. The energy reference and the offset              |
-| E40, E53                                              | 4. EDMF and the updrafts                            |
-| E39, E39b, E43, E59, E61, E62, E64–E67, E79, E80, E82 | 5. The implicit channel and the increment prototype |
-| E45, E47, E51, E54, E55, E57, E58                     | 6. Parity, Float32, MPI and restarts                |
-| E7–E9, E20–E24, E26, E28, E30, E38, E49, E63, E87     | 7. The process records and the per-process checks   |
-| E50, E60, E69, E70, E74, E75, E81                     | 8. The sphere and long runs                         |
-| E68, E72, E73, E76, E83, E84, E86                     | 9. Mixing: V3 and the updraft gap                   |
-| T1–T10, E44, E44b–E44e, E52, E56, E77, E78            | 10. Cost                                            |
-| M1–M8                                                 | 11. Method                                          |
-| old claims, errata, conflicts                         | 12. Superseded and falsified claims                 |
-| FQ-1 to FQ-24                                         | 13. What is not established                         |
+| IDs                                                      | section                                             |
+|:-------------------------------------------------------- |:--------------------------------------------------- |
+| W1–W48, W50 (W46 reserved for PX7, W49 for C's revision) | 1. Water tags                                       |
+| E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48, E85    | 2. Energy source tags: closure by transport         |
+| E1–E6, E9b, E9c, E10–E19, E71, R1–R11                    | 3. The energy reference and the offset              |
+| E40, E53                                                 | 4. EDMF and the updrafts                            |
+| E39, E39b, E43, E59, E61, E62, E64–E67, E79, E80, E82    | 5. The implicit channel and the increment prototype |
+| E45, E47, E51, E54, E55, E57, E58                        | 6. Parity, Float32, MPI and restarts                |
+| E7–E9, E20–E24, E26, E28, E30, E38, E49, E63, E87        | 7. The process records and the per-process checks   |
+| E50, E60, E69, E70, E74, E75, E81                        | 8. The sphere and long runs                         |
+| E68, E72, E73, E76, E83, E84, E86                        | 9. Mixing: V3 and the updraft gap                   |
+| T1–T10, E44, E44b–E44e, E52, E56, E77, E78               | 10. Cost                                            |
+| M1–M8                                                    | 11. Method                                          |
+| old claims, errata, conflicts                            | 12. Superseded and falsified claims                 |
+| FQ-1 to FQ-24                                            | 13. What is not established                         |
 
 ## 1. Water tags
 
@@ -1861,15 +1861,15 @@ Two independent scorings agree on every verdict. Where they differ at the
 printed digit, both numbers are given (see the discrepancies below). The
 verdicts are the pre-registered scorer's, `analysis/water/w50_score.py`.
 
-| rule                                                | least favourable result                                                                                                                       |
-|:--------------------------------------------------- |:----------------------------------------------------------------------------------------------------------------------------------------------|
-| R1 parity, 40 files, every level and time           | *pass*, all 12 tagged runs, 0 differences                                                                                                     |
-| R4 closure, 24 h gross, tolerance 2e-3              | *pass*: at most 1.947e-3 (copies, plain 30 levels, 97% of the tolerance); the default at most 1.1e-4                                          |
-| R4 closure, the second 12 h against the first       | *pass* in all 12 runs, in the pre-registered reading (relative to the water): second minus first -2.2e-7 (fix) and -2.1e-7 (main) at 60 levels, default. A note on absolute amounts is in the discrepancies |
-| R5 the copies' own residual, tolerance 2e-4         | *pass*: at most 5.4e-5 (60 levels)                                                                                                            |
-| R5 the copies' repair a day, tolerance 2e-3         | *fail* on all three rungs, both arms: 3.9e-3 (30 levels), 4.5e-3 to 4.6e-3 (60 levels), 3.7e-3 (pulse); the worst, on the mean-water reading, is 2.3 times the tolerance |
-| R6 refinement                                       | not run (P2 is needed only where R5 passes, which is nowhere)                                                                                 |
-| R7 provenance                                       | *not assessable* on every rung and arm (R5 fails); numbers below are reported, not judged                                                     |
+| rule                                          | least favourable result                                                                                                                                                                                     |
+|:--------------------------------------------- |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1 parity, 40 files, every level and time     | *pass*, all 12 tagged runs, 0 differences                                                                                                                                                                   |
+| R4 closure, 24 h gross, tolerance 2e-3        | *pass*: at most 1.947e-3 (copies, plain 30 levels, 97% of the tolerance); the default at most 1.1e-4                                                                                                        |
+| R4 closure, the second 12 h against the first | *pass* in all 12 runs, in the pre-registered reading (relative to the water): second minus first -2.2e-7 (fix) and -2.1e-7 (main) at 60 levels, default. A note on absolute amounts is in the discrepancies |
+| R5 the copies' own residual, tolerance 2e-4   | *pass*: at most 5.4e-5 (60 levels)                                                                                                                                                                          |
+| R5 the copies' repair a day, tolerance 2e-3   | *fail* on all three rungs, both arms: 3.9e-3 (30 levels), 4.5e-3 to 4.6e-3 (60 levels), 3.7e-3 (pulse); the worst, on the mean-water reading, is 2.3 times the tolerance                                    |
+| R6 refinement                                 | not run (P2 is needed only where R5 passes, which is nowhere)                                                                                                                                               |
+| R7 provenance                                 | *not assessable* on every rung and arm (R5 fails); numbers below are reported, not judged                                                                                                                   |
 
 The copies' repair per day, as a share of `∫ρq_tot`, in established flow.
 Fix and main are the same to the printed digits. The window starts at 6600 s
@@ -1877,11 +1877,11 @@ Fix and main are the same to the printed digits. The window starts at 6600 s
 twins. The scorer's column is the pre-registered value: it divides by
 `∫ρq_tot` at 24 h. The re-derivation divides by the mean over the window.
 
-| rung        | scorer (pre-registered) | re-derivation, mean water                                                                    | whole day (scorer / re-derivation) | tolerance |
-|:----------- | -----------------------:| --------------------------------------------------------------------------------------------:| ----------------------------------:| ---------:|
-| plain 30    | 3.93e-3                 | 3.94e-3 from the 2 h row, the first row in the window (4.21e-3 from the 1 h row, see below) | 4.13e-3 / 4.15e-3                  | 2e-3      |
-| plain 60    | 4.48e-3                 | 4.58e-3                                                                                      | 4.97e-3 / 5.08e-3                  | 2e-3      |
-| pulse 30    | 3.69e-3                 | 3.70e-3 (3.55e-3 from the 1 h row, see below)                                                | 4.55e-3 / 4.57e-3                  | 2e-3      |
+| rung     | scorer (pre-registered) | re-derivation, mean water                                                                   | whole day (scorer / re-derivation) | tolerance |
+|:-------- | -----------------------:| -------------------------------------------------------------------------------------------:| ----------------------------------:| ---------:|
+| plain 30 | 3.93e-3                 | 3.94e-3 from the 2 h row, the first row in the window (4.21e-3 from the 1 h row, see below) | 4.13e-3 / 4.15e-3                  | 2e-3      |
+| plain 60 | 4.48e-3                 | 4.58e-3                                                                                     | 4.97e-3 / 5.08e-3                  | 2e-3      |
+| pulse 30 | 3.69e-3                 | 3.70e-3 (3.55e-3 from the 1 h row, see below)                                               | 4.55e-3 / 4.57e-3                  | 2e-3      |
 
 The 4.21e-3 and 3.55e-3 are from the 1 h row, which includes 50 min of
 startup, outside the pre-registered window. The re-derivation took the larger
@@ -1891,13 +1891,13 @@ If it were scored (R7's numbers, not a verdict), L1 of default against copies
 at 1 h, fix / main, against the budgets (region 1%, source 10%, `sfc` and
 `air` 1% as regions):
 
-| rung, tag        | 1 h L1 fix / main | 1 h L∞ fix / main | budget | 24 h L1 fix / main | 24 h L∞ fix / main | budget |
-|:---------------- | -----------------:| -----------------:| ------:|-------------------:| ------------------:| ------:|
-| plain 30, `evap` | 4.59% / 6.49%     | 10.23% / 7.04%    | 10%    | 0.19% / 0.40%      | 1.06% / 0.72%      | 2%     |
-| plain 60, `evap` | 8.06% / 11.83%    | 15.63% / 19.66%   | 10%    | 0.46% / 0.24%      | 0.73% / 0.35%      | 2%     |
-| plain 60, `strat`| 1.36% / 1.36%     | 17.69% / 17.69%   | 1%     | 1.72% / 1.72%      | 1.52% / 1.38%      | 2%     |
-| pulse, `sfc`     | 13.06% / 14.33%   | 15.47% / 17.38%   | 1%     | 0.23% / 0.45%      | 0.95% / 0.98%      | 2%     |
-| pulse, `air`     | 0.88% / 0.96%     | 2.14% / 2.41%     | 1%     | 0.24% / 0.20%      | 0.63% / 0.60%      | 2%     |
+| rung, tag         | 1 h L1 fix / main | 1 h L∞ fix / main | budget | 24 h L1 fix / main | 24 h L∞ fix / main | budget |
+|:----------------- | -----------------:| -----------------:| ------:| ------------------:| ------------------:| ------:|
+| plain 30, `evap`  | 4.59% / 6.49%     | 10.23% / 7.04%    | 10%    | 0.19% / 0.40%      | 1.06% / 0.72%      | 2%     |
+| plain 60, `evap`  | 8.06% / 11.83%    | 15.63% / 19.66%   | 10%    | 0.46% / 0.24%      | 0.73% / 0.35%      | 2%     |
+| plain 60, `strat` | 1.36% / 1.36%     | 17.69% / 17.69%   | 1%     | 1.72% / 1.72%      | 1.52% / 1.38%      | 2%     |
+| pulse, `sfc`      | 13.06% / 14.33%   | 15.47% / 17.38%   | 1%     | 0.23% / 0.45%      | 0.95% / 0.98%      | 2%     |
+| pulse, `air`      | 0.88% / 0.96%     | 2.14% / 2.41%     | 1%     | 0.24% / 0.20%      | 0.63% / 0.60%      | 2%     |
 
 The budgets are for L1. `output/w50/effect.csv` has every tag, rung and hour.
 
@@ -1956,6 +1956,7 @@ The budgets are for L1. `output/w50/effect.csv` has every tag, rung and hour.
     the scorer's 3.93e-3. The pre-registered value is the scorer's. The text
     keeps 4.58e-3 as the least favourable reading, the mean-water reading.
     Every choice fails 2e-3.
+
   - *R4's second-half rule, a note on absolute amounts.* The pre-registered
     scorer reads the rule from `gross_relative` at 0, 12 and 24 h, relative to
     the water, as W38's `w25_score.py` does. It passes in all 12 runs. The
@@ -1966,6 +1967,7 @@ The budgets are for L1. `output/w50/effect.csv` has every tag, rung and hour.
     was applied after the runs, so it is not a verdict. Whether the rule
     should read absolute amounts is a question for the owner. The 24 h level
     is 1.04e-5, far inside 2e-3.
+
   - *Others.* The window, R1, the own residual and every R7 number agree to
     the printed digits. Net copy repair (`copy_repair`), reported beside, is
     3.40e-3, 4.13e-3 and 3.85e-3 at 24 h, and also exceeds 2e-3. The updraft
