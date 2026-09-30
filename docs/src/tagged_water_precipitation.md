@@ -145,6 +145,16 @@ non-precipitating water's target, and `q_tag_inc_negative` holds what it gives
 the tags for that water's negative part. Where no compartment is negative,
 nothing changes, bit for bit.
 
+A transfer into a negative compartment takes the target's treatment (known
+issue 7; the owner, 2026-09-30). In a cell where a compartment is below zero,
+a flow that touches it is read in its actual direction, and its parts take no
+microphysics change. Its pool starts empty, so it passes on only what came in,
+with that water's composition. What it keeps fills its negative part, and
+what it gives beyond its inflow carries no tag's water and lands in
+`q_tag_res`. The net-flow rule gives a negative compartment no gain. The
+ledgers `q_tag_exp_negative` and `q_tag_exp_negative_precip` record what the
+negative non-precipitating water and the negative rain and snow keep.
+
 **Cost.** Three fields per tag, two audit records per tag, and the flows,
 which cost about as much as the microphysics itself.
 

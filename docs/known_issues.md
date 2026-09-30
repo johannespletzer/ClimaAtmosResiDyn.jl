@@ -371,9 +371,28 @@ region tags gained water, but the target stayed zero.
     partition's gain from the updraft's part where the grid parent is below
     zero, and keeps its loss. In the default mode the split already gives
     the partition nothing there.
-  - Unchanged: the implicit microphysics bracket, source tags, region tags
-    that list sources, the copies' own terms, and the moves between a tag's
-    parts.
+  - Extended on 2026-09-30 (the owner; the record's design note, 11.11). The
+    implicit microphysics bracket takes the rule too, read at each Newton
+    iterate. So do source tags and region tags that list sources: a source
+    tag is a part of the target. Under `water_tag_precipitation: true` a
+    transfer into a negative compartment takes the target's treatment: flows
+    are read in their actual direction, a negative compartment's parts do not
+    change, and it passes on only what came in. What it gives beyond its
+    inflow carries no tag's water and lands in `q_tag_res`.
+  - A new ledger, `q_tag_exp_negative`, records the withheld gain, whatever
+    the tags hold. Under the key `q_tag_exp_negative_precip` records rain's
+    and snow's. The follower reads the ledger: a gain withheld inside the
+    solve is not taken from the partition a second time, and a crossing's
+    positive part goes to the partition in its own cell, by mask. A
+    checkpoint without the ledger is refused.
+  - Unchanged: the copies' own terms, the default split's gain at a parent
+    of exactly zero, and the energy source tags.
+  - Registered, not fixed: a loss the partition does not share in a negative
+    cell still enters the follower's `N`, which gives it to the partition
+    elsewhere in the column. It predates the revision.
+  - A source tag that holds nothing can end a crossing step below zero, or
+    above the parent, since the tableau's weights include negative ones.
+    Nothing removes that value. The validation reports it.
   - No model field changes. The tags change only once the parent has gone
     below zero somewhere. The validation is registered in the record's
     `design/NEGATIVE_PARENT_WATER.md`, section 11.

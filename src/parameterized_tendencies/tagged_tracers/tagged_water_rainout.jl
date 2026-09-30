@@ -94,8 +94,8 @@ default the one the run's microphysics path takes.
     grid parent is not positive: no partition tag takes a part there.
   - **Copies.** The updraft's share is the copy's clamped share of `q_totʲ`,
     the one the copies' own rain-out takes (`_copies_rain_out!`). Under
-    `TargetGain` a partition tag's gain from it is withheld where the grid
-    parent is below zero. The environment's share is the model's regularized
+    `TargetGain` a tag's gain from it is withheld where the grid parent is
+    below zero. The environment's share is the model's regularized
     environment value of the copy over `q_tot⁰`, renormalized over the
     partition and times `S`; a source tag takes its own clamped share. Where
     the environment's partition holds nothing, the grid mean's share.
@@ -240,10 +240,10 @@ function _add_split_rainout_copies!(
     return nothing
 end
 _add_split_rainout_copies_each!(ᶜdest, Y, p, ᶜsgsʲ, args, ::Tuple{}) = nothing
-# The updraft's part of a partition tag takes the bracket's gain rule
+# The updraft's part of every tag takes the bracket's gain rule
 # (`water_tag_split_change`): under `TargetGain` its gain is withheld where the
-# grid parent is below zero. A source tag keeps the parent's gain. The copies'
-# own rain-out (`water_tag_copies_microphysics_tendency!`) is not changed: each
+# grid parent is below zero, for a source tag too (the owner, 2026-09-30). The
+# copies' own rain-out (`water_tag_copies_microphysics_tendency!`) is not changed: each
 # copy loses its share of `q_totʲ`'s sink, and the copies' repair closes the
 # copies onto `max(q_totʲ, 0)` after the filter.
 function _add_split_rainout_copies_each!(ᶜdest, Y, p, ᶜsgsʲ, args, tags::Tuple)
@@ -386,7 +386,7 @@ batch of [`update_water_tag_rainouts!`](@ref) for the time `t`. Under the split
 it is `∫ (Δʲ (1 - Sʲ) + Δ⁰ (1 - S))`, with `S` the grid partition's sum of
 shares and `Sʲ` the updraft's (`S` in the default mode). On the grid rule it is
 `∫ ρ_dq_tot_dt (1 - S)` for a loss. A gain, to rounding, stays here only where
-the explicit microphysics withholds it from the partition (`ρq_tot < 0`).
+the bracket withholds it from the partition (`ρq_tot < 0`), on either path.
 """
 function water_tag_precipitation_residual!(out, Y, p, t)
     _current_water_tag_rainouts!(Y, p, t)

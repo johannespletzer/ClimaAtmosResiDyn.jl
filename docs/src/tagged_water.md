@@ -119,8 +119,10 @@ Two consequences:
 
     That allocation is a numerical closure convention, not a physical path
     of water, and can move provenance between cells no water moved between.
-    The explicit brackets give the partition the target's gain: where the
-    parent is below zero, a gain fills the negative part (known issue 7).
+    Every bracket gives the tags the target's gain: where the parent is
+    below zero, a gain fills the negative part, and the ledger
+    `q_tag_exp_negative` records it. The follower reads that ledger, so it
+    does not take a withheld gain from the partition again (known issue 7).
 
     The closure can pass while the parent is negative. So the water closure
     check also reads the parent's own negative water, from the raw

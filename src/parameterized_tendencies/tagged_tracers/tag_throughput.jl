@@ -251,12 +251,16 @@ is_tag_mechanism_ledger_name(name::Symbol) =
 
 Every state ledger of the tags that the per-step gross follows: the ledgers per
 mechanism, the leak correction's (WP4c), the increment corrections' ledgers,
-and each tag's own ledgers where the tags keep them (step 3), of both families.
+the water tags' ledgers of the withheld gain, and each tag's own ledgers where
+the tags keep them (step 3), of both families. The ledgers of the withheld
+gain are a tendency's, as the leak correction's are, so they have no
+`attempted` total.
 """
 tag_state_ledger_names(atmos) = (
     water_tag_mechanism_names(atmos.water_tagging_model)...,
     water_tag_leak_mechanism_names(atmos.water_tagging_model)...,
     _water_increment_ledger_names(atmos.water_tagging_model)...,
+    water_tag_exp_ledger_names(atmos.water_tagging_model)...,
     water_tag_per_tag_ledger_names(atmos.water_tagging_model)...,
     energy_source_mechanism_names(atmos.energy_source_tagging_model)...,
     _energy_increment_ledger_names(atmos.energy_source_tagging_model)...,

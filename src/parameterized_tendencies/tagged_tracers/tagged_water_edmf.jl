@@ -1034,9 +1034,9 @@ end
 # `_accumulate_water_tag!` gives it: one without a region, the region's mask
 # with one. Whether it receives the flux is known only at run time, so it is a
 # factor in the broadcast, which keeps the weight's type fixed. The grid's
-# partition tags also take no gain where the grid's parent is below zero (the
-# explicit brackets' `TargetGain`). The copies keep the gain, since their
-# repair closes them onto `max(q_totʲ, 0)` after the filter at every step.
+# tags also take no gain where the grid's parent is below zero (the brackets'
+# `TargetGain`). The copies keep the gain, since their repair closes them onto
+# `max(q_totʲ, 0)` after the filter at every step.
 _surface_gain_weight(ᶜmasks, tag::WaterTag{name, Nothing}) where {name} = true
 _surface_gain_weight(ᶜmasks, tag::WaterTag) = tag_field(ᶜmasks, tag)
 

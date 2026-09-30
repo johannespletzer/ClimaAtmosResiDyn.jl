@@ -2335,6 +2335,7 @@ rule (see `parameterized_tendencies/tagged_tracers/tagged_water.jl`):
 Unlike an energy tag, *every* water tag is depleted by *every* attributed loss
 term, in proportion to its own share of the local water. That is what makes
 `ρq_tag_<name>` an actual water mass rather than a running source integral.
+Where the parent's water is below zero, no tag gains (known issue 7).
 """
 struct WaterTag{name, R <: Union{Nothing, AbstractTagRegion}, S <: Tuple} <:
        AbstractTracerTag{name}

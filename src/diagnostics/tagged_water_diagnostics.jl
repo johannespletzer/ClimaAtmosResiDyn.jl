@@ -245,6 +245,12 @@ during simulation setup rather than at package load time:
     cumulative since the start of the run. See
     `water_tag_increment_ledger_variables`.
 
+  - `q_tag_exp_negative`, and under `water_tag_precipitation: true`
+    `q_tag_exp_negative_precip`: the gain withheld from the tags where the
+    parent is below zero, per unit mass, cumulative. They and their per-step
+    grosses are registered with the other state ledgers
+    (`register_tag_ledger_diagnostics!`).
+
   - `q_tag_fix_<name>`: water that the limiters and state constraints have moved
     into or out of each tag, cumulative since the start of the simulation
     segment. It separates "the numerics moved water" from "the transport
