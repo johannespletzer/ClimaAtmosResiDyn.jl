@@ -1,4 +1,13 @@
 date,decided_by,decision,doc,section,still_in_force,superseded_by
+2026-09-30,owner,"C's revision, Q2: the stages split a crossing step; accepted as built.",design/NEGATIVE_PARENT_WATER.md,11.10,yes,
+2026-09-30,owner,"C's revision, Q3: extend the target's-gain rule to the implicit microphysics bracket, now.",design/NEGATIVE_PARENT_WATER.md,11.10,yes,
+2026-09-30,owner,"C's revision, Q4: extend the rule to source tags and to region tags that list sources, now; needs a new design of a source tag's target where the parent is at or below zero.",design/NEGATIVE_PARENT_WATER.md,11.10,yes,
+2026-09-30,owner,"C's revision, Q5: a transfer into a negative compartment under water_tag_precipitation takes the target's treatment, now, in this PR.",design/NEGATIVE_PARENT_WATER.md,11.10,yes,
+2026-09-30,owner,"C's revision, Q6: build the ledger of the withheld gain, q_tag_exp_negative, a state field under water tags carried through restarts.",design/NEGATIVE_PARENT_WATER.md,11.10,yes,
+2026-09-30,owner,"C's revision, Q7: the windows' rule is set before the runs: the rise goes if R <= 0.1 R48 (W5).",design/NEGATIVE_PARENT_WATER.md,11.10,yes,
+2026-09-30,owner,"C's revision, Q9: V3's fallback compares by column and time, from the first time the parent is negative anywhere in the column; amended before any run.",design/NEGATIVE_PARENT_WATER.md,11.10,yes,
+2026-09-29,owner,"C's revision, Q1: a parent of exactly zero counts as positive; the tags take the whole gain there.",design/NEGATIVE_PARENT_WATER.md,11.10,yes,
+2026-09-29,owner,"C's revision, Q8: rerun the parity check to about 30 days; it passes if every model field and the day-30 state are bit for bit and a region tag differs from main's at the end.",design/NEGATIVE_PARENT_WATER.md,11.10,done,
 2026-09-29,owner,"Option C's revision: the explicit brackets give the region tags the target's gain, for every explicit process (design section 10, option 1).",design/NEGATIVE_PARENT_WATER.md,10,yes,
 2026-09-29,owner,"ClimaParams v1.1.16: pin at v1.1.15 (PR #128), then investigate.",DECISIONS.md,2026-09-29,yes,
 2026-09-28,owner,"Option C after W47: probe more before any fix (the fourth rise, cell by cell).",DECISIONS.md,2026-09-28,yes,

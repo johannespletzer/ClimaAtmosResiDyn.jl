@@ -550,6 +550,12 @@ to #126 were read from GitHub on 2026-09-28.
     the first 30-day run's bit for bit). One check failed, a test defect
     (index type); fixed at `210eeece`, the file passes and its mutant fails
     as intended (`14012892`, `14012893`; design 11.8).
+  - **2026-09-30, `crev`, the owner's answers to 11.10:** Q2 accepted; Q3,
+    Q4 and Q5 extend the rule now; Q6 builds the ledger `q_tag_exp_negative`;
+    Q7 sets W5 (`R ≤ 0.1 R48`); Q9 amends V3's fallback. The extension's
+    design is section 11.11, revised after an agent's review. 11.7 carries the
+    dated amendments, made before any run. Nothing is built or run. The owner
+    reviews 11.11 next (its 11.11.13).
 
 ## The housekeeping, H0 to H7: done
 

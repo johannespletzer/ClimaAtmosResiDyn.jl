@@ -218,8 +218,38 @@ The list as it stood before this classification, kept as written:
 >     and the copies under first-order upwinding (W25). **Waiting.**
 >     [FINDINGS W25](FINDINGS.md)
 
+## 2026-09-30
+
+  - **C's revision: the owner's answers to section 11's questions**
+    (`design/NEGATIVE_PARENT_WATER.md`, 11.10). How the extension is built is
+    11.11, and the amendments to the pre-registration are in 11.7.
+      + **Q2: the stages split a crossing step,** as built. Accepted. **In
+        force.**
+      + **Q3: the rule reaches the implicit microphysics bracket,** now. **In
+        force.**
+      + **Q4: the rule reaches the source tags and the region tags that list
+        sources,** now. This needs a new design of a source tag's target where
+        the parent is at or below zero (11.11.4). **In force.**
+      + **Q5: a transfer into a negative compartment under
+        `water_tag_precipitation: true` takes the target's treatment,** now,
+        in this PR. **In force.**
+      + **Q6: build the ledger of the withheld gain, `q_tag_exp_negative`,**
+        a state field under water tags, carried through restarts. **In
+        force.**
+      + **Q7: the windows' rule is set before the runs:** the rise goes if
+        `R ≤ 0.1 R48` (W5). **In force.**
+      + **Q9: V3's fallback clause compares by column and time,** from the
+        first time the parent is negative anywhere in the column. Amended
+        before any run. **In force.**
+
 ## 2026-09-29
 
+  - **C's revision, questions 1 and 8 of section 11.10**
+    (`design/NEGATIVE_PARENT_WATER.md`): a parent of exactly zero counts as
+    positive, so the tags take the whole gain there (**in force**); the
+    parity check reruns to about 30 days, and passes if every model field
+    and the day-30 state are bit for bit and a region tag differs from
+    `main`'s at the end (**done**, 11.8).
   - **Option C's revision: the explicit brackets give the region tags the
     target's gain, for every explicit process** (option 1 of
     `design/NEGATIVE_PARENT_WATER.md` section 10, recommended). Production
