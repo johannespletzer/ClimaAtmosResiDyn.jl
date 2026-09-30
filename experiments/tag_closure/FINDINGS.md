@@ -97,7 +97,7 @@ changes, which [RUNS.md](RUNS.md) records.
 | E45, E47, E51, E54, E55, E57, E58                             | 6. Parity, Float32, MPI and restarts                |
 | E7–E9, E20–E24, E26, E28, E30, E38, E49, E63, E87             | 7. The process records and the per-process checks   |
 | E50, E60, E69, E70, E74, E75, E81                             | 8. The sphere and long runs                         |
-| E68, E72, E73, E76, E83, E84, E86                             | 9. Mixing: V3 and the updraft gap                   |
+| E68, E72, E73, E76, E83, E84, E86, E89                        | 9. Mixing: V3 and the updraft gap                   |
 | T1–T10, E44, E44b–E44e, E52, E56, E77, E78                    | 10. Cost                                            |
 | M1–M8                                                         | 11. Method                                          |
 | old claims, errata, conflicts                                 | 12. Superseded and falsified claims                 |
@@ -1850,7 +1850,9 @@ arms, but the copies' repair still fails its tolerance on all three rungs,
 assessable, and the first hour stays not assessable, as in W38.** The rule is
 the plume's start at the lowest level with the copies' steady state there
 (`design/W25_ISOLATION.md`, section 7). W50 measured `03eb4dbd`, the water fix,
-not the PR head. The fix arm ran from merge `04fa29fe` (`03eb4dbd` and the
+not the PR head. The merged code (#136, `6657ae6c`) differs from `03eb4dbd`: it adds the
+clipped-fraction documentation, the edge tests and test 4e, and its merges of
+`main` carry #135's code, not W21's. The fix arm ran from merge `04fa29fe` (`03eb4dbd` and the
 record `66cd950e`). The main arm ran from `a15e3d5e` (`43b01ca1` and the same
 record), the same code without the rule. The twins ran from the fix tree.
 Pre-registered in section 8, before any run: D4-W at 30 and 60 levels, plus
@@ -3524,6 +3526,100 @@ estimate Θi (E84: an estimate, not a bound), against 2e-3:
 *`analysis/increment/od4_restate.py`; `output/od4_restatement/`;
 `review/od4_restatement.md` (the full restatement). Runs as each record says,
 and E84's `g411x_d4_*`.*
+
+**E89. The energy source tags' plume start (W21's surface-flux rule) keeps
+every field the twin writes bit for bit in both arms and closes to 5.3e-14 of
+the throughput (limit 2e-3). It moves the two tags that take the surface flux,
+`sfc` and `new_tropo`, by 7.3% and 7.1% at 1 h and 0.88% and 0.73% at 24 h
+(L∞ relative to main, fix against main). The pre-registered metrics cannot
+judge "in the lowest levels", and the least favourable pre-registered number
+is that `sfc`'s column integral rises by 2.3e-3 at 1 h. A read of the fields
+made after the score shows `sfc` lower at the lowest levels and higher above,
+an upward shift. The size and the sign of the change are a measurement, not a
+verdict: section 9 sets no threshold for them.** D4 (DYCOMS RF02, EDMF, 1M
+stepped implicitly, `dt` 120 s, 30 levels, one day) with the eight energy
+source tags in the default mode (`enthalpy_increment`, offset 110,495 J/kg,
+per-tag ledgers on), pre-registered in `design/W25_ISOLATION.md` section 9
+("E89, the measurement") before any run. **E89 measured `10cdeebd`, in run
+tree `15ce40a27`, not the PR's head.** `10cdeebd` was the pushed head at
+submission, as section 9 requires. The PR head `f10085351` adds only merges of
+`main`, and its own change is the same line for line. E89 does not cover the
+change on top of `main` `b983d62b`. The merged code (#136, `6657ae6c`) differs from `10cdeebd`: it adds the
+clipped-fraction documentation, the edge tests and test 4e, and its merges of
+`main` carry #135's code, not W21's. The main arm is `main` `43b01ca1`, in run
+tree `bf19d377b`. The two arms differ only in the plume's start, since D4 has
+no water tags.
+
+| rule (section 9)                                           | fix arm        | main arm       | limit        | verdict |
+|:---------------------------------------------------------- |:-------------- |:-------------- |:------------ |:------- |
+| R1, every field the untagged twin writes, bit for bit      | 26 of 26 equal | 26 of 26 equal | all equal    | pass    |
+| closure, gross residual over the window's exact throughput | 5.268e-14      | 4.237e-14      | at most 2e-3 | pass    |
+
+The window is 3600 s to 86400 s. OD2's rule found no end of startup on the
+main arm, so its table's first hour is used, as G4.11 did. The exact throughput
+over the window is 2.0032e7 J/m² in both arms (E84's copies runs: 2.004e7). The gross
+residual is 1.055e-6 J/m² in the fix arm and 8.49e-7 J/m² in the main arm.
+
+The change of each tag between the arms, fix against main, reported and not
+judged. L1 and L∞ are relative to main. The relative integral change is
+(integral in the fix arm minus integral in main) over the main arm's integral.
+It has no unit and carries the sign.
+
+| tag         | 1 h: L1, L∞       | 1 h: absolute L1 (J/m²), relative integral change | 24 h: L1, L∞      | 24 h: absolute L1 (J/m²), relative integral change |
+|:----------- |:----------------- |:------------------------------------------------- |:----------------- |:-------------------------------------------------- |
+| `sfc`       | 7.3e-2, 7.3e-2    | 30,618, +2.3e-3                                   | 5.8e-3, 8.8e-3    | 52,844, -2.1e-4                                    |
+| `new_tropo` | 6.2e-2, 7.1e-2    | 31,206, +2.0e-3                                   | 4.7e-3, 7.3e-3    | 51,342, -1.7e-4                                    |
+| `rad`       | 1.5e-4, 2.0e-4    | 11.5, -7.6e-6                                     | 8.5e-4, 1.3e-3    | 1,307, +2.6e-5                                     |
+| `strat`     | 2.5e-7, 6.0e-7    | 12.9, +8.3e-8                                     | 1.1e-4, 1.6e-4    | 5,682, +1.2e-5                                     |
+| `tropo`     | 2.1e-7, 5.7e-7    | 12.9, -7.2e-8                                     | 9.0e-5, 1.5e-4    | 5,682, -9.9e-6                                     |
+| `sub`       | 9.4e-6, 6.3e-6    | 0.19, +2.0e-6                                     | 6.8e-4, 9.7e-4    | 418, +2.6e-5                                       |
+| `new_strat` | 5.6e-7, 2.6e-7    | 0.0068, +1.0e-7                                   | 5.9e-4, 5.3e-4    | 209, +2.1e-5                                       |
+| `mp`        | zero in both arms | 0                                                 | zero in both arms | 0                                                  |
+
+  - **Parity.** R1 passes in both arms. The fix changes no field the twin
+    writes, as section 9 required.
+  - **What the change is.** `sfc` and `new_tropo` (`source: surface_flux` and
+    `source: all`) are the source tags that take the surface flux. They change
+    by about the same amount and in the same direction. `tropo` takes the flux
+    by its mask too, but it already holds about 99.9% of the lowest cell. At
+    the lowest level `sfc` is 971.5 J/kg in the fix arm against 1047.5 J/kg in
+    the main arm at 1 h (-76.0, -7.3%) and 9768.4 against 9858.0 at 24 h
+    (-89.6, -0.9%). `new_tropo` is -76.9 and -87.0 J/kg there. The other six
+    tags move by at most 0.04 J/kg at 1 h: `rad`, `strat` and `sub` gain
+    slightly and `tropo` loses (-0.04 J/kg at 1 h, -10.2 at 24 h, where `strat`
+    gains the same 10.2 J/kg and `rad` gains 2.2 J/kg).
+  - **The expectation, read after the data.** The pre-registered metrics cannot
+    judge "in the lowest levels". They measure no lowest-level quantity. The
+    one pre-registered signed metric, the column integral, shows `sfc` gaining
+    at 1 h, by 2.3e-3, and losing 2.1e-4 at 24 h. That is the least favourable
+    number. The read of the fields at the lowest levels was made after the
+    score and is not pre-registered. It shows `sfc` lower in the fix arm at
+    levels 1 to 5 (25 to 225 m) and higher at 275 to 775 m at 1 h, and lower
+    at 25 to 325 m and higher at 375 to 875 m at 24 h. The measured change is
+    an upward shift of `sfc`. Section 9 expected a gain in `sfc` in the lowest
+    levels, so on that post-hoc reading the expectation was not met. `f` was
+    not read from the run, so the change is not compared with `f`'s size. That
+    the updraft now carries a surface-flux share upward out of the lowest
+    cells would fit the shift. It is an inference, and no run tested it.
+  - **Not judged.** No threshold exists for the tags' change, and none is
+    proposed. No default-against-copies verdict follows: the energy copies are
+    not an eligible comparator (E84).
+  - **The partition.** Only `strat` and `tropo` partition `ρe_tot + cρ`. `rad`,
+    `sfc`, `sub` and `mp` are source tags, and `new_strat` and `new_tropo`
+    cover the same source energy again, so the eight fields are not one
+    partition. `strat + tropo`, weighted by `ρ dz`, sum to the closure table's
+    tagged total to 1e-8 (relative) at 0, 1, 12 and 24 h in both arms, and the fix
+    changes their integral by at most 5e-8 J/m².
+  - **The limits.** One case, D4, one day, Float64, one time step. The lowest
+    levels' numbers come from a read of the NetCDF fields after the score
+    (`analysis/increment/e89_lowest_levels.py`), not from the pre-registered
+    script.
+
+*`hpda2_compute`, 2026-09-30, jobs `14013767` (fix), `14013768` (main) and
+`14013769` (untagged), each COMPLETED, exit 0:0, `ret_code = :success`, from
+run trees `15ce40a27` and `bf19d377b` (the record's `1b329e18` merged).
+`analysis/increment/e89_score.py`; `output/e89/` (`e89_score.txt`,
+`verifier_fix_vs_main.json`, `e89_lowest_levels.txt`).*
 
 ## 10. Cost
 

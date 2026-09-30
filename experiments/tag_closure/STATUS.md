@@ -106,11 +106,19 @@ not checked, it says so.
         against 2e-3), so R7 is not assessable and D4-W's provenance stays
         not assessable. The pulse's surface first hour is 13.1% (fix)
         against 14.3% (main), budget 1%.
-      + **w21s:** the water fix and the energy plume (the owner's "do both
-        now") are on `claude/w21-surface-flux`, local head `16453638`. The
-        Julia 1.10 allocation gate passes after a fix. The coverage and
-        parity reruns are running. E89 (the energy measurement) is
-        pre-registered and approved, not run. The PR is to follow.
+      + **W21 is closed** (2026-09-30): #136, W21's plume surface-flux start
+        for water and energy, is merged (merge commit `6657ae6c`). It gives
+        the default mode's water and energy plume the surface flux at the
+        lowest level. The rule is chosen and test-supported, not validated as
+        a provenance improvement: W50's comparator fails its repair criterion
+        (R5), so the first hour stays not assessable. E89 (the energy
+        measurement on D4) is reported, not judged: R1 passes, and `sfc` and
+        `new_tropo` move by 7.3% and 7.1% (L∞) at 1 h. The review's eight
+        test jobs (`14014802` to `14014809`, Julia 1.10.12 and 1.11.9 with
+        CI's versions, at `2ebf7648`, one docs-only commit before the PR
+        head) all passed. The record is W50 and E89 in FINDINGS, the RUNS
+        section "W50 and E89: the review checks of #136", and `output/w50/`
+        and `output/e89/`.
       + **C's revision** (W49, `design/NEGATIVE_PARENT_WATER.md` section
         11): the code is on `claude/option-c-revision` (`a4b492ec`), with the
         rule, coupling-1 and the review's wording fixes. The 30-day parity
@@ -237,6 +245,11 @@ not checked, it says so.
         hour stay not assessable. The rule lowers `evap`'s and `sfc`'s first-hour
         L1 but raises some L∞ and 24 h numbers (FINDINGS W50; the two scorings agree
         on every verdict).
+      + *E89, 2026-09-30:* W21's plume start on D4 (W50), measured at
+        `10cdeebd`. R1 passes in both arms and closure is 5.3e-14. `sfc` and
+        `new_tropo` move by 7.3% and 7.1% (L∞) at 1 h. `sfc`'s column integral
+        rises by 2.3e-3 at 1 h, and the post-hoc read shows an upward shift.
+        Reported, not judged (FINDINGS E89).
       + *Where the next session starts:* #128, then #127's CI and the #119
         follow-ups' PR; C's revision (design, pre-registration, PR); WP4a-J;
         W21's surface flux. The

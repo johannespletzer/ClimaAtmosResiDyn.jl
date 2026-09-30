@@ -410,6 +410,49 @@ kernel with water's. The EDMF integration test of the energy tags rebuilds `f`
 from the model's own tendencies and checks the plume's lowest cell against
 `ψᵢ`. A mutant without the start's term must fail that check.
 
+**Checks before the PR (2026-09-30).** The jobs are in RUNS, under "W50 and
+E89: the checks before the PR (w21s)".
+
+  - *Julia 1.11.* With CI's versions (ClimaCore 1.0.1, ClimaComms 0.6.12,
+    ClimaParams 1.1.15), 18 files passed at `068eab01`: every
+    `tagged_water*` and `energy_source_tags*` integration file, the two
+    `tagged_water*_tests` files and `energy_source_tags_tests.jl`. At
+    `16453638`, the final code, five of them passed again:
+    `energy_source_tags_edmf_integration.jl` (59/59),
+    `energy_source_tags_increment_integration.jl` (115/115),
+    `energy_source_tags_updraft_integration.jl` (37/37),
+    `energy_source_tags_integration.jl` (117/117) and
+    `tagged_water_edmf_integration.jl` (43/43). The other 13 were not rerun
+    there.
+  - *Julia 1.10.12.* With the same versions, the two files with allocation
+    caps passed at `16453638`: the EDMF file 59/59 and the increment file
+    115/115. No other file was run on 1.10.
+  - *The caps.* The energy allocation caps, 24 B for
+    `sgs_mass_flux_of_energy_source_tags!` and 8 B for the increment's
+    `exchange!`, hold at their values. They were not raised. The 1.10 probe
+    measures 24 B and 8 B, as `main` does, and the 1.11 tests pass the caps.
+  - *The excess on 1.10.* At `068eab01` the two files failed only the caps,
+    with 280 B and 728 B. `main` measured 24 B and 8 B on the same Julia. The
+    excess came from the recursion of `_start_plume_at_surface!` over the
+    tags with `Val(i+1)`. `16453638` recurses over the tags and indices
+    instead, and the probe drops to 24 B and 8 B.
+  - *Parity with `main`.* Water: the fix's untagged, default and copies arms
+    are bit for bit against `main` untagged, 19 fields, at `091533f2` and
+    at `068eab01`. Energy: the fix's default and copies arms are bit for bit
+    against `main` on g411 D4, 17 fields, at `16453638`. The water arms were
+    not rerun at `16453638`.
+  - *Mutants.* The water mutant `43e9aaa3`, without the plume start, fails
+    two checks of "The plume starts with the updraft's surface water" and one
+    copies check, and no other. The energy mutant `6d3ea5f9` fails four checks
+    of "The plume starts with the updraft's surface energy". It also fails
+    the allocation cap, as the tested code did at that time.
+  - *The shas.* The branch was rebuilt before its push. `0ecf47aa` is now
+    `44e39fef`, `841185f8` is `cb609fcb`, `068eab01` is `0df32216` and
+    `16453638` is `89759e41`, with identical trees. `10cdeebd` on top of
+    `89759e41` turns one docstring `@ref` into a code span. The code is the
+    same as `16453638`. The old head stays in the local branch
+    `claude/w21s-pre-amend-16453638`.
+
 **E89, the measurement: pre-registered on 2026-09-30, before any run.** The
 owner approved section 9's proposal on 2026-09-29 and named it E89.
 

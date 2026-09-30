@@ -404,7 +404,16 @@ error. It is an input to OD7, not a decision.
 ### G4.11 Carried over from G3
 
   - the plume rescale, to `Aʲ`;
-  - one surface rule;
+  - [x] one surface rule. *Done 2026-09-30 for the default mode's plume
+    start (W21, #136 merged at `6657ae6c`; FINDINGS E89, measured at
+    `10cdeebd`).* The energy plume now starts in the lowest cell with the
+    surface enthalpy flux, as the water plume does. R1 passes and closure is
+    5.3e-14 of the throughput. `sfc` and `new_tropo` move by 7.3% and 7.1%
+    (L∞) at 1 h, reported and not judged. The rule is chosen and
+    test-supported, not validated as a provenance improvement. The energy
+    copies stay not eligible as a comparator (E84). The review's test jobs
+    `14014802` to `14014809` passed (RUNS, "W50 and E89: the review checks of
+    #136").
   - the per-subdomain split for precipitation energy and EDMF's sedimentation
     corrections;
   - compartments for the energy falling water carries.

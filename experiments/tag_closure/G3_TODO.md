@@ -226,9 +226,20 @@ Restated 2026-09-30 from the findings; the plan's section 2 holds the criteria's
     not assessable. The pulse's surface first hour is 13.1% (fix) against
     14.3% (main), budget 1%. The water fix and the energy plume are on
     `claude/w21-surface-flux` (local head `16453638`). The Julia 1.10
-    allocation gate passes after a fix. The coverage and parity reruns are
-    running. E89, the energy measurement, is pre-registered and approved, not
-    run. The PR is to follow.*
+    allocation gate passes after a fix.*
+    *Measured 2026-09-30 (E89), at `10cdeebd`:* R1 passes in both arms, closure
+    5.3e-14 of the throughput. `sfc` and `new_tropo` move by 7.3% and 7.1%
+    (L∞) at 1 h; `sfc`'s column integral rises by 2.3e-3 at 1 h (least
+    favourable). The post-hoc read shows `sfc` shifted upward. Reported, not
+    judged (FINDINGS E89).
+    *Done 2026-09-30: #136 merged (`6657ae6c`), the water and the energy plume
+    start at the lowest level with the surface flux in the default mode. The
+    rule is chosen and test-supported, not validated as a provenance
+    improvement: W50's comparator fails R5, so the first hour stays not
+    assessable. The review's eight test jobs (`14014802` to `14014809`, Julia
+    1.10.12 and 1.11.9) passed, at `2ebf7648`, one docs-only commit before
+    the PR head (RUNS, "W50 and E89: the review checks of #136"). What remains
+    open is the copies' repair.*
   - [x] **The prognostic fields of the rain and snow tags**, settled in the
     design note WP4b-D and its review. *Decided 2026-09-25:* the three parts;
     `ρq_tag_<name>` holds the non-precipitating water, beside `ρq_rtag_<name>`
