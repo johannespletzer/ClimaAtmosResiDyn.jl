@@ -16,29 +16,36 @@ jobs:
         with:
           ref: gh-pages
 
-      - name: Delete preview and history
-        id: cleanup
+      # The documentation deploys push previews to gh-pages as well. So the
+      # push is `--force-with-lease` against the gh-pages this attempt read,
+      # and a refused push starts again from the latest gh-pages. A plain
+      # `--force` would silently drop a preview deployed in the meantime.
+      - name: Delete the preview and the history
         run: |
-            # Not every closed pull request left a preview behind. Documenter
-            # only deploys them for same-repository pull requests, and a failed
-            # doc build deploys nothing at all. `git rm` errors on a pathspec
-            # that matches nothing, so without this guard the job goes red on
-            # every fork pull request that gets closed.
-            if [ ! -d "previews/PR$PRNUM" ]; then
-              echo "No preview for PR$PRNUM, nothing to clean up."
-              echo "cleaned=false" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
             git config user.name "Documenter.jl"
             git config user.email "documenter@juliadocs.github.io"
-            git rm -rf "previews/PR$PRNUM"
-            git commit -m "delete preview"
-            git branch gh-pages-new $(echo "delete history" | git commit-tree HEAD^{tree})
-            echo "cleaned=true" >> "$GITHUB_OUTPUT"
+            for attempt in 1 2 3; do
+              git fetch -q origin gh-pages
+              base=$(git rev-parse FETCH_HEAD)
+              git checkout -q --detach "$base"
+              # Not every closed pull request left a preview behind. Documenter
+              # only deploys them for same-repository pull requests, and a failed
+              # doc build deploys nothing at all. `git rm` errors on a pathspec
+              # that matches nothing, so without this guard the job goes red on
+              # every fork pull request that gets closed.
+              if [ ! -d "previews/PR$PRNUM" ]; then
+                echo "No preview for PR$PRNUM, nothing to clean up."
+                exit 0
+              fi
+              git rm -rf -q "previews/PR$PRNUM"
+              git commit -q -m "delete preview"
+              squashed=$(echo "delete history" | git commit-tree "HEAD^{tree}")
+              if git push --force-with-lease="gh-pages:$base" origin "$squashed:refs/heads/gh-pages"; then
+                exit 0
+              fi
+              echo "gh-pages moved while cleaning up; trying again."
+              sleep $((20 * attempt + RANDOM % 20))
+            done
+            exit 1
         env:
             PRNUM: ${{ github.event.number }}
-
-      - name: Push changes
-        if: steps.cleanup.outputs.cleaned == 'true'
-        run: |
-            git push --force origin gh-pages-new:gh-pages

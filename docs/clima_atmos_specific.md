@@ -317,14 +317,18 @@ The other workflows:
     without a cache, so it runs weekly (Monday 04:00 UTC), on tags and on
     demand, not after each merge, where it held a job slot for up to two
     hours. A pull request runs it only when it changes the workflow.
-  - **`Invalidations`.** It runs when a pull request that changes `src/`,
-    `ext/` or `Project.toml` is not a draft. It builds the package twice
+  - **`Invalidations`.** It runs on a pull request to `main` that changes
+    `src/`, `ext/` or `Project.toml` and is not a draft. It builds the package twice
     without a cache and reports a count, and is not a required check.
-  - **`Manifest compat`.** It runs on pull requests and on `main` when a
-    `Project.toml` or `Manifest-*.toml` changes, and weekly.
-  - **`Documentation`.** It builds on every pull request and deploys a
-    preview. Two previews pushed at the same time made one push fail; the
-    deploy now tries up to three times.
+  - **`Manifest compat`.** It resolves `Project.toml` and `.buildkite`. It runs
+    on pull requests and on `main` when one of them or its manifest changes,
+    and weekly.
+  - **`Documentation`.** It builds on every pull request. For a pull request
+    from this repository it also deploys a preview. A pull request from a fork
+    has no deploy key and gets no preview. Two previews pushed at the same
+    time made one push fail, so the deploy now tries up to three times.
+    `Doc Preview Cleanup` removes a closed pull request's preview the same
+    way, with a lease-protected push that it retries.
   - **Caches.** `ci`, `Documentation` and `Downgrade` keep depot caches under
     the paths in `DEPOT_CACHE_PATHS`. `ci` keeps one per check-bounds setting,
     Julia patch version and day, shared by all groups. The two settings build

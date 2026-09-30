@@ -1,8 +1,9 @@
 name: Invalidations
 
-# It runs when a pull request that changes the package's code or dependencies
-# is ready for review, not on every push to a draft: it builds the package
-# twice without a cache and reports only a count. It is not a required check.
+# It runs on a pull request to `main` that changes the package's code or
+# dependencies, once the pull request is ready for review. It does not run on
+# every push to a draft. It builds the package twice without a cache and
+# reports only a count. It is not a required check.
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
@@ -50,6 +51,8 @@ jobs:
       run: |
         echo "Invalidations on default branch: ${{ steps.invs_default.outputs.total }} (${{ steps.invs_default.outputs.deps }} via deps)" >> $GITHUB_STEP_SUMMARY
         echo "This branch: ${{ steps.invs_pr.outputs.total }} (${{ steps.invs_pr.outputs.deps }} via deps)" >> $GITHUB_STEP_SUMMARY
+    # Step outputs are strings, and two strings compare as text, where '1002'
+    # is less than '998'. `fromJSON` makes them numbers.
     - name: Check if the PR does increase number of invalidations
-      if: steps.invs_pr.outputs.total > steps.invs_default.outputs.total
+      if: fromJSON(steps.invs_pr.outputs.total) > fromJSON(steps.invs_default.outputs.total)
       run: exit 1

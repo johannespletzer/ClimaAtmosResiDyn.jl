@@ -2,7 +2,7 @@ name: Downstream
 # Whether ClimaCoupler's AMIP tests still run with this package in place of
 # upstream ClimaAtmos. It runs on one Julia version, without a cache, which
 # takes about an hour. So it runs weekly (Monday 04:00 UTC), on tags and on
-# demand, not after each merge: after a merge it held one of the account's
+# demand, not after each merge. After a merge it held one of the account's
 # job slots for up to two hours while pull requests queued. ClimaCoupler does
 # not use this fork, and the fork keeps the model's results the same as
 # upstream's, so a break here is rare and is found within a week at most. A
