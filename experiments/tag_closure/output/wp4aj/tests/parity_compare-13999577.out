@@ -1,0 +1,37 @@
+== plain_0m_vdiff.jls
+   a: (julia = "1.11.9", host = "hpdar03c04s08", cpu = "Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30GHz", climaatmos = "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mainref", commit = "43b01ca1", manifest_sha1 = "7ca7783e061c8e6d2991991fe746a9fff3f142d9")
+   b: (julia = "1.11.9", host = "hpdar03c04s08", cpu = "Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30GHz", climaatmos = "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-run", commit = "f2c1e6a5", manifest_sha1 = "e138ece708430353d79ef074215dc6675bb5c682")
+   field names and time equal: true
+   state.c         bit for bit
+   state.f         bit for bit
+   implicit.c      bit for bit
+   implicit.f      bit for bit
+   remaining.c     bit for bit
+   remaining.f     bit for bit
+   lim.c           bit for bit
+   lim.f           bit for bit
+== tags_0m.jls
+   a: (julia = "1.11.9", host = "hpdar03c04s08", cpu = "Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30GHz", climaatmos = "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mainref", commit = "43b01ca1", manifest_sha1 = "7ca7783e061c8e6d2991991fe746a9fff3f142d9")
+   b: (julia = "1.11.9", host = "hpdar03c04s08", cpu = "Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30GHz", climaatmos = "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-run", commit = "f2c1e6a5", manifest_sha1 = "e138ece708430353d79ef074215dc6675bb5c682")
+   field names and time equal: true
+   state.c         bit for bit
+   state.f         bit for bit
+   implicit.c      bit for bit
+   implicit.f      bit for bit
+   remaining.c     bit for bit
+   remaining.f     bit for bit
+   lim.c           bit for bit
+   lim.f           bit for bit
+== tags_0m_vdiff.jls
+   a: (julia = "1.11.9", host = "hpdar03c04s08", cpu = "Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30GHz", climaatmos = "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mainref", commit = "43b01ca1", manifest_sha1 = "7ca7783e061c8e6d2991991fe746a9fff3f142d9")
+   b: (julia = "1.11.9", host = "hpdar03c04s08", cpu = "Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30GHz", climaatmos = "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-run", commit = "f2c1e6a5", manifest_sha1 = "e138ece708430353d79ef074215dc6675bb5c682")
+   field names and time equal: true
+   state.c         bit for bit
+   state.f         bit for bit
+   implicit.c      bit for bit
+   implicit.f      bit for bit
+   remaining.c     bit for bit
+   remaining.f     bit for bit
+   lim.c           bit for bit
+   lim.f           bit for bit
+ALL BIT FOR BIT

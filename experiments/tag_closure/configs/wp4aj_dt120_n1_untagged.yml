@@ -1,0 +1,33 @@
+# WP4a-J, known issue 4's Jacobian switch: design/ZERO_M_SPLIT.md, section 5
+# and its completion 5.1. The raining 0M column of V-W0a (DYCOMS RF02 without
+# EDMF, the DYCOMS radiation, the decaying diffusion, implicit microphysics and
+# diffusion, ARS222, 2 h), whose initial cloud rains out in the first hour
+# (W15, W16). `water_tag_transport: tracer` is pinned, since the follower would
+# move the switch's closure change into its ledger.
+#
+# This run: the untagged twin of wp4aj_dt120_n1_off: parity, and OD2's window read from the parent.
+job_id: "wp4aj_dt120_n1_untagged"
+
+config: "column"
+initial_condition: "DYCOMS_RF02"
+z_max: 1500.0
+z_elem: 30
+z_stretch: false
+microphysics_model: "0M"
+implicit_microphysics: true
+rad: "DYCOMS"
+vert_diff: "DecayWithHeightDiffusion"
+implicit_diffusion: true
+ode_algo: "ARS222"
+max_newton_iters_ode: 1
+
+dt: "120secs"
+t_end: "2hours"
+FLOAT_TYPE: "Float64"
+
+# Every 6 minutes, a multiple of each time step, so that every run of the
+# ladders writes at the same times.
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [rhoa, ta, hus, clw, cli, wa, pr, evspsbl, lwp]
+    period: "360secs"

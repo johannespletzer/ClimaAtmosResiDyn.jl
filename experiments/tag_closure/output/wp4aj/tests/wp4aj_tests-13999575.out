@@ -1,0 +1,32 @@
+commit: f2c1e6a5; host: hpdar03c03s06; start: 2026-09-29T13:31:17+02:00
+== unit: tagged_water_rainout_jacobian_tests.jl in /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-run 2026-09-29T13:31:17+02:00
+exit=0 unit 2026-09-29T13:34:54+02:00
+Test Summary:           | Pass  Total  Time
+Test Summary:                        | Pass  Total   Time
+Test Summary:                 | Pass  Total  Time
+Test Summary:            | Pass  Total   Time
+== integration: tagged_water_rainout_jacobian_integration.jl in /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-run 2026-09-29T13:34:54+02:00
+exit=0 integration 2026-09-29T13:49:12+02:00
+Test Summary:               | Pass  Total      Time
+== tagged_water_tests: tagged_water_tests.jl in /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-run 2026-09-29T13:49:12+02:00
+exit=0 tagged_water_tests 2026-09-29T13:57:31+02:00
+Test Summary:                                   | Pass  Total  Time
+Test Summary:               | Pass  Total  Time
+Test Summary:                                         | Pass  Total     Time
+Test Summary:                                   | Pass  Total     Time
+Test Summary:                                          | Pass  Total  Time
+Test Summary:                 | Pass  Total  Time
+Test Summary:                     | Pass  Total  Time
+Test Summary:          | Pass  Total   Time
+Test Summary:                          | Pass  Total   Time
+Test Summary:                 | Pass  Total   Time
+Test Summary:                                                | Pass  Total     Time
+Test Summary:                          | Pass  Total  Time
+== tagged_water_integration: tagged_water_integration.jl in /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-run 2026-09-29T13:57:31+02:00
+exit=0 tagged_water_integration 2026-09-29T14:46:08+02:00
+Test Summary:            | Pass  Total     Time
+Test Summary:                | Pass  Total      Time
+Test Summary:                   | Pass  Total      Time
+Test Summary:                                 | Pass  Total  Time
+Test Summary:                         | Pass  Total      Time
+end 2026-09-29T14:46:08+02:00

@@ -1842,6 +1842,96 @@ job `13996777`), run tree `../ClimaAtmosResiDyn-ic-probe2-run` at `e09e0986`,
 on 2026-09-29 with `analysis/water/ic_miss_score2.py` as amended at
 `6eae646f`, before the job started; `output/ic_miss_probe2/`.*
 
+**W51. WP4a-J, known issue 4's Jacobian on the raining 0M column: the missing
+entries cost little, and the pair changes little. Without the entries, one
+Newton iteration keeps every tag within G3_PLAN 6.1's first-hour budgets of
+the converged reference at 1 h, at dt 120, 60 and 30 s. The worst is 1.52e-3
+in L1 (`strat`, dt 30 s), against 1%. So by the pre-registered rule known
+issue 4 is closed on this column. With the pair, every model field is bit for
+bit the same, and the tags move by at most 1.75e-5 in L1 and 6.3e-5 in L∞.
+That changes the one-iteration error by at most 1.5% of it, and the sign
+depends on the tag.** The experiment of `design/ZERO_M_SPLIT.md` section 5,
+completed in 5.1 before the runs: V-W0a's column (DYCOMS RF02, 0M without
+EDMF, implicit microphysics and diffusion, ARS222, 2 h), with the tags
+`tropo`, `strat` and `evap` under `water_tag_transport: tracer`.
+`water_tag_rainout_jacobian: true` gives each tag's row both entries (the
+pair).
+
+The checks all pass:
+
+  - **P1:** the untagged twin's model fields match `wp4aj_dt120_n1_off`'s bit
+    for bit.
+  - **P2:** at each of the five rungs, the switch on against off, every model
+    field is bit for bit the same.
+  - **V1:** each 20-iteration reference is within 1.4e-14 in L1 and 3.2e-14 in
+    L∞ of its 40-iteration check, per tag.
+  - **V2:** the column rains in the first hour.
+
+The verdict's runs, one Newton iteration, the switch off, against their dt's
+reference at 1 h:
+
+| dt    | `tropo` L1 / L∞   | `strat` L1 / L∞   | `evap` L1 / L∞    |
+|:----- |:----------------- |:----------------- |:----------------- |
+| 120 s | 1.06e-3 / 1.21e-3 | 1.20e-3 / 1.48e-3 | 2.14e-5 / 1.85e-5 |
+| 60 s  | 9.73e-4 / 1.13e-3 | 1.35e-3 / 1.51e-3 | 1.34e-5 / 1.87e-5 |
+| 30 s  | 1.09e-3 / 1.21e-3 | 1.52e-3 / 1.71e-3 | 4.83e-6 / 4.03e-6 |
+
+The budgets are 1% in L1 for the region tags, 10% for `evap` (1.16% of the
+partition, so not a small tag), and 25% in L∞. At the least favourable
+output up to 1 h, reported and not judged, the off runs reach 2.40e-3 in L1
+(`strat`, dt 30 s) and 1.09e-2 in L∞ (`strat`, dt 120 s). The error does not
+fall with dt: `strat`'s grows from 1.20e-3 at 120 s to 1.52e-3 at 30 s.
+
+What the pair does (M1, on against off; M2, each against its reference):
+
+  - **M1 isolates the pair.** The two runs differ only in the tags' rows,
+    since P2 holds. It does not separate the diagonal from the block to
+    `ρq_tot`. At one iteration the tags move by at most 1.75e-5 in L1 and
+    6.3e-5 in L∞ (`strat`, dt 120 s). That is first order in dt: 9.1e-6 at
+    60 s and 4.9e-6 at 30 s. With two iterations it is 5.6e-7, and with ten
+    1.4e-13, about 14 times V1's level at dt 120 s.
+  - **The pair does not reduce the one-iteration error consistently.** Against
+    the reference, `tropo`'s L1 is larger with the pair at every output at
+    each dt, by up to 4.9e-6 (0.36%). `strat`'s is smaller at 14 of 15
+    outputs at dt 120 s and at every output at 60 and 30 s, by up to 1.5e-5
+    (1.5%). `evap`'s changes by at most 1.0e-8. At its worst output up to
+    1 h, `strat` is 2.389e-3 with the pair against 2.387e-3 without.
+  - **So the one-iteration error of about 1e-3 comes from elsewhere.** The
+    entries change it by at most 1.5%. W16 found the region tags' Newton
+    sensitivity 25 times the parent's and pointed to the advection split
+    between the implicit parent and the explicit tags. This experiment does
+    not test that.
+  - **The closure residual** `G` is 3.85e-3 at 1 h with one iteration and
+    4.85e-3 at the references, as in W15. The pair changes it by at most
+    7.5e-7.
+
+The predictions made before the runs held. The bound on `c` is 2.29e-3 at dt
+120 s and halves with dt. M1 is well below the off runs' error and falls to
+near V1's level by ten iterations. The off runs pass. V1 is at the rounding
+level. OD2's rule does not end the startup within 2 h, because evaporation
+keeps the column's water rising. The judged hour stays 1 h.
+
+*Bounds.* One column: 0M without EDMF, the grid rule, 30 levels. It does not
+cover prognostic EDMF, where the rain-out is split and the switch is refused,
+1M, the sphere, or the copies' part of issue 4, which is a follow-up. The
+verdict reads 1 h only, as the pre-registration fixed.
+
+*Amendment, 2026-09-29, after the runs (the design note, 5.1).* The scorer's
+first pass stopped at the verifier's pairing guard. `--expect-parity` refuses
+a pair whose YAML differs in a key outside its allowlist, and
+`water_tag_rainout_jacobian` was not on it. The key was added beside
+`water_tag_updraft_copy`, since it too changes only the tags. The verifier's
+55 tests pass. No measure or budget changed. The first pass wrote no P2 or M1
+numbers and was discarded.
+
+*`hpda2_compute`, 2026-09-29, about 13:51 to 14:05, jobs `13999648` to
+`13999664`, from the run tree `../ClimaAtmosResiDyn-wp4aj-run` at `727dba0a`
+(`claude/wp4a-j-jacobian-switch` at `f2c1e6a5`, merged with the record at
+`54e47d9d`), `configs/wp4aj_*.yml`. Scored with
+`analysis/water/wp4aj_score.py` on the verifier; `output/wp4aj/`, with
+`wp4aj_score.txt` and `.json`, the verifier's reports in `verifier/`, and each
+run's tables, manifest and provenance.*
+
 ## 2. Energy source tags: closure by transport
 
 Under the default `tracer` transport the tags move as passive tracers while the

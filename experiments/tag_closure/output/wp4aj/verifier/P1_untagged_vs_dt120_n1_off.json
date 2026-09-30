@@ -1,0 +1,193 @@
+{
+  "input_file_sha256": {
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_off/output_0000/cli_6m_inst.nc": "e55466ee043fb4da80ec37201f215f72792fe725a2f6e2cb35d655e6ec6546bd",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_off/output_0000/clw_6m_inst.nc": "d8840a6c686349535bd7766597b91ee45c50109f0c58e19dfebeeba0cfab236e",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_off/output_0000/evspsbl_6m_inst.nc": "9f51eddd1aca9fa0ed9c2da30ca30b19b0ecd696afd2712ad5b7288cc6e2b67c",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_off/output_0000/hus_6m_inst.nc": "041789b0817efa7f01c6554452aa2d3cdc1e8cba287f680591139332b28e6c3a",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_off/output_0000/lwp_6m_inst.nc": "bbd9c4321ae7977f018fb9e4e27c3b0c84cdedaf79642c5af4b73fcf1eb93afe",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_off/output_0000/pr_6m_inst.nc": "352ce88c315e8ffc6be268785690411071bc81c0f3a6d9f52633e63144eb07a8",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_off/output_0000/rhoa_6m_inst.nc": "7c90304fc436f3dc19070240406a53ea763e1bf57ff2f12c5d783c8be8faf094",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_off/output_0000/ta_6m_inst.nc": "fd2199907899602d95a4e62fb4c94c6e6dd3eb6a7b40d8734eb0a93303a993dd",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_off/output_0000/wa_6m_inst.nc": "30da462c564604c83858d7341e01d1d8ecdd274563f6d3a9d5989d7a9165c3f7",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_off/output_0000/wp4aj_dt120_n1_off.yml": "7e15e989694403804927426447f9062c813bfbe478e119f02a25879de2bb4bc4",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_untagged/output_0000/cli_6m_inst.nc": "e55466ee043fb4da80ec37201f215f72792fe725a2f6e2cb35d655e6ec6546bd",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_untagged/output_0000/clw_6m_inst.nc": "d8840a6c686349535bd7766597b91ee45c50109f0c58e19dfebeeba0cfab236e",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_untagged/output_0000/evspsbl_6m_inst.nc": "9f51eddd1aca9fa0ed9c2da30ca30b19b0ecd696afd2712ad5b7288cc6e2b67c",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_untagged/output_0000/hus_6m_inst.nc": "041789b0817efa7f01c6554452aa2d3cdc1e8cba287f680591139332b28e6c3a",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_untagged/output_0000/lwp_6m_inst.nc": "bbd9c4321ae7977f018fb9e4e27c3b0c84cdedaf79642c5af4b73fcf1eb93afe",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_untagged/output_0000/pr_6m_inst.nc": "352ce88c315e8ffc6be268785690411071bc81c0f3a6d9f52633e63144eb07a8",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_untagged/output_0000/rhoa_6m_inst.nc": "7c90304fc436f3dc19070240406a53ea763e1bf57ff2f12c5d783c8be8faf094",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_untagged/output_0000/ta_6m_inst.nc": "fd2199907899602d95a4e62fb4c94c6e6dd3eb6a7b40d8734eb0a93303a993dd",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_untagged/output_0000/wa_6m_inst.nc": "30da462c564604c83858d7341e01d1d8ecdd274563f6d3a9d5989d7a9165c3f7",
+    "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_untagged/output_0000/wp4aj_dt120_n1_untagged.yml": "de38e9ad5b923b3821c710522886e79bcd27bc8bdd964a612b5042f175245bd1"
+  },
+  "mode": "parity_only",
+  "pairing": {
+    "mismatches": [],
+    "reference_provenance": {
+      "branch": "detached",
+      "climacomms_context": "SINGLETON",
+      "climacomms_device": "CPU",
+      "commit": "727dba0afc67abafdceb803f8b786fa89ad6c347",
+      "commit_dirty": "unknown",
+      "commit_error": "git is not on PATH",
+      "commit_source": "git-files",
+      "config": "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-run/experiments/tag_closure/configs/wp4aj_dt120_n1_untagged.yml",
+      "cpus_per_task": "2",
+      "driver": "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-run/experiments/tag_closure/run_tag_closure.jl",
+      "exit_status": "0",
+      "finished": "2026-09-29T14:00:41+02:00",
+      "julia": "1.11.9",
+      "julia_depot": "/dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu",
+      "launch": "direct",
+      "machine": "terrabyte",
+      "manifest_path": "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/manifests/wp4aj_dt120_n1_untagged.20260929T115031Z.json",
+      "netcdf_and_checkpoints": "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_untagged/output_0000 (left on scratch, not committed)",
+      "node_type": "Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30GHz",
+      "nodelist": "hpdar03c05s12",
+      "ntasks": "1",
+      "output_dir": "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_untagged/output_0000",
+      "partition": "hpda2_compute",
+      "project": "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-run/.buildkite",
+      "run": "wp4aj_dt120_n1_untagged",
+      "slurm_job_id": "13999652",
+      "slurm_job_name": "g3-wp4aj_dt120_n1_untagged",
+      "started": "2026-09-29T13:50:35+02:00"
+    },
+    "run_provenance": {
+      "branch": "detached",
+      "climacomms_context": "SINGLETON",
+      "climacomms_device": "CPU",
+      "commit": "727dba0afc67abafdceb803f8b786fa89ad6c347",
+      "commit_dirty": "unknown",
+      "commit_error": "git is not on PATH",
+      "commit_source": "git-files",
+      "config": "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-run/experiments/tag_closure/configs/wp4aj_dt120_n1_off.yml",
+      "cpus_per_task": "2",
+      "driver": "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-run/experiments/tag_closure/run_tag_closure.jl",
+      "exit_status": "0",
+      "finished": "2026-09-29T14:04:32+02:00",
+      "julia": "1.11.9",
+      "julia_depot": "/dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu",
+      "launch": "direct",
+      "machine": "terrabyte",
+      "manifest_path": "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/manifests/wp4aj_dt120_n1_off.20260929T115030Z.json",
+      "netcdf_and_checkpoints": "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_off/output_0000 (left on scratch, not committed)",
+      "node_type": "Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30GHz",
+      "nodelist": "hpdar03c05s12",
+      "ntasks": "1",
+      "output_dir": "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_off/output_0000",
+      "partition": "hpda2_compute",
+      "project": "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-run/.buildkite",
+      "run": "wp4aj_dt120_n1_off",
+      "slurm_job_id": "13999650",
+      "slurm_job_name": "g3-wp4aj_dt120_n1_off",
+      "started": "2026-09-29T13:50:35+02:00"
+    }
+  },
+  "parent_parity": {
+    "cli": {
+      "identical": true,
+      "max_abs_diff": 0.0,
+      "max_rel_diff": 0.0,
+      "n_diff": 0,
+      "n_total": 630,
+      "signed_zero_only": 0,
+      "would_array_equal": true
+    },
+    "clw": {
+      "identical": true,
+      "max_abs_diff": 0.0,
+      "max_rel_diff": 0.0,
+      "n_diff": 0,
+      "n_total": 630,
+      "signed_zero_only": 0,
+      "would_array_equal": true
+    },
+    "evspsbl": {
+      "identical": true,
+      "max_abs_diff": 0.0,
+      "max_rel_diff": 0.0,
+      "n_diff": 0,
+      "n_total": 21,
+      "signed_zero_only": 0,
+      "would_array_equal": true
+    },
+    "hus": {
+      "identical": true,
+      "max_abs_diff": 0.0,
+      "max_rel_diff": 0.0,
+      "n_diff": 0,
+      "n_total": 630,
+      "signed_zero_only": 0,
+      "would_array_equal": true
+    },
+    "lwp": {
+      "identical": true,
+      "max_abs_diff": 0.0,
+      "max_rel_diff": 0.0,
+      "n_diff": 0,
+      "n_total": 21,
+      "signed_zero_only": 0,
+      "would_array_equal": true
+    },
+    "pr": {
+      "identical": true,
+      "max_abs_diff": 0.0,
+      "max_rel_diff": 0.0,
+      "n_diff": 0,
+      "n_total": 21,
+      "signed_zero_only": 0,
+      "would_array_equal": true
+    },
+    "rhoa": {
+      "identical": true,
+      "max_abs_diff": 0.0,
+      "max_rel_diff": 0.0,
+      "n_diff": 0,
+      "n_total": 630,
+      "signed_zero_only": 0,
+      "would_array_equal": true
+    },
+    "ta": {
+      "identical": true,
+      "max_abs_diff": 0.0,
+      "max_rel_diff": 0.0,
+      "n_diff": 0,
+      "n_total": 630,
+      "signed_zero_only": 0,
+      "would_array_equal": true
+    },
+    "wa": {
+      "identical": true,
+      "max_abs_diff": 0.0,
+      "max_rel_diff": 0.0,
+      "n_diff": 0,
+      "n_total": 630,
+      "signed_zero_only": 0,
+      "would_array_equal": true
+    }
+  },
+  "resolved_paths": {
+    "reference": "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_untagged/output_0000",
+    "run": "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_off/output_0000"
+  },
+  "run_context": {
+    "command": "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-wp4aj/experiments/tag_closure/analysis/evidence/compare_runs.py --reference /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_untagged/output_0000 --run /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_off/output_0000 --parity-only --json /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-wp4aj/experiments/tag_closure/output/wp4aj/verifier/P1_untagged_vs_dt120_n1_off.json",
+    "hostname": "dlr-login",
+    "utc_time": "2026-09-29T12:27:35.115923+00:00"
+  },
+  "script_sha256": "4566a1f7d4344902199d98a549db09cf1408a97c80df9923869a402beb459980",
+  "tag_only_fields": {
+    "reference": [],
+    "run": [
+      "q_tag_evap",
+      "q_tag_fix_evap",
+      "q_tag_fix_strat",
+      "q_tag_fix_tropo",
+      "q_tag_res",
+      "q_tag_strat",
+      "q_tag_tropo"
+    ]
+  }
+}

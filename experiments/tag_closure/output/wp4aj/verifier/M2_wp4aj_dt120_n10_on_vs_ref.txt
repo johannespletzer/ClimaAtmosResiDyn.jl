@@ -1,0 +1,72 @@
+/dss/dsstbyfs01/pn56su/pn56su-dss-0020/opt/python/3.12/bin/python3 /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-wp4aj/experiments/tag_closure/analysis/evidence/compare_runs.py --reference /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_ref_dt120_n20/output_0000 --run /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n10_on/output_0000 --hours 0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1,1.2,1.4,1.6,1.8,2 --json /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-wp4aj/experiments/tag_closure/output/wp4aj/verifier/M2_wp4aj_dt120_n10_on_vs_ref.json
+
+reference: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_ref_dt120_n20/output_0000
+run:       /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n10_on/output_0000
+family:    water
+NOTICE: pairing: YAML 'max_newton_iters_ode' differs between reference and run (outside the allowed keys)
+
+Weights: w_k = rho_ref,k * dz_k, using the reference's rhoa at each hour for both runs. z faces rebuilt from centres, top face 1500.000 m (YAML z_max 1500.000 m).
+
+Parent parity (bitwise, dtype-width unsigned-int view):
+  cli        bitwise identical (630 elements)
+  clw        39 of 630 elements differ; max|Δ|=1.1334e-12; max relative Δ=1.28e-06; 0 signed-zero-only; np.array_equal would say not equal
+  evspsbl    bitwise identical (21 elements)
+  hus        600 of 630 elements differ; max|Δ|=6.5306e-13; max relative Δ=7.04e-11; 0 signed-zero-only; np.array_equal would say not equal
+  lwp        10 of 21 elements differ; max|Δ|=2.7098e-11; max relative Δ=5.61e-09; 0 signed-zero-only; np.array_equal would say not equal
+  pr         8 of 21 elements differ; max|Δ|=1.9991e-14; max relative Δ=3.21e-08; 0 signed-zero-only; np.array_equal would say not equal
+  rhoa       600 of 630 elements differ; max|Δ|=1.7987e-11; max relative Δ=1.57e-11; 0 signed-zero-only; np.array_equal would say not equal
+  ta         599 of 630 elements differ; max|Δ|=3.0843e-09; max relative Δ=1.08e-11; 0 signed-zero-only; np.array_equal would say not equal
+  wa         600 of 630 elements differ; max|Δ|=5.1391e-12; max relative Δ=7.06e-08; 0 signed-zero-only; np.array_equal would say not equal
+
+tag        hour   ∫ref kg/m²        Δ∫/∫        L1        L∞     max|Δq|
+tropo       0.1   8.2628e+00   +1.36e-12  4.00e-11  1.94e-10  1.8782e-12
+tropo       0.2   8.2653e+00   +2.07e-12  1.41e-11  2.58e-11  2.5236e-13
+tropo       0.3   8.2715e+00   +2.47e-12  1.31e-11  3.27e-11  3.2234e-13
+tropo       0.4   8.2795e+00   +3.13e-12  1.33e-11  4.65e-11  4.6233e-13
+tropo       0.5   8.2884e+00   +3.72e-12  8.91e-12  3.27e-11  3.2723e-13
+tropo       0.6   8.2978e+00   +3.94e-12  5.94e-12  9.54e-12  9.6036e-14
+tropo       0.7   8.3074e+00   +4.29e-12  7.86e-12  2.23e-11  2.2582e-13
+tropo       0.8   8.3171e+00   +4.36e-12  6.41e-12  1.44e-11  1.4677e-13
+tropo       0.9   8.3269e+00   +4.48e-12  5.42e-12  6.37e-12  6.5168e-14
+tropo         1   8.3367e+00   +4.50e-12  4.65e-12  6.29e-12  6.4657e-14
+tropo       1.2   8.3561e+00   +4.50e-12  4.50e-12  6.01e-12  6.2275e-14
+tropo       1.4   8.3753e+00   +4.50e-12  4.50e-12  5.75e-12  5.9938e-14
+tropo       1.6   8.3943e+00   +4.50e-12  4.49e-12  5.52e-12  5.7909e-14
+tropo       1.8   8.4131e+00   +4.49e-12  4.49e-12  5.31e-12  5.5986e-14
+tropo         2   8.4319e+00   +4.48e-12  4.48e-12  5.14e-12  5.4373e-14
+
+strat       0.1   3.2927e+00   +2.72e-12  4.79e-11  2.93e-10  1.2867e-12
+strat       0.2   3.2851e+00   +3.72e-12  2.07e-11  6.48e-11  2.7305e-13
+strat       0.3   3.2787e+00   +4.22e-12  1.70e-11  4.11e-11  1.6897e-13
+strat       0.4   3.2729e+00   +4.66e-12  1.19e-11  1.91e-11  7.6802e-14
+strat       0.5   3.2674e+00   +4.82e-12  1.07e-11  1.09e-11  4.3151e-14
+strat       0.6   3.2622e+00   +4.93e-12  1.00e-11  1.14e-11  4.4152e-14
+strat       0.7   3.2571e+00   +4.96e-12  1.00e-11  1.12e-11  4.2770e-14
+strat       0.8   3.2521e+00   +5.07e-12  9.63e-12  1.13e-11  4.2546e-14
+strat       0.9   3.2473e+00   +5.01e-12  8.72e-12  1.08e-11  4.0174e-14
+strat         1   3.2425e+00   +4.98e-12  8.45e-12  1.07e-11  3.9211e-14
+strat       1.2   3.2332e+00   +4.96e-12  7.98e-12  1.04e-11  3.7456e-14
+strat       1.4   3.2241e+00   +4.93e-12  7.60e-12  1.02e-11  3.5964e-14
+strat       1.6   3.2154e+00   +4.91e-12  7.29e-12  1.02e-11  3.4952e-14
+strat       1.8   3.2068e+00   +4.89e-12  7.03e-12  1.01e-11  3.4148e-14
+strat         2   3.1985e+00   +4.86e-12  6.79e-12  1.01e-11  3.3606e-14
+
+evap        0.1   1.3388e-02   +1.02e-13  3.34e-12  2.26e-12  3.7971e-16
+evap        0.2   2.6775e-02   +2.18e-13  1.45e-12  1.31e-12  3.6874e-16
+evap        0.3   4.0162e-02   +8.15e-14  5.32e-13  5.27e-13  1.9564e-16
+evap        0.4   5.3548e-02   +1.65e-13  1.58e-12  1.39e-12  6.2439e-16
+evap        0.5   6.6934e-02   +8.94e-14  6.67e-13  5.48e-13  2.8341e-16
+evap        0.6   8.0320e-02   +2.92e-13  3.23e-13  4.62e-13  2.6769e-16
+evap        0.7   9.3704e-02   +1.87e-13  1.97e-13  2.62e-13  1.6708e-16
+evap        0.8   1.0709e-01   +3.62e-13  3.71e-13  4.58e-13  3.1594e-16
+evap        0.9   1.2047e-01   +2.66e-13  2.75e-13  1.75e-13  1.2967e-16
+evap          1   1.3385e-01   +2.32e-13  2.35e-13  2.23e-13  1.7607e-16
+evap        1.2   1.6061e-01   +2.33e-13  2.34e-13  2.15e-13  1.8919e-16
+evap        1.4   1.8737e-01   +2.29e-13  2.29e-13  2.22e-13  2.1283e-16
+evap        1.6   2.1412e-01   +2.21e-13  2.23e-13  2.35e-13  2.4351e-16
+evap        1.8   2.4086e-01   +2.12e-13  2.15e-13  2.32e-13  2.5696e-16
+evap          2   2.6759e-01   +2.00e-13  2.05e-13  2.30e-13  2.7148e-16
+
+NOTICE: reference and run rhoa are not bitwise identical, so the two runs do not share one atmosphere; integral_run_ref_weighted mixes the tag's own change with rhoa's change. See integral_run_own_atmosphere for the run's own column integral.
+json report: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-wp4aj/experiments/tag_closure/output/wp4aj/verifier/M2_wp4aj_dt120_n10_on_vs_ref.json
+

@@ -1,0 +1,55 @@
+================================================================
+ClimaAtmos tag-closure run
+================================================================
+Run (job_id):    wp4aj_ref_dt120_n40
+Machine:         terrabyte
+Configuration:   /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-run/experiments/tag_closure/configs/wp4aj_ref_dt120_n40.yml
+SLURM job:       13999660
+Partition:       hpda2_compute
+Nodes:           hpdar03c05s12
+CPUs per task:   2
+Tasks:           1
+Launch:          (direct)
+Repository:      /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-run
+Commit:          727dba0afc67abafdceb803f8b786fa89ad6c347 (from git-files)
+Julia:           /dss/dsshome1/0D/di38kez/.juliaup/bin/julia +1.11
+Project:         /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-run/.buildkite
+Driver:          /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-run/experiments/tag_closure/run_tag_closure.jl
+Depot:           /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+Run directory:   /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure
+Output base:     /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_ref_dt120_n40
+Start time:      2026-09-29T13:50:43+02:00
+
+Loaded modules:
+Currently Loaded Modulefiles:
+ 1) stack/24.4.0{arch=auto}(default) <aL>   3) gcc/13.2.0(default)           
+ 2) python/3.12                             4) openmpi/4.1.8-gcc13(default)  
+
+Key:
+{variant=value}  (symbolic-version)  <module-tag>  <aL>=auto-loaded  
+
+
+Wrote /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_ref_dt120_n40/output_0000/provenance.txt
+Driver exit status: 0
+End time:           2026-09-29T14:04:06+02:00
+--- warnings and errors from g3-wp4aj_ref_dt120_n40-13999660.err
+┌ Warning: water tag closure residual 0.008901498824072466 exceeds the warning tolerance 1.0e-10 at t = 360.0 s: the residual has drifted past the level set for this check. A warning level is not an acceptance threshold; see output/wp4aj_ref_dt120_n40/output_0000/water_tag_closure.csv.
+┌ Warning: water tag closure residual 0.007754119537359358 exceeds the warning tolerance 1.0e-10 at t = 720.0 s: the residual has drifted past the level set for this check. A warning level is not an acceptance threshold; see output/wp4aj_ref_dt120_n40/output_0000/water_tag_closure.csv.
+┌ Warning: water tag closure residual 0.00703937970933214 exceeds the warning tolerance 1.0e-10 at t = 1080.0 s: the residual has drifted past the level set for this check. A warning level is not an acceptance threshold; see output/wp4aj_ref_dt120_n40/output_0000/water_tag_closure.csv.
+┌ Warning: water tag closure residual 0.006638741380897122 exceeds the warning tolerance 1.0e-10 at t = 1440.0 s: the residual has drifted past the level set for this check. A warning level is not an acceptance threshold; see output/wp4aj_ref_dt120_n40/output_0000/water_tag_closure.csv.
+┌ Warning: water tag closure residual 0.006261546614409573 exceeds the warning tolerance 1.0e-10 at t = 1800.0 s: the residual has drifted past the level set for this check. A warning level is not an acceptance threshold; see output/wp4aj_ref_dt120_n40/output_0000/water_tag_closure.csv.
+┌ Warning: water tag closure residual 0.005902529888995794 exceeds the warning tolerance 1.0e-10 at t = 2160.0 s: the residual has drifted past the level set for this check. A warning level is not an acceptance threshold; see output/wp4aj_ref_dt120_n40/output_0000/water_tag_closure.csv.
+┌ Warning: water tag closure residual 0.005600019867506912 exceeds the warning tolerance 1.0e-10 at t = 2520.0 s: the residual has drifted past the level set for this check. A warning level is not an acceptance threshold; see output/wp4aj_ref_dt120_n40/output_0000/water_tag_closure.csv.
+┌ Warning: water tag closure residual 0.005331267795056318 exceeds the warning tolerance 1.0e-10 at t = 2880.0 s: the residual has drifted past the level set for this check. A warning level is not an acceptance threshold; see output/wp4aj_ref_dt120_n40/output_0000/water_tag_closure.csv.
+┌ Warning: water tag closure residual 0.005073923733289728 exceeds the warning tolerance 1.0e-10 at t = 3240.0 s: the residual has drifted past the level set for this check. A warning level is not an acceptance threshold; see output/wp4aj_ref_dt120_n40/output_0000/water_tag_closure.csv.
+┌ Warning: water tag closure residual 0.004850052852081483 exceeds the warning tolerance 1.0e-10 at t = 3600.0 s: the residual has drifted past the level set for this check. A warning level is not an acceptance threshold; see output/wp4aj_ref_dt120_n40/output_0000/water_tag_closure.csv.
+┌ Warning: water tag closure residual 0.004645252180685069 exceeds the warning tolerance 1.0e-10 at t = 3960.0 s: the residual has drifted past the level set for this check. A warning level is not an acceptance threshold; see output/wp4aj_ref_dt120_n40/output_0000/water_tag_closure.csv.
+┌ Warning: water tag closure residual 0.004458243556786482 exceeds the warning tolerance 1.0e-10 at t = 4320.0 s: the residual has drifted past the level set for this check. A warning level is not an acceptance threshold; see output/wp4aj_ref_dt120_n40/output_0000/water_tag_closure.csv.
+┌ Warning: water tag closure residual 0.004290765823570764 exceeds the warning tolerance 1.0e-10 at t = 4680.0 s: the residual has drifted past the level set for this check. A warning level is not an acceptance threshold; see output/wp4aj_ref_dt120_n40/output_0000/water_tag_closure.csv.
+┌ Warning: water tag closure residual 0.004129745491230165 exceeds the warning tolerance 1.0e-10 at t = 5040.0 s: the residual has drifted past the level set for this check. A warning level is not an acceptance threshold; see output/wp4aj_ref_dt120_n40/output_0000/water_tag_closure.csv.
+┌ Warning: water tag closure residual 0.003975254470144709 exceeds the warning tolerance 1.0e-10 at t = 5400.0 s: the residual has drifted past the level set for this check. A warning level is not an acceptance threshold; see output/wp4aj_ref_dt120_n40/output_0000/water_tag_closure.csv.
+┌ Warning: water tag closure residual 0.0038272331506576237 exceeds the warning tolerance 1.0e-10 at t = 5760.0 s: the residual has drifted past the level set for this check. A warning level is not an acceptance threshold; see output/wp4aj_ref_dt120_n40/output_0000/water_tag_closure.csv.
+┌ Warning: water tag closure residual 0.003685468638687152 exceeds the warning tolerance 1.0e-10 at t = 6120.0 s: the residual has drifted past the level set for this check. A warning level is not an acceptance threshold; see output/wp4aj_ref_dt120_n40/output_0000/water_tag_closure.csv.
+┌ Warning: water tag closure residual 0.0035498990085898233 exceeds the warning tolerance 1.0e-10 at t = 6480.0 s: the residual has drifted past the level set for this check. A warning level is not an acceptance threshold; see output/wp4aj_ref_dt120_n40/output_0000/water_tag_closure.csv.
+┌ Warning: water tag closure residual 0.003420226866596795 exceeds the warning tolerance 1.0e-10 at t = 6840.0 s: the residual has drifted past the level set for this check. A warning level is not an acceptance threshold; see output/wp4aj_ref_dt120_n40/output_0000/water_tag_closure.csv.
+┌ Warning: water tag closure residual 0.0033014747965807896 exceeds the warning tolerance 1.0e-10 at t = 7200.0 s: the residual has drifted past the level set for this check. A warning level is not an acceptance threshold; see output/wp4aj_ref_dt120_n40/output_0000/water_tag_closure.csv.

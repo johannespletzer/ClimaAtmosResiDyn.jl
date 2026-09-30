@@ -1,0 +1,58 @@
+commit: f2c1e6a5-mutants; host: hpdar03c03s06; start: 2026-09-29T13:31:17+02:00
+== mut1_unit: tagged_water_rainout_jacobian_tests.jl in /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1 2026-09-29T13:31:17+02:00
+exit=1 mut1_unit 2026-09-29T13:34:00+02:00
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:192
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:192
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:227
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:227
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:227
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:259
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:260
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:259
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:260
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:259
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut1/test/tagged_water_rainout_jacobian_tests.jl:260
+Test Summary:                        | Pass  Fail  Total   Time
+== mut2_unit: tagged_water_rainout_jacobian_tests.jl in /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut2 2026-09-29T13:34:00+02:00
+exit=1 mut2_unit 2026-09-29T13:35:33+02:00
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut2/test/tagged_water_rainout_jacobian_tests.jl:200
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut2/test/tagged_water_rainout_jacobian_tests.jl:196
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut2/test/tagged_water_rainout_jacobian_tests.jl:200
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut2/test/tagged_water_rainout_jacobian_tests.jl:196
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut2/test/tagged_water_rainout_jacobian_tests.jl:200
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut2/test/tagged_water_rainout_jacobian_tests.jl:269
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut2/test/tagged_water_rainout_jacobian_tests.jl:270
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut2/test/tagged_water_rainout_jacobian_tests.jl:269
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut2/test/tagged_water_rainout_jacobian_tests.jl:270
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut2/test/tagged_water_rainout_jacobian_tests.jl:269
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut2/test/tagged_water_rainout_jacobian_tests.jl:270
+Test Summary:                        | Pass  Fail  Total   Time
+== mut3_unit: tagged_water_rainout_jacobian_tests.jl in /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut3 2026-09-29T13:35:33+02:00
+exit=1 mut3_unit 2026-09-29T13:37:05+02:00
+ERROR: LoadError: Some tests did not pass: 53 passed, 9 failed, 0 errored, 0 broken.
+Test Summary:           | Pass  Total  Time
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut3/test/tagged_water_rainout_jacobian_tests.jl:192
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut3/test/tagged_water_rainout_jacobian_tests.jl:192
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut3/test/tagged_water_rainout_jacobian_tests.jl:192
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut3/test/tagged_water_rainout_jacobian_tests.jl:192
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut3/test/tagged_water_rainout_jacobian_tests.jl:192
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut3/test/tagged_water_rainout_jacobian_tests.jl:192
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut3/test/tagged_water_rainout_jacobian_tests.jl:260
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut3/test/tagged_water_rainout_jacobian_tests.jl:260
+The tags' rain-out blocks, assembled: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut3/test/tagged_water_rainout_jacobian_tests.jl:260
+Test Summary:                        | Pass  Fail  Total   Time
+== mut4_integration: tagged_water_rainout_jacobian_integration.jl in /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut4 2026-09-29T13:37:05+02:00
+exit=1 mut4_integration 2026-09-29T13:52:03+02:00
+Only the tags change, bit for bit: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut4/test/tagged_water_rainout_jacobian_integration.jl:105
+The entries, from `update_jacobian!`: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut4/test/tagged_water_rainout_jacobian_integration.jl:133
+The entries, from `update_jacobian!`: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut4/test/tagged_water_rainout_jacobian_integration.jl:141
+The entries, from `update_jacobian!`: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut4/test/tagged_water_rainout_jacobian_integration.jl:133
+The entries, from `update_jacobian!`: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut4/test/tagged_water_rainout_jacobian_integration.jl:134
+The entries, from `update_jacobian!`: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut4/test/tagged_water_rainout_jacobian_integration.jl:141
+The entries, from `update_jacobian!`: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut4/test/tagged_water_rainout_jacobian_integration.jl:133
+The entries, from `update_jacobian!`: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut4/test/tagged_water_rainout_jacobian_integration.jl:141
+The split solver back-substitutes the block to `ρq_tot`: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut4/test/tagged_water_rainout_jacobian_integration.jl:181
+The split solver back-substitutes the block to `ρq_tot`: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut4/test/tagged_water_rainout_jacobian_integration.jl:181
+The split solver back-substitutes the block to `ρq_tot`: Test Failed at /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-mut4/test/tagged_water_rainout_jacobian_integration.jl:181
+Test Summary:                                             | Pass  Fail  Total      Time
+end 2026-09-29T13:52:03+02:00

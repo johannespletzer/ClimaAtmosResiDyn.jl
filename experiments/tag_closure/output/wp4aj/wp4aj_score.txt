@@ -1,0 +1,67 @@
+verdict: known issue 4 closed: the off runs at one iteration are within the budgets at 1 h
+P1 True  P2 True  V1 True  V2 True
+
+judged at 1 h, off runs at one iteration against their dt's reference:
+  wp4aj_dt120_n1_off     tropo  pass  region tag: L1=1.056e-03 (budget 0.01), Linf=1.207e-03 (budget 0.25)
+  wp4aj_dt120_n1_off     strat  pass  region tag: L1=1.203e-03 (budget 0.01), Linf=1.478e-03 (budget 0.25)
+  wp4aj_dt120_n1_off     evap   pass  source tag: L1=2.141e-05 (budget 0.1), Linf=1.845e-05 (budget 0.25)
+  wp4aj_dt60_n1_off      tropo  pass  region tag: L1=9.730e-04 (budget 0.01), Linf=1.126e-03 (budget 0.25)
+  wp4aj_dt60_n1_off      strat  pass  region tag: L1=1.345e-03 (budget 0.01), Linf=1.511e-03 (budget 0.25)
+  wp4aj_dt60_n1_off      evap   pass  source tag: L1=1.341e-05 (budget 0.1), Linf=1.867e-05 (budget 0.25)
+  wp4aj_dt30_n1_off      tropo  pass  region tag: L1=1.094e-03 (budget 0.01), Linf=1.210e-03 (budget 0.25)
+  wp4aj_dt30_n1_off      strat  pass  region tag: L1=1.523e-03 (budget 0.01), Linf=1.712e-03 (budget 0.25)
+  wp4aj_dt30_n1_off      evap   pass  source tag: L1=4.830e-06 (budget 0.1), Linf=4.033e-06 (budget 0.25)
+
+the same for the on runs (reported):
+  wp4aj_dt120_n1_on      tropo  pass  region tag: L1=1.059e-03 (budget 0.01), Linf=1.215e-03 (budget 0.25)
+  wp4aj_dt120_n1_on      strat  pass  region tag: L1=1.188e-03 (budget 0.01), Linf=1.451e-03 (budget 0.25)
+  wp4aj_dt120_n1_on      evap   pass  source tag: L1=2.140e-05 (budget 0.1), Linf=1.845e-05 (budget 0.25)
+  wp4aj_dt60_n1_on       tropo  pass  region tag: L1=9.751e-04 (budget 0.01), Linf=1.131e-03 (budget 0.25)
+  wp4aj_dt60_n1_on       strat  pass  region tag: L1=1.337e-03 (budget 0.01), Linf=1.495e-03 (budget 0.25)
+  wp4aj_dt60_n1_on       evap   pass  source tag: L1=1.341e-05 (budget 0.1), Linf=1.867e-05 (budget 0.25)
+  wp4aj_dt30_n1_on       tropo  pass  region tag: L1=1.095e-03 (budget 0.01), Linf=1.213e-03 (budget 0.25)
+  wp4aj_dt30_n1_on       strat  pass  region tag: L1=1.519e-03 (budget 0.01), Linf=1.704e-03 (budget 0.25)
+  wp4aj_dt30_n1_on       evap   pass  source tag: L1=4.828e-06 (budget 0.1), Linf=4.033e-06 (budget 0.25)
+
+M1, on against off, worst L1 / L-inf up to 1 h and over 2 h, per tag:
+  dt120_n1   evap   to 1 h   1.0349849349537534e-08    8.131902537531117e-09   to 2 h   1.0349849349537534e-08    8.131902537531117e-09
+  dt120_n1   strat  to 1 h   1.7462388958931706e-05    6.342604071007573e-05   to 2 h   1.7462388958931706e-05    6.342604071007573e-05
+  dt120_n1   tropo  to 1 h   6.3696705210568345e-06    2.464212438077705e-05   to 2 h   6.3696705210568345e-06    2.464212438077705e-05
+  dt120_n2   evap   to 1 h    4.927054112800329e-12   3.8903863706077435e-12   to 2 h    4.927054112800329e-12   3.8903863706077435e-12
+  dt120_n2   strat  to 1 h    5.548100135613209e-07   2.1485503503914683e-06   to 2 h    5.551632484361861e-07   2.1485503503914683e-06
+  dt120_n2   tropo  to 1 h   3.1910319814771704e-07   1.1756610843964973e-06   to 2 h   3.1910319814771704e-07   1.1756610843964973e-06
+  dt120_n10  evap   to 1 h    1.828581651582088e-18     1.83995436908477e-18   to 2 h    1.828581651582088e-18     1.83995436908477e-18
+  dt120_n10  strat  to 1 h    1.405131625427272e-13    7.914611893687777e-13   to 2 h    1.405131625427272e-13    7.914611893687777e-13
+  dt120_n10  tropo  to 1 h   3.2362288115291376e-14    2.478371255368326e-13   to 2 h   3.2362288115291376e-14    2.478371255368326e-13
+  dt60_n1    evap   to 1 h    5.197633797542489e-09    4.120532978972073e-09   to 2 h    5.197633797542489e-09    4.120532978972073e-09
+  dt60_n1    strat  to 1 h    9.060976289824067e-06   3.2291035969744876e-05   to 2 h    9.060976289824067e-06   3.2291035969744876e-05
+  dt60_n1    tropo  to 1 h    3.110442537596259e-06   1.2425269082301554e-05   to 2 h    3.110442537596259e-06   1.2425269082301554e-05
+  dt30_n1    evap   to 1 h   2.6107944596984325e-09   2.0804429489200446e-09   to 2 h   2.6107944596984325e-09   2.0804429489200446e-09
+  dt30_n1    strat  to 1 h    4.903961949470964e-06   1.6429080662948202e-05   to 2 h    4.920995103359621e-06   1.6429080662948202e-05
+  dt30_n1    tropo  to 1 h   1.5755133395162717e-06    6.312525994501074e-06   to 2 h   1.5755133395162717e-06    6.312525994501074e-06
+
+V1, 40 against 20 iterations, worst over 2 h:
+  dt120: pass True  {'evap': {'L1': 9.92902162750787e-15, 'Linf': 1.11357833335535e-14}, 'strat': {'L1': 5.599165380244194e-15, 'Linf': 1.0769299312726547e-14}, 'tropo': {'L1': 7.825986897335332e-15, 'Linf': 1.5943564484081713e-14}}
+  dt60: pass True  {'evap': {'L1': 9.712241230284679e-15, 'Linf': 1.0993291854917845e-14}, 'strat': {'L1': 1.0289734953329959e-14, 'Linf': 2.1718449152917045e-14}, 'tropo': {'L1': 7.702337072773062e-15, 'Linf': 1.9938804080460205e-14}}
+  dt30: pass True  {'evap': {'L1': 1.3672368111461388e-14, 'Linf': 2.0737562507320133e-14}, 'strat': {'L1': 1.2846590670881914e-14, 'Linf': 3.150603089448065e-14}, 'tropo': {'L1': 1.0063376641233499e-14, 'Linf': 2.347303356672934e-14}}
+
+OD2 startup end (untagged twin): {'end_s': None, 'largest_tendency': 4.886821656764104e-05}
+bound on c: {'dt120': 0.002292145766045893, 'dt60': 0.0011460728830229466, 'dt30': 0.0005730364415114733}
+
+G(t), each run's gross residual over its water, at 1 h and 2 h:
+  wp4aj_ref_dt120_n20           0.00485005285208008    0.0033014747965795215
+  wp4aj_ref_dt120_n40          0.004850052852081482    0.0033014747965807896
+  wp4aj_ref_dt60_n20            0.00470349568694216    0.0032200893871662767
+  wp4aj_ref_dt60_n40           0.004703495686941552     0.003220089387164016
+  wp4aj_ref_dt30_n20          0.0045435375658516575    0.0031143170718906607
+  wp4aj_ref_dt30_n40           0.004543537565849387    0.0031143170718923555
+  wp4aj_dt120_n1_off           0.003853237160580213     0.002604580809551109
+  wp4aj_dt120_n1_on            0.003853982407095507     0.002605124133550398
+  wp4aj_dt120_n2_off          0.0048087891970428455     0.003276498813524817
+  wp4aj_dt120_n2_on           0.0048085419551527325     0.003276279186241476
+  wp4aj_dt120_n10_off          0.004850052859132549     0.003301474801616608
+  wp4aj_dt120_n10_on           0.004850052859137877     0.003301474801627506
+  wp4aj_dt60_n1_off            0.003691665901175045    0.0025050322604876227
+  wp4aj_dt60_n1_on             0.003692052433445496     0.002505314227055216
+  wp4aj_dt30_n1_off           0.0033856504704292494     0.002305097048917153
+  wp4aj_dt30_n1_on            0.0033858428784334003    0.0023052615186127884

@@ -1,0 +1,35 @@
+================================================================
+ClimaAtmos tag-closure run
+================================================================
+Run (job_id):    wp4aj_dt120_n1_untagged
+Machine:         terrabyte
+Configuration:   /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-run/experiments/tag_closure/configs/wp4aj_dt120_n1_untagged.yml
+SLURM job:       13999652
+Partition:       hpda2_compute
+Nodes:           hpdar03c05s12
+CPUs per task:   2
+Tasks:           1
+Launch:          (direct)
+Repository:      /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-run
+Commit:          727dba0afc67abafdceb803f8b786fa89ad6c347 (from git-files)
+Julia:           /dss/dsshome1/0D/di38kez/.juliaup/bin/julia +1.11
+Project:         /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-run/.buildkite
+Driver:          /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-wp4aj-run/experiments/tag_closure/run_tag_closure.jl
+Depot:           /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+Run directory:   /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure
+Output base:     /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_untagged
+Start time:      2026-09-29T13:50:35+02:00
+
+Loaded modules:
+Currently Loaded Modulefiles:
+ 1) stack/24.4.0{arch=auto}(default) <aL>   3) gcc/13.2.0(default)           
+ 2) python/3.12                             4) openmpi/4.1.8-gcc13(default)  
+
+Key:
+{variant=value}  (symbolic-version)  <module-tag>  <aL>=auto-loaded  
+
+
+Wrote /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/wp4aj_dt120_n1_untagged/output_0000/provenance.txt
+Driver exit status: 0
+End time:           2026-09-29T14:00:41+02:00
+--- warnings and errors from g3-wp4aj_dt120_n1_untagged-13999652.err

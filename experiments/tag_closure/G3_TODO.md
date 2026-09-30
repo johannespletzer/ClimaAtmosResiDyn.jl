@@ -46,6 +46,15 @@ The twelve criteria of the plan, section 2, in short:
 
 ## Decisions
 
+  - [x] **WP4a-J: does `water_tag_rainout_jacobian` become a default?**
+    *Decided 2026-09-29, after W51 (DECISIONS.md): no. It stays an
+    experimental key, opt-in and off by default, as proposed.* ~~Open.~~ The
+    proposal: it stays an experimental key, off by default. On the raining
+    0M column the missing entries cost well under the first-hour budgets,
+    and the pair moves the tags by at most
+    1.75e-5 in L1, less than 1.5% of the one-iteration error, with a sign
+    that depends on the tag. It is refused under prognostic EDMF.
+    (`design/ZERO_M_SPLIT.md` 5.2.)
   - [x] **Option C's revision, after W47.** *Decided 2026-09-29, after W48
     (design section 10, option 1): the explicit brackets give the region
     tags the target's gain, for every explicit process. Next: its design
@@ -744,6 +753,34 @@ The switch and the experiment of `design/ZERO_M_SPLIT.md`, sections 4 and 5,
 after the owner's decision 1 ("WP4a's two points" above). Separate from #104's
 scope (the split, `pr_tag` and the restatement), by the owner's review of
 #104, finding 6.
+
+  - [x] The switch, the pair, on `claude/wp4a-j-jacobian-switch` at
+    `f2c1e6a5` (from `main` at `43b01ca1`): `water_tag_rainout_jacobian`,
+    `false` by default (the note's section 4, "As built"). The unit tests
+    passed 134/134 on the login node.
+  - [x] Tests in a Slurm job (`13999575`): the unit file 134/134, the
+    integration file 75/75, with no allocation added to the update or the
+    solve. The four mutants (`13999576`: the diagonal, the block to
+    `ρq_tot`, the `−I` start, the call from `update_jacobian!`) each fail
+    their file. The branch without the key against `main` (`13999577`): all
+    bit for bit on three 0M columns, two tagged and one untagged
+    (`analysis/water/wp4aj_parity_run.jl`). The regression files
+    `tagged_water_tests.jl` and `tagged_water_integration.jl` pass in the
+    same job, with no failure. Logs in `output/wp4aj/tests/`.
+  - [x] The experiment's pre-registration completed (the note's section 5.1):
+    17 configs `configs/wp4aj_*.yml`, the scorer
+    `analysis/water/wp4aj_score.py` (smoke-tested on W16's outputs), the
+    budgets reused from 6.1's first-hour row. Nothing waits for the owner.
+  - [x] The 17 runs, from the run tree `-wp4aj-run` at `727dba0a` (`f2c1e6a5`
+    merged with the record at `54e47d9d`): jobs `13999648` to `13999664`,
+    all exit 0. Scored as W51 (`output/wp4aj/`): known issue 4 closed on
+    this column. The departures are dated amendments in the note's 5.1.
+  - [x] Known issue 4 closed for the grid rule in `docs/known_issues.md`, as
+    drafted in the note's 5.2: on `claude/wp4a-j-jacobian-switch` at
+    `3c16a58b`, with NEWS.
+  - [x] Whether the switch becomes a default. *Decided 2026-09-29: no; it
+    stays opt-in and off by default (the note's 5.2, DECISIONS.md).*
+  - [ ] The PR (the coordinating session opens it).
 
 ## WP4b: rain and snow carry their own tags (draft PR #121)
 

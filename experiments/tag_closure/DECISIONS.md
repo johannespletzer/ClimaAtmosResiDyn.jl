@@ -230,6 +230,12 @@ The list as it stood before this classification, kept as written:
     on the geometric SGS-variance term (`sgs_variance_horizontal_scale_factor`
     3.0 where ClimaAtmos defaulted to 0) and turned `main`'s CI red. PR #128
     caps ClimaParams at v1.1.15. **In force.**
+  - **WP4a-J: `water_tag_rainout_jacobian` stays opt-in and off by default.**
+    The owner accepted the proposal after W51 (`design/ZERO_M_SPLIT.md` 5.2):
+    on the raining 0M column the missing entries cost well under the
+    first-hour budgets, and the pair moves the tags by at most 1.75e-5 in L1,
+    with a sign that depends on the tag. Known issue 4 is closed for the grid
+    rule on that column. **In force.**
 
 ## 2026-09-28
 
