@@ -402,13 +402,8 @@ end
         "void_above" => 1.0e-30,
         "audit" => true,
     )
-    # In this column the model's own cache carries two things from one
-    # evaluation to the next, and a checkpoint carries neither. The cloud fraction's Picard
-    # iteration starts from the value it last took, unless
-    # `reproducible_restart` is set. The SGS saturation adjustment reads the
-    # covariances the last evaluation left, unless `sgs_distribution` is
-    # `mean`. Without both, a restarted run does not continue the straight run
-    # below bit for bit, with or without tags.
+    # The default config. Every run below uses it, except the three the
+    # restart is compared with.
     test_dict = base_config(
         tags;
         extra = Dict{String, Any}(
@@ -416,13 +411,24 @@ end
             "dt_save_state_to_disk" => "20secs",
             "output_dir" => mktempdir(pwd()),
             "water_closure_check" => closure_check,
-            "reproducible_restart" => true,
-            "sgs_distribution" => "mean",
         ),
     )
+    # This column restarts bit for bit only under two keys. The model's own
+    # cache carries two things from one evaluation to the next, and a
+    # checkpoint carries neither. The cloud fraction's Picard iteration starts
+    # from the value it last took, unless `reproducible_restart` is set. The
+    # SGS saturation adjustment reads the covariances the last evaluation
+    # left, unless `sgs_distribution` is `mean`. Without both, a restarted run
+    # does not continue the straight run bit for bit, with or without tags.
+    # So the first run, its restart and the straight run take both keys.
+    restart_keys = Dict{String, Any}(
+        "reproducible_restart" => true,
+        "sgs_distribution" => "mean",
+    )
+    restart_base_dict = merge(test_dict, restart_keys)
 
     simulation = CA.get_simulation(
-        CA.AtmosConfig(test_dict; job_id = "tagged_water_restart"),
+        CA.AtmosConfig(restart_base_dict; job_id = "tagged_water_restart"),
     )
     result = CA.solve_atmos!(simulation)
     @test result.ret_code == :success
@@ -432,7 +438,16 @@ end
     # them is a new model type, so this costs a compile, and every other field
     # must come out bit for bit. `isequal` tells signed zeros apart, which `==`
     # does not. See "Fork parity with upstream" in `docs/clima_atmos_specific.md`.
+    # Both runs use the default config, not the restart's two keys.
     @testset "The model's fields do not depend on the tags" begin
+        local tagged = CA.get_simulation(
+            CA.AtmosConfig(
+                merge(test_dict, Dict{String, Any}("output_dir" => mktempdir(pwd())));
+                job_id = "tagged_water_parity",
+            ),
+        )
+        @test CA.solve_atmos!(tagged).ret_code == :success
+        local Y = tagged.integrator.u
         local plain_dict = merge(
             filter(
                 entry -> !(first(entry) in ("water_tracers", "water_closure_check")),
@@ -494,7 +509,7 @@ end
     # The restart sets water's default level, 1.0, which its own residual does
     # not reach. So its rows are void only through the flag in the checkpoint.
     restart_dict = merge(
-        test_dict,
+        restart_base_dict,
         Dict{String, Any}(
             "restart_file" => restart_file,
             "t_end" => "40secs",
@@ -551,7 +566,7 @@ end
     straight = CA.get_simulation(
         CA.AtmosConfig(
             merge(
-                test_dict,
+                restart_base_dict,
                 Dict{String, Any}(
                     "t_end" => "40secs",
                     "output_dir" => mktempdir(pwd()),

@@ -706,8 +706,16 @@ end
             response = ∫(with_gain.U.c.ρq_tot .- without.U.c.ρq_tot)
             @test response > 0
             left(run) = ∫(dtγ .* run.dY.c.q_tag_inc_left)
-            @test abs((left(with_gain) - left(without)) - (response - δL)) <=
+            left_with = left(with_gain)
+            left_without = left(without)
+            @info "The real stage's column response" response δL left_with left_without
+            @test abs((left_with - left_without) - (response - δL)) <=
                   1e-4 * δL
+            # With both stages on one cache, the column's response to the
+            # withheld gain is the gain itself. So the part left out does not
+            # change. Without the ledger it would change by the whole gain.
+            @test abs(response - δL) <= 1e-4 * δL
+            @test abs(left_with - left_without) <= 1e-4 * δL
             restore_fields!(p_default.precomputed, saved_cache)
             CA.set_precomputed_quantities!(Y_default, p_default, t_default)
         end
