@@ -87,21 +87,21 @@ changes, which [RUNS.md](RUNS.md) records.
 
 ## Index
 
-| IDs                                                      | section                                             |
-|:-------------------------------------------------------- |:--------------------------------------------------- |
+| IDs                                                           | section                                             |
+|:------------------------------------------------------------- |:--------------------------------------------------- |
 | W1–W48, W50, W51 (W46 reserved for PX7, W49 for C's revision) | 1. Water tags                                       |
-| E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48, E85    | 2. Energy source tags: closure by transport         |
-| E1–E6, E9b, E9c, E10–E19, E71, R1–R11                    | 3. The energy reference and the offset              |
-| E40, E53                                                 | 4. EDMF and the updrafts                            |
-| E39, E39b, E43, E59, E61, E62, E64–E67, E79, E80, E82    | 5. The implicit channel and the increment prototype |
-| E45, E47, E51, E54, E55, E57, E58                        | 6. Parity, Float32, MPI and restarts                |
-| E7–E9, E20–E24, E26, E28, E30, E38, E49, E63, E87        | 7. The process records and the per-process checks   |
-| E50, E60, E69, E70, E74, E75, E81                        | 8. The sphere and long runs                         |
-| E68, E72, E73, E76, E83, E84, E86                        | 9. Mixing: V3 and the updraft gap                   |
-| T1–T10, E44, E44b–E44e, E52, E56, E77, E78               | 10. Cost                                            |
-| M1–M8                                                    | 11. Method                                          |
-| old claims, errata, conflicts                            | 12. Superseded and falsified claims                 |
-| FQ-1 to FQ-24                                            | 13. What is not established                         |
+| E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48, E85         | 2. Energy source tags: closure by transport         |
+| E1–E6, E9b, E9c, E10–E19, E71, R1–R11                         | 3. The energy reference and the offset              |
+| E40, E53                                                      | 4. EDMF and the updrafts                            |
+| E39, E39b, E43, E59, E61, E62, E64–E67, E79, E80, E82         | 5. The implicit channel and the increment prototype |
+| E45, E47, E51, E54, E55, E57, E58                             | 6. Parity, Float32, MPI and restarts                |
+| E7–E9, E20–E24, E26, E28, E30, E38, E49, E63, E87             | 7. The process records and the per-process checks   |
+| E50, E60, E69, E70, E74, E75, E81                             | 8. The sphere and long runs                         |
+| E68, E72, E73, E76, E83, E84, E86                             | 9. Mixing: V3 and the updraft gap                   |
+| T1–T10, E44, E44b–E44e, E52, E56, E77, E78                    | 10. Cost                                            |
+| M1–M8                                                         | 11. Method                                          |
+| old claims, errata, conflicts                                 | 12. Superseded and falsified claims                 |
+| FQ-1 to FQ-24                                                 | 13. What is not established                         |
 
 ## 1. Water tags
 

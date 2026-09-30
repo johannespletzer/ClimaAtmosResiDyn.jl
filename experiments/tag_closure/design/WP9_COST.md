@@ -36,17 +36,17 @@ memory and the build time, with the compile time kept apart.
 Each arm is one Slurm job on one node, and each point in it is one Julia process.
 Points run in turn, smallest first.
 
-| Arm                | Family | Base config                | Mode    | Rain, snow | Points                                              |
-|:-------------------|:-------|:---------------------------|:--------|:-----------|:----------------------------------------------------|
-| `water_default`    | water  | `wp9_water_trmm0m_edmf`    | default | no         | 0, 2, 4, 8, 8:ledgers, 8:tracer, 8:increment        |
-| `water_default_32` | water  | `wp9_water_trmm0m_edmf`    | default | no         | 32                                                  |
-| `water_copies`     | water  | `wp9_water_trmm0m_edmf`    | copies  | no         | 2, 4, 8, 8:ledgers                                  |
-| `water_1m_off`     | water  | `wp9_water_1m_column`      | n/a     | no         | 0, 2, 4, 8, 32                                      |
-| `water_1m_on`      | water  | `wp9_water_1m_column`      | n/a     | yes        | 2, 4, 8, 32                                         |
-| `energy_default`   | energy | `wp9_energy_d4_edmf`       | default | n/a        | 0, 2, 4, 8, 8:ledgers, 8:records                    |
-| `energy_default_32`| energy | `wp9_energy_d4_edmf`       | default | n/a        | 32                                                  |
-| `energy_copies`    | energy | `wp9_energy_d4_edmf`       | copies  | n/a        | 2, 4, 8, 8:ledgers                                  |
-| `energy_copies_32` | energy | `wp9_energy_d4_edmf`       | copies  | n/a        | 32                                                  |
+| Arm                 | Family | Base config             | Mode    | Rain, snow | Points                                       |
+|:------------------- |:------ |:----------------------- |:------- |:---------- |:-------------------------------------------- |
+| `water_default`     | water  | `wp9_water_trmm0m_edmf` | default | no         | 0, 2, 4, 8, 8:ledgers, 8:tracer, 8:increment |
+| `water_default_32`  | water  | `wp9_water_trmm0m_edmf` | default | no         | 32                                           |
+| `water_copies`      | water  | `wp9_water_trmm0m_edmf` | copies  | no         | 2, 4, 8, 8:ledgers                           |
+| `water_1m_off`      | water  | `wp9_water_1m_column`   | n/a     | no         | 0, 2, 4, 8, 32                               |
+| `water_1m_on`       | water  | `wp9_water_1m_column`   | n/a     | yes        | 2, 4, 8, 32                                  |
+| `energy_default`    | energy | `wp9_energy_d4_edmf`    | default | n/a        | 0, 2, 4, 8, 8:ledgers, 8:records             |
+| `energy_default_32` | energy | `wp9_energy_d4_edmf`    | default | n/a        | 32                                           |
+| `energy_copies`     | energy | `wp9_energy_d4_edmf`    | copies  | n/a        | 2, 4, 8, 8:ledgers                           |
+| `energy_copies_32`  | energy | `wp9_energy_d4_edmf`    | copies  | n/a        | 32                                           |
 
 Point `0` is the untagged baseline of the base config. `:ledgers` adds the
 per-tag ledgers, which the owner set on for every validation and qualification
@@ -83,17 +83,17 @@ source tag, so the cost of a tag is that of a source tag, not of a region tag.
     the record tree at a pushed commit. Both must be clean, and the jobs log both
     commits.
   - **What is timed.**
-    - Build: `AtmosConfig` and `get_simulation` together, with the runtime's own
-      compile and recompile time and GC time reported apart.
-    - The first step alone. It compiles the stepper, so it is the compile cost
-      that the build did not take.
-    - Step time: 10 warm-up steps after the first, then 5 blocks of 20 steps. Each
-      block is timed as a whole with its allocated bytes and GC time, after a
-      `GC.gc()`. The point's step time is the minimum block, with the median and
-      the maximum beside it. Block `k` covers the same model time in every arm of
-      a base config.
-    - Memory: `Sys.maxrss()` after the build, after the warm-up and at the end.
-      Slurm's `MaxRSS` (`sacct`) is the cross-check.
+      + Build: `AtmosConfig` and `get_simulation` together, with the runtime's own
+        compile and recompile time and GC time reported apart.
+      + The first step alone. It compiles the stepper, so it is the compile cost
+        that the build did not take.
+      + Step time: 10 warm-up steps after the first, then 5 blocks of 20 steps. Each
+        block is timed as a whole with its allocated bytes and GC time, after a
+        `GC.gc()`. The point's step time is the minimum block, with the median and
+        the maximum beside it. Block `k` covers the same model time in every arm of
+        a base config.
+      + Memory: `Sys.maxrss()` after the build, after the warm-up and at the end.
+        Slurm's `MaxRSS` (`sacct`) is the cross-check.
   - **Nothing else runs.** No diagnostics, no output and no closure check, and
     `energy_source_closure_check: false`, so the timing is the tags' own. The
     check's cost is known (T2, T3). It is not part of this measure.

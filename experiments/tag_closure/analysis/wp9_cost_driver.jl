@@ -163,7 +163,13 @@ function tagged_config(dict, family, mode, ntags, precip, variant, base_name)
         variant == "ledgers" && (dict["energy_source_tag_ledger_per_tag"] = true)
         variant == "records" && (
             dict["energy_process_record"] =
-                ["radiation", "surface_flux", "subsidence", "microphysics", "precipitation"]
+                [
+                    "radiation",
+                    "surface_flux",
+                    "subsidence",
+                    "microphysics",
+                    "precipitation",
+                ]
         )
         variant in ("tracer", "increment") &&
             error("The transport variants are for the water family.")
@@ -174,7 +180,8 @@ function tagged_config(dict, family, mode, ntags, precip, variant, base_name)
 end
 
 maxrss_gb() = Sys.maxrss() / 1024^3
-median(x) = (s = sort(x); n = length(s); isodd(n) ? s[(n + 1) ÷ 2] : (s[n ÷ 2] + s[n ÷ 2 + 1]) / 2)
+median(x) =
+    (s = sort(x); n = length(s); isodd(n) ? s[(n + 1) ÷ 2] : (s[n ÷ 2] + s[n ÷ 2 + 1]) / 2)
 
 function main(base_path)
     load_seconds = time() - T_PROCESS_START
@@ -203,8 +210,9 @@ function main(base_path)
     dict = tagged_config(dict, family, mode, ntags, precip, variant, base_name)
 
     label = join(
-        [family, base_name, ntags == 0 ? "untagged" : mode, precip ? "precip" : "noprecip",
-         variant, "n$ntags"],
+        [family, base_name, ntags == 0 ? "untagged" : mode,
+            precip ? "precip" : "noprecip",
+            variant, "n$ntags"],
         "_",
     )
     println("[wp9] run $label")
@@ -220,8 +228,10 @@ function main(base_path)
     end
     simulation = build.value
     build_rss = maxrss_gb()
-    @printf("[wp9] build %.1f s (compile %.1f s, recompile %.1f s, gc %.1f s, %.2f GB allocated), maxrss %.2f GB\n",
-        build.time, build.compile_time, build.recompile_time, build.gctime, build.bytes / 1024^3,
+    @printf(
+        "[wp9] build %.1f s (compile %.1f s, recompile %.1f s, gc %.1f s, %.2f GB allocated), maxrss %.2f GB\n",
+        build.time, build.compile_time, build.recompile_time, build.gctime,
+        build.bytes / 1024^3,
         build_rss)
     flush(stdout)
 
@@ -263,9 +273,11 @@ function main(base_path)
     header = [
         "label", "family", "base", "mode", "ntags", "precip", "variant", "follower",
         "commit", "host", "loadavg1", "load_s", "build_s", "build_compile_s",
-        "build_gc_s", "build_gb", "first_step_s", "first_step_compile_s", "steps_per_block",
+        "build_gc_s", "build_gb", "first_step_s", "first_step_compile_s",
+        "steps_per_block",
         "repeats", "step_ms_min", "step_ms_median", "step_ms_max", "bytes_per_step_min",
-        "bytes_per_step_max", "gc_fraction_max", "block_compile_s_max", "maxrss_build_gb", "maxrss_warm_gb",
+        "bytes_per_step_max", "gc_fraction_max", "block_compile_s_max",
+        "maxrss_build_gb", "maxrss_warm_gb",
         "maxrss_final_gb", "step_ms_blocks", "finished",
     ]
     row = [
@@ -273,17 +285,22 @@ function main(base_path)
         variant, follower, model_commit, gethostname(),
         split(read("/proc/loadavg", String))[1], load_seconds, build.time,
         build.compile_time + build.recompile_time, build.gctime, build.bytes / 1024^3,
-        first_step.time, first_step.compile_time + first_step.recompile_time, STEPS, REPEATS,
+        first_step.time, first_step.compile_time + first_step.recompile_time, STEPS,
+        REPEATS,
         minimum(step_ms), median(step_ms), maximum(step_ms), minimum(bytes_per_step),
-        maximum(bytes_per_step), maximum(gc_fraction), maximum(b.compile_time + b.recompile_time for b in blocks), build_rss, warm_rss, final_rss,
-        join(round.(step_ms; digits = 4), ";"), Dates.format(Dates.now(), "yyyy-mm-ddTHH:MM:SS"),
+        maximum(bytes_per_step), maximum(gc_fraction),
+        maximum(b.compile_time + b.recompile_time for b in blocks), build_rss, warm_rss,
+        final_rss,
+        join(round.(step_ms; digits = 4), ";"),
+        Dates.format(Dates.now(), "yyyy-mm-ddTHH:MM:SS"),
     ]
     length(header) == length(row) || error("The header and the row differ in length.")
     open(joinpath(outdir, "$label.csv"), "w") do io
         println(io, join(header, ","))
         println(io, join(row, ","))
     end
-    @printf("RESULT %s step_ms_min=%.4f step_ms_median=%.4f build_s=%.1f maxrss_gb=%.2f\n", label,
+    @printf("RESULT %s step_ms_min=%.4f step_ms_median=%.4f build_s=%.1f maxrss_gb=%.2f\n",
+        label,
         minimum(step_ms), median(step_ms), build.time, final_rss)
     return nothing
 end
