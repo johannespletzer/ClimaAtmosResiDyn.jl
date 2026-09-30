@@ -2441,12 +2441,15 @@ function start_plume_at_surface!(
         flags,
         gain_weight,
         tags,
-        Val(1),
+        ntuple(Val, Val(length(tags))),
     )
     return nothing
 end
-_start_plume_at_surface!(ᶜε_start, ε̄, f, ᶜmasks, flags, gain_weight, ::Tuple{}, ::Val) =
+_start_plume_at_surface!(ᶜε_start, ε̄, f, ᶜmasks, flags, gain_weight, ::Tuple{}, ::Tuple{}) =
     nothing
+# The tags and their indices, as `Val`s, are walked together. `Val(i + 1)` made
+# in the recursion does not infer on Julia 1.10, and the call then boxes its
+# arguments (280 B on the EDMF column).
 function _start_plume_at_surface!(
     ᶜε_start,
     ε̄,
@@ -2455,13 +2458,14 @@ function _start_plume_at_surface!(
     flags,
     gain_weight::G,
     tags::Tuple,
-    ::Val{i},
-) where {G, i}
+    indices::Tuple,
+) where {G}
     tag = first(tags)
-    εᵢ = Fields.field_values(Fields.level(getproperty(ᶜε_start, i), 1))
+    index = first(indices)
+    εᵢ = Fields.field_values(Fields.level(getproperty(ᶜε_start, _val(index)), 1))
     receives = tag_receives_source(tag, :surface_flux)
     gain = _lowest_level_values(gain_weight(ᶜmasks, tag))
-    start = PlumeStartValue(Val(i), flags)
+    start = PlumeStartValue(index, flags)
     @. εᵢ = start(ε̄, f, receives * gain)
     return _start_plume_at_surface!(
         ᶜε_start,
@@ -2471,9 +2475,10 @@ function _start_plume_at_surface!(
         flags,
         gain_weight,
         Base.tail(tags),
-        Val(i + 1),
+        Base.tail(indices),
     )
 end
+_val(::Val{i}) where {i} = i
 _lowest_level_values(weight::Bool) = weight
 _lowest_level_values(ᶜweight::Fields.Field) =
     Fields.field_values(Fields.level(ᶜweight, 1))
