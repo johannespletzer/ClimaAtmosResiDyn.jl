@@ -1090,6 +1090,42 @@ verdict. Against Q8's rule:
 
 The rule of Q8 is met. No run was extended.
 
+*Rechecks after the review's fixes, 2026-09-30* (`claude/option-c-revision`
+at `a4b492ec`; 11.1's amendment, the split in copies mode):
+
+  - **Unit tests:** pass (job `14010375`): 328, the bracket testset 76 of 76,
+    the stage testset 20 of 20, and the precipitation file with no failure.
+  - **Mutants:** the rule removed fails 12 of 76 in the bracket testset and
+    the precipitation file (`14010376`; the stage testset is after the first
+    failing testset and did not run on it). The explicit rule at the implicit
+    site fails only the implicit-site testset (`14010378`). The split
+    ignoring the rule (`14010377`) fails the two coupling-1 tests that test
+    the withheld gain (lines 284 and 298 of
+    `tagged_water_edmf_0m_explicit_integration.jl`), and nothing else.
+  - **Integration: one file FAILS.** Eight of the nine `tagging_water*` files
+    pass (`14010379` to `14010387`). `tagged_water_edmf_0m_explicit_integration.jl`
+    (`14010383`) fails the new test's line 291, in copies mode: for the
+    partition tags, the split's result in the cells other than the test's
+    cell is not `isequal` between the two rules. The first printed values
+    agree, and the differing cells are not shown. Not diagnosed. One
+    hypothesis: the real state has other cells with the grid parent below
+    zero, where the rules differ by design, and the test should restrict
+    `others` to cells with `ρq_tot ≥ 0`. That is a hypothesis, not a
+    finding. The failing check is part of the new test. The file's earlier
+    checks pass, including the model fields against the run without tags.
+    The fix of the test, and a rerun of this file (about 35 min) and of its
+    mutant, wait for the owner.
+  - **30-day parity** (jobs `14010408` to `14010411`, `output_0001`):
+    Q8's rule passes. In all four pairs every model field is bit for bit, 20
+    files each to day 30, and the day-30 state is `isequal` (10 model
+    fields). The region tags differ from `main`'s at the end: `q_tag_free` by
+    up to 7.2% of its largest value, `q_tag_fcg` 0.98%, `q_tag_pbl` 0.17%,
+    `q_tag_evap` 0.12% (in the state at day 30), so the rule acted. `output/cr_parity30b/`.
+  - **Against the first 30-day run** (`output_0000`, at `cfb72587`): all 91
+    files of the revision's tagged run are bit for bit equal. So the
+    review's fixes, coupling-1 included, changed no tag in this
+    configuration, which is not copies mode: largest difference 0.
+
 ### 11.9 The jobs
 
 From each run tree's root, with `submit_g3.sh`,

@@ -544,6 +544,12 @@ to #126 were read from GitHub on 2026-09-28.
     passes Q8's rule. Every model field and the day-30 state are bit for bit in
     all four pairs. The region tags differ from `main`'s from day 11.5, so the
     rule acted (design 11.8, `output/cr_parity30/`). Nothing is extended.
+  - **2026-09-30, `crev`, after the review's fixes** (`a4b492ec`): the unit
+    tests, the mutants and eight of nine `tagging_water*` files pass, and the
+    30-day parity passes Q8 again (`14010408` to `14010411`; the tags equal
+    the first 30-day run's bit for bit). **One check fails:**
+    `tagged_water_edmf_0m_explicit_integration.jl` fails the new coupling-1
+    test (job `14010383`), not diagnosed (design 11.8).
 
 ## The housekeeping, H0 to H7: done
 

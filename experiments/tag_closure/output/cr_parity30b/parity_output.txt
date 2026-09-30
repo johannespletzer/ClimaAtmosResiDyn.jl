@@ -1,0 +1,60 @@
+tags on, the revision against main: 20 model field files, to day 30.0: bit for bit
+tags off, the revision against main: 20 model field files, to day 30.0: bit for bit
+the revision, tags on against off: 20 model field files, to day 30.0: bit for bit
+main, tags on against off: 20 model field files, to day 30.0: bit for bit
+the water tags, the revision against main (reported):
+    q_tag_evap_1d_inst.nc: the same to day 11.0, differs from day 12.0, largest difference 2.74e-03 of the field's largest value
+    q_tag_evap_6h_inst.nc: the same to day 11.25, differs from day 11.5, largest difference 2.74e-03 of the field's largest value
+    q_tag_fcg_1d_inst.nc: the same to day 11.0, differs from day 12.0, largest difference 7.82e-03 of the field's largest value
+    q_tag_fcg_6h_inst.nc: the same to day 11.25, differs from day 11.5, largest difference 7.78e-03 of the field's largest value
+    q_tag_fix_evap_1d_inst.nc: the same at 31 outputs
+    q_tag_fix_fcg_1d_inst.nc: the same at 31 outputs
+    q_tag_fix_free_1d_inst.nc: the same to day 11.0, differs from day 12.0, largest difference 5.24e+00 of the field's largest value
+    q_tag_fix_pbl_1d_inst.nc: the same to day 11.0, differs from day 12.0, largest difference 5.24e+00 of the field's largest value
+    q_tag_free_1d_inst.nc: the same to day 11.0, differs from day 12.0, largest difference 1.96e-02 of the field's largest value
+    q_tag_free_6h_inst.nc: the same to day 11.25, differs from day 11.5, largest difference 1.96e-02 of the field's largest value
+    q_tag_inc_left_1d_inst.nc: the same to day 11.0, differs from day 12.0, largest difference 8.73e-03 of the field's largest value
+    q_tag_inc_left_6h_inst.nc: the same to day 11.25, differs from day 11.5, largest difference 8.74e-03 of the field's largest value
+    q_tag_inc_left_gross_1d_inst.nc: the same to day 11.0, differs from day 12.0, largest difference 8.81e-03 of the field's largest value
+    q_tag_inc_left_gross_6h_inst.nc: the same to day 11.25, differs from day 11.5, largest difference 8.81e-03 of the field's largest value
+    q_tag_inc_moved_1d_inst.nc: the same to day 11.0, differs from day 12.0, largest difference 2.59e-02 of the field's largest value
+    q_tag_inc_moved_6h_inst.nc: the same to day 11.25, differs from day 11.5, largest difference 2.60e-02 of the field's largest value
+    q_tag_inc_moved_gross_1d_inst.nc: the same to day 11.0, differs from day 12.0, largest difference 1.34e-02 of the field's largest value
+    q_tag_inc_moved_gross_6h_inst.nc: the same to day 11.25, differs from day 11.5, largest difference 1.35e-02 of the field's largest value
+    q_tag_inc_negative_6h_inst.nc: the same to day 11.25, differs from day 11.5, largest difference 9.23e-03 of the field's largest value
+    q_tag_inc_negative_gross_6h_inst.nc: the same to day 11.25, differs from day 11.5, largest difference 9.19e-03 of the field's largest value
+    q_tag_led_empty_6h_inst.nc: the same at 121 outputs
+    q_tag_led_empty_attempted_6h_inst.nc: the same at 121 outputs
+    q_tag_led_empty_gross_6h_inst.nc: the same at 121 outputs
+    q_tag_led_fix_evap_6h_inst.nc: the same at 121 outputs
+    q_tag_led_fix_fcg_6h_inst.nc: the same at 121 outputs
+    q_tag_led_fix_free_6h_inst.nc: the same to day 11.25, differs from day 11.5, largest difference 5.23e+00 of the field's largest value
+    q_tag_led_fix_pbl_6h_inst.nc: the same to day 11.25, differs from day 11.5, largest difference 5.23e+00 of the field's largest value
+    q_tag_led_fixgross_evap_6h_inst.nc: the same at 121 outputs
+    q_tag_led_fixgross_fcg_6h_inst.nc: the same at 121 outputs
+    q_tag_led_fixgross_free_6h_inst.nc: the same to day 11.25, differs from day 11.5, largest difference 4.24e+00 of the field's largest value
+    q_tag_led_fixgross_pbl_6h_inst.nc: the same to day 11.25, differs from day 11.5, largest difference 4.24e+00 of the field's largest value
+    q_tag_led_inc_evap_6h_inst.nc: the same to day 11.25, differs from day 11.5, largest difference 4.36e-02 of the field's largest value
+    q_tag_led_inc_fcg_6h_inst.nc: the same to day 11.25, differs from day 11.5, largest difference 1.99e-02 of the field's largest value
+    q_tag_led_inc_free_6h_inst.nc: the same to day 11.25, differs from day 11.5, largest difference 2.96e-01 of the field's largest value
+    q_tag_led_inc_pbl_6h_inst.nc: the same to day 11.25, differs from day 11.5, largest difference 1.09e-01 of the field's largest value
+    q_tag_led_incgross_evap_6h_inst.nc: the same to day 11.25, differs from day 11.5, largest difference 1.75e-02 of the field's largest value
+    q_tag_led_incgross_fcg_6h_inst.nc: the same to day 11.25, differs from day 11.5, largest difference 2.13e-02 of the field's largest value
+    q_tag_led_incgross_free_6h_inst.nc: the same to day 11.25, differs from day 11.5, largest difference 2.78e-01 of the field's largest value
+    q_tag_led_incgross_pbl_6h_inst.nc: the same to day 11.25, differs from day 11.5, largest difference 6.34e-02 of the field's largest value
+    q_tag_led_repair_6h_inst.nc: the same to day 11.25, differs from day 11.5, largest difference 4.24e+00 of the field's largest value
+    q_tag_led_repair_attempted_6h_inst.nc: the same to day 11.25, differs from day 11.5, largest difference 4.24e+00 of the field's largest value
+    q_tag_led_repair_gross_6h_inst.nc: the same to day 11.25, differs from day 11.5, largest difference 4.24e+00 of the field's largest value
+    q_tag_led_repairnet_6h_inst.nc: the same to day 11.5, differs from day 11.75, largest difference 6.49e-01 of the field's largest value
+    q_tag_led_repairnet_attempted_6h_inst.nc: the same to day 11.5, differs from day 11.75, largest difference 6.49e-01 of the field's largest value
+    q_tag_led_repairnet_gross_6h_inst.nc: the same to day 11.5, differs from day 11.75, largest difference 6.49e-01 of the field's largest value
+    q_tag_led_rescale_6h_inst.nc: the same at 121 outputs
+    q_tag_led_rescale_attempted_6h_inst.nc: the same at 121 outputs
+    q_tag_led_rescale_gross_6h_inst.nc: the same at 121 outputs
+    q_tag_negative_1d_inst.nc: the same at 31 outputs
+    q_tag_negative_6h_inst.nc: the same at 121 outputs
+    q_tag_pbl_1d_inst.nc: the same to day 11.0, differs from day 12.0, largest difference 6.42e-03 of the field's largest value
+    q_tag_pbl_6h_inst.nc: the same to day 11.25, differs from day 11.5, largest difference 6.40e-03 of the field's largest value
+    q_tag_res_1d_inst.nc: the same to day 11.0, differs from day 12.0, largest difference 1.00e+00 of the field's largest value
+    q_tag_res_6h_inst.nc: the same to day 11.25, differs from day 11.5, largest difference 1.00e+00 of the field's largest value
+RESULT every model field bit for bit ; the rule acted: a region tag differs from main's at the last output
