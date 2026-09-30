@@ -1102,19 +1102,19 @@ at `a4b492ec`; 11.1's amendment, the split in copies mode):
     ignoring the rule (`14010377`) fails the two coupling-1 tests that test
     the withheld gain (lines 284 and 298 of
     `tagged_water_edmf_0m_explicit_integration.jl`), and nothing else.
-  - **Integration: one file FAILS.** Eight of the nine `tagging_water*` files
-    pass (`14010379` to `14010387`). `tagged_water_edmf_0m_explicit_integration.jl`
-    (`14010383`) fails the new test's line 291, in copies mode: for the
-    partition tags, the split's result in the cells other than the test's
-    cell is not `isequal` between the two rules. The first printed values
-    agree, and the differing cells are not shown. Not diagnosed. One
-    hypothesis: the real state has other cells with the grid parent below
-    zero, where the rules differ by design, and the test should restrict
-    `others` to cells with `ρq_tot ≥ 0`. That is a hypothesis, not a
-    finding. The failing check is part of the new test. The file's earlier
-    checks pass, including the model fields against the run without tags.
-    The fix of the test, and a rerun of this file (about 35 min) and of its
-    mutant, wait for the owner.
+  - **Integration:** eight of nine `tagging_water*` files passed first
+    (`14010379` to `14010387`). `tagged_water_edmf_0m_explicit_integration.jl`
+    (`14010383`) failed the new coupling-1 test at line 291. A diagnostic
+    run (`14012457`, copies mode only) showed a test defect, not a code one:
+    `eachindex` of the 5-d parent array gives Cartesian indices, which never
+    equal the linear `k`, so the modified cell itself was among the "other"
+    cells. It is the one differing cell of 30 (grid parent `-1e-6`, where the
+    rules differ by design: 6.8e-8 against a scale of 1.7e-7 for `tropo`,
+    7.3e-10 against 3.0e-8 for `strat`). The real state has no cell with the
+    grid parent below zero. The test now compares by linear index
+    (`210eeece`, the code unchanged). Rerun (`14012892`): the file passes,
+    64 of 64. The mutant (`14012893`) fails exactly the withheld-gain tests
+    (lines 284 and 302) and nothing else.
   - **30-day parity** (jobs `14010408` to `14010411`, `output_0001`):
     Q8's rule passes. In all four pairs every model field is bit for bit, 20
     files each to day 30, and the day-30 state is `isequal` (10 model

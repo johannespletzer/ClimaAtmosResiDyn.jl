@@ -547,9 +547,9 @@ to #126 were read from GitHub on 2026-09-28.
   - **2026-09-30, `crev`, after the review's fixes** (`a4b492ec`): the unit
     tests, the mutants and eight of nine `tagging_water*` files pass, and the
     30-day parity passes Q8 again (`14010408` to `14010411`; the tags equal
-    the first 30-day run's bit for bit). **One check fails:**
-    `tagged_water_edmf_0m_explicit_integration.jl` fails the new coupling-1
-    test (job `14010383`), not diagnosed (design 11.8).
+    the first 30-day run's bit for bit). One check failed, a test defect
+    (index type); fixed at `210eeece`, the file passes and its mutant fails
+    as intended (`14012892`, `14012893`; design 11.8).
 
 ## The housekeeping, H0 to H7: done
 
