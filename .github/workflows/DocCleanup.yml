@@ -43,9 +43,11 @@ jobs:
               if git push --force-with-lease="gh-pages:$base" origin "$squashed:refs/heads/gh-pages"; then
                 exit 0
               fi
+              [ "$attempt" -lt 3 ] || break
               echo "gh-pages moved while cleaning up; trying again."
               sleep $((20 * attempt + RANDOM % 20))
             done
+            echo "gh-pages kept moving; the preview of PR$PRNUM was not removed."
             exit 1
         env:
             PRNUM: ${{ github.event.number }}

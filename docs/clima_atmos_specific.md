@@ -318,8 +318,8 @@ The other workflows:
     demand, not after each merge, where it held a job slot for up to two
     hours. A pull request runs it only when it changes the workflow.
   - **`Invalidations`.** It runs on a pull request to `main` that changes
-    `src/`, `ext/` or `Project.toml` and is not a draft. It builds the package twice
-    without a cache and reports a count, and is not a required check.
+    `src/`, `ext/` or `Project.toml` and is not a draft. It builds the package
+    twice without a cache and reports a count, and is not a required check.
   - **`Manifest compat`.** It resolves `Project.toml` and `.buildkite`. It runs
     on pull requests and on `main` when one of them or its manifest changes,
     and weekly.

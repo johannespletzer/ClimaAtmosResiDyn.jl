@@ -183,7 +183,8 @@ for attempt in 1:3
         break
     catch err
         attempt == 3 && rethrow()
-        @warn "Deploying the docs failed; trying again" attempt exception = err
+        @warn "Deploying the docs failed; trying again" attempt exception =
+            (err, catch_backtrace())
         # A random part, so two previews that lost the same race do not
         # retry at the same moment.
         sleep(20 * attempt + rand(0:20))
