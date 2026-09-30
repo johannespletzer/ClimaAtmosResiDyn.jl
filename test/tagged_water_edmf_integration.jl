@@ -76,6 +76,21 @@ end
     # `config/model_configs/prognostic_edmfx_dycoms_rf02_column.yml` as a
     # single column with 1-moment microphysics, for an hour. It drizzles, so
     # the diffusion's leak is not zero.
+    #
+    # Test 4b needs the entrainment diffusivity `K_e`. ClimaParams 1.1.15 sets
+    # its efficiency `EDMF_interface_entr_efficiency` to 0, which switches
+    # `K_e` off. The other versions checked, 1.1.6, 1.1.9, 1.1.11, 1.1.13
+    # and 1.1.17, set 0.4. So this file sets 0.4 itself, and `K_e` acts under
+    # each of them.
+    entrainment_toml = joinpath(mktempdir(pwd()), "interface_entrainment.toml")
+    write(
+        entrainment_toml,
+        """
+        [EDMF_interface_entr_efficiency]
+        value = 0.4
+        type = "float"
+        """,
+    )
     edmf_dict = Dict{String, Any}(
         "config" => "column",
         "initial_condition" => "DYCOMS_RF02",
@@ -97,7 +112,10 @@ end
         "z_stretch" => false,
         "perturb_initstate" => false,
         "rad" => "DYCOMS",
-        "toml" => [joinpath(pkgdir(CA), "toml", "prognostic_edmfx_1M.toml")],
+        "toml" => [
+            joinpath(pkgdir(CA), "toml", "prognostic_edmfx_1M.toml"),
+            entrainment_toml,
+        ],
         "ode_algo" => "ARS222",
         "dt" => "120secs",
         "t_end" => "1hours",
@@ -239,7 +257,9 @@ end
         )
 
         # The parent negative across the inversion, where `K_e` acts, and the
-        # partition closed to its target there.
+        # partition closed to its target there. The checks below need `K_e`,
+        # so a `K_e` of zero everywhere fails here first.
+        @test CA.Parameters.interface_entr_efficiency(p.params) == 0.4
         @test maximum(abs, parent(p.precomputed.ᶠK_entr)) > 0
         ᶜz = CA.Fields.coordinate_field(Y.c).z
         Y_negative = copy(Y_uniform)
