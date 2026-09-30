@@ -410,11 +410,36 @@ kernel with water's. The EDMF integration test of the energy tags rebuilds `f`
 from the model's own tendencies and checks the plume's lowest cell against
 `ψᵢ`. A mutant without the start's term must fail that check.
 
-**A measurement, proposed and waiting for the owner.** D4 (the energy tags'
-column, DYCOMS RF02 with EDMF and 1M) with its energy source tags in the
-default mode, in a fix arm and a main arm as section 8 has them, and the
-untagged twin, for one day. Reported: parity (R1), closure in OD4 units, and
-each tag's change between the arms at 1 h and 24 h. It judges nothing: the
-energy copies are not an eligible comparator, and no threshold is proposed
-for the change. Its configs and jobs are not written. **Waiting for the
-owner.**
+**E89, the measurement: pre-registered on 2026-09-30, before any run.** The
+owner approved section 9's proposal on 2026-09-29 and named it E89.
+
+  - *Case.* D4 (DYCOMS RF02, EDMF, 1M stepped implicitly, one Newton
+    iteration, `dt` 120 s, 30 levels, one day) with its eight energy source
+    tags in the default mode (`enthalpy_increment`, offset 110,495 J/kg), and
+    each tag's ledgers on for OD4's exact throughput. The configs are
+    `configs/e89_d4_default_{fix,main}.yml` and `configs/e89_d4_untagged.yml`,
+    G4.11's `g411x_d4_*` with only the `job_id` and the header changed. The
+    driver is `analysis/water/d4w_driver.jl`, as G4.11's.
+  - *Arms.* The fix arm runs at the pushed final head of
+    `claude/w21-surface-flux`, from a clean detached run tree with the record
+    merged. E89 names that commit, in RUNS and in its finding. The main arm
+    runs at `main` `43b01ca1` with the record merged, the same base. The two
+    differ only in the plume's start, since D4 has no water tags. The
+    untagged twin runs from the fix tree.
+  - *Scored* (`analysis/increment/e89_score.py`), with OD3's rows as
+    approved: R1, every field the twin writes, bit for bit, in both arms
+    ("Parent validity: parity"); closure, the partition's gross residual over
+    the window at most 0.2% of the window's exact gross source throughput
+    ("Closure, energy"). The window is OD2's rule on the main arm's
+    partitioned total, as G4.11 read it.
+  - *Reported, not judged.* Each tag's change between the arms, fix against
+    main, at 1 h and 24 h: L1, L∞, the absolute L1 and the change of its
+    integral, with the sign. No threshold exists for it, and none is proposed.
+    No default-against-copies verdict: the energy copies are not an eligible
+    comparator (E84).
+  - *Expected.* R1 and closure pass in both arms. The surface-flux tag `sfc`
+    gains in the lowest levels in the fix arm, and the tags that do not
+    receive the flux lose a share of about `f` there, which depends on the
+    offset.
+  - *Jobs.* Three, `hpda2_compute`, 4 h each, with `submit_g3.sh` as in
+    section 8. Scored after all three end.
