@@ -2143,7 +2143,7 @@ mix by mass,
 which is the steady updraft equation `wʲ ∂εʲ/∂z = (ε + ε_turb)(ε⁰ - εʲ)`, taken
 implicitly in `z`, with the environment `ε⁰` from the grid mean and the updraft.
 The plume starts in the lowest cell with the updraft's surface energy
-([`energy_source_plume!`](@ref)), and anew from the grid mean's composition
+(`energy_source_plume!`), and anew from the grid mean's composition
 wherever the updraft is absent or does not rise. It assumes one
 updraft, since the environment is the grid mean less that updraft. It is exact when
 the updraft adjusts faster than the shares change. The environment's shares
