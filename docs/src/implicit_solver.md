@@ -92,19 +92,25 @@ the presence of topography, the diffusion mode, and the prognostic variables in
 When grid-scale diffusion is implicit, the linear solve is itself approximate;
 `approximate_linear_solve_iters` sets how many iterations it takes.
 
-Tags and process records enter no other variable's equation. Their blocks are
-their own diagonal and, for a water tag under 1M microphysics, a cross block to
-each falling species in their own row. They are solved one field at a time,
-apart from the nested solver of the other variables, by a
-`SplitJacobianSolver`. A field with cross blocks is solved after the other
-variables, on its right-hand side less the cross blocks times their
-increments. The other variables' increments do not change. A field with only
-its diagonal gets the increment the nested solver would give it. The unsplit
-form, which `AutoSparseJacobian` uses, does not carry the cross blocks. The
-reason for the split is the build. ClimaCore works out at compile time which
-blocks each nested solve touches, over the names of every field in the state,
-and that work grows much faster than the number of fields. With the split, the
-tags and records no longer add to it.
+Tags and process records enter no other variable's equation. A
+`SplitJacobianSolver` solves them one field at a time, after the model's own
+variables, so the model's increments do not change. The reason is compile time:
+the nested solve works out its blocks over the names of every field in the
+state, and that work grows much faster than the number of fields. The unsplit
+form, which `AutoSparseJacobian` uses, carries no cross blocks. With the split
+solver:
+
+  - `ρq_tag_<name>` has cross blocks to the sedimenting masses. Under
+    `water_tag_precipitation` they go only to `ρq_lcl` and `ρq_icl`.
+  - `ρe_src_<name>` has cross blocks to every sedimenting mass, 2-moment and P3
+    included.
+  - The rain and snow parts and the process records have only a diagonal block.
+  - The water tags' updraft copies have cross blocks inside the EDMF nested
+    solve.
+
+A field with cross blocks is solved on its right-hand side less the cross blocks
+times the other increments. A field with only a diagonal block gets the
+increment the nested solver would give it.
 
 ### Automatic differentiation
 

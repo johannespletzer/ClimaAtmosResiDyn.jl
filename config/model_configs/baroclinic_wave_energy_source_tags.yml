@@ -4,8 +4,7 @@ rad: "gray"
 dt_rad: "1hours"
 t_end: "1days"
 # An example of the energy source tags in the layout that makes the per-process
-# checks possible, on the sphere the tag-closure experiments closed per process
-# (their run C7). See `docs/src/energy_source_tags.md`.
+# checks possible. See `docs/src/energy_source_tags.md`.
 #
 #   - `tropics` and `extratropics` partition the total. `e_src_res` sums them.
 #   - `new_tropics` and `new_extratropics` collect every process's new energy in
@@ -16,9 +15,11 @@ t_end: "1days"
 #     follows it.
 #   - The records say what each of those processes did at each point.
 #
-# The closure check is on by default with these tags: daily, report-only, from a
-# spin-up reference an hour in. The repair is on by default too, and the repair
-# ledgers are in the default output.
+# The closure check is on by default with these tags. It runs daily, from a
+# spin-up reference 1 hour in. It warns above 1.0, the default tolerance for
+# `tracer` transport, which this config uses. By default it never stops the
+# run and never marks rows void. The repair is on by default too, and the
+# repair ledgers are in the default output.
 
 # Required with the tags. The tags partition `ρe_tot + c·ρ`, which this offset
 # makes positive everywhere, so the donor share is defined everywhere. The model

@@ -23,8 +23,8 @@ Clone the repository and instantiate the bundled `.buildkite` environment, which
 pins the exact dependency versions used in CI:
 
 ```bash
-git clone https://github.com/CliMA/ClimaAtmos.jl.git
-cd ClimaAtmos.jl
+git clone https://github.com/johannespletzer/ClimaAtmosResiDyn.jl.git
+cd ClimaAtmosResiDyn.jl
 julia --project=.buildkite -e 'using Pkg; Pkg.instantiate()'
 ```
 
@@ -124,6 +124,8 @@ diagnostics:
 
 See [Computing and Saving Diagnostics](diagnostics.md) for reductions, writers,
 and the catalogue of [Available Diagnostics](available_diagnostics.md).
+The fork's tag and record diagnostics are switched on with their own YAML keys.
+See [Configuring Tracers](tracer_configuration.md).
 
 **Checkpoints** — the full prognostic state, used to restart:
 

@@ -51,18 +51,15 @@ Always read the ClimaAtmos-specific guide before working in this repository:
 - Format code before committing. CI checks formatting via the `prek` hook in [.github/workflows/run-prek.yml](.github/workflows/run-prek.yml), which runs JuliaFormatter from the version-pinned [.dev/format/Project.toml](.dev/format/Project.toml) environment (currently `=2.10.1`). Match CI with either `prek run julia-formatter --all-files` or the pinned env directly: `julia --startup-file=no --project=.dev/format -e 'using Pkg; Pkg.instantiate(io=devnull); using JuliaFormatter; format(ARGS)' .`. Avoid `julia -e 'using JuliaFormatter; format(\".\")'` from your global environment — `Pkg.add("JuliaFormatter")` installs v2 by default and a mismatched version produces a different diff.
 - Optional but recommended: install the pre-commit hooks in [.pre-commit-config.yaml](.pre-commit-config.yaml) (`uv tool install prek && prek install`) to auto-format and trim trailing whitespace on commit. See [docs/src/contributor_guide.md](docs/src/contributor_guide.md) ("Pre-commit hooks").
 - Bookkeeping words: budget is the parent's, ledger is a tag's, record is a
-  process's. Say "the parent budget" for `src/parent_budget`, name a tag
-  ledger's kind (repair, increment or mechanism), and keep the noun "record"
-  for process records. A threshold is a tolerance. The level a residual is
-  judged against, such as the tag closure's 0.2%, is its tolerance, never its
-  budget. A CI job's limit is its time limit. A budget in the physical sense,
-  such as the energy, water or TKE budget, keeps the word. The code follows
-  the rule too. The parent budget's per-step store is `BudgetJournal`, held
-  in `adapter.journal`. Its event hooks are `open_parent_budget_event!` and
-  `close_parent_budget_event!`, and its timestepper pin is `TimestepperPin`.
-  Tag-side names that say "ledger" already follow the rule. The stratospheric
-  tracers' tracer budget is a separate feature and keeps its name. See
+  process's. A threshold is a tolerance, and a CI job's limit is its time
+  limit. A budget in the physical sense (energy, water, TKE) keeps the word,
+  and so does the stratospheric tracers' tracer budget, a separate feature.
+  The code follows the rule: the parent budget's names include
+  `BudgetJournal` (held in `adapter.journal`) and `TimestepperPin`. See
   [the glossary](docs/src/glossary.md).
+- Docs and comments on `main` describe the current code in the present tense.
+  Plan and finding IDs, PR numbers, dates and decisions go in commit messages,
+  NEWS.md and the record branch, not in docs or comments.
 - Do not touch upstream naming conventions. Fork rules such as the
   bookkeeping words apply only to names and text the fork added. Upstream
   ClimaAtmos identifiers, file names and config keys stay as upstream has

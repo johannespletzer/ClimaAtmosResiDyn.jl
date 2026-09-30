@@ -1,105 +1,85 @@
 # Configuring Tracers
 
-This page is the configuration reference for the tracer and tagging features
-you can switch on from a YAML file. It says what to write. The pages it links to say how
-each one works and what its output means.
+This page is the configuration reference for the tracer and tag features. Each
+one is a top-level YAML key, and each is off by default. With one on, every
+model field that exists without it stays bit for bit as in the same run with it
+off, under the default solver settings. Only the feature's own fields and
+output are added. The [parity contract](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/blob/main/docs/clima_atmos_specific.md#fork-parity-with-upstream) states the limits. It does not
+cover `use_krylov_method` or `use_newton_rtol`, whose residual norm includes the
+feature's fields, and the stratospheric passive tracers have no on/off test
+yet.
 
-You do not need to write any Julia code, and you do not need to understand the
-implementation to use these. Start from a block on this page, change the
-numbers, and run.
+Start from a block on this page, change the numbers, and run. No Julia code is
+needed. The pages linked below say how each family works and what its output
+means.
 
 ## Which one do I want?
 
-| I want to know…                          | Use                                           | Adds                                |
-|:---------------------------------------- |:--------------------------------------------- |:----------------------------------- |
-| how long air stays in the stratosphere   | [`passive_tracers`](@ref passive_tracers)     | one inert tracer per release region |
-| where the water at a point came from     | [`water_tracers`](@ref water_tracers)         | one field `ρq_tag_<name>` per tag   |
-| where the energy at a point came from    | [`energy_source_tags`](energy_source_tags.md) | one field `ρe_src_<name>` per tag   |
-| what heated or cooled the air at a point | [`energy_tracers`](@ref energy_tracers)       | one field `ρe_tag_<name>` per tag   |
-| what each process did to the energy      | [`energy_process_record`](process_record.md)  | one field `prc_e_<process>` each    |
-| what each process did to the water       | [`water_process_record`](process_record.md)   | one field `prc_q_<process>` each    |
+| I want to know…                          | Use                                                  | Adds                                 | Details                                                                                             |
+|:---------------------------------------- |:---------------------------------------------------- |:------------------------------------ |:--------------------------------------------------------------------------------------------------- |
+| how long air stays in the stratosphere   | [`passive_tracers`](@ref passive_tracers)            | one inert tracer per release region  | [Passive Tracers](passive_tracers.md)                                                               |
+| where the water at a point came from     | [`water_tracers`](@ref water_tracers)                | one field `ρq_tag_<name>` per tag    | [Tagged Water Tracers](tagged_water.md)                                                             |
+| how much of that water is rain or snow   | `water_tag_precipitation: true` (Experimental)       | a rain and a snow part per water tag | [Rain and Snow Tags](tagged_water_precipitation.md)                                                 |
+| where the energy at a point came from    | [`energy_source_tags`](@ref energy_source_tags_conf) | one field `ρe_src_<name>` per tag    | [Energy Source Tags: a user guide](energy_source_tags_guide.md), [reference](energy_source_tags.md) |
+| what heated or cooled the air at a point | [`energy_tracers`](@ref energy_tracers)              | one field `ρe_tag_<name>` per tag    | [Tagged Energy Tracers](tagged_tracers.md)                                                          |
+| what each process did to the energy      | `energy_process_record`                              | one field `prc_e_<process>` each     | [Process-Change Records](process_record.md)                                                         |
+| what each process did to the water       | `water_process_record`                               | one field `prc_q_<process>` each     | [Process-Change Records](process_record.md)                                                         |
 
-They are independent. Switch on any one of them, or all of them, in the same
-run. Each is off by default and costs nothing when off.
+The families are independent. Switch on any one of them, or all of them, in the
+same run.
+
+The tags attribute water and energy by the rules you configure: the region
+masks, the `source` labels, and each family's transport and loss rules. Their
+results are attributions defined by those rules, not a unique physical history.
+Energy source tag results also depend on `energy_source_tag_offset`, so report
+the offset with them.
 
 ## What the words mean
 
-Three of these families use the word "tag", and all three accept a `source`
-key, but a tag does not hold the same kind of quantity in each.
+The [glossary](glossary.md) defines these terms. In short:
 
-  - **source tag**: an amount of the parent variable that is present now, traced
-    back to where it came from. Both `water_tracers` and `energy_source_tags`
-    are source tags, and they differ in what is guaranteed of the result. Water
-    ends up non-negative wherever its parent does: every correction that touches
-    a water tag preserves non-negativity, and `repair_water_tag_partition!` puts
-    a negative holding back, with the `q_tag_fix_<name>` diagnostic logging how
-    much was moved. Nothing keeps `ρq_tot` itself non-negative, though —
-    `tracer_nonnegativity_method` is off by default — and where the parent is
-    not positive the shares are undefined and the tags of that cell mean
-    nothing, which the `nonpositive_fraction` column of the closure table
-    reports. Energy source tags are **not non-negative on their own** — the
-    loss term bounds the depletion rate rather than the amount removed over a
-    step, and their parent has no physical zero to begin with. The repair,
-    `energy_source_tag_repair`, is on by default. It puts a negative tag back
-    wherever the tags' total is positive, and `e_src_fix_<name>` logs how much
-    it moved. See [Energy Source Tags](energy_source_tags.md).
-  - **signed process tag**: an `energy_tracers` entry configured with `source`.
-    It starts at zero and holds the signed increment its process has added,
-    going negative under net cooling. A running total of what a process did,
-    not a source amount. Transported like any other tag.
+  - **region tag**: an entry with a `region` and no `source`. A transported part
+    of the parent variable. The region tags together form one partition of it.
+  - **source tag**: an entry of `water_tracers` or `energy_source_tags` with a
+    `source`. The amount of the parent that is present now and that the rules
+    attribute to that process. A repair puts a negative tag back, for the energy source tags
+    under `energy_source_tag_repair` (on by default). Its repair ledger,
+    `q_tag_fix_<name>` or `e_src_fix_<name>`, logs what it moved.
+  - **signed process tag**: an `energy_tracers` entry with a `source`. It starts
+    at zero and holds the signed running total of what that process added. It
+    goes negative under net cooling.
   - **process-change record**: the `prc_e_<process>` and `prc_q_<process>`
-    fields from the `energy_process_record` and `water_process_record` keys.
-    Also a signed running total, but one field per process rather than per tag,
-    and never transported. Reserve the phrase for these: a signed process tag
-    is a different object and calling both by one name has already caused
-    confusion.
-  - **region tag**: a transported partition of the parent variable, in either
-    family.
-  - **source tracing**: what the source tags do. A description of the method,
-    not the name of any output.
-  - **closure**: whether the tags still add up to the variable they split. Also
-    called a sum-to-total test.
+    fields. One per process, not per tag, and never transported.
+  - **closure**: whether the tags still add up to the variable they split.
 
-A process-change record is available on its own, without any tags, through the
-`energy_process_record` and `water_process_record` keys. See
-[Process-Change Records](process_record.md).
-
-The families differ in the *rule*, not the key. `water_tracers` and
-`energy_source_tags` share out production by mask and take loss from each tag
-in proportion to what it already holds, which yields an amount present.
-`energy_tracers` applies the whole signed increment by mask, and an entry there
-is a signed process tag only when it is configured with `source`: a `region`
-entry is a transported partition. See
-[Attribution](tagged_water.md#Attribution) and
+`water_tracers` and `energy_source_tags` share out production by mask and take
+loss from each tag in proportion to what it holds. `energy_tracers` applies the
+whole signed increment by mask. The rule differs between the families, not the
+key. See [Attribution](tagged_water.md#Attribution) and
 [What a tag means](tagged_tracers.md#What-a-tag-means).
 
-Two words are deliberately not used here. *Heat tagging* names a different
-method that tags potential temperature; this tags moist total energy. A *source
-fingerprint* is the pattern that source shares form across space and time, which
-is an analysis product rather than anything the model writes out.
+## Combining configuration files
 
-They are also separate top-level keys, so they can come from separate
-configuration files. A run assembled from a numerics file, a water-tracer file
-and an energy-tracer file keeps all three: later files override earlier ones key
-by key, and these are three different keys.
+The keys are separate top-level keys, so they can come from separate
+configuration files. Later files override earlier ones key by key. A run
+assembled from a numerics file, a water-tracer file and an energy-tracer file
+keeps all three.
 
 !!! warning "One key sets the whole block"
 
     Overriding is per top-level key, not per setting inside it. If two
     configuration files both set `passive_tracers`, the later one replaces the
-    earlier one completely — the settings are not combined. Write the whole
-    block in one file.
+    earlier one completely. The settings are not combined. Write the whole block
+    in one file.
 
 * * *
 
 ## [`passive_tracers`](@id passive_tracers)
 
 Inert tracers that are produced inside fixed regions and removed below the
-tropopause. Because production and removal are the only terms, a tracer whose
-burden has stopped drifting has a residence time of `burden / source` — which
-is how long air released in that region stays in the stratosphere.
-
-Physics and output: [Passive Tracers](passive_tracers.md).
+tropopause. Production and removal are the only terms. So when a tracer's burden
+has stopped changing, `burden / source` is the residence time of air released in
+that region. Physics and output: [Passive Tracers](passive_tracers.md).
 
 ### Starter block
 
@@ -118,58 +98,40 @@ passive_tracers:
 
 !!! tip "Start small"
 
-    Setup cost grows steeply with the number of tracers — roughly as the cube
-    of it — and is paid again on every launch and restart. Six latitude bands
-    by four height bands takes about 17 minutes to set up; doubling the height
-    bands takes over two hours. Tracers do not interact, so several small runs
+    Setup cost grows steeply with the number of tracers, and it is paid again on
+    every launch and restart. Tracers do not interact, so several small runs
     covering different regions are cheaper than one large one.
 
-### Settings
+### Keys
 
-| Key               | Meaning                                                    | Default      |
-|:----------------- |:---------------------------------------------------------- |:------------ |
-| `release_grid`    | release regions on a regular latitude × height grid        | —            |
-| `release_boxes`   | release regions listed one by one                          | —            |
-| `heights_from`    | what heights are measured from: `tropopause` or `altitude` | `tropopause` |
-| `production_rate` | how fast tracer is made inside a release region, in 1/s    | `1.0e-10`    |
-| `loss_timescale`  | decay time below the tropopause                            | `6hours`     |
-| `tropopause`      | how the tropopause is found                                | see below    |
+| Key               | Meaning                                                                                                                           | Default      |
+|:----------------- |:--------------------------------------------------------------------------------------------------------------------------------- |:------------ |
+| `release_grid`    | release regions on a regular latitude × height grid                                                                               | none         |
+| `release_boxes`   | release regions listed one by one                                                                                                 | none         |
+| `heights_from`    | what heights are measured from: `tropopause` or `altitude`                                                                        | `tropopause` |
+| `production_rate` | how fast tracer is made inside a release region, in 1/s. It scales the tracer values, not the residence times                     | `1.0e-10`    |
+| `loss_timescale`  | decay time below the tropopause. Short compared with the residence times you measure, long compared with the timestep, and finite | `6hours`     |
+| `tropopause`      | how the tropopause is found, see below                                                                                            | see below    |
 
-Exactly one of `release_grid` and `release_boxes` is required. Setting both is
-an error, and so is setting neither — 48 tracers is hours of setup, which is
-not a thing to arrive at by leaving a key out.
+Exactly one of `release_grid` and `release_boxes` is required. Setting both, or
+neither, is an error. The budget table that the residence times come from is
+written every `dt_tracer_budget`, a separate top-level key because it is an
+output cadence like `dt_rad`.
 
-`production_rate` sets how large the tracer values are, not how long the
-residence times are: burden and source are both proportional to it, and only
-their ratio is reported. Leave it alone unless the numbers are inconveniently
-small.
+Every key of `release_grid` is optional:
 
-`loss_timescale` should be short compared with the residence times you are
-measuring (years) and long compared with the timestep. It cannot be infinite —
-that would remove the tracers' only sink, so they would never settle.
+| Key              | Meaning                                                                  | Default |
+|:---------------- |:------------------------------------------------------------------------ |:------- |
+| `latitude_bands` | number of latitude boxes, centred on equal divisions from pole to pole   | `6`     |
+| `latitude_width` | width of each latitude box, in degrees. At most the spacing of the boxes | `10`    |
+| `height_bands`   | number of height boxes, stacked upwards                                  | `8`     |
+| `height_depth`   | thickness of each height box, in m. At most `height_spacing`             | `2000`  |
+| `height_spacing` | distance between the bottoms of successive height boxes, in m            | `5000`  |
+| `lowest_height`  | height of the bottom of the lowest box, in m                             | `0`     |
 
-The budget table that the residence times come from is written every
-`dt_tracer_budget`, which is a separate top-level key because it is an output
-cadence like `dt_rad`.
-
-#### `release_grid`
-
-Every key is optional; anything you leave out keeps its default.
-
-| Key              | Meaning                                                                                                  | Default |
-|:---------------- |:-------------------------------------------------------------------------------------------------------- |:------- |
-| `latitude_bands` | number of latitude boxes, centred on equal divisions from pole to pole                                   | `6`     |
-| `latitude_width` | width of each latitude box, in degrees. Must not exceed the spacing between them, or boxes would overlap | `10`    |
-| `height_bands`   | number of height boxes, stacked upwards                                                                  | `8`     |
-| `height_depth`   | thickness of each height box, in m. Must not exceed `height_spacing`                                     | `2000`  |
-| `height_spacing` | distance between the bottoms of successive height boxes, in m                                            | `5000`  |
-| `lowest_height`  | height of the bottom of the lowest box, in m                                                             | `0`     |
-
-#### `release_boxes`
-
-Use this when the boxes are not a neat latitude × height grid: uneven spacing,
-boxes of different thickness, or a grid with some combinations left out. Each
-box is one line:
+The grid refuses boxes that would overlap. To place boxes freely, list them in
+`release_boxes`, one per line. `latitude` is `[southern edge, northern edge]` in
+degrees and `height` is `[bottom, top]` in m.
 
 ```yaml
 passive_tracers:
@@ -177,38 +139,28 @@ passive_tracers:
   release_boxes:
     - {latitude: [-85.0, -75.0], height: [9989.7, 10404.8]}
     - {latitude: [-5.0, 5.0], height: [27896.0, 28623.5]}
-    - {latitude: [75.0, 85.0], height: [45380.1, 46322.6]}
 ```
 
-`latitude` is `[southern edge, northern edge]` in degrees and `height` is
-`[bottom, top]` in m. To make a box exactly one model layer thick, use that
-layer's face heights.
+Listed boxes may overlap. The tracers are independent, so a point inside two of
+them feeds both. Two boxes with the same latitude and height range are refused,
+because they would claim the same name. To make a box one model layer thick, use
+that layer's face heights.
 
-Boxes may overlap. The tracers are independent, so a point inside two of them
-simply feeds both. What is refused is two boxes with the same latitude *and*
-height range, because they would claim the same name.
-
-#### `tropopause`
-
-Rarely changed. Every key is optional.
-
-| Key                    | Meaning                                                                                               | Default   |
-|:---------------------- |:----------------------------------------------------------------------------------------------------- |:--------- |
-| `lapse_rate_threshold` | WMO lapse-rate threshold, in K/m                                                                      | `0.002`   |
-| `consistency_depth`    | depth above a candidate tropopause over which the mean lapse rate must stay below the threshold, in m | `2000.0`  |
-| `search_min_height`    | lowest height a tropopause may be found at, in m. Excludes boundary-layer inversions                  | `5000.0`  |
-| `search_max_height`    | highest height a tropopause may be found at, in m                                                     | `25000.0` |
+`tropopause` takes four optional keys: `lapse_rate_threshold` (`0.002`, WMO
+threshold in K/m), `consistency_depth` (`2000.0`, depth above a candidate over
+which the mean lapse rate must stay below the threshold, in m),
+`search_min_height` (`5000.0`, lowest height a tropopause may be found at, in m,
+which excludes boundary-layer inversions) and `search_max_height` (`25000.0`,
+highest, in m).
 
 * * *
 
 ## [`water_tracers`](@id water_tracers)
 
 Splits total water into labelled parts, so you can see where the water at a
-point came from. Each tag adds one prognostic field `ρq_tag_<name>`.
-
-Physics and output: [Tagged Water Tracers](tagged_water.md).
-
-Needs `microphysics_model: "0M"` or `"1M"`.
+point came from. Each tag adds one prognostic field `ρq_tag_<name>`. It needs
+`microphysics_model: "0M"` or `"1M"`. Physics and output:
+[Tagged Water Tracers](tagged_water.md).
 
 ### Starter block
 
@@ -245,14 +197,17 @@ every process in the table.
     includes `microphysics`. To follow both without the forcings, list them:
     `source: [surface_flux, microphysics]`.
 
+Setting `water_tag_precipitation: true` splits each water tag into the water
+that is neither rain nor snow, rain, and snow. It is Experimental and needs 1M
+microphysics without EDMF. See [Rain and Snow Tags](tagged_water_precipitation.md).
+
 * * *
 
 ## [`energy_tracers`](@id energy_tracers)
 
 Splits moist energy into labelled parts, so you can see what heated or cooled
-the air at a point. Each tag adds one prognostic field `ρe_tag_<name>`.
-
-Physics and output: [Tagged Energy Tracers](tagged_tracers.md).
+the air at a point. Each tag adds one prognostic field `ρe_tag_<name>`. Physics
+and output: [Tagged Energy Tracers](tagged_tracers.md).
 
 ### Starter block
 
@@ -288,332 +243,52 @@ energy_tracers:
 
 * * *
 
-## Checking closure while a run goes
+## [`energy_source_tags` and process records](@id energy_source_tags_conf)
 
-"Closure" is the statement that the tags still add up to the field they split.
-It is what tells you the tags mean what they say. The `q_tag_res` / `e_tag_res`
-diagnostics give it to you as a 3-D field to look at afterwards; the two keys
-below reduce it to two numbers and write them to a table every `period`, so you
-can see drift without waiting for the run to end.
+`energy_source_tags` split `ρe_tot + c·ρ` by where the energy present now came
+from. `c` is `energy_source_tag_offset`, in J/kg, which the tags require. The
+tags take the entries and the `source` labels of `energy_tracers`, and the water
+tags' rule. `energy_process_record` and `water_process_record` list the
+processes to record. They work with no tags configured.
 
 ```yaml
-water_closure_check:
-  period: "1days"        # how often to check
-  tolerance: 1.0e-10     # warn above this relative residual
-  void_above: 1.0        # above this, warn once and mark every later row
-                         # closure_void, also after a restart
-  abort_above: ~         # end the run above this one; never, by default
-  audit: false           # write the second table described below
-  negative_water_void_above: 1.0e-4  # water only: above this fraction of
-                         # negative water, mark every later row
-                         # negative_water_void, also after a restart
-
-energy_closure_check:
-  period: "1days"
-  tolerance: 1.0e-6
-  void_above: ~          # the default for both energy families
-  abort_above: ~
+microphysics_model: "0M"
+energy_source_tag_offset: 110495.0
+energy_source_tags:
+  - name: tropics
+    region: tropics
+  - name: extratropics
+    region: extratropics
+  - name: sfc
+    source: surface_flux
+energy_process_record: [radiation, surface_flux]
+water_process_record: [surface_flux]
 ```
 
-Every key is optional inside each block, and both blocks are off by default.
-Both also accept `spin_up`, described under the energy source tags.
-Each writes `water_tag_closure.csv` / `energy_tag_closure.csv` to the output
-directory, with columns `time`, `total`, `tagged`, `residual`, `relative`,
-`gross_residual`, `gross_relative`, `scale` and `nonpositive_fraction`, then a
-column `closure_void` where the check has a void level. The water table ends
-with `negative_water_relative` and `negative_water_void`, unless
-`negative_water_void_above` is `~` (see below).
+Two labels differ for the source tags. `precipitation` receives nothing, because
+the tags follow sedimentation as transport. `microphysics` receives energy only
+under 0-moment microphysics. Each case warns at startup. A record warns for
+`precipitation` where nothing sediments, and for `microphysics` outside 0-moment
+microphysics. `water_process_record` needs `microphysics_model: "0M"` or `"1M"`
+and uses the water labels.
 
-`residual = total - tagged` is the signed miss between two global integrals, and
-`relative` is it over `scale = ∫|parent|`. `gross_residual` integrates the
-pointwise `|parent - Σ tags|` instead, and `gross_relative` is that over `scale`
-too. The normalizer is `∫|parent|` rather than `total` because the parent may be
-signed: moist total energy has no physical zero, so `∫ρe_tot` can be negative or
-zero under a shifted reference and a ratio taken over it could never exceed a
-positive tolerance. `nonpositive_fraction` is the volume fraction where the
-parent is not positive, reported separately because closure cannot reveal it.
-
-The distinction matters, and `gross_relative` is the one the tolerance is
-compared against. Because `total` and `tagged` are each a single global
-integral, a partition that is too high by some amount in one place and too low
-by the same amount somewhere else has a signed residual of exactly zero — it
-reports perfect closure while being locally wrong. Taking the absolute value
-before integrating cannot cancel that way. `gross_relative` is never smaller
-than `|relative|`, so watching it also catches everything the signed number
-would; the signed pair is still written because its sign says which way the
-leak goes.
-
-Exceeding the tolerance **warns and keeps running**. Closure drift is something
-you want to watch grow, and ending a multi-year integration over it costs more
-than it saves.
-
-Exceeding `void_above` **marks the tags void, and the run goes on.** That is a
-different event from drift: a residual larger than the field it measures says
-the tags no longer describe anything. The check warns once, and from then on it
-writes `closure_void` as 1 on every row of its closure table and its audit
-table. The tags are a diagnostic, and a diagnostic must never end a run that
-the model would complete. Before, water's check ended the run at this level,
-and so ended runs whose parent's own water had gone negative (known issue 7).
-Only water has a default level, `1.0`. A set of non-negative tags inside a
-non-negative parent misses it by at most the parent itself, pointwise, so an
-honest partition cannot reach 1 — and neither can an honest strict subset of one, which leaves
-most of the water untagged and pushes the ratio towards 1 from below. Passing 1
-means the tags hold water that is not there, or the parent has gone negative.
-Both energy families default to `~`, no level at all, because their residual is
-normalized by `∫|ρe_tot|`, whose zero is a convention: a shifted energy
-reference can make that denominator arbitrarily small and the ratio
-arbitrarily large with nothing wrong. Set one per run once its first closure
-table shows where that configuration settles. Writing `void_above: ~` turns the
-water default off.
-
-The flag holds across a restart. The checkpoint records it, and the restarted
-run reads it back before its first check. So a run split into segments marks
-its rows as one run would. A check that restarts as void says so in a warning.
-A checkpoint written before the flag was recorded restarts as not void, also
-with a warning.
-
-`closure_void` is about the closure only. It says that the residual has passed
-`void_above`, and nothing else. `closure_void = 0` does not mean that the tags
-or the parent are valid. It only means that the residual has not passed the
-level yet. The parent's water can go negative long before that. At site 23 of
-the tag-closure long runs, the parent's `q_tot` went below zero from day 10.
-The water closure passed 1.0 only at day 48 in one run, and at day 74.5 in two
-others.
-
-For the parent, read `nonpositive_fraction` in the same row. It is the volume
-fraction of the domain where the parent is zero or negative, at the time of the
-row, and the check warns on every row where it is above zero. For water, that
-means the tags' shares are undefined somewhere. The audit's
-`nonpositive_mass_fraction` gives the same by mass. Both read the grid-mean
-parent at the check's times only, so a cell that goes negative and back between
-two checks does not show. Unlike `closure_void`, they are not kept from one row
-to the next. For water, the next section adds a flag that is kept and is
-also checked at the end of every accepted step, and an accumulator that sees
-every step.
-
-### The parent's negative water
-
-The water tags partition the parent's non-negative water, `max(ρq_tot, 0)`
-(known issue 7, option C). The closure check compares them with that. So a
-parent whose own water has gone negative can close perfectly, and
-`closure_void` stays 0. The water check therefore also reads the parent's own
-negative water, from the raw `ρq_tot`, not from the partition's target.
-
-`negative_water_relative`, on every row of the water closure table, is
-
-    ∫max(-ρq_tot, 0) dV / ∫ρq_tot dV,
-
-the parent's negative water, `Σ ρ max(-q_tot, 0) dV`, over its water, at the
-row's time. It is 0 where no cell is negative, and `Inf` where some cell is
-negative and `∫ρq_tot` is not positive. This is the tag-closure contract's row
-"Parent validity: negative water": above `1e-4`, a run's water results are not
-scored.
-
-`negative_water_void_above`, `1e-4` by default, is that level. The check
-compares the ratio with it at every row, and also at the end of every accepted
-step. The first time the ratio passes it, the run warns once. From then on
-`negative_water_void` is 1 on every row of the closure table and of the audit
-table, also after the parent recovers. The checkpoint records the flag, as it
-records `closure_void`, and a restarted run reads it back before its first
-check. A checkpoint written before the flag restarts it at 0, with a warning.
-`negative_water_void_above: ~` drops both columns and the check at every step.
-Zero marks the rows at the first negative water. Only `water_closure_check`
-takes the key.
-
-The check at every step matters because the rows see the state at their own
-times only. At site 23 of the tag-closure long runs, the negative water rose
-from zero within one 6-hour interval at the start of each spell, and fell back
-to zero within one at its end. So an excursion shorter than the interval is
-possible. An excursion that passes the level and ends between two rows still
-sets the flag, and the next row is the first one marked. That row's own
-`negative_water_relative` can then be below the level, or 0.
-
-A crossing after the run's last row reaches no row. The rows fall every
-`period` from the start. Where `t_end` is not a multiple of the period, or
-after a graceful exit, the last steps have no row after them. A step past the
-level there still sets the flag, and the run warns. A checkpoint written after
-it records the flag, so a restarted run marks all its rows. But neither table
-of this run shows the crossing. To score a run from its tables alone, choose a
-`t_end` that is a multiple of the `period`.
-
-`negative_water_void` says one thing: the parent's negative water passed the
-level at a row or at the end of an accepted step. `negative_water_void = 0`
-does not say that the parent is valid in any other way. The check reads the
-state at the end of each accepted step, not within a step.
-
-It costs a global sum of `max(-ρq_tot, 0)` after every accepted step, and a
-second one, of `ρq_tot`, after a step that ends with negative water somewhere.
-Under MPI both are collective, so every process takes them. With the key at
-`~`, the step does neither.
-
-The audit also sees every step. After each accepted step, an accumulator in the
-cache adds `max(-ρq_tot, 0) Δt` per cell, and counts the cells whose `ρq_tot`
-is below zero. The checkpoint carries it. The water audit table reports it:
-
-| column                                  | what it is                                                                               |
-|:--------------------------------------- |:---------------------------------------------------------------------------------------- |
-| `negative_water_integral`               | `∫∫max(-ρq_tot, 0) dV dt` since the start of the run, in kg s                            |
-| `negative_water_interval`               | its change since the previous audit row, in kg s                                         |
-| `negative_water_interval_mean_relative` | that change over the interval's length, over `∫ρq_tot dV` at this row                    |
-| `negative_water_interval_events`        | cell-steps in the interval whose end state had `ρq_tot < 0`; exactly 0 when none had any |
-| `negative_water_void`                   | the flag above, last                                                                     |
-
-An interval with `negative_water_interval_events = 0` had no negative water
-at the end of any accepted step, anywhere. The first row of a run, or of a
-restarted segment, has an empty interval, so its interval columns are 0. The
-interval's mean divides by `∫ρq_tot` at the row, not at each step. So it
-approximates the interval's mean of `negative_water_relative`, and the two
-differ where the parent's water changes within the interval. The flag does not
-use it. A checkpoint written before the accumulator restarts it at zero, with a
-warning. The per-cell fields are the opt-in diagnostics
-`q_tag_negative_integral`, in kg s m⁻³, and `q_tag_negative_events`.
-
-Both the flag and the accumulator live in the cache and in the checkpoint,
-never in the model's state, so neither can change a model field.
-
-Exceeding `abort_above` **ends the run**, where a user sets it. No family sets
-one by default. Set it when a run whose tags no longer mean anything is not
-worth its compute.
-
-**None of these levels is acceptance.** They are kept apart, for every family:
-
-| level                                           | what passing it does                                    | default                                                                      |
-|:----------------------------------------------- |:------------------------------------------------------- |:---------------------------------------------------------------------------- |
-| `tolerance`                                     | warns, every time                                       | water 1.0e-10; `energy_tracers` 1.0e-6; energy source tags one per transport |
-| `throughput_tolerance`, energy source tags only | warns, every time                                       | `~`                                                                          |
-| `void_above`                                    | warns once, and marks this row and every later one void | water 1.0; the energy families `~`                                           |
-| `abort_above`                                   | ends the run                                            | `~` for every family                                                         |
-
-A warning says the residual has drifted past the level set for this check. The
-void level says the tags no longer describe the field. Whether a run is
-acceptable is a different question. It is answered afterwards, from the closure
-and audit tables, against thresholds fixed before the run and over windows
-fixed before it, not by any level the model checks while it runs.
-
-The check adds no tendency. It only reads the state and writes a table, so
-switching it on does not change what the simulation produces.
-
-### The audit table
-
-`gross_relative` is the right number to compare against a tolerance and the
-wrong number to diagnose with. It adds together situations that are not the same
-problem and do not have the same answer. Setting `audit: true` writes a second
-table, `<family>_tag_audit.csv`, that separates them. It is off by default,
-costs a handful of extra global reductions per check, and changes nothing about
-the run.
-
-| column                     | what it is                                                            |
-|:-------------------------- |:--------------------------------------------------------------------- |
-| `untagged`                 | `∫max(parent - Σ tags, 0)`: water the tags do not account for         |
-| `overclaimed`              | `∫max(Σ tags - parent, 0)`: water the tags claim that is not there    |
-| `orphaned`                 | mass in cells whose parent still holds water while every tag is empty |
-| `orphaned_volume_fraction` | volume fraction of those cells                                        |
-| `nonpositive_mass`         | mass where the parent is not positive                                 |
-
-Each of the first three also has a `_relative` column over the same `scale` the
-closure table uses, and `nonpositive_mass_fraction` is `nonpositive_mass` over
-it. For water, `nonpositive_mass` is `∫|min(ρq_tot, 0)| dV` of the raw
-`ρq_tot`. The partition's target, `max(ρq_tot, 0)`, is never negative, so read
-from it the column would be 0 by construction. `scale` is the target's
-integral, `∫max(ρq_tot, 0) dV`. The water audit table also has the negative
-water accumulator's columns, after `closure_void` (see above). A separate file rather than more columns on the closure table, so that
-turning the audit on does not change a schema other runs and analysis scripts
-already read. Join the two on `time`.
-
-Three things it tells you that the closure table cannot.
-
-**Which way the tags are wrong.** `untagged + overclaimed` is `gross_residual`
-to reduction round-off, so nothing is lost by reading them apart. The identity
-is exact pointwise; each of the three is its own volume integral and rounds
-separately, so compare them with a tolerance. They mean opposite
-things. Untagged water has an origin that nothing claims to know, which is
-recoverable in principle. Overclaimed water is the tags asserting water that
-does not exist, which is not a physical state at all and is the direction a
-runaway takes.
-
-**Whether provenance is drifting or gone.** A tag that is a little wrong still
-maps water to where it came from. A cell whose tags have all been emptied does
-not, and nothing re-tags it afterwards: that water stays anonymous for the rest
-of the run and mixes into its neighbours. `orphaned` counts total loss only, so
-it is a lower bound — a cell left holding a sliver of one tag does not appear
-there and shows up in `untagged` instead.
-
-**How much of the field the undefined region actually holds.**
-`nonpositive_fraction` in the closure table is a volume fraction while `scale`
-is a mass integral, and on a moist sphere the two tell opposite stories: cells
-with no water take up much of the volume and almost none of the mass. Reading
-the volume fraction alone says most of the domain has undefined shares. Reading
-the mass fraction alone says the state is nearly clean. Both are true, and a
-cell that holds negligible mass can still be where a scheme breaks.
-
-### Why the two tolerances differ
-
-The default for energy is looser than the one for water by four orders of
-magnitude, and that is not arbitrary. The water tags ride the same transport
-operators as `ρq_tot` apart from the implicit-versus-explicit vertical
-advection split, so very little escapes them. The energy tags follow their
-parent less closely. The `ρe_tag_*` family rides the passive-tracer path, and
-so do the energy source tags under the default
-`energy_source_tag_transport: tracer`. Meanwhile `ρe_tot` is moved as enthalpy,
-pressure work included, and vertically on the implicit path. The `enthalpy`
-audit moves the source tags with the parent's own advective and hyperdiffusive
-fluxes instead, but still explicitly (see
-[Moving the tags as enthalpy, an audit](@ref)).
-Transport is not attributed on top of that. Each tag is already transported in
-its own right, and attributing the `ρe_tot` version as well would count it
-twice. The `ρe_tag_*` family has no updraft copy, so the EDMFX sub-grid mass
-flux does not reach it through the updrafts. By default the energy source tags
-have none either. They take their shares of the parent's own sub-grid flux
-instead, with one updraft, and exchange provenance at the mass flux. With
-`energy_source_tag_updraft_copy: true` they have copies, and the model's SGS
-tracer flux moves them. Sedimentation reaches both families: the `ρe_tag_*` family
-attributes it under `precipitation`, and the energy source tags follow it on
-the implicit path as transport of their own (see
-[Energy Source Tags](energy_source_tags.md)). So a visibly larger residual is
-the expected, correct behaviour, not a bug.
-
-!!! tip "Calibrate on your own configuration"
-
-    Treat the water and energy defaults as starting points. The energy source
-    tags have none, and their check never warns about the residual until you
-    set one. Run once, read the `relative`
-    column, and set a tolerance a little above the level your configuration
-    settles at. A tolerance tuned that way turns the warning into news; one
-    left at a default that your setup never meets is just noise.
-
-Two configurations are refused at startup rather than left to mislead you: a
-check enabled without its tracer family, and a family whose entries all carry a
-`source`. Closure is the sum of the *pure region* tags — a tag with a `source`
-starts at zero and is not part of the partition — so with none of them there is
-nothing to close against.
+A Newton solve that stops on a residual norm over the whole state sees the
+energy source tags. Use a fixed iteration count or a direct solve. See
+[Energy Source Tags: a user guide](energy_source_tags_guide.md) and
+[Process-Change Records](process_record.md).
 
 * * *
 
 ## Tag entries
 
-`water_tracers` and `energy_tracers` take the same kind of entry. Each needs a
-unique `name` and at least one of `region` and `source`.
+`water_tracers`, `energy_tracers` and `energy_source_tags` take the same kind of
+entry. Each needs a unique `name` and at least one of `region` and `source`.
 
-Some names are reserved, because a tag's name becomes part of a diagnostic's
-name, and another diagnostic of the family would take it:
-
-  - `res` is reserved in both families. It is the closure residual,
-    `q_tag_res` or `e_tag_res`.
-  - A `water_tracers` name may not begin with `fix_`, `upfix_`, `inc_`,
-    `rtag_`, `stag_`, `fixgross_`, `fixcount_`, `upfixgross_`,
-    `upfixcount_`, `led_` or `aud_`. `fix_` begins the repair ledger
-    `q_tag_fix_<name>`, and `aud_` the microphysics audit's records
-    `q_rtag_aud_<name>` and `q_stag_aud_<name>` of
-    `water_tag_precipitation` (see [Tagged Water Tracers](tagged_water.md)).
-    The others begin other ledgers, or are held.
-  - The underscore is part of each prefix, so names such as `fixed`, `income`
-    and `rtagged` are allowed.
-
-| Field    | Meaning                                                                                     |
-|:-------- |:------------------------------------------------------------------------------------------- |
-| `name`   | what the tag is called. Appears in the output as `q_tag_<name>` / `e_tag_<name>`            |
-| `region` | where the tag starts out. A [named region](#Named-regions), or a region written out in full |
-| `source` | which process the tag follows. One label, or a list of them                                 |
+| Field    | Meaning                                                                                           |
+|:-------- |:------------------------------------------------------------------------------------------------- |
+| `name`   | what the tag is called. Appears in the output as `q_tag_<name>`, `e_tag_<name>` or `e_src_<name>` |
+| `region` | where the tag starts out. A [named region](#Named-regions), or a region written out in full       |
+| `source` | which process the tag follows. One label, or a list of them                                       |
 
 What a tag starts as depends on which of the two you give it:
 
@@ -624,67 +299,56 @@ What a tag starts as depends on which of the two you give it:
     that region. Useful for asking "how much of the evaporation happened in the
     tropics?".
 
+A tag's name becomes part of its diagnostics' names, so some names are reserved:
+
+  - `res` is reserved in all three families. It is the closure residual,
+    `q_tag_res`, `e_tag_res` or `e_src_res`.
+  - A `water_tracers` name may not begin with `fix_`, `upfix_`, `inc_`, `rtag_`,
+    `stag_`, `fixgross_`, `fixcount_`, `upfixgross_`, `upfixcount_`, `led_` or
+    `aud_`, and may not begin with `negative`. `fix_` begins the repair ledger
+    `q_tag_fix_<name>`, `negative` the diagnostic `q_tag_negative`, and `aud_`
+    the microphysics audit fields `q_rtag_aud_<name>` and `q_stag_aud_<name>`.
+    The others begin other ledgers or are held.
+  - An `energy_source_tags` name may not begin with `fix_`, `fixgross_`,
+    `fixcount_`, `inc_` or `led_`.
+  - The underscore is part of each prefix, so `fixed`, `income` and `rtagged`
+    are allowed.
+
 !!! warning "Use exactly one set of regions per run"
 
-    The closure diagnostics `q_tag_res` and `e_tag_res` add up **all** the tags
-    that have a region and no source. They are only meaningful if those tags
-    cover the domain exactly once — a region and its complement, such as
-    `tropics` and `extratropics`. Two overlapping decompositions in one run make
-    the residual meaningless. A warning is printed at startup when the masks do
-    not add up to 1.
+    The closure diagnostics `q_tag_res`, `e_tag_res` and `e_src_res` add up
+    **all** the tags that have a region and no source. They are meaningful only
+    if those tags cover the domain exactly once, such as a region and its
+    complement, `tropics` and `extratropics`. Two overlapping decompositions in
+    one run make the residual meaningless. A warning is printed at startup when
+    the masks do not add up to 1.
 
 ### Named regions
 
-The quickest way to write a region:
+| Name           | Where                                       |
+|:-------------- |:------------------------------------------- |
+| `everywhere`   | the whole domain                            |
+| `tropics`      | within 20° of the equator, smoothed over 2° |
+| `extratropics` | the exact complement of `tropics`           |
 
-| Name           | Where                     |
-|:-------------- |:------------------------- |
-| `everywhere`   | the whole domain          |
-| `tropics`      | within 20° of the equator |
-| `extratropics` | everywhere else           |
-
-`tropics` and `extratropics` are exact complements, so they are a valid pair for
-the closure diagnostics above.
+`tropics` and `extratropics` are a valid pair for the closure diagnostics.
 
 ### Regions written out in full
 
 Anything else is written as a mapping with a `type`. Edges are smoothed with a
 `tanh` over the given `width` rather than being sharp.
 
-| `type`          | Required                                                      | Meaning                           |
-|:--------------- |:------------------------------------------------------------- |:--------------------------------- |
-| `everywhere`    | —                                                             | the whole domain                  |
-| `tanh_altitude` | `z_center`, `width` (m)                                       | above a height                    |
-| `tanh_latitude` | `lat_bound`, `width` (degrees)                                | within `lat_bound` of the equator |
-| `tanh_box`      | `lon_min`, `lon_max`, `lat_min`, `lat_max`, `width` (degrees) | a longitude–latitude box          |
-| `tanh_polygon`  | `vertices` (a list of `[lon, lat]` pairs), `width` (degrees)  | an arbitrary polygon              |
+| `type`          | Required                                                      | Meaning                                        |
+|:--------------- |:------------------------------------------------------------- |:---------------------------------------------- |
+| `everywhere`    | none                                                          | the whole domain                               |
+| `tanh_altitude` | `z_center`, `width` (m)                                       | above a height                                 |
+| `tanh_latitude` | `lat_bound`, `width` (degrees)                                | within `lat_bound` of the equator              |
+| `tanh_box`      | `lon_min`, `lon_max`, `lat_min`, `lat_max`, `width` (degrees) | a longitude–latitude box                       |
+| `tanh_polygon`  | `vertices` (a list of `[lon, lat]` pairs), `width` (degrees)  | a polygon spanning less than 180° of longitude |
 
 Every type except `everywhere` also takes `inside: false` (`above: false` for
-`tanh_altitude`) to select the exact complement instead.
-
-#### What the numbers have to satisfy
-
-Four combinations describe no region at all, and are refused with a message
-naming the key rather than run:
-
-  - `width` must be **greater than zero**, for every type. Zero is not a sharp
-    edge, it is an undefined one: a point sitting exactly on the edge gives
-    `NaN`, and one `NaN` spreads through the tagged field on the first step.
-    A negative width goes wrong differently for each type — it gives you the
-    complement of a `tanh_altitude` or `tanh_polygon` region, it turns a
-    `tanh_latitude` band *negative*, and it does nothing whatever to a
-    `tanh_box`, which quietly uses the width without its minus sign.
-  - `lat_bound` must be **greater than zero**. The band is `|lat| ≤ lat_bound`,
-    so zero is empty and a negative bound makes the mask itself negative — the
-    tag would hold a negative share of the air.
-  - A box needs `lat_min` **below** `lat_max`. Equal bounds give a mask of zero
-    everywhere, reversed bounds a negative one.
-  - A box must **span some longitude**. Longitudes are compared modulo 360°,
-    which is what lets a box cross the antimeridian (`lon_min: 170`,
-    `lon_max: -170` is a 20° box), and it also means a full turn looks exactly
-    like no turn. Writing `lon_min: -180, lon_max: 180` for "every longitude"
-    used to give a mask of zero everywhere. If you want a band over every
-    longitude and it is symmetric about the equator, use `tanh_latitude`.
+`tanh_altitude`) to select the exact complement instead. `tanh_latitude`,
+`tanh_box` and `tanh_polygon` need spherical geometry.
 
 ```yaml
 energy_tracers:
@@ -694,33 +358,235 @@ energy_tracers:
     region: {type: tanh_altitude, z_center: 12000.0, width: 1000.0, above: false}
 ```
 
+Parameters that describe no region are refused at startup, with a message that
+names the key:
+
+| Key                  | Must be                        | Why                                                                                                                                                                                                                                                          |
+|:-------------------- |:------------------------------ |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `width`              | greater than zero              | Zero leaves the edge undefined: a point exactly on it gives `NaN`. A negative width complements `tanh_altitude` and `tanh_polygon`, makes a `tanh_latitude` band negative, and is silently ignored by `tanh_box`.                                            |
+| `lat_bound`          | greater than zero              | The band is `abs(lat) ≤ lat_bound`. Zero is empty, and a negative bound makes the mask negative.                                                                                                                                                             |
+| `lat_min`, `lat_max` | `lat_min` below `lat_max`      | Equal bounds give a mask of zero, and reversed bounds a negative one.                                                                                                                                                                                        |
+| `lon_min`, `lon_max` | a box must span some longitude | Longitudes are compared modulo 360°, so a box may cross the antimeridian (`lon_min: 170`, `lon_max: -170` is 20° wide). A full turn looks like no turn, so `lon_min: -180`, `lon_max: 180` is refused. For a band over every longitude, use `tanh_latitude`. |
+| `vertices`           | at least 3 `[lon, lat]` pairs  | Fewer do not enclose an area.                                                                                                                                                                                                                                |
+
 !!! warning "Smoothing is required, not cosmetic"
 
-    In longitude and latitude — `tanh_latitude`, `tanh_box`, `tanh_polygon`,
-    whose `width` is in degrees — a sharp 0/1 mask produces Gibbs oscillations
-    in the spectral-element horizontal discretization that contaminate the
+    In longitude and latitude (`tanh_latitude`, `tanh_box`, `tanh_polygon`,
+    whose `width` is in degrees), a sharp 0/1 mask produces Gibbs oscillations
+    in the spectral-element horizontal discretization. They contaminate the
     tagged fields from the first step. Set `width` comparable to, or larger
     than, the horizontal grid spacing. This matters most for `tanh_polygon`,
-    where the vertices often come from a tool that rasterizes sharply — see
-    [Tagged Energy Tracers](tagged_tracers.md) for turning an IPCC AR6
-    reference region into a config block.
+    where the vertices often come from a tool that rasterizes sharply. See
+    [Tagged Energy Tracers](tagged_tracers.md) for turning an IPCC AR6 reference
+    region into a config block.
 
-    `tanh_altitude` is a different case. Its `width` is in metres and the
-    vertical grid is finite-difference rather than spectral, so there is no
-    ringing to avoid. Smoothing there is about resolution: a transition
-    thinner than the local layer spacing is not resolved, so set `width` at
-    least as thick as the layers the edge crosses.
+    `tanh_altitude` is different. Its `width` is in metres and the vertical grid
+    is finite-difference, so there is no ringing. A transition thinner than the
+    local layer spacing is not resolved, so set `width` at least as thick as the
+    layers the edge crosses.
+
+* * *
+
+## Checking closure while a run goes
+
+Closure means that the tags still add up to the field they split. The
+`q_tag_res`, `e_tag_res` and `e_src_res` diagnostics give it as a 3-D field to
+look at afterwards. A closure check reduces it to a few numbers and writes them
+to a table every `period`, so you can see drift while the run goes. The check
+adds no tendency. It reads the state and writes a table.
+
+```yaml
+water_closure_check:
+  period: "1days"        # how often to check
+  tolerance: 1.0e-10     # warn above this relative residual
+  void_above: 1.0        # above this, warn once and mark every later row void
+  abort_above: ~         # end the run above this one; never, by default
+  audit: false           # write the second table
+  negative_water_void_above: 1.0e-4  # water only
+energy_closure_check:
+  tolerance: 1.0e-6
+energy_source_closure_check:
+  spin_up: "1hours"
+```
+
+There is one block per family. Every block is optional, and every key in it is
+optional. `water_closure_check` and `energy_closure_check` are off by default.
+`energy_source_closure_check` is on by default whenever the tags include a
+region tag without a `source`, and `false` switches it off. A check without its
+tracer family is refused at startup, and so is a family whose entries all carry
+a `source`, because there is nothing to close against.
+
+| Key                         | Meaning                                                                                                                                                                      | Water   | `energy_tracers` | Energy source tags                                                     |
+|:--------------------------- |:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:------- |:---------------- |:---------------------------------------------------------------------- |
+| `period`                    | how often to check                                                                                                                                                           | `1days` | `1days`          | `1days`                                                                |
+| `tolerance`                 | warn when `gross_relative` passes it. `~`: never warn about the residual                                                                                                     | `1e-10` | `1e-6`           | per transport: `tracer` 1.0, `enthalpy` 0.1, `enthalpy_increment` 0.01 |
+| `void_above`                | warn once, then mark this and every later row void. The run goes on                                                                                                          | `1.0`   | none             | none                                                                   |
+| `abort_above`               | end the run                                                                                                                                                                  | none    | none             | none                                                                   |
+| `spin_up`                   | take a reference residual at this time, and report the residual since then beside it                                                                                         | none    | none             | `1hours`                                                               |
+| `audit`                     | write the audit table                                                                                                                                                        | `false` | `false`          | `false`                                                                |
+| `throughput_tolerance`      | warn when the gross residual over the gross source throughput since the start passes it. Needs `energy_source_tag_ledger_per_tag: true` and region tags whose masks sum to 1 |         |                  | none                                                                   |
+| `negative_water_void_above` | mark rows void when the parent's negative water over its water passes it. `~` switches it off                                                                                | `1e-4`  |                  |                                                                        |
+
+The defaults are starting points. Set your own from the first run's closure
+table: a tolerance a little above the level your configuration settles at turns
+the warning into news. The water tags ride the same transport operators as
+`ρq_tot` apart from the implicit-vs-explicit vertical advection split, so their
+residual is small. The energy families get larger residuals by design.
+`ρe_tot` is moved as enthalpy, and vertically on the implicit path. The
+`energy_tracers` tags move as passive tracers and receive no EDMFX sub-grid
+mass flux. The energy source tags' residual depends on their
+`energy_source_tag_transport`, which is why their default tolerance does too.
+See [Energy Source Tags](energy_source_tags.md).
+
+Water has a void level of 1.0 because a set of non-negative tags inside a
+non-negative parent misses it by at most the parent itself. Passing 1 means the
+tags hold water that is not there, or the parent has gone negative. Both energy
+families have none. Their residual is divided by `∫|ρe_tot|`, whose zero is a
+convention, so a shifted energy reference can make a ratio large with nothing
+wrong. Writing `void_above: ~` turns the water default off.
+
+### The closure table
+
+Each check writes `<family>_tag_closure.csv` to the output directory:
+`water_tag_closure.csv`, `energy_tag_closure.csv` or
+`energy_source_tag_closure.csv`. All integrals are over the whole domain.
+
+| Column                                                                                                                            | What it is                                                                                                  |
+|:--------------------------------------------------------------------------------------------------------------------------------- |:----------------------------------------------------------------------------------------------------------- |
+| `time`                                                                                                                            | simulation time, in s                                                                                       |
+| `total`, `tagged`                                                                                                                 | `∫parent dV` and `∫Σ tags dV`                                                                               |
+| `residual`, `relative`                                                                                                            | `total - tagged`, and it over `scale`                                                                       |
+| `gross_residual`, `gross_relative`                                                                                                | `∫abs(parent - Σ tags) dV`, and it over `scale`                                                             |
+| `scale`                                                                                                                           | `∫abs(parent) dV`                                                                                           |
+| `nonpositive_fraction`                                                                                                            | volume fraction where the parent is zero or negative                                                        |
+| `residual_at_spin_up`, `residual_since_spin_up`, `relative_since_spin_up`                                                         | with `spin_up`: the reference, the residual since, and it over `scale`. `NaN` before the reference is taken |
+| `headroom_min`, `headroom_min_z`, and with per-tag ledgers `source_partition_valid`, `source_throughput`, `gross_over_throughput` | energy source tags only. See [Energy Source Tags](energy_source_tags.md)                                    |
+| `closure_void`                                                                                                                    | 1 from the first void row on, else 0. Present where the check has a void level                              |
+| `negative_water_relative`, `negative_water_void`                                                                                  | water only, unless `negative_water_void_above` is `~`. See below                                            |
+
+`gross_relative` is the number the levels are compared with. `total` and
+`tagged` are global integrals, so a partition that is too high in one place and
+too low in another has a signed residual of zero. Taking the absolute value
+before integrating removes that cancellation, and `gross_relative` is never
+smaller than `|relative|`. The signed pair says which way the leak goes.
+
+The divisor is `scale`, not `total`, because the parent may be signed. Moist
+total energy has no physical zero, so `∫ρe_tot` can be zero or negative, and a
+ratio over it could never exceed a positive tolerance.
+
+`nonpositive_fraction` is the volume fraction of the domain where the parent is
+zero or negative at the row. Where it is above zero the check warns on every
+row. For water, the tags' shares are undefined there. Closure cannot show this,
+because complementary region tags can partition a negative parent exactly.
+Volume and mass tell opposite stories on a moist sphere. Cells with no water
+take up much of the volume and almost none of the mass, so the audit also gives
+`nonpositive_mass_fraction`. Both read the grid-mean parent at the check's times
+only, so a cell that goes negative and back between two checks does not show.
+
+### Levels
+
+Each level is separate from the others.
+
+| Level                  | What passing it does                                    |
+|:---------------------- |:------------------------------------------------------- |
+| `tolerance`            | warns, every time                                       |
+| `throughput_tolerance` | warns, every time. Energy source tags only              |
+| `void_above`           | warns once, and marks this row and every later one void |
+| `abort_above`          | ends the run                                            |
+
+The check warns above `tolerance`, marks later rows void above `void_above`, and
+ends the run only above an explicit `abort_above`. A diagnostic never ends a run
+that the model would complete. A residual larger than the field it measures says
+the tags no longer describe anything, and the void flag says so while the run
+goes on.
+
+None of the levels says a run is acceptable. `closure_void = 0` says only that
+the residual has not passed `void_above`. The parent can be non-positive
+earlier, which `nonpositive_fraction` shows.
+
+The checkpoint records each family's void flag. A restarted run reads it back
+before its first check, so a run split into segments marks its rows as one run
+would, and a check that restarts as void says so in a warning. A checkpoint
+without a family's void flag restarts that family as not void, with a warning.
+
+### The audit table
+
+`audit: true` writes `<family>_tag_audit.csv` beside the closure table. It splits
+the residual into parts that mean different things. It is a separate file so
+that switching it on does not change the closure table's columns. Join the two
+on `time`. It costs a handful of extra global reductions per check.
+
+| Column                                                                                        | What it is                                                                               |
+|:--------------------------------------------------------------------------------------------- |:---------------------------------------------------------------------------------------- |
+| `untagged`                                                                                    | `∫max(parent - Σ tags, 0)`: parent the tags do not account for                           |
+| `overclaimed`                                                                                 | `∫max(Σ tags - parent, 0)`: parent the tags claim that is not there                      |
+| `orphaned`                                                                                    | mass in cells whose parent is positive while every partition tag is empty                |
+| `orphaned_volume_fraction`                                                                    | volume fraction of those cells                                                           |
+| `nonpositive_mass`                                                                            | mass where the parent is not positive                                                    |
+| `untagged_relative`, `overclaimed_relative`, `orphaned_relative`, `nonpositive_mass_fraction` | the four above over the closure table's `scale`                                          |
+| `negative_water_integral`                                                                     | water only: `∫∫max(-ρq_tot, 0) dV dt` since the start of the run, in kg s                |
+| `negative_water_interval`                                                                     | its change since the previous audit row, in kg s                                         |
+| `negative_water_interval_mean_relative`                                                       | that change over the interval's length, over `∫ρq_tot dV` at this row                    |
+| `negative_water_interval_events`                                                              | cell-steps in the interval whose end state had `ρq_tot < 0`. Exactly 0 when none had any |
+| `closure_void`, `negative_water_void`                                                         | the flags, last, where they apply                                                        |
+
+`untagged + overclaimed` is `gross_residual` to reduction round-off. The two
+mean opposite things. Untagged water has an origin that nothing claims to know.
+Overclaimed water is the tags asserting water that does not exist, which is the
+direction a runaway takes. `orphaned` shows whether provenance is gone rather
+than drifting: nothing re-tags an emptied cell, so its water stays anonymous. It
+counts total loss only, so it is a lower bound. For water, `nonpositive_mass` is
+`∫abs(min(ρq_tot, 0)) dV` of the raw `ρq_tot`. The energy source tags add
+columns of their own. See [Energy Source Tags](energy_source_tags.md).
+
+### The parent's negative water
+
+`ρq_tot` is not kept non-negative by default (`tracer_nonnegativity_method: ~`).
+The water tags partition `max(ρq_tot, 0)`. Where `ρq_tot` is negative they
+partition zero, and `q_tag_negative` holds the parent's negative water. Under
+`water_tag_precipitation` the same rule applies to each part separately.
+
+The closure check compares the tags with `max(ρq_tot, 0)`. So a parent whose own
+water has gone negative can close perfectly, with `closure_void` at 0. The water
+check therefore also reads the raw `ρq_tot`.
+
+`negative_water_relative` is `∫max(-ρq_tot, 0) dV / ∫ρq_tot dV` at the row. It
+is 0 where no cell is negative, and `Inf` where some cell is negative and
+`∫ρq_tot` is not positive. `negative_water_void_above` is the level for it,
+`1e-4` by default. The check compares the ratio with it at every row and at the
+end of every accepted step. The first time it passes, the check warns once. From
+then on `negative_water_void` is 1 on every row of both tables, also after the
+parent recovers. `~` drops both columns and the per-step check. Zero marks the
+rows at the first negative water. Only `water_closure_check` takes the key.
+
+Because the check also runs after every accepted step, an excursion between two
+rows still sets the flag, and the next row is the first one marked. That row's
+own `negative_water_relative` can be below the level. A crossing after the last
+row shows in the warning and the checkpoint but in no table, so choose a `t_end`
+that is a multiple of `period`. The check reads the state at the end of each
+accepted step, not within a step.
+
+The flag and the accumulator behind the audit's `negative_water_*` columns live
+in the cache and the checkpoint, not in the model's state. A checkpoint without
+the flag restarts with the flag false, with a warning. A checkpoint without the
+accumulator starts it at zero, with a warning, and the `negative_water_*`
+columns then cover this segment only. The per-cell diagnostics
+`q_tag_negative_integral`, in kg s m⁻³, and `q_tag_negative_events` are opt-in.
+
+The per-step check costs one global sum after every accepted step, and a second
+one after a step that ends with negative water somewhere. Under MPI both are
+collective. With the key at `~`, the step does neither.
 
 * * *
 
 ## Worked examples in this repository
 
-  - `config/model_configs/passive_stratospheric_tracers_ci.yml` — small grid, runs in minutes
-  - `config/example_configs/passive_stratospheric_tracers.yml` — a multi-year aquaplanet run
-  - `config/example_configs/strat_tracers_transient_a.yml` — an explicit box list
-  - `config/model_configs/baroclinic_wave_tagged_water.yml` — water tags with a closure check
-  - `config/model_configs/baroclinic_wave_tagged_tracers.yml` — the same for energy tags
-  - `config/model_configs/baroclinic_wave_energy_source_tags.yml` — energy source tags laid out for the per-process checks, with records
+  - `config/model_configs/passive_stratospheric_tracers_ci.yml`: small grid, runs in minutes
+  - `config/example_configs/passive_stratospheric_tracers.yml`: a multi-year aquaplanet run
+  - `config/example_configs/strat_tracers_transient_a.yml`: an explicit box list
+  - `config/model_configs/baroclinic_wave_tagged_water.yml`: water tags with a closure check
+  - `config/model_configs/baroclinic_wave_tagged_tracers.yml`: the same for energy tags
+  - `config/model_configs/baroclinic_wave_energy_source_tags.yml`: energy source tags laid out for the per-process checks, with records
 
 ## Tracer configuration API
 
