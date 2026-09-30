@@ -1,0 +1,26 @@
+# V-W10 (WP9), water family, with and without rain and snow tags: the 1M
+# precipitating column without EDMF that WP4b's stage 1 is tested on
+# (`test/tagged_water_precipitation_integration.jl`). Rain and snow tags exist
+# only here at `main` 43b01ca1: `water_tag_precipitation` is refused under EDMF.
+# The driver adds the tags and the variant; see design/WP9_COST.md.
+job_id: "wp9_water_1m_column"
+
+config: column
+initial_condition: PrecipitatingColumn
+surface_setup: DefaultMoninObukhov
+z_elem: 30
+z_max: 6000.0
+z_stretch: false
+dt: "10secs"
+t_end: "1hours"
+cloud_model: grid_scale
+microphysics_model: 1M
+vert_diff: DecayWithHeightDiffusion
+implicit_diffusion: true
+approximate_linear_solve_iters: 2
+tracer_upwinding: first_order
+toml: [toml/single_column_precipitation_test.toml]
+FLOAT_TYPE: "Float64"
+
+output_default_diagnostics: false
+diagnostics: []
