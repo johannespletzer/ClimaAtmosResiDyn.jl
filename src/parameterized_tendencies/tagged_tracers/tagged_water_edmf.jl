@@ -562,7 +562,7 @@ end
     start_water_plume!(ᶜε_start, ᶜε̄, ᶜf, ᶜmasks, tags)
 
 Write where the default mode's plume starts into `ᶜε_start`
-([`start_plume_at_surface!`](@ref)), with the fifth mirror's weight for the
+(`start_plume_at_surface!`), with the fifth mirror's weight for the
 label `surface_flux`: the tag's mask if it receives the flux, one if it has no
 region, and zero if it does not receive it. The plume rescales the start to
 `q_totʲ`, which gives the shares `(1 - f) φ̄ᵢ + f gᵢ` where the partition's
