@@ -1,52 +1,18 @@
 #####
 ##### Tagged prognostic energy tracers
 #####
-##### Each tag adds one grid-scale prognostic field `Y.c.ρe_tag_<name>` holding
-##### part of the total moist energy `ρe_tot`. The `energy_tracers` config key
-##### switches them on. Types live in `types.jl` and config parsing in
-##### `config/tracer_config.jl`. The physics is written up in
+##### Under `energy_tracers`, each tag adds a field `Y.c.ρe_tag_<name>` that holds
+##### part of `ρe_tot`. A region tag is a transported part of `ρe_tot`. A tag with
+##### a `source` starts at zero and accumulates the signed increment of that
+##### process, so cooling drives it negative. Types are in `types.jl`, config
+##### parsing in `config/tracer_config.jl`, and the physics in
 ##### `docs/src/tagged_tracers.md`.
 #####
-##### The two kinds of tag hold different quantities. A region tag is a
-##### transported partition of `ρe_tot`. A tag configured with `source` is a
-##### signed process tag: it starts at zero and accumulates the signed
-##### increment one process adds, so cooling drives it negative. It says what a
-##### process did, not what share of the energy present came from it.
-#####
-##### A signed process tag is not the *process-change record* of
-##### `process_record.jl`. That is a separate family, one field per process
-##### rather than per tag, and it is not transported. The two are close enough
-##### that sharing a name would confuse both.
-#####
-##### The water tags in `tagged_water.jl` use the same `source` key but a
-##### different rule. They share out production by mask and take loss from each
-##### tag in proportion to what it holds, so a water tag is an amount of water
-##### actually present. That rule never drives a tag below zero. Transport can,
-##### and `repair_water_tag_partition!` puts it back. The rule differs, not the
-##### key.
-#####
-##### The rest of the model reaches tagging through four entry points:
-#####
-#####   1. `tagging_variables` in the initial-condition assembly
-#####      (`setups/common/prognostic_variables.jl`);
-#####   2. `tagging_cache` in `cache/cache.jl` for the static region masks, and
-#####      `tagging_scratch` in `cache/temporary_quantities.jl` for the snapshot
-#####      buffer;
-#####   3. the `snapshot_tagged_ρe_tot!` and `attribute_tagged_ρe_tot!` brackets
-#####      in `prognostic_equations/remaining_tendency.jl` and
-#####      `prognostic_equations/implicit/implicit_tendency.jl`;
-#####   4. `is_tagged_tracer_name`, which exempts tags from the tracer limiters
-#####      in `prognostic_equations/limited_tendencies.jl`.
-#####
-##### Tag names are ρ-weighted, so `gs_tracer_names(Y)` picks them up and the
-##### usual tracer machinery supplies advection, hyperdiffusion, sponges,
-##### vertical eddy diffusion and the implicit-Jacobian blocks. Leave transport
-##### to that machinery. Attributing it here would count it twice. Attribution
-##### covers only the processes in `KNOWN_TAG_SOURCES`, grouped for users by
-##### `TAG_SOURCE_GROUPS`.
-#####
-##### Masks are static in space. Evaluate them once when building the cache,
-##### outside any per-timestep broadcast.
+##### Tags are ρ-weighted tracers, so the tracer machinery transports them and
+##### this file attributes only the processes in `KNOWN_TAG_SOURCES`. The model
+##### reaches the tags through `tagging_variables`, `tagging_cache`,
+##### `tagging_scratch` and the applied-update events, which call
+##### `snapshot_tagged_ρe_tot!` and `attribute_tagged_ρe_tot!`.
 
 """
     region_mask(region::AbstractTagRegion, coord)
@@ -334,7 +300,7 @@ function tagging_cache(Y, atmos::AtmosModel)
         _or_empty(energy)...,
         _or_empty(water)...,
         _or_empty(sources)...,
-        # The per-step gross of the tags' state ledgers (WP6).
+        # The per-step gross of the tags' state ledgers.
         tag_ledger_step_cache(Y, atmos)...,
         closure_void = tag_closure_void_flags(atmos),
         negative_water_void = negative_water_void_flags(atmos),
@@ -391,7 +357,7 @@ tagging_scratch(Y, atmos::AtmosModel) = (;
                 (; ᶜtagging_q_leak_correction = similar(Y.c.ρ)) : (;)
             )...,
             _water_tag_precipitation_scratch(Y, atmos.water_tagging_model)...,
-            # Each tag's part of the 0M rain-out, for `pr_tag` (WP4a).
+            # Each tag's part of the 0M rain-out, for `pr_tag`.
             (
                 atmos.microphysics_model isa EquilibriumMicrophysics0M ?
                 (;
@@ -429,11 +395,10 @@ region_tag_state_names(tagging_model::TaggingModel) = Tuple(
 # Closure checking
 # ============================================================================
 #
-# `e_tag_res` and `q_tag_res` hold this same residual as a 3-D field, for
-# looking at afterwards. What follows reduces it to one number per family and
-# appends it to a table while the run goes, so closure drift shows up during the
-# run itself. Both families share this code. Only the parent field and the tag
-# names differ.
+# `e_tag_res` and `q_tag_res` hold this residual as a 3-D field, for looking at
+# afterwards. The code below reduces it to one number per family and appends it
+# to a table while the run goes, so drift shows during the run. The families
+# share it. Only the parent field and the tag names differ.
 
 """
     closure_parent(Y, p, total_name)
@@ -449,58 +414,48 @@ closure_parent(Y, p, total_name) = total_name(Y, p)
 """
     closure_signed_parent(Y, p, total_name)
 
-The field whose non-positive part a closure check reports: the parent itself,
-as `closure_parent` gives it, except where the tags partition only a
-part of it. The water tags partition `max(ρq_tot, 0)` (known issue 7, option
-C), which is never negative, so for them this is the raw `ρq_tot` (see
-`water_closure_parent`). Otherwise `nonpositive_mass` would be zero by
-construction.
+The field whose non-positive part a closure check reports.
+
+It is the parent itself, as `closure_parent` gives it, except where the tags
+partition only part of it. The water tags partition `max(ρq_tot, 0)`, which is
+never negative. For them this is the raw `ρq_tot` (see `water_closure_parent`),
+because `nonpositive_mass` would otherwise be zero by construction.
 """
 closure_signed_parent(Y, p, total_name) = closure_parent(Y, p, total_name)
 
 """
     tag_closure(Y, p, total_name, tag_state_names)
 
-Global closure of one tag family: how much of the parent field its tags account
-for, right now.
+Compute the global closure of one tag family: how much of the parent field its
+tags account for, right now.
 
 `total_name` is `:ρe_tot` or `:ρq_tot`, or a function for a parent the model
-does not carry (see `closure_parent`), and `tag_state_names` are the pure region
-tags of that family. Returns
+does not carry (see `closure_parent`). `tag_state_names` are the pure region
+tags of the family. Returns
 
-    (; total, tagged, residual, relative, gross_residual, gross_relative)
+    (; total, tagged, residual, relative, gross_residual, gross_relative,
+       scale, nonpositive_fraction)
 
-All the integrals are volume-weighted over the whole domain.
-`residual = total - tagged` is the *signed* miss. `gross_residual` is the
-integral of the pointwise `|parent - Σ tags|`. Both are reported relative to
-`scale = ∫|parent|`, never to `total`.
+All integrals are volume-weighted over the whole domain.
 
-`scale` rather than `total` because the parent may be signed. Moist total energy
-has no physical zero, so `∫ρe_tot` can be negative or zero under a shifted
-reference, and dividing a non-negative `gross_residual` by it would give a
-negative or zero number that can never exceed a positive tolerance — the check
-would pass silently at any residual. `∫|parent|` is positive whenever the field
-is not identically zero, and equals `total` wherever the parent is non-negative,
-so the water numbers are unchanged.
+  - `residual = total - tagged` is the signed miss.
+  - `gross_residual` is the integral of the pointwise `|parent - Σ tags|`. A
+    partition that is too high in one place and too low in another has a signed
+    residual of zero but not a gross one. `gross_relative` is never smaller than
+    `|relative|`, so it is the number to compare with a tolerance. The signed
+    pair says which way the leak goes.
+  - `relative` and `gross_relative` divide by `scale = ∫|parent|`, not by
+    `total`. The parent may be signed. Moist total energy has no physical zero,
+    so `∫ρe_tot` can be zero or negative, and a ratio over it could never
+    exceed a positive tolerance. `scale` equals `total` where the parent is
+    non-negative.
+  - `nonpositive_fraction` is the volume fraction where `parent ≤ 0`, read from
+    [`closure_signed_parent`](@ref). Above zero, the shares are undefined
+    somewhere. The residual does not show it, because complementary region
+    tags can partition a negative parent exactly.
 
-`nonpositive_fraction` is the volume fraction where `parent ≤ 0`, read from
-[`closure_signed_parent`](@ref): for water, the raw `ρq_tot`. It is zero for
-a well-posed run. Anything above zero says the shares are undefined somewhere,
-which the residual alone will not tell you: a set of complementary region tags
-can partition a negative parent exactly, giving perfect closure over a state
-whose fractions are meaningless.
-
-Both are reported because the signed pair alone can say a partition is perfect
-when it is not. `total` and `tagged` are two global integrals, so a partition
-that is too high by `X` in one place and too low by `X` in another has a signed
-residual of exactly zero. Taking the absolute value before integrating removes
-that cancellation, which makes `gross_relative` — never smaller than
-`|relative|` — the number that actually says whether the tags still partition
-the field. The signed pair is kept because its sign says which way the leak
-goes.
-
-`Base.sum` on a `Field` is the volume-weighted global integral and reduces
-across processes, so this is collective — every process must call it.
+`Base.sum` on a `Field` reduces across processes, so every process must call
+this.
 """
 function tag_closure(Y, p, total_name, tag_state_names)
     ᶜparent = closure_parent(Y, p, total_name)
@@ -513,7 +468,6 @@ function tag_closure(Y, p, total_name, tag_state_names)
     # processes is not something this file should assume.
     ᶜtmp = p.scratch.ᶜtemp_scalar
 
-    # The positive normalization scale.
     @. ᶜtmp = abs(ᶜparent)
     scale = sum(ᶜtmp)
 
@@ -882,86 +836,57 @@ end
                           voided = nothing, throughput_tolerance = nothing,
                           negative_water = nothing)
 
-Record the closure of one tag family, warn when it has drifted past `tolerance`,
-mark its rows `closure_void` once it has passed `void_above`, and end the run
-only when it has passed an `abort_above` the user set.
+Check the closure of one tag family and append a row to its table.
 
-The comparison is against `gross_relative`, the relative residual that does not
-let opposite-signed local errors cancel (see [`tag_closure`](@ref)). It is never
-smaller than `|relative|`, so testing it alone also catches everything a test on
-the signed residual would.
+The callback runs every `period` of the check. It writes
+`<family>_tag_closure.csv`, and with `audit` also `<family>_tag_audit.csv` (see
+[`tag_audit`](@ref)). It tests `gross_relative` (see
+[`tag_closure`](@ref)) against three levels:
 
-Drift is information, not a reason to stop. Closure drift is something you want
-to watch grow, and ending a multi-year integration over it would cost more than
-it saves, so exceeding `tolerance` warns and keeps running.
+  - `tolerance` warns on every row above it. `nothing` means the check only
+    reports. `throughput_tolerance` warns the same way for the energy source
+    tags' `gross_over_throughput` column.
+  - `void_above` warns once. From then on the check marks this row and every
+    later row `closure_void = 1`, in both tables, and the run goes on.
+    `voided`, a `Ref{Bool}`, holds the flag. The callback passes the family's
+    entry in `p.tagging.closure_void`, which the checkpoint carries (see
+    [`restore_tag_closure_void!`](@ref)).
+  - `abort_above` ends the run. No family sets one by default.
 
-A divergence is not drift. A residual far larger than the field it measures says
-the tags no longer describe anything. But the tags are a diagnostic, and a
-diagnostic must never end a run that upstream completes (known issue 7). So
-past `void_above` the check warns once. It marks this row and every later row
-with `closure_void = 1`, in the closure table and the audit table, and the run
-goes on. `voided`, a `Ref{Bool}`, remembers that the level was passed. The
-callback passes the family's flag in `p.tagging.closure_void`, which the
-checkpoint records and a restart reads back, so the rows after a restart stay
-marked (see [`restore_tag_closure_void!`](@ref)). `abort_above` still ends the
-run where a user sets it; no family sets one by default. See
+A diagnostic never ends a run that the model would complete, so only an
+`abort_above` the user sets stops it. See
 [`DEFAULT_CLOSURE_VOID_LEVELS`](@ref) and
-[`DEFAULT_CLOSURE_ABORT_LEVELS`](@ref).
+[`DEFAULT_CLOSURE_ABORT_LEVELS`](@ref). None of the levels is an acceptance
+threshold.
 
-`closure_void` is limited to the closure threshold. `closure_void = 0` does not
-mean that the parent is valid, only that the residual has not passed the level.
-The parent can go negative long before that. `nonpositive_fraction`, in the
-same row, is the volume fraction where the parent is not positive, and this
-check warns on every row where it is above zero.
+`closure_void = 0` says only that the residual has not passed `void_above`. The
+parent can be non-positive long before that. `nonpositive_fraction`, in the same
+row, is the volume fraction where it is, and the check warns on every row where
+it is above zero.
 
 The water check also reads the parent's own negative water, from the raw
-`ρq_tot` (known issue 7). `negative_water`, `nothing` for the other families,
-is `(; void_above, voided, accumulator)`: the check's `negative_water_void_above`,
-the family's flag in `p.tagging.negative_water_void`, and the parent's
-negative water accumulator (see [`negative_water_accumulator_cache`](@ref)) or
-`nothing`. See [`negative_water_rows`](@ref) for the columns. Past
-`void_above` the check warns once, and marks this row and every later row
-`negative_water_void = 1`, in both tables, also after a restart. The same
-flag is also set at the end of every accepted step
-([`check_negative_water_step!`](@ref)), so an excursion between two rows marks
-the next row. Like `closure_void`, this flag covers one thing: the parent's
-negative water at the rows and at the ends of the accepted steps.
-`negative_water_void = 0` does not say that the parent is valid in any other
-way.
+`ρq_tot`. `negative_water`, `nothing` for the other families, is
+`(; void_above, voided, accumulator)`: the check's `negative_water_void_above`,
+the family's flag in `p.tagging.negative_water_void`, and the parent's negative
+water accumulator (see [`negative_water_accumulator_cache`](@ref)) or `nothing`.
+Past `void_above` the check warns once and marks this row and every later row
+`negative_water_void = 1`, in both tables, also after a restart.
+[`check_negative_water_step!`](@ref) sets the same flag at the end of every
+accepted step, so an excursion between two rows marks the next row. See
+[`negative_water_rows`](@ref) for the columns.
 
-`audit` adds a second table that splits the residual into the parts that mean
-different things, and reports the non-positive parent by mass beside the volume
-fraction reported here. See [`tag_audit`](@ref) for what it separates and why
-one number cannot say it.
+`reference` is the check's spin-up reference, a `Ref`, or `nothing` (see
+[`write_tag_closure!`](@ref)). `extra_audit(Y, p, closure, t)` gives a family's
+own audit columns when `audit` is on, such as [`energy_source_audit`](@ref) and
+[`energy_source_residual_report`](@ref). `extra_closure(Y, p, closure)` gives a
+family's own closure columns on every row, such as
+[`energy_source_closure_columns`](@ref).
 
-The abort is raised outside the root-only block, because every process computes
-the same `closure` from the same global reductions. Raising it on the root alone
-would leave the others waiting in the next reduction. `audit` comes from the
-configuration and is therefore the same on every process, so the reductions
-inside [`tag_audit`](@ref) are entered by all of them or by none.
-
-A `tolerance` of `nothing` means the check only reports. `reference` is the
-spin-up reference of the check, a `Ref`, or `nothing` for a check without one;
-see [`write_tag_closure!`](@ref). `extra_audit`, a function of
-`(Y, p, closure, t)`, gives a family's own audit columns, such as
-[`energy_source_audit`](@ref) and [`energy_source_residual_report`](@ref), when
-`audit` is on. `extra_closure`, a function of `(Y, p, closure)`, gives a
-family's own closure columns on every row, such as the energy source tags'
-[`energy_source_closure_columns`](@ref). Both reduce across processes, so every
-process calls them.
-
-The check's levels are kept apart from each other and from acceptance
-(G4.5):
-
-  - `tolerance` warns, and so does `throughput_tolerance`, the energy source
-    tags' level against the gross source throughput, compared with the
-    `gross_over_throughput` column where the family writes one;
-  - `void_above` marks this row and every later one void;
-  - `abort_above` ends the run, only where a user sets it.
-
-None of them is an acceptance threshold. A run's verdicts are scored
-afterwards, from these tables, against the thresholds its experiment fixes in
-advance, over the windows it fixes.
+Every process computes the same `closure` from the same global reductions, and
+`audit` is the same on every process. So the reductions in `tag_audit`,
+`extra_audit` and `extra_closure` are entered by all processes or by none. The
+abort is raised outside the root-only block for the same reason. Raising it on
+the root alone would leave the others waiting in the next reduction.
 """
 function tag_closure_callback!(
     integrator,
@@ -1099,8 +1024,8 @@ or `nothing`, which gives no columns and no reduction.
 On the closure table, where `void_above` is set:
 
   - `negative_water_relative`: `∫max(-ρq_tot, 0) dV / ∫ρq_tot dV` at the row,
-    from the raw `ρq_tot` ([`parent_negative_water`](@ref)). This is the
-    contract row "Parent validity: negative water" read at the check;
+    from the raw `ρq_tot` ([`parent_negative_water`](@ref)). It reads the
+    state at the row only;
   - `negative_water_void`: 1 on this and every later row once the same ratio
     has passed `void_above`, at a row or at the end of an accepted step
     ([`check_negative_water_step!`](@ref)), in this run or before the
@@ -1254,9 +1179,8 @@ other tag zero (`tag_initial_value`).
 `initial_state` calls this after a setup has overwritten the state from a file.
 `WeatherModel`, `AMIPFromERA5` and `MoistFromFile` build the state from `NaN`
 placeholders and then rewrite `ρ`, `ρe_tot`, `ρq_tot`, the condensates and the
-winds from the file. The tags were built from the placeholders, so every region
-tag held `NaN` and the run stopped at the first check. Rebuilding them here is
-what the file-based path was missing.
+winds from the file. Tags built from the placeholders hold `NaN`, so they are
+rebuilt here from the state the file gave.
 
 It is idempotent: where nothing overwrote the state, it writes the values that
 are already there. A restart does not go through it, so a checkpoint's tags are
@@ -1266,8 +1190,8 @@ function rebuild_tags_from_state!(Y, atmos)
     ᶜcoord = Fields.coordinate_field(Y.c)
     _rebuild_tags_of_family!(Y.c, ᶜcoord, Y.c.ρe_tot, atmos.tagging_model)
     # Each water tag's parts take their masked share of their compartments'
-    # non-negative parts (known issue 7, option C). Without
-    # `water_tag_precipitation` that is the whole of `max(ρq_tot, 0)`.
+    # non-negative parts. Without `water_tag_precipitation` that is the whole of
+    # `max(ρq_tot, 0)`.
     hasproperty(Y.c, :ρq_tot) && rebuild_water_tags_from_state!(
         Y.c,
         ᶜcoord,

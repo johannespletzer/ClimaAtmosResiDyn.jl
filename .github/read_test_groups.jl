@@ -1,8 +1,9 @@
-# Print the Downgrade workflow's test matrix, `groups=[...]`, for
-# `$GITHUB_OUTPUT`: the groups of `test/runtests.jl`'s `KNOWN_TEST_GROUPS`,
-# less "all". It parses that file and evaluates only the one assignment, so no
-# test runs. It fails, rather than printing a partial list, if the assignment
-# is missing or is not a literal tuple of plain names, or if a name repeats.
+# Print the test groups, `groups=[...]`, for `$GITHUB_OUTPUT`: the groups of
+# `test/runtests.jl`'s `KNOWN_TEST_GROUPS`, less "all" and "precompile", which
+# runs no tests. The Downgrade matrix and `.github/ci_plan.sh` read them. It
+# parses that file and evaluates only the one assignment, so no test runs. It
+# fails, rather than printing a partial list, if the assignment is missing or
+# is not a literal tuple of plain names, or if a name repeats.
 text = read(joinpath(@__DIR__, "..", "test", "runtests.jl"), String)
 is_groups(e) =
     e isa Expr && e.head == :const && e.args[1] isa Expr &&
@@ -20,6 +21,7 @@ allunique(names) || error("KNOWN_TEST_GROUPS repeats a name")
 all(n -> occursin(r"^[a-z0-9_]+$", n), names) ||
     error("KNOWN_TEST_GROUPS has a malformed name")
 "all" in names || error("KNOWN_TEST_GROUPS lacks \"all\"")
-groups = filter(!=("all"), names)
+"precompile" in names || error("KNOWN_TEST_GROUPS lacks \"precompile\"")
+groups = filter(n -> !(n in ("all", "precompile")), names)
 isempty(groups) && error("KNOWN_TEST_GROUPS lists no group besides \"all\"")
 println("groups=[", join(map(n -> "\"$n\"", groups), ","), "]")

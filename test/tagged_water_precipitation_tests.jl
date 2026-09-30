@@ -891,6 +891,14 @@ end
     names = (CA.WATER_TAG_FLOW_NAMES..., :dq_rai_dt, :dq_sno_dt)
     largest_error = zeros(length(nsubs), length(steps))
     mean_error = zeros(length(nsubs), length(steps))
+    # At the state with the largest error: the difference over the rounding
+    # tolerance below, and the gross flows over the water. With one substep
+    # the difference is within the tolerance, so its row stays zero. With more,
+    # on Julia 1.11 the first is 2.6e7 to 5.0e8, so the largest errors are not
+    # rounding. The second shows whether the error at 15 s comes from states
+    # whose flows are tiny.
+    over_rounding = zeros(length(nsubs), length(steps))
+    gross_over_water = zeros(length(nsubs), length(steps))
     (largest_audit, largest_rounding, smallest_part) = (0.0, 0.0, Inf)
     (two_way, melting) = (0, 0)
     for s in states
@@ -929,6 +937,10 @@ end
             # A difference within rounding counts as none. Where the flows
             # are tiny, it would otherwise swamp the fraction.
             e = result.difference > rounding ? result.difference / result.gross : 0.0
+            if e > largest_error[i, j]
+                over_rounding[i, j] = result.difference / rounding
+                gross_over_water[i, j] = result.gross / sum(compartments)
+            end
             largest_error[i, j] = max(largest_error[i, j], e)
             mean_error[i, j] += e / length(states)
             largest_audit = max(largest_audit, result.audit / result.gross)
@@ -946,6 +958,9 @@ end
     # and 29 of the 100 states are expected to show them.
     @test two_way > 0
     @test melting > 0
+    # The largest errors with substeps are far above the tolerance, so they
+    # are not rounding. The bound sits 25 times below the smallest found.
+    @test minimum(over_rounding[2:end, :]) >= 1e6
     # The rounding and the smallest part are in units of eps times the water
     # and the gross water the flows move.
     microphysics = (;
@@ -953,6 +968,8 @@ end
         substeps = nsubs,
         largest_error = round.(largest_error; sigdigits = 3),
         mean_error = round.(mean_error; sigdigits = 3),
+        over_rounding = round.(over_rounding; sigdigits = 3),
+        gross_over_water = round.(gross_over_water; sigdigits = 3),
         audit = round(largest_audit; sigdigits = 3),
         rounding_in_eps = round(largest_rounding; sigdigits = 3),
         smallest_part_in_eps = round(smallest_part; sigdigits = 3),

@@ -98,7 +98,7 @@ include(
 # Tagged prognostic energy tracers (masks, state builders, config parsing)
 include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_tracers.jl"))
 # The gross twins and counts of the tags' cache ledgers, and their state ledgers
-# per mechanism with the gross per step (WP6).
+# per mechanism with the gross per step.
 include(joinpath("parameterized_tendencies", "tagged_tracers", "tag_throughput.jl"))
 # Tagged prognostic water tracers (reuses the regions and masks defined above)
 include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_water.jl"))
@@ -112,7 +112,7 @@ include(
 )
 # Energy source tags (ρe_src_*, the donor-proportional counterpart of the water tags)
 include(joinpath("parameterized_tendencies", "tagged_tracers", "energy_source_tags.jl"))
-# The residual report of the energy source tags' closure check (G4.4).
+# The residual report of the energy source tags' closure check.
 include(joinpath("parameterized_tendencies", "tagged_tracers", "energy_source_report.jl"))
 # After the energy source tags, whose weight-free exchange helpers it uses.
 include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_water_edmf.jl"))

@@ -1,8 +1,10 @@
 # Energy Source Tags: a user guide
 
 This page is for running the energy source tags and reading what they give you.
-[Energy Source Tags](energy_source_tags.md) is the reference: it says what each
-rule is and why. Start here, go there when a number surprises you.
+The `energy_source_tags` key switches them on. It is off by default, and it
+needs `energy_source_tag_offset`. [Energy Source Tags](energy_source_tags.md) is
+the reference: it says what each rule is and why. Start here, go there when a
+number surprises you.
 
 The tags answer one question: **of the moist energy in this cell now, how much
 came from each place or process?** They split the total into named parts that
@@ -60,43 +62,43 @@ Add the tags to a `diagnostics` block the same way as any other short name.
 
 ## The choices, and what to set them to
 
-| Key                                                       | Default        | Set it to                                                                                                                                                                                                                                              |
-|:--------------------------------------------------------- |:-------------- |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `energy_source_tag_offset`                                | none, required | 110495.0 unless you have a reason. It makes the partitioned total positive, which the donor rule needs. It is a convention, and the tags depend on it                                                                                                  |
-| `energy_source_tag_transport`                             | `tracer`       | `enthalpy_increment` under EDMF or implicit diffusion. `tracer` only when you want the tags to ride the plain tracer path                                                                                                                              |
-| `energy_source_tag_repair`                                | `true`         | leave on, unless you want to see what the attribution rule alone produces                                                                                                                                                                              |
-| `energy_source_tag_updraft_copy`                          | `false`        | leave off. `true` is the audit: a copy of each tag in the updraft, moved by the model's own tracer machinery. A cold build takes about six times as long                                                                                               |
-| `energy_source_tag_increment_allow_explicit_microphysics` | `false`        | leave off. With `enthalpy_increment` the model refuses 2M or P3 stepped explicitly, which no run has measured, and 1M stepped explicitly under `use_auto_jacobian: true`, which lacks the tags' cross blocks. `true` runs them anyway, for development |
+| Key                                                       | Default        | Set it to                                                                                                                                                                                                                                                               |
+|:--------------------------------------------------------- |:-------------- |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `energy_source_tag_offset`                                | none, required | 110495.0 unless you have a reason. It makes the partitioned total positive, which the donor rule needs. It is a convention, and the tags depend on it                                                                                                                   |
+| `energy_source_tag_transport`                             | `tracer`       | `enthalpy_increment` under EDMF or implicit diffusion. `tracer` only when you want the tags to ride the plain tracer path                                                                                                                                               |
+| `energy_source_tag_repair`                                | `true`         | leave on, unless you want to see what the attribution rule alone produces                                                                                                                                                                                               |
+| `energy_source_tag_updraft_copy`                          | `false`        | leave off. `true` is the audit: a copy of each tag in the updraft, moved by the model's own tracer machinery                                                                                                                                                            |
+| `energy_source_tag_increment_allow_explicit_microphysics` | `false`        | leave off. With `enthalpy_increment` the model refuses 2M or P3 stepped explicitly, where no run has shown that the tags close, and 1M stepped explicitly under `use_auto_jacobian: true`, which lacks the tags' cross blocks. `true` runs them anyway, for development |
 
 Under `prognostic_edmfx` the tags need `updraft_number: 1`, and the model
 refuses more.
 
 ## Reading the result
 
-The check warns above a default level that follows the transport, 1.0 under
-`tracer`, 0.1 under `enthalpy` and 0.01 under `enthalpy_increment`. They sit
-7.1, 1.7 and 50 times above the largest value each transport reached in the
-runs they were calibrated from, so they are guards against a runaway, not a
-judgement on a run, and the margin differs by transport. Set `tolerance` in
-the block once you know where your own configuration settles.
+The check warns above a default level that follows the transport: 1.0 under
+`tracer`, 0.1 under `enthalpy` and 0.01 under `enthalpy_increment`. By default
+it never stops the run and never marks rows void; `abort_above` and `void_above`
+in the block change that. The check runs daily and measures the
+residual since a spin-up reference taken one hour in. The defaults are guards
+against a runaway, not a judgement on a run. Set `tolerance` in the block once
+you know where your own configuration settles.
 
 **Start with the closure table.** `gross_relative` is the partition's residual
 over the total it partitions, which the offset enters, and it covers the
-partition only, not the source tags. Under `enthalpy_increment` it runs from
-about 1e-6 after an hour on a column to 2e-4 after ten days on a sphere in
-Float32; under `tracer` and `enthalpy` it is 1e-3 to 1e-1, since those
-transports do not follow the parent's own fluxes.
-What matters is less its size than its trend: it should slow, and the rows
-since the spin-up should not grow faster than the first ones.
+partition only, not the source tags. It is smallest under
+`enthalpy_increment`. Under `tracer` and `enthalpy` it is larger, since those
+transports do not follow the parent's own fluxes. What matters is less its size
+than its trend: it should slow, and the rows since the spin-up should not grow
+faster than the first ones.
 
 **Then the audit table.** `untagged` and `overclaimed` split the residual by
 sign. `repair_moved` is the size of the repair's *net* accumulated correction
 per tag: it adds each change with its sign and takes the absolute value at the
 end. A large value means the repair is holding a tag's profile up. A small one
 does not mean the repair was idle, since corrections in opposite directions
-cancel in it. Under `enthalpy_increment`, `increment_left` is the
-part of the parent's implicit increment that the correction could not move
-inside a column. It usually explains most of the residual.
+cancel in it. Under `enthalpy_increment`, `increment_left` is the part of the
+parent's implicit increment that the correction could not move inside a column.
+It usually explains most of the residual.
 
 **Then the tags themselves.** They are shares of energy, not of mass. A cell
 whose air came half from the boundary layer does not hold half its energy from
@@ -112,11 +114,10 @@ there, because the two air masses carry different energy per kilogram.
     figure, so treat it as a lower bound on how much the repair did.
  4. Under `enthalpy_increment`, `increment_left` accounts for most of the
     residual. What it does not account for is what no share follows yet.
- 5. You know your `c`, and you quote it with the result. Doubling it moved a
-    column's source tags by 4 to 6% in a day.
+ 5. You know your `c`, and you quote it with the result. The tags change with
+    it.
  6. If the run has convection, you know which mixing convention you used: the
-    default exchange, or the audit's updraft copies. On a column they agree to
-    better than 1% after a day.
+    default exchange, or the audit's updraft copies.
 
 ## Caveats
 
@@ -134,11 +135,11 @@ there, because the two air masses carry different energy per kilogram.
     that is. The copies are a comparator, not ground truth: they take the
     environment's composition for the surface's buoyant air, the model filters
     them, and their flux needs the same post-solve correction. The plume adds
-    the assumption that the updraft adjusts faster than the shares change. The sedimentation corrections take the grid mean's shares either
-    way.
+    the assumption that the updraft adjusts faster than the shares change. The
+    sedimentation corrections take the grid mean's shares either way.
   - **`e_src_fix_<name>` is carried through a restart.** The checkpoint holds
-    it beside the state. A checkpoint written before it did starts it at zero,
-    with a warning, and then you stitch the segments yourself.
+    it beside the state. A checkpoint without it starts it at zero, with a
+    warning, and then you stitch the segments yourself.
   - **The offset `c` is a choice with consequences.** It sets how long the
     initial-energy tags are remembered, and it is the reference that makes the
     shares meaningful. Keep one `c` across every run you compare. Before a run
@@ -147,10 +148,10 @@ there, because the two air masses carry different energy per kilogram.
   - **Falling ice can pass provenance upward.** With the offset used here, ice
     carries negative `E`, so the cell below is the donor. A different `c` can
     flip that direction. It is the reference speaking, not the physics.
-  - **Untested ground.** Topography with the tags, more than one updraft
-    (refused), 2-moment microphysics, and the GPU. A run that takes its initial
-    state from a file now builds the tags from what the file wrote, but no such
-    run has been made with tags on.
+  - **Untested ground.** Topography with the tags, 2-moment microphysics, and
+    the GPU. More than one updraft is refused. A run that takes its initial
+    state from a file builds the tags from what the file wrote. No such run has
+    been made with tags on.
   - **Provenance of energy is not provenance of air.** Ask the tags where the
     energy came from. For where the air came from, carry a passive tracer.
 

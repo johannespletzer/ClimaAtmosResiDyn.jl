@@ -15,12 +15,21 @@ name: Manifest compat
 on:
   pull_request:
     paths:
-      - '**/Project.toml'
-      - '**/Manifest-*.toml'
+      - 'Project.toml'
+      - '.buildkite/Project.toml'
+      - '.buildkite/Manifest-*.toml'
       - '.github/workflows/manifest-compat.yml'
+  # On `main` too, only when a project or manifest it resolves changes. The
+  # paths are the two projects in the matrix below, not every Project.toml in
+  # the repository. The weekly run covers the rest.
   push:
     branches:
       - main
+    paths:
+      - 'Project.toml'
+      - '.buildkite/Project.toml'
+      - '.buildkite/Manifest-*.toml'
+      - '.github/workflows/manifest-compat.yml'
   # Bounds can also be invalidated from outside, by a registry change rather
   # than by a commit here, so do not rely on the path filter alone.
   schedule:

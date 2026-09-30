@@ -1977,12 +1977,34 @@ function check_water_tag_leak_correction_supported(parsed_args, microphysics_mod
 end
 
 """
+    check_water_tag_rainout_jacobian_supported(parsed_args)
+
+Refuse `water_tag_rainout_jacobian: true` under `turbconv: prognostic_edmfx`
+(known issue 4). There the 0M rain-out goes to the tags by each subdomain's
+composition (`splits_rainout`), and the switch's entries, the derivatives of
+the grid rule, are not that split's derivatives. Elsewhere the key is accepted.
+It does nothing where the tags do not lose water by the grid rule on the
+implicit path, such as under 1M or with `implicit_microphysics: false`
+(`water_tag_rainout_jacobian_names`).
+"""
+function check_water_tag_rainout_jacobian_supported(parsed_args)
+    get(parsed_args, "turbconv", nothing) == "prognostic_edmfx" && error(
+        "`water_tag_rainout_jacobian: true` is refused under `turbconv: \
+        prognostic_edmfx`. There the 0M rain-out goes to the tags by each \
+        subdomain's composition, and the switch's entries are the \
+        derivatives of the grid mean's share, not of that split. Drop the \
+        key.",
+    )
+    return nothing
+end
+
+"""
     AtmosTagging(config::AtmosConfig)
 
 Assemble the `AtmosTagging` group from the `energy_tracers`, `water_tracers`
 (with `water_tag_updraft_copy`, `water_tag_transport`,
-`water_tag_precipitation`, `water_tag_ledger_per_tag` and
-`water_tag_leak_correction`),
+`water_tag_precipitation`, `water_tag_ledger_per_tag`,
+`water_tag_leak_correction` and `water_tag_rainout_jacobian`),
 `energy_source_tags` (with `energy_source_tag_offset`, `energy_source_tag_repair`,
 `energy_source_tag_transport`, `energy_source_tag_updraft_copy` and
 `energy_source_tag_increment_allow_explicit_microphysics`),
@@ -2030,6 +2052,10 @@ function AtmosTagging(config::AtmosConfig)
         get(config.parsed_args, "water_tag_leak_correction", false),
         "water_tag_leak_correction",
     )
+    water_rainout_jacobian = tag_ledger_per_tag_from_config(
+        get(config.parsed_args, "water_tag_rainout_jacobian", false),
+        "water_tag_rainout_jacobian",
+    )
     water_tagging_model = if isnothing(water_entries) || isempty(water_entries)
         water_precipitation && error(
             "`water_tag_precipitation: true` is set but `water_tracers` is \
@@ -2040,6 +2066,11 @@ function AtmosTagging(config::AtmosConfig)
             "`water_tag_leak_correction: true` is set but `water_tracers` is \
             not, so there are no tags to correct. Configure `water_tracers`, \
             or drop the key.",
+        )
+        water_rainout_jacobian && error(
+            "`water_tag_rainout_jacobian: true` is set but `water_tracers` is \
+            not, so there are no tags to give the entries. Configure \
+            `water_tracers`, or drop the key.",
         )
         water_ledger_per_tag && error(
             "`water_tag_ledger_per_tag: true` is set but `water_tracers` is \
@@ -2090,6 +2121,8 @@ function AtmosTagging(config::AtmosConfig)
             config.parsed_args,
             microphysics_model,
         )
+        water_rainout_jacobian &&
+            check_water_tag_rainout_jacobian_supported(config.parsed_args)
         # `water_tag_leak_correction` needs EDMF, which `water_tag_precipitation`
         # refuses, so the two are never on together. `water_tag_precipitation`
         # and `water_tag_ledger_per_tag` work together. Each tag keeps one
@@ -2104,6 +2137,7 @@ function AtmosTagging(config::AtmosConfig)
             precipitation = water_precipitation,
             ledger_per_tag = water_ledger_per_tag,
             leak_correction = water_leak_correction,
+            rainout_jacobian = water_rainout_jacobian,
         )
     end
     source_entries = config.parsed_args["energy_source_tags"]

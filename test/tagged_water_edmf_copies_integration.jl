@@ -24,38 +24,21 @@ so that parity covers the tags' brackets on the explicit path, after an hour:
  7. the partition copies' sedimentation cross blocks to each updraft species
     sum to the updraft water's block, `(q_totʲ, qʲ)`, to rounding (WP5b-C).
 
+Item 8, the copies with `water_tag_leak_correction: true` as well, is in
+`tagged_water_edmf_copies_leak_integration.jl`.
+
 The copies are a model type of their own, and the check against the column
-without tags needs a second. So the file builds the EDMF column twice and has a
-test group of its own. See `docs/src/tagged_water.md`.
+without tags needs a second. So the file builds the EDMF column twice and has
+a test group of its own. See `docs/src/tagged_water.md`.
 =#
 using Test
 import ClimaAtmos as CA
+include("tagged_water_edmf_copies_common.jl")
 
 function second_call_allocations(f::F, args::Vararg{Any, N}) where {F, N}
     f(args...)
     return @allocated f(args...)
 end
-
-function run_simulation(config_dict, job_id)
-    simulation = CA.get_simulation(
-        CA.AtmosConfig(
-            merge(
-                config_dict,
-                Dict{String, Any}("output_dir" => mktempdir(pwd())),
-            );
-            job_id,
-        ),
-    )
-    @test CA.solve_atmos!(simulation).ret_code == :success
-    return simulation
-end
-
-altitude_region(above) = Dict{String, Any}(
-    "type" => "tanh_altitude",
-    "z_center" => 750.0,
-    "width" => 100.0,
-    "above" => above,
-)
 
 relative_difference(a, b) =
     maximum(abs, parent(a) .- parent(b)) / maximum(abs, parent(b))
@@ -71,69 +54,8 @@ function whole_tendency(Y, p, t)
 end
 
 @testset "Water tags with updraft copies" begin
-    edmf_dict = Dict{String, Any}(
-        "config" => "column",
-        "initial_condition" => "DYCOMS_RF02",
-        "turbconv" => "prognostic_edmfx",
-        "implicit_diffusion" => true,
-        "approximate_linear_solve_iters" => 2,
-        "edmfx_entr_model" => "Generalized",
-        "edmfx_detr_model" => "Generalized",
-        "edmfx_sgs_mass_flux" => true,
-        "edmfx_sgs_diffusive_flux" => true,
-        "edmfx_nh_pressure" => true,
-        "edmfx_vertical_diffusion" => true,
-        "edmfx_filter" => true,
-        "prognostic_tke" => true,
-        "microphysics_model" => "1M",
-        "implicit_microphysics" => false,
-        "fixed_terminal_velocity_liquid" => false,
-        "z_elem" => 30,
-        "z_max" => 1500.0,
-        "z_stretch" => false,
-        "perturb_initstate" => false,
-        "rad" => "DYCOMS",
-        "toml" => [joinpath(pkgdir(CA), "toml", "prognostic_edmfx_1M.toml")],
-        "ode_algo" => "ARS222",
-        # On the explicit microphysics path with one Newton iteration the
-        # tags lag the parent's solve: the parent's rows carry the
-        # sedimenting species' cross blocks and the tags' do not
-        # (`update_water_tag_sedimentation_jacobian!`). After an hour the
-        # partition then misses by 0.8% net. With ten iterations it closes to
-        # 4e-7 net and 8e-4 gross. That lag is WP5's to follow; this file
-        # checks the copies, so it converges the solve.
-        "max_newton_iters_ode" => 10,
-        "dt" => "120secs",
-        "t_end" => "1hours",
-        "FLOAT_TYPE" => "Float64",
-        "output_default_diagnostics" => false,
-    )
-    tag_dict = Dict{String, Any}(
-        "water_tracers" => [
-            Dict{String, Any}("name" => "tropo", "region" => altitude_region(false)),
-            Dict{String, Any}("name" => "strat", "region" => altitude_region(true)),
-            Dict{String, Any}("name" => "evap", "source" => "surface_flux"),
-        ],
-        "water_tag_updraft_copy" => true,
-        # The audit and the diagnostics write scratch from callbacks, so the
-        # parity check below covers them too.
-        "water_closure_check" =>
-            Dict{String, Any}("period" => "10mins", "audit" => true),
-        "diagnostics" => [
-            Dict{String, Any}(
-                "short_name" => [
-                    "q_tag_leak_vdiff",
-                    "q_tag_leak_diffusion_up",
-                    "q_tag_copy_res",
-                    "q_tag_upfix_tropo",
-                    "q_tag_led_upfilter",
-                    "q_tag_led_repair_gross",
-                    "q_tag_led_uprepair_colgross",
-                ],
-                "period" => "10mins",
-            ),
-        ],
-    )
+    edmf_dict = copies_edmf_config()
+    tag_dict = copies_tag_config()
     copies = run_simulation(merge(edmf_dict, tag_dict), "water_tags_edmf_copies")
     Y = copies.integrator.u
     p = copies.integrator.p
