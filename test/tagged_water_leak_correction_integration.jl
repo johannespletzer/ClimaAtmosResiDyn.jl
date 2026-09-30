@@ -86,7 +86,7 @@ gross(ᶜf) = Float64(sum(abs.(ᶜf)))
 # The rain and snow that the parent does not diffuse, `q_p`, as a field.
 function leaking_water(Y, p)
     ᶜq_p = similar(Y.c.ρ)
-    ᶜq_p_lazy = CA._leaking_water(Y, p)
+    ᶜq_p_lazy = CA._precipitating_water(Y, p)
     @. ᶜq_p = ᶜq_p_lazy
     return ᶜq_p
 end
@@ -260,7 +260,7 @@ end
         # snow, its ledger holds it, and the partition's ledger their sum, the
         # leak with the opposite sign.
         ᶠρK_h = face_ρK_h(Y_uniform, p)
-        ᶜq_p = CA._leaking_water(Y_uniform, p)
+        ᶜq_p = CA._precipitating_water(Y_uniform, p)
         for (name, share) in pairs(shares)
             ᶜpart = similar(Y.c.ρ)
             @. ᶜpart = share * ᶜq_p

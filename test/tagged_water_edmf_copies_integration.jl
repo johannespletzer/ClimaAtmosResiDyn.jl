@@ -18,7 +18,8 @@ so that parity covers the tags' brackets on the explicit path, after an hour:
     up to the surface flux, whose new water goes by region and source. The
     partition's copies take all of the updraft's surface flux. The diffusion
     leak's correction, called on its own, closes the partition's diffusion
-    and the copies';
+    and the copies'. The updraft's leaking water includes the negative part
+    of `q_totʲ`, and keeps its old value where `q_totʲ` is not negative;
  5. the copies' own code allocates next to nothing;
  6. the model's fields are those of the same column without tags, bit for bit;
  7. the partition copies' sedimentation cross blocks to each updraft species
@@ -307,6 +308,50 @@ end
         # A copy takes its tag's correction per unit mass, as it takes its
         # tag's diffusion.
         @test maximum(abs, parent(ᶜsgsʲₜ.q_tag_evap)) > 0
+    end
+
+    # 4d. The updrafts' leaks are taken where the copies sum to their target,
+    # `max(q_totʲ, 0)`. So where `q_totʲ` is negative, the updraft's leaking
+    # water includes `-min(q_totʲ, 0)`. Where it is not negative, the value is
+    # the one before option C's target, bit for bit. The run is 1M. A 0M
+    # model reaches the branch without rain and snow.
+    @testset "The updraft's leaking water at the copies' target" begin
+        Y_negative = copy(Y)
+        ᶜsgsʲ_negative = Y_negative.c.sgsʲs.:(1)
+        ᶜz = CA.Fields.coordinate_field(Y.c).z
+        @. ᶜsgsʲ_negative.q_tot =
+            ifelse(500 < ᶜz < 1000, -abs(ᶜsgsʲ.q_tot) - 1e-6, ᶜsgsʲ.q_tot)
+        ᶜq_totʲ = ᶜsgsʲ_negative.q_tot
+        @test any(<(0), parent(ᶜq_totʲ))
+        @test any(>(0), parent(ᶜq_totʲ))
+        not_negative = parent(ᶜq_totʲ) .>= 0
+        negative = .!not_negative
+
+        microphysics_1M = p.atmos.microphysics_model
+        @test microphysics_1M isa CA.NonEquilibriumMicrophysics1M
+        ᶜleaking = Base.materialize(
+            CA._leaking_updraft_water(ᶜsgsʲ_negative, microphysics_1M),
+        )
+        ᶜold = @. ᶜsgsʲ_negative.q_rai + ᶜsgsʲ_negative.q_sno
+        ᶜexpected = @. ᶜold - min(ᶜq_totʲ, 0)
+        @test parent(ᶜleaking) == parent(ᶜexpected)
+        @test isequal(parent(ᶜleaking)[not_negative], parent(ᶜold)[not_negative])
+        @test all(parent(ᶜleaking)[negative] .> parent(ᶜold)[negative])
+
+        ᶜleaking_0M = Base.materialize(
+            CA._leaking_updraft_water(
+                ᶜsgsʲ_negative,
+                CA.EquilibriumMicrophysics0M(),
+            ),
+        )
+        ᶜold_0M = @. 0 * ᶜq_totʲ
+        ᶜexpected_0M = @. -min(ᶜq_totʲ, 0)
+        @test parent(ᶜleaking_0M) == parent(ᶜexpected_0M)
+        @test isequal(
+            parent(ᶜleaking_0M)[not_negative],
+            parent(ᶜold_0M)[not_negative],
+        )
+        @test all(parent(ᶜleaking_0M)[negative] .> 0)
     end
 
     # 4b. The sedimentation mirror takes the updraft's share for the falling
