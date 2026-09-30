@@ -153,11 +153,11 @@ not checked, it says so.
         geometric SGS-variance term. #128 caps it at v1.1.15.
       + *W50, 2026-09-29:* W21's surface rule, measured at `03eb4dbd` (the
         water fix), not the PR head. R1 and R4 pass in both arms. R5 fails on
-        all three rungs: the copies' repair is 0.37% to 0.46% of the water a
+        all three rungs: the copies' repair is 0.37% to 0.45% of the water a
         day against 0.20%, the same in both arms. So provenance and the first
         hour stay not assessable. The rule lowers `evap`'s and `sfc`'s first-hour
-        L1 but raises some L∞ and 24 h numbers (FINDINGS W50; the scorings
-        differ on R4's second-half reading at 60 levels).
+        L1 but raises some L∞ and 24 h numbers (FINDINGS W50; the two scorings agree
+        on every verdict).
       + *Where the next session starts:* #128, then #127's CI and the #119
         follow-ups' PR; C's revision (design, pre-registration, PR); WP4a-J;
         W21's surface flux. The

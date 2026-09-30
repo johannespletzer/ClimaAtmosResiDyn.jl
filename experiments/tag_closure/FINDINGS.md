@@ -89,7 +89,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                                   | section                                             |
 |:----------------------------------------------------- |:--------------------------------------------------- |
-| W1–W48, W50 (W46 reserved for PX7)                   | 1. Water tags                                       |
+| W1–W48, W50 (W46 reserved for PX7, W49 for C's revision)                 | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48, E85 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11                 | 3. The energy reference and the offset              |
 | E40, E53                                              | 4. EDMF and the updrafts                            |
@@ -1843,8 +1843,9 @@ on 2026-09-29 with `analysis/water/ic_miss_score2.py` as amended at
 `6eae646f`, before the job started; `output/ic_miss_probe2/`.*
 
 **W50. W21's surface rule on D4-W: the tagged runs are bit for bit the untagged
-ones and the partition closes in both arms, but the copies' repair still fails
-its tolerance on all three rungs, 0.37% to 0.46% of the water a day against
+ones in the 40 written hourly diagnostics and the partition closes in both
+arms, but the copies' repair still fails its tolerance on all three rungs,
+0.37% to 0.45% of the water a day (0.46% with the window's mean water) against
 0.20%, and the rule does not move it. So R5 fails, provenance stays not
 assessable, and the first hour stays not assessable, as in W38.** The rule is
 the plume's start at the lowest level with the copies' steady state there
@@ -1856,46 +1857,53 @@ Pre-registered in section 8, before any run: D4-W at 30 and 60 levels, plus
 the surface pulse at 30 levels, one day each, centred reconstruction, one
 Newton iteration, `dt` 120 s. Fourteen runs, all exited 0.
 
-Two independent scorings agree on every verdict except R4's second-half rule
-at 60 levels. Where they differ at the printed digit, both numbers are given
-(see the discrepancies below).
+Two independent scorings agree on every verdict. Where they differ at the
+printed digit, both numbers are given (see the discrepancies below). The
+verdicts are the pre-registered scorer's, `analysis/water/w50_score.py`.
 
 | rule                                                | least favourable result                                                                                                                       |
 |:--------------------------------------------------- |:----------------------------------------------------------------------------------------------------------------------------------------------|
 | R1 parity, 40 files, every level and time           | *pass*, all 12 tagged runs, 0 differences                                                                                                     |
 | R4 closure, 24 h gross, tolerance 2e-3              | *pass*: at most 1.947e-3 (copies, plain 30 levels, 97% of the tolerance); the default at most 1.1e-4                                          |
-| R4 closure, the second 12 h against the first       | *pass* in the scorer's reading (relative); *fails by 1.0% to 1.1%* on absolute amounts at 60 levels, default, both arms (see discrepancies)  |
+| R4 closure, the second 12 h against the first       | *pass* in all 12 runs, in the pre-registered reading (relative to the water): second minus first -2.2e-7 (fix) and -2.1e-7 (main) at 60 levels, default. A note on absolute amounts is in the discrepancies |
 | R5 the copies' own residual, tolerance 2e-4         | *pass*: at most 5.4e-5 (60 levels)                                                                                                            |
-| R5 the copies' repair a day, tolerance 2e-3         | *fail* on all three rungs, both arms: 4.2e-3 (30 levels), 4.6e-3 (60 levels), 3.7e-3 (pulse); the worst is 2.3 times the tolerance           |
+| R5 the copies' repair a day, tolerance 2e-3         | *fail* on all three rungs, both arms: 3.9e-3 (30 levels), 4.5e-3 to 4.6e-3 (60 levels), 3.7e-3 (pulse); the worst, on the mean-water reading, is 2.3 times the tolerance |
 | R6 refinement                                       | not run (P2 is needed only where R5 passes, which is nowhere)                                                                                 |
 | R7 provenance                                       | *not assessable* on every rung and arm (R5 fails); numbers below are reported, not judged                                                     |
 
 The copies' repair per day, as a share of `∫ρq_tot`, in established flow.
 Fix and main are the same to the printed digits. The window starts at 6600 s
 (30 levels, and the pulse) and 7200 s (60 levels), from OD2's rule on the
-twins.
+twins. The scorer's column is the pre-registered value: it divides by
+`∫ρq_tot` at 24 h. The re-derivation divides by the mean over the window.
 
-| rung        | scorer | re-derivation, least favourable row | whole day (scorer / re-derivation) | tolerance |
-|:----------- | ------:| -----------------------------------:| ----------------------------------:| ---------:|
-| plain 30    | 3.93e-3 | 4.21e-3 (3.94e-3 from the 2 h row) | 4.13e-3 / 4.15e-3                  | 2e-3      |
-| plain 60    | 4.48e-3 | 4.58e-3                             | 4.97e-3 / 5.08e-3                  | 2e-3      |
-| pulse 30    | 3.69e-3 | 3.70e-3 (3.55e-3 from the 1 h row)  | 4.55e-3 / 4.57e-3                  | 2e-3      |
+| rung        | scorer (pre-registered) | re-derivation, mean water                                                                    | whole day (scorer / re-derivation) | tolerance |
+|:----------- | -----------------------:| --------------------------------------------------------------------------------------------:| ----------------------------------:| ---------:|
+| plain 30    | 3.93e-3                 | 3.94e-3 from the 2 h row, the first row in the window (4.21e-3 from the 1 h row, see below) | 4.13e-3 / 4.15e-3                  | 2e-3      |
+| plain 60    | 4.48e-3                 | 4.58e-3                                                                                      | 4.97e-3 / 5.08e-3                  | 2e-3      |
+| pulse 30    | 3.69e-3                 | 3.70e-3 (3.55e-3 from the 1 h row, see below)                                                | 4.55e-3 / 4.57e-3                  | 2e-3      |
+
+The 4.21e-3 and 3.55e-3 are from the 1 h row, which includes 50 min of
+startup, outside the pre-registered window. The re-derivation took the larger
+of the rows either side of the window's start, a choice it made itself.
 
 If it were scored (R7's numbers, not a verdict), L1 of default against copies
 at 1 h, fix / main, against the budgets (region 1%, source 10%, `sfc` and
 `air` 1% as regions):
 
-| rung, tag        | 1 h L1 fix / main | budget | 24 h L1 fix / main | budget |
-|:---------------- | -----------------:| ------:|-------------------:|-------:|
-| plain 30, `evap` | 4.59% / 6.49%     | 10%    | 0.19% / 0.40%      | 2%     |
-| plain 60, `evap` | 8.06% / 11.83%    | 10%    | 0.46% / 0.24%      | 2%     |
-| plain 60, `strat`| 1.36% / 1.36%     | 1%     | 1.72% / 1.72%      | 2%     |
-| pulse, `sfc`     | 13.06% / 14.33%   | 1%     | 0.23% / 0.45%      | 2%     |
-| pulse, `air`     | 0.88% / 0.96%     | 1%     | 0.24% / 0.20%      | 2%     |
+| rung, tag        | 1 h L1 fix / main | 1 h L∞ fix / main | budget | 24 h L1 fix / main | 24 h L∞ fix / main | budget |
+|:---------------- | -----------------:| -----------------:| ------:|-------------------:| ------------------:| ------:|
+| plain 30, `evap` | 4.59% / 6.49%     | 10.23% / 7.04%    | 10%    | 0.19% / 0.40%      | 1.06% / 0.72%      | 2%     |
+| plain 60, `evap` | 8.06% / 11.83%    | 15.63% / 19.66%   | 10%    | 0.46% / 0.24%      | 0.73% / 0.35%      | 2%     |
+| plain 60, `strat`| 1.36% / 1.36%     | 17.69% / 17.69%   | 1%     | 1.72% / 1.72%      | 1.52% / 1.38%      | 2%     |
+| pulse, `sfc`     | 13.06% / 14.33%   | 15.47% / 17.38%   | 1%     | 0.23% / 0.45%      | 0.95% / 0.98%      | 2%     |
+| pulse, `air`     | 0.88% / 0.96%     | 2.14% / 2.41%     | 1%     | 0.24% / 0.20%      | 0.63% / 0.60%      | 2%     |
+
+The budgets are for L1. `output/w50/effect.csv` has every tag, rung and hour.
 
   - **Least favourable arm and rung.** R5's repair at 60 levels, 4.58e-3 a
-    day in both arms (the scorer's 4.48e-3 is 2.2 times the tolerance, the
-    re-derivation's 2.3). R4's copies at 30 levels close to 97% of their
+    day in both arms on the mean-water reading (the pre-registered scorer's
+    4.48e-3 is 2.2 times the tolerance, the mean-water reading's 2.3). R4's copies at 30 levels close to 97% of their
     tolerance at 24 h. The worst 24 h R7 number is `strat` at 60 levels, 1.72%
     against 2% (86%).
   - **R5 fails, so R7 is not a verdict.** R5 passes on no fix rung. So there
@@ -1904,15 +1912,25 @@ at 1 h, fix / main, against the budgets (region 1%, source 10%, `sfc` and
     hour stays not assessable, as in W38.
   - **The rule does not touch the repair.** The copies' repair and closure are
     the same in both arms to five digits, and their fields differ between
-    arms by at most 7.3e-9 in L1, with the region tags bit for bit. So
-    every difference between the arms in R7 comes from the default mode.
+    arms by at most 7.3e-9 in L1, with the region tags bit for bit. So the
+    copies contribute at most 7.3e-9 in L1, and the differences between the
+    arms come from the default mode. On the same configs W38 measured 6.9e-3
+    and 6.6e-3 a day (30, 60 levels). Here it is 3.9e-3 and 4.5e-3 in both
+    arms, while the default's closure equals W38's to every digit. The rule
+    does not move it. The change came with the code between `705c8ed0` and
+    `43b01ca1` and is not isolated here.
   - **The rule's effect, reported with its sign, no threshold.** At 1 h it
     lowers `evap`'s L1 on every rung, 6.49% to 4.59% at 30 levels and 11.83%
     to 8.06% at 60, and `sfc`'s in the pulse, 14.33% to 13.06%. So the
-    expected direction holds at L1. At 1 h it raises `evap`'s L∞ at 30 levels
-    and in the pulse, 7.04% to 10.23%. At 24 h it raises `evap`'s L1 at 60
+    expected direction holds at L1. At 1 h it raises `evap`'s L∞ at 30 levels,
+    7.04% to 10.23%, and in the pulse, 7.04% to 10.24%. At 24 h it raises
+    `evap`'s L∞ on every rung: 0.72% to 1.06% (30 levels), 0.35% to 0.73%
+    (60), 0.74% to 1.08% (pulse). At 24 h it raises `evap`'s L1 at 60
     levels, 0.235% to 0.463%, and `air`'s in the pulse, 0.198% to 0.243%.
-    `tropo` and `strat` are the same in both arms to four digits. The rule
+    At 1 h `tropo` and `strat` are the same in both arms to four digits. At 24 h
+    they differ slightly: at 30 levels `strat` L1 0.413% against 0.409% and
+    `tropo` 0.258% against 0.261%; at 60 levels `strat` L∞ 1.52% against
+    1.38%. The rule
     shifts the pulse's `sfc` by 1.3 points of 14.3, an 8.8% reduction; it
     stays 13 times its 1% budget.
   - **Even with the rule, the first hour would fail** on `strat` at 60 levels
@@ -1921,29 +1939,33 @@ at 1 h, fix / main, against the budgets (region 1%, source 10%, `sfc` and
     did here, not a verdict, since the comparator is not eligible.
   - **The default mode's field moves between arms** (fix against main): the
     `evap` L1 at 1 h is 7.36% at 30 levels and 5.91% at 60, `sfc` in the
-    pulse 1.25%; other tags at most 0.12% at 24 h except `evap` (0.39% and
-    0.68%).
+    pulse 1.25%; other tags at most 0.12% at 24 h, except `evap` (0.39% at 30
+    levels and in the pulse, 0.68% at 60) and the pulse's `sfc` (0.32%).
   - **The parent** (`rhoa`, `hus`) is bit for bit the same between arms and
     modes.
 
-**Discrepancies between the two scorings.** Not resolved here.
+**Discrepancies between the two scorings.** The verdicts do not differ.
 
-  - *R5's repair, the digit and the window.* The scorer and the
-    re-derivation differ in the third digit (3.93e-3 against 4.21e-3, 4.48e-3
-    against 4.58e-3, 3.69e-3 against 3.70e-3). Only the pulse is below the
-    printed precision. The re-derivation reads the state ledger
-    `led_uprepair_retained` per day, and its hourly rows start before the
-    window ends at 30 levels (6600 s), so its 1 h row includes 50 min of
-    startup. From the 2 h row it is 3.94e-3, next to the scorer's 3.93e-3. Every
-    choice fails 2e-3. The table quotes both, and the text quotes the
-    larger.
-  - *R4's second-half rule at 60 levels, default.* The scorer reads it
-    relative to each time's `∫ρq_tot` and passes (-2.1e-7). The re-derivation
-    reads absolute amounts and finds 6.245e-5 against 6.180e-5 kg/m² (fix),
-    6.221e-5 against 6.153e-5 (main), 1.0% more in the second half. Relative
-    to the parent's water it passes (5.09e-6 against 5.30e-6), because the
-    water grows by 2.6% in the second half. The rule does not say which
-    reading applies. The 24 h level is 1.04e-5, far inside 2e-3.
+  - *R5's repair, the digit and the window.* Both scorings read the ledger
+    `led_uprepair_retained`. The scorer, as pre-registered and as in W38,
+    divides by `∫ρq_tot` at 24 h. The re-derivation divides by its mean over
+    the window, which is 1% to 2% smaller at 60 levels, where the water grows
+    3.2% after 2 h. That gives 4.48e-3 against 4.58e-3 and 3.69e-3 against
+    3.70e-3. At 30 levels the re-derivation also used the 1 h row, inside
+    startup (4.21e-3). From the first row in the window it is 3.94e-3, next to
+    the scorer's 3.93e-3. The pre-registered value is the scorer's. The text
+    keeps 4.58e-3 as the least favourable reading, the mean-water reading.
+    Every choice fails 2e-3.
+  - *R4's second-half rule, a note on absolute amounts.* The pre-registered
+    scorer reads the rule from `gross_relative` at 0, 12 and 24 h, relative to
+    the water, as W38's `w25_score.py` does. It passes in all 12 runs. The
+    re-derivation, written after the runs, also read absolute amounts. At 60
+    levels in the default mode the second 12 h add 6.245e-5 against 6.180e-5
+    kg/m² (fix, 1.05% more) and 6.222e-5 against 6.153e-5 (main, 1.1% more).
+    Relative to the water it is 5.089e-6 against 5.304e-6 (fix). This reading
+    was applied after the runs, so it is not a verdict. Whether the rule
+    should read absolute amounts is a question for the owner. The 24 h level
+    is 1.04e-5, far inside 2e-3.
   - *Others.* The window, R1, the own residual and every R7 number agree to
     the printed digits. Net copy repair (`copy_repair`), reported beside, is
     3.40e-3, 4.13e-3 and 3.85e-3 at 24 h, and also exceeds 2e-3. The updraft
@@ -1955,7 +1977,7 @@ at 1 h, fix / main, against the budgets (region 1%, source 10%, `sfc` and
     0.4% a day. It changes no threshold. R1 checks the 40 written diagnostic
     files, not the prognostic state (no checkpoints). `evap`'s share at 1 h
     is 1.14%, just above the 1% small-tag line, so it is judged on L1; on
-    absolute error it would be outside (9.2e-4 at 60 levels, fix). One
+    absolute error it would be outside (9.2e-4 at 60 levels in fix and 1.34e-3 in main). One
     uniform column, PX13: the modes are compared with each other, not with
     an independent reference.
 
@@ -1963,8 +1985,10 @@ at 1 h, fix / main, against the budgets (region 1%, source 10%, `sfc` and
 `03eb4dbd` in the fix arm and `43b01ca1` in the main arm (merge trees
 `04fa29fe`, `a15e3d5e`). `analysis/water/w50_score.py`,
 `w25_compare.py`; `output/w50/` (`w50_scores.csv`, `effect.csv`,
-`windows.csv`, `verifier/`); the re-derivation is on scratch,
-`claude_work/w50_rederive/`.*
+`windows.csv`, `verifier/`, `data/` with each run's closure and audit CSVs and
+`provenance.txt`, `SHA256SUMS_copied_data`, `SHA256SUMS_scratch_inputs` for the
+diagnostic files left on scratch, `rederive/` with the re-derivation's script
+and results).*
 
 ## 2. Energy source tags: closure by transport
 
