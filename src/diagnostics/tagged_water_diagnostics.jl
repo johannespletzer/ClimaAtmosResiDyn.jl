@@ -667,10 +667,12 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
                        "path moves the tags on their whole value, and total " *
                        "water only by the water that diffuses, without rain " *
                        "and snow. Under `water_tag_precipitation: true` the " *
-                       "tags' non-precipitating parts diffuse as that water, " *
-                       "and only the hyperdiffusion leaks: where the " *
-                       "partition holds none of that water, or it is " *
-                       "negative. It is the source the path adds to the " *
+                       "tags' non-precipitating parts diffuse as that water. " *
+                       "Where it is negative they partition zero, so the " *
+                       "vertical diffusion, the hyperdiffusion and the " *
+                       "sponge leak its negative part. The hyperdiffusion " *
+                       "also leaks where the partition holds none of that " *
+                       "water. It is the source the path adds to the " *
                        "closure residual; the path's transport of a residual " *
                        "already there is not in it. Zero where the path is " *
                        "off. See `water_tag_leak!`.",

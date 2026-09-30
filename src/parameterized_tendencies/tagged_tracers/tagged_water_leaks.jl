@@ -36,7 +36,8 @@ of water tags away from the parent if the partition were exactly closed, per
 unit mass of grid-mean air, in kg kg⁻¹ s⁻¹. It is the path's tendency of
 `Σᵢ ρq_tagᵢ` minus its tendency of `ρq_tot`, over `ρ`, evaluated at
 `Σᵢ ρq_tagᵢ = ρq_tot`. So it is the source the path adds to the closure
-residual. It does not read the tags: the path's transport of a residual already
+residual. It reads the tags only for their shares, under
+`water_tag_precipitation: true`. The path's transport of a residual already
 there, `L(Σᵢ q_tagᵢ - q_tot)` for the path's operator `L`, is not in it. A
 positive value means the tags gain water the parent does not.
 
@@ -49,10 +50,11 @@ Zero where the path is off, or on a column for the horizontal paths. On the
 sphere the result is DSSed, as a tendency diagnostic is. See
 [`WATER_TAG_LEAK_PATHS`](@ref) for the paths.
 
-Under `water_tag_precipitation: true` only `hyperdiff` can be nonzero. It is
-taken where the non-precipitating parts sum to `max(N, 0)`, for
-`N = ρq_tot - ρq_rai - ρq_sno`, and not to `ρq_tot`. See
-`docs/src/tagged_water_precipitation.md`. The copies are refused with the key.
+Under `water_tag_precipitation: true` only `hyperdiff`, `vdiff` and `sponge`
+can be nonzero. They are taken where the non-precipitating parts sum to
+`max(N, 0)`, for `N = ρq_tot - ρq_rai - ρq_sno`, and not to `ρq_tot`. See
+`docs/src/tagged_water_precipitation.md`. The copies and EDMF are refused with
+the key.
 """
 function water_tag_leak!(ᶜleak, Y, p, path::Val)
     @. ᶜleak = 0
@@ -98,6 +100,25 @@ function _water_tag_parts_leak!(ᶜleak, Y, p, ::Val{:hyperdiff})
     return nothing
 end
 
+# The vertical diffusion and the sponge take the parts on their values and the
+# parent on `N/ρ`. A closed partition's parts sum to `max(N, 0)`, so the tags'
+# sum departs from the parent by the path's operator on `-min(N, 0)/ρ`. That is
+# zero where `N` is not negative. EDMF is refused with the key, so the boundary
+# layer's diffusion is the only vertical path.
+function _negative_nonprecipitating_water(Y)
+    ᶜN = water_tag_part_parent(Y.c, NonPrecipitatingPart())
+    return @. lazy(-water_tag_negative_part(ᶜN) / Y.c.ρ)
+end
+_water_tag_parts_leak!(ᶜleak, Y, p, ::Val{:vdiff}) = _add_boundary_layer_leak!(
+    ᶜleak,
+    Y,
+    p,
+    p.atmos.vertical_diffusion,
+    _negative_nonprecipitating_water(Y),
+)
+_water_tag_parts_leak!(ᶜleak, Y, p, ::Val{:sponge}) =
+    _add_sponge_leak!(ᶜleak, Y, p, _negative_nonprecipitating_water(Y))
+
 # The water the parent does not move on these paths, as the tags' sum minus
 # the diffusing water. Zero without rain and snow.
 function _leaking_water(Y, p)
@@ -140,18 +161,26 @@ end
 function _water_tag_leak!(ᶜleak, Y, p, ::Val{:vdiff})
     _edmf_diffuses(p, p.atmos.turbconv_model) &&
         _add_edmf_vertical_leak!(ᶜleak, Y, p)
-    _add_boundary_layer_leak!(ᶜleak, Y, p, p.atmos.vertical_diffusion)
+    _add_boundary_layer_leak!(
+        ᶜleak,
+        Y,
+        p,
+        p.atmos.vertical_diffusion,
+        _leaking_water(Y, p),
+    )
     return nothing
 end
 
-_add_boundary_layer_leak!(ᶜleak, Y, p, vertical_diffusion) = nothing
-# As `vertical_diffusion_boundary_layer_tendency!`: the same harmonic-mean face
-# diffusivity for the tags and for `q_tot_eff`.
+# The boundary layer's diffusion of the water `ᶜq_p` that the tags carry and
+# the parent does not. As `vertical_diffusion_boundary_layer_tendency!`: the
+# same harmonic-mean face diffusivity for the tags and for `q_tot_eff`.
+_add_boundary_layer_leak!(ᶜleak, Y, p, vertical_diffusion, ᶜq_p) = nothing
 function _add_boundary_layer_leak!(
     ᶜleak,
     Y,
     p,
     vertical_diffusion::Union{VerticalDiffusion, DecayWithHeightDiffusion},
+    ᶜq_p,
 )
     FT = eltype(Y)
     ᶜK_h = p.scratch.ᶜtemp_scalar
@@ -165,7 +194,6 @@ function _add_boundary_layer_leak!(
         )
     end
     ᶠρK = @. lazy(ᶠinterp(Y.c.ρ) / ᶠinterp(1 / max(ᶜK_h, eps(FT))))
-    ᶜq_p = _leaking_water(Y, p)
     @. ᶜleak -= ᶜdiffdivᵥ(-(ᶠρK * ᶠgradᵥ(ᶜq_p))) / Y.c.ρ
     return nothing
 end
@@ -195,10 +223,15 @@ end
 
 # The sponge diffuses the tags on their value and the parent on `q_tot_eff`
 # (`viscous_sponge_tendency!`).
-function _water_tag_leak!(ᶜleak, Y, p, ::Val{:sponge})
+_water_tag_leak!(ᶜleak, Y, p, ::Val{:sponge}) =
+    _add_sponge_leak!(ᶜleak, Y, p, _leaking_water(Y, p))
+
+# The sponge's diffusion of the water `ᶜq_p` that the tags carry and the parent
+# does not.
+function _add_sponge_leak!(ᶜleak, Y, p, ᶜq_p)
     sponge = p.atmos.viscous_sponge
     (isnothing(sponge) || iscolumn(axes(Y.c))) && return nothing
-    ᶜtendency = viscous_sponge_tendency_tracer(Y.c.ρ, _leaking_water(Y, p), sponge)
+    ᶜtendency = viscous_sponge_tendency_tracer(Y.c.ρ, ᶜq_p, sponge)
     @. ᶜleak += ᶜtendency / Y.c.ρ
     return nothing
 end

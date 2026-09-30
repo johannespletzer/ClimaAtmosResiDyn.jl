@@ -69,8 +69,14 @@ What moves the parts:
     water is negative, its parts partition zero (see *Negative water* below),
     so the tags do not diffuse its negative part. In both, the tags' sum does
     not follow the parent's hyperdiffusion. `q_tag_leak_hyperdiff` reports
-    that rate under the key, from both gaps. It is not yet measured in a run.
-    The other leak diagnostics read zero.
+    that rate under the key, from both gaps. The second gap is not special to
+    the hyperdiffusion. The vertical diffusion and the viscous sponge take the
+    parts on their values and the parent on ``q_\mathrm{tot,eff}``, so where
+    the non-precipitating water is negative they too move the parent by its
+    negative part and the tags not. `q_tag_leak_vdiff` and `q_tag_leak_sponge`
+    report those rates. None of the three is yet measured in a run. The other
+    leak diagnostics read zero, since EDMF and the copies are refused with the
+    key.
 
   - **Microphysics.** The 1-moment scheme moves water between the
     compartments. `water_tag_1m_flows` repeats the model's linearized

@@ -423,6 +423,46 @@ end
         # `ρq_tot` is advected implicitly and `N` explicitly.
         @test result.total < 1e-2
     end
+    # The vertical diffusion's leak against the model's own vertical diffusion.
+    # Between 400 and 800 m, where the diffusivity is large, `N` is made
+    # negative. The partition is rebuilt at option C's targets, which leave its
+    # parts empty there. The tags diffuse on their values and the parent on
+    # `N/ρ`, so the tags' sum moves by the diffusion of `-min(N, 0)/ρ` more
+    # than the parent does. The residual is taken relative to the parent's
+    # tendency, as in the sphere's split test, and the leak must stand well
+    # above it. Without the leak's term the diagnostic would read zero.
+    @testset "The vertical diffusion leak against the model's diffusion" begin
+        Y_negative = copy(Y)
+        ᶜz = CA.Fields.coordinate_field(Y_negative.c).z
+        @. Y_negative.c.ρq_tot = ifelse(
+            (400 < ᶜz) & (ᶜz < 800),
+            Y_negative.c.ρq_rai + Y_negative.c.ρq_sno - 1e-4 * Y_negative.c.ρ,
+            Y_negative.c.ρq_tot,
+        )
+        CA.rebuild_tags_from_state!(Y_negative, p.atmos)
+        @test minimum(compartments(Y_negative).ρq_tag_) < 0
+        expected = parent(
+            CA.water_tag_leak!(similar(Y_negative.c.ρ), Y_negative, p, Val(:vdiff)),
+        )
+        Yₜ = zero(Y_negative)
+        CA.vertical_diffusion_boundary_layer_tendency!(
+            Yₜ,
+            Y_negative,
+            p,
+            simulation.integrator.t,
+            p.atmos.vertical_diffusion,
+        )
+        ρ = parent(Y_negative.c.ρ)
+        parentₜ = compartments(Yₜ).ρq_tag_ ./ ρ
+        actual = part_sum(Yₜ, :ρq_tag_) ./ ρ .- parentₜ
+        scale = maximum(abs, parentₜ)
+        @test all(isfinite, actual)
+        @test maximum(abs, expected) > 1e-4 * scale
+        residual = maximum(abs, actual .- expected) / scale
+        @test residual <= 1e-10
+        @info "The vertical diffusion leak against the model's" largest =
+            maximum(abs, expected) scale residual
+    end
     plain = run!(build(base_config(), "water_tags_precipitation_plain"))
     @test isnothing(plain.integrator.p.atmos.water_tagging_model)
     @testset "The model's fields do not depend on the parts" begin
@@ -673,7 +713,9 @@ sphere_part_sum(x, prefix) =
         @test maximum(abs, emptied) > 0
         @test maximum(abs, held) <= 1e-6 * maximum(abs, emptied)
         @test maximum(abs, leak(Y_unclosed)) <= 1e-6 * maximum(abs, emptied)
-        # The other paths read zero under the key.
+        # Where `N` is not negative, the other paths read zero under the key:
+        # the vertical diffusion and the sponge leak only its negative part,
+        # and EDMF is refused.
         for path in (:vdiff, :hdiff, :sponge)
             @test all(
                 iszero,
@@ -693,8 +735,10 @@ sphere_part_sum(x, prefix) =
     # thermodynamic state is not recomputed. The split's residual above is
     # rounding at 1e-15 of the tendencies, and the bound sits well above it.
     # Without the negative part's term the leak would miss the hyperdiffusion
-    # of `0.01 q_rai` in the band.
-    @testset "The hyperdiffusion leak against the model's hyperdiffusion" begin
+    # of `0.01 q_rai` in the band. The viscous sponge takes the parts on their
+    # values and the parent on `N/ρ`, so its leak is the sponge of that same
+    # negative part, and it is checked on the same state.
+    @testset "The hyperdiffusion and sponge leaks against the model's operators" begin
         Y_band = copy(Y_test)
         ᶜlat = CA.Fields.coordinate_field(Y_band.c).lat
         ᶜin_band = @. abs(ᶜlat) < 15
@@ -708,16 +752,19 @@ sphere_part_sum(x, prefix) =
             @. ᶜρq_tag = ifelse(ᶜin_band, zero(FT), ᶜρq_tag)
         end
         @test minimum(compartments(Y_band).ρq_tag_) < 0
-        expected = leak(Y_band)
-        Yₜ = hyperdiffusion(Y_band, p)
-        CA.dss!(Yₜ, p, t)
-        tagsₜ = parent(Yₜ.c.ρq_tag_tropics) .+ parent(Yₜ.c.ρq_tag_extratropics)
-        actual = (tagsₜ .- compartments(Yₜ).ρq_tag_) ./ parent(Y_band.c.ρ)
-        @test all(isfinite, actual)
-        @test maximum(abs, expected) > 0
-        mismatch = maximum(abs, actual .- expected) / maximum(abs, expected)
-        @test mismatch <= 1e-10
-        @info "The hyperdiffusion leak against the model's" largest =
-            maximum(abs, expected) mismatch
+        for (path, operator) in ((:hyperdiff, hyperdiffusion), (:sponge, sponge))
+            expected =
+                parent(CA.water_tag_leak!(similar(Y_band.c.ρ), Y_band, p, Val(path)))
+            Yₜ = operator(Y_band, p)
+            CA.dss!(Yₜ, p, t)
+            tagsₜ = parent(Yₜ.c.ρq_tag_tropics) .+ parent(Yₜ.c.ρq_tag_extratropics)
+            actual = (tagsₜ .- compartments(Yₜ).ρq_tag_) ./ parent(Y_band.c.ρ)
+            @test all(isfinite, actual)
+            @test maximum(abs, expected) > 0
+            mismatch = maximum(abs, actual .- expected) / maximum(abs, expected)
+            @test mismatch <= 1e-10
+            @info "The $path leak against the model's" largest =
+                maximum(abs, expected) mismatch
+        end
     end
 end
