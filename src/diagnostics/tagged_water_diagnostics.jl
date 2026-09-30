@@ -706,7 +706,9 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
             "gave the tags, or took from them, because the parent's negative " *
             "part changed: the tags partition max(ρq_tot, 0), whose column " *
             "total grows by the negative water a solve creates. Zero where " *
-            "the parent stays non-negative (known issue 7, option C)." *
+            "the parent stays non-negative (known issue 7, option C). It " *
+            "also holds the positive part of a crossing whose gain the rule " *
+            "withheld inside the solve, which the tags take in that cell." *
             (
                 precipitation ?
                 " Under water_tag_precipitation: true the same holds for the " *
