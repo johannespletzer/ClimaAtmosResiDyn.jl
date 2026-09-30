@@ -347,11 +347,20 @@ gain lifts the parent into the positive range, so the target takes all of it.
 `max(Δ, 0)`, the same operation on the same numbers as the rule before, bit
 for bit.
 
+`ρq_tot` here is the partition's parent. Under `water_tag_precipitation: true`
+that is the non-precipitating water, `ρq_tot - ρq_rai - ρq_sno`
+(`water_tag_parent`), whose sign decides, not that of `ρq_tot`.
+
 The explicit brackets give the partition tags this gain, by mask (known issue
 7, option C, as the owner revised it on 2026-09-29; the record's
 `design/NEGATIVE_PARENT_WATER.md`, section 11). The loss half already follows
 the target: a tag's share is zero where the parent is not positive. So on a
 closed partition a bracket's tendency is the target's.
+
+The rule is read at the state of each stage. The tableau's explicit weights
+include negative ones, so in a step whose parent crosses zero the partition's
+gain over the step can be negative, and a tag that holds nothing can end the
+step below zero (the design note, section 11.2).
 """
 @inline water_tag_target_gain(Δ, ρq_tot) =
     ifelse(ρq_tot < zero(ρq_tot), zero(Δ), max(Δ, 0))
@@ -363,7 +372,9 @@ closed partition a bracket's tendency is the target's.
 How a bracket gives a process's gain to the partition tags.
 
   - `TargetGain()`, the explicit brackets: the gain of the partition's
-    target, `water_tag_target_gain`. The owner's rule of 2026-09-29.
+    target, `water_tag_target_gain`. The owner's rule of 2026-09-29. The
+    split 0M rain-out in copies mode applies it to the updraft's part
+    (`water_tag_split_change`).
   - `ParentGain()`, the implicit microphysics bracket: `max(Δ, 0)` wherever
     the parent is, as before. The owner's rule covers the explicit processes.
     Under 0M this increment is a sink, except where a subdomain's area is
@@ -382,6 +393,17 @@ Base.broadcastable(rule::WaterTagGainRule) = tuple(rule)
     water_tag_target_gain(Δ, ρq_tot)
 @inline water_tag_gain(::ParentGain, Δ, ρq_tot) = max(Δ, 0)
 _tag_gain_rule(rule, tag) = _is_partition_tag(tag) ? rule : ParentGain()
+
+# A tag's part of the updraft's 0M rain-out in copies mode, `x = Δʲ·φʲ`. It
+# is signed: `Δʲ = ρaʲ·dq_tot_dtʲ` is a gain where the updraft's area is
+# negative. Under `TargetGain` the gain is withheld where the grid parent is
+# below zero, as the brackets withhold theirs, and a loss is kept. A partition
+# tag's part of the environment's rain-out is zero there already, since its
+# share is scaled by the grid shares' sum `S`, which is zero where the parent
+# is not positive. Where the parent is not negative this is `x`, bit for bit.
+@inline water_tag_split_change(::ParentGain, x, ρq_tot) = x
+@inline water_tag_split_change(::TargetGain, x, ρq_tot) =
+    ifelse(ρq_tot < zero(ρq_tot), min(x, zero(x)), x)
 
 """
     microphysics_gain_rule(atmos)
@@ -512,14 +534,14 @@ end
     attribute_tagged_ρq_tot!(Yₜ, Y, p, source::Symbol, rule = TargetGain())
 
 Close a bracket opened by [`snapshot_tagged_ρq_tot!`](@ref): add `M_k·G - φ_k·Δ⁻`
-to each tag's tendency for the increment `Δ = Yₜ.c.ρq_tot - snapshot` of the
-process `source`, with `M_k` the tag's mask and `φ_k` its donor share of the
-local water. `G = Δ⁺`, but a partition tag's is zero where `ρq_tot < 0` under
-`rule = TargetGain()`, the explicit brackets' rule (known issue 7, option C).
+to each tag's tendency for the process `source`'s increment
+`Δ = Yₜ.c.ρq_tot - snapshot`. `M_k` is the tag's mask, and `φ_k` its share of
+the partition's parent `N`, `ρq_tot` or under `water_tag_precipitation` the
+non-precipitating water. `G = Δ⁺`, or for a partition tag under
+`rule = TargetGain()` (the explicit brackets) zero where `N < 0`.
 
-Production reaches a tag only when it lists `source` (pure region tags take
-every source); loss reaches *every* tag. A no-op without water tags, or when
-`source` is not a water process.
+Production reaches a tag only if it lists `source`, or has a region and no
+source; loss reaches every tag. A no-op without water tags or water process.
 """
 attribute_tagged_ρq_tot!(Yₜ, Y, p, source::Symbol, rule = TargetGain()) =
     _attribute_tagged_ρq_tot!(Yₜ, Y, p, source, p.atmos.water_tagging_model, rule)
@@ -535,7 +557,8 @@ function _attribute_tagged_ρq_tot!(
     source in KNOWN_WATER_TAG_SOURCES || return nothing
     # Under 0M and prognostic EDMF the rain-out goes to the tags by each
     # subdomain's composition (`tagged_water_rainout.jl`).
-    splits_rainout(p, source) && return add_split_rainout!(Yₜ.c, Y, p, model)
+    splits_rainout(p, source) &&
+        return add_split_rainout!(Yₜ.c, Y, p, model, nothing, rule)
     (; ᶜwater_masks) = p.tagging
     ᶜρq_tot_snapshot = p.scratch.ᶜtagging_q_snapshot
     ᶜΔρq_tot = @. lazy(Yₜ.c.ρq_tot - ᶜρq_tot_snapshot)

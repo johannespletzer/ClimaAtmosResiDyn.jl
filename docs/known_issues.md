@@ -367,8 +367,13 @@ region tags gained water, but the target stayed zero.
     at each stage's state.
   - Under `water_tag_precipitation: true` it reads the non-precipitating
     water's sign.
-  - Unchanged: the implicit microphysics bracket, source tags, the copies,
-    and the moves between a tag's parts.
+  - The split 0M rain-out in copies mode, stepped explicitly, withholds the
+    partition's gain from the updraft's part where the grid parent is below
+    zero, and keeps its loss. In the default mode the split already gives
+    the partition nothing there.
+  - Unchanged: the implicit microphysics bracket, source tags, region tags
+    that list sources, the copies' own terms, and the moves between a tag's
+    parts.
   - No model field changes. The tags change only once the parent has gone
     below zero somewhere. The validation is registered in the record's
     `design/NEGATIVE_PARENT_WATER.md`, section 11.
