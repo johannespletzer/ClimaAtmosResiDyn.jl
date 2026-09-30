@@ -39,6 +39,7 @@ const KNOWN_TEST_GROUPS = (
     "tagging_water_leak",
     "tagging_water_precipitation",
     "tagging_water_precipitation_sphere",
+    "tagging_water_rainout_jacobian",
     "parameterizations",
     "restarts",
     "precompile",
@@ -78,6 +79,7 @@ if TEST_GROUP in ("infrastructure", "all")
     @safetestset "Tagged tracers" begin @time include("tagged_tracers_tests.jl") end
     @safetestset "Tagged water" begin @time include("tagged_water_tests.jl") end
     @safetestset "Tagged water with rain and snow parts" begin @time include("tagged_water_precipitation_tests.jl") end
+    @safetestset "Tagged water rain-out Jacobian" begin @time include("tagged_water_rainout_jacobian_tests.jl") end
     @safetestset "Energy source tags" begin @time include("energy_source_tags_tests.jl") end
     @safetestset "Process records" begin @time include("process_record_tests.jl") end
     @safetestset "Parent-budget packets" begin @time include("parent_budget/reduction_tests.jl") end
@@ -345,6 +347,12 @@ end
 if TEST_GROUP in ("tagging_water_precipitation_sphere", "all")
     @safetestset "Water tags with rain and snow parts on a sphere" begin
         @time include("tagged_water_precipitation_sphere_integration.jl")
+    end
+end
+
+if TEST_GROUP in ("tagging_water_rainout_jacobian", "all")
+    @safetestset "Tagged water rain-out Jacobian integration" begin
+        @time include("tagged_water_rainout_jacobian_integration.jl")
     end
 end
 

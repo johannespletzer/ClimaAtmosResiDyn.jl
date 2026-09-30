@@ -403,10 +403,9 @@ function edmfx_sgs_diffusive_flux_tendency!(
             # tracer the updraft does not carry is skipped, as on the
             # horizontal path below. The fork's grid-scale-only tracers are
             # such tracers: the water and energy tags, the energy source tags
-            # and the stratospheric passive tracers. The skip covers any
-            # tracer, as the horizontal path's does. Under EDMF every tracer
-            # upstream has on the grid has an updraft copy, so upstream's runs
-            # take the same path as before.
+            # and the stratospheric passive tracers. Under EDMF every tracer
+            # upstream has on the grid has an updraft copy, so the skip is
+            # never taken for upstream's tracers.
             if apply_sgs_updraft
                 χ_name = specific_tracer_name(ρχ_name)
                 for j in 1:n
@@ -421,7 +420,7 @@ function edmfx_sgs_diffusive_flux_tendency!(
         # The loop has diffused each water tag's whole value at `K_h + K_e`.
         # Under `water_tag_leak_correction` each tag takes back the `K_h`
         # diffusion of its share of the rain and snow, which the parent does
-        # not diffuse, and so does each copy (WP4c). A no-op otherwise.
+        # not diffuse, and so does each copy. A no-op otherwise.
         correct_water_tag_diffusion_leak!(Yₜ, Y, p, ᶠρK_h, apply_sgs_updraft)
 
         # Momentum diffusion

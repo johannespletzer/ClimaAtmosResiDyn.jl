@@ -1,46 +1,13 @@
 #####
 ##### Process-change records
 #####
-##### A process record answers a different question from a tag. A tag says what
-##### share of the energy or water present came from somewhere. A record says
-##### what one process did to it. Gains are positive and losses negative, so a
-##### record is a history and not a composition.
-#####
-##### Each recorded process gets one center prognostic field in `Y.c`, named
-##### `prc_e_<process>` for energy and `prc_q_<process>` for water. The
-##### `energy_process_record` and `water_process_record` config keys switch them
-##### on. The physics is written up in `docs/src/process_record.md`.
-#####
-##### Every bracketed process is wrapped in `snapshot_tags!` and
-##### `attribute_tags!`, which difference `Yₜ.c.ρe_tot` and `Yₜ.c.ρq_tot` across
-##### the block. That difference is a *rate*, so a record adds it to its own
-##### tendency and lets the timestepper integrate it, exactly as the tags do.
-##### Summing the rate directly would give a total that scales with the number
-##### of tendency evaluations and therefore with `dt`.
-#####
-##### Records are prognostic but not transported. The timestepper advances them
-##### and nothing else touches them: no advection, no limiter, no Jacobian block
-##### beyond the fallback identity. They accumulate from the start of the run
-##### and are carried through a restart, so the change over an interval is the
-##### difference of two outputs. `q_tag_fix_<name>` lives in the cache, and a
-##### checkpoint carries it separately (WP6, step 3).
-#####
-##### Both tendency paths are recorded. `snapshot_tags!` and `attribute_tags!`
-##### bracket the explicit path from `remaining_tendency.jl`, and
-##### `implicit_tendency.jl` brackets the records itself around the implicit
-##### microphysics sink and precipitation sedimentation. So `microphysics` is
-##### recorded however microphysics is stepped, and `precipitation` is recorded
-##### wherever sedimentation runs, which is never under 0-moment microphysics.
-#####
-##### That needed brackets and nothing else. A record's snapshot (`p.scratch`)
-##### and its destination (`Yₜ`) are both dual-converted. A record's increment
-##### does not depend on the record, so the identity block it falls back to in
-##### the Jacobian is right for its own row. It has no cross blocks, though.
-##### With one Newton iteration, a record takes its implicit increments at the
-##### stage's first guess, while `ρe_tot` also gets the Jacobian's coupling to
-##### other rows. Under 1M and 2M that coupling includes sedimentation, so the
-##### records and `ρe_tot` differ by a small linearised term. See
-##### `docs/src/process_record.md`.
+##### A record says what one process did, not where the energy or water present
+##### came from. Each recorded process is one center field in `Y.c`, named
+##### `prc_e_<process>` for energy and `prc_q_<process>` for water.
+##### The bracket around a process differences `Yₜ.c.ρe_tot` and `Yₜ.c.ρq_tot`,
+##### which gives a rate. A record adds that rate to its own tendency, and the
+##### timestepper integrates it. Records are prognostic but not transported, and
+##### they are carried through a restart. See `docs/src/process_record.md`.
 
 # ============================================================================
 # Names and state fields
