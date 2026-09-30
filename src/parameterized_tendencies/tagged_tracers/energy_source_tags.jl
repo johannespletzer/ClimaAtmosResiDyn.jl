@@ -2338,7 +2338,8 @@ units, energy per unit mass plus the offset `c`, per second:
 So `f` depends on the offset. A cooling flux leaves by share in M1, so it
 gives `f = 0`, and so does `disable_surface_flux_tendency`.
 
-Each supply is clipped at zero, so `0 ≤ f ≤ 1`. Here the clip can act.
+Each factor is clipped at zero, so a supply counts only where both its
+factors are positive, and `0 ≤ f ≤ 1`. Here the clip can act.
 `Ā + X` and `A⁰` are energies relative to the model's reference plus `c`. They
 are negative where the cell's energy is below `-c`, which a cold lowest cell
 can give with a small offset or none. Such a supply counts as none, so `f` is

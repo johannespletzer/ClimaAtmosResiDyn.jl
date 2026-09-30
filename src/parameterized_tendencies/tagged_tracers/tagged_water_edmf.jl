@@ -513,7 +513,8 @@ grid mean's composition, the copies' mirrors hold the cell at the shares
 (`water_tag_copies_surface_flux_tendency!`). Dew leaves by share, so it gives
 `f = 0`, and so does `disable_surface_flux_tendency`.
 
-Each supply is clipped at zero, so `0 ≤ f ≤ 1`. For water all four factors
+Each factor is clipped at zero, so a supply counts only where both its
+factors are positive, and `0 ≤ f ≤ 1`. For water all four factors
 are meant to be non-negative. The source is clipped at zero
 (`edmfx_sfc_mass_flux_source`), `e` is a rate, and `q_b` and `q⁰` are water
 contents. So the clip does nothing there. If a factor still comes out

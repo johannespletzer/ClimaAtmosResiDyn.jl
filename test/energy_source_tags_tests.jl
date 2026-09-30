@@ -3325,7 +3325,7 @@ end
         @test fraction(0, -1, 2, 1, -1) == 0
         @test fraction(-1, 1, -2, -1, 1) == 0
         # Finite and in [0, 1] everywhere on a grid of signs and magnitudes,
-        # overflow and underflow of the products included.
+        # in Float32 the products also overflow and underflow.
         values = FT.((-1e20, -2, -0.0, 0, 1e-30, 0.5, 3, 1e20))
         in_range = true
         for (Δ, r, b, e, x⁰) in Iterators.product(ntuple(_ -> values, 5)...)
