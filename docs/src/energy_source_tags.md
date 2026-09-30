@@ -1012,6 +1012,8 @@ ClimaAtmos.check_energy_source_checkpoint
 ClimaAtmos.sgs_mass_flux_of_energy_source_tags!
 ClimaAtmos.sgs_exchange_of_energy_source_tags!
 ClimaAtmos.energy_source_plume!
+ClimaAtmos.energy_plume_surface_fraction!
+ClimaAtmos.start_plume_at_surface!
 ClimaAtmos.has_energy_source_updraft_copies
 ClimaAtmos.energy_source_updraft_copy_variables
 ClimaAtmos.mirror_on_energy_source_copies!

@@ -3298,3 +3298,112 @@ end
     )
     @test CA.sedimenting_energy_source_tag_names(Y_dry) == ()
 end
+
+# W21's plume start in the lowest cell, at its edges (the owner's review of
+# #136). The fraction clips each supply at zero, so it stays in [0, 1] and
+# finite, and the start keeps the partition's sum.
+@testset "The plume's surface fraction and start at their edges" begin
+    CC = CA.ClimaCore
+    for FT in (Float32, Float64)
+        fraction(Δ, r, b, e, x⁰) =
+            CA._surface_supply_fraction(FT(Δ), FT(r), FT(b), FT(e), FT(x⁰))
+        @test fraction(1, 1, 2, 1, 1) isa FT
+        # All three supplies positive: the flux's part of their sum.
+        @test fraction(1, 1, 2, 1, 1) ≈ FT(1 / 4)
+        # A supply that is not positive counts as none. With the energy tags
+        # `Ā + X` or `A⁰` is negative where the cell's energy is below `-c`.
+        @test fraction(1, 1, -2, 1, 1) ≈ FT(1 / 2)
+        @test fraction(1, -1, 2, 1, 1) ≈ FT(1 / 2)
+        @test fraction(1, 1, 2, 1, -1) ≈ FT(1 / 3)
+        @test fraction(1, 1, 2, -1, 1) ≈ FT(1 / 3)
+        @test fraction(1, 1, -2, 1, -1) == 1
+        # Cooling or dew, and a flux of zero, as with the surface flux off.
+        @test fraction(-1, 1, 2, 1, 1) == 0
+        @test fraction(0, 1, 2, 1, 1) == 0
+        # Nothing supplied at all: zero, not `0 / 0`.
+        @test fraction(0, 0, 0, 0, 0) == 0
+        @test fraction(0, -1, 2, 1, -1) == 0
+        @test fraction(-1, 1, -2, -1, 1) == 0
+        # Finite and in [0, 1] everywhere on a grid of signs and magnitudes,
+        # overflow and underflow of the products included.
+        values = FT.((-1e20, -2, -0.0, 0, 1e-30, 0.5, 3, 1e20))
+        in_range = true
+        for (Δ, r, b, e, x⁰) in Iterators.product(ntuple(_ -> values, 5)...)
+            f = CA._surface_supply_fraction(Δ, r, b, e, x⁰)
+            in_range &= isfinite(f) && 0 <= f <= 1
+        end
+        @test in_range
+
+        # The start in the lowest cell, on a column of four cells: two region
+        # tags that partition it, a tag that receives the surface flux and one
+        # that does not.
+        space = CC.CommonSpaces.ColumnSpace(
+            FT;
+            z_min = 0,
+            z_max = 1500,
+            z_elem = 4,
+            staggering = CC.CommonSpaces.CellCenter(),
+        )
+        region(above) = CA.TanhAltitudeRegion(FT(750), FT(100), above)
+        tags = (
+            CA.EnergySourceTag{:tropo}(region(false)),
+            CA.EnergySourceTag{:strat}(region(true)),
+            CA.EnergySourceTag{:sfc}(nothing, :surface_flux),
+            CA.EnergySourceTag{:rad}(nothing, :radiation),
+        )
+        masks = CA._tag_masks(CC.Fields.coordinate_field(space), tags)
+        flags = CA._energy_partition_flags(tags)
+        mask = parent(masks.ρe_src_tropo)[1]
+        # The values by level, one column per tuple entry.
+        by_level(ᶜx) = reshape(parent(ᶜx), 4, :)
+        function start(ε̄_value, f)
+            ᶜε̄ = fill(FT.(ε̄_value), space)
+            ᶜε_start = similar(ᶜε̄)
+            CA.start_plume_at_surface!(
+                ᶜε_start,
+                ᶜε̄,
+                fill(FT(f), space),
+                masks,
+                tags,
+                flags,
+                CA._energy_source_copy_gain_weight,
+            )
+            # Above the lowest cell the start is the grid mean's.
+            @test by_level(ᶜε_start)[2:end, :] == by_level(ᶜε̄)[2:end, :]
+            return by_level(ᶜε_start)[1, :]
+        end
+        ε̄ = (3, 1, 0.5, 2)
+        edges = (
+            fraction(1, 1, 2, 1, 1),
+            fraction(1, 1, -2, 1, -1),
+            fraction(1, -1, 2, 1, 1),
+            fraction(-1, 1, 2, 1, 1),
+            fraction(0, 0, 0, 0, 0),
+        )
+        for f in edges
+            ε = start(ε̄, f)
+            shares = ε ./ (ε̄[1] + ε̄[2])
+            @test all(isfinite, shares)
+            # The partition's shares sum to one, and each start is the
+            # mixture of the grid mean's share and the surface flux's.
+            @test shares[1] + shares[2] ≈ 1 rtol = 4 * eps(FT)
+            @test shares[1] ≈ (1 - f) * FT(3 / 4) + f * mask rtol = 4 * eps(FT)
+            @test shares[3] ≈ (1 - f) * FT(1 / 8) + f rtol = 4 * eps(FT)
+            @test shares[4] ≈ (1 - f) * FT(1 / 2) rtol = 4 * eps(FT)
+        end
+        # Without the flux's part the start is the grid mean's, bit for bit.
+        @test start(ε̄, 0) == collect(FT.(ε̄))
+        # An empty partition starts empty, without `0 / 0`.
+        @test start((0, 0, 0.5, 2), 1) == FT[0, 0, 0, 0]
+
+        # `disable_surface_flux_tendency` gives `f = 0` in every cell.
+        ᶜf = fill(FT(0.5), space)
+        CA.energy_plume_surface_fraction!(
+            ᶜf,
+            (; c = (; ρ = ones(space))),
+            (; atmos = (; disable_surface_flux_tendency = true)),
+            FT(1e5),
+        )
+        @test all(iszero, parent(ᶜf))
+    end
+end

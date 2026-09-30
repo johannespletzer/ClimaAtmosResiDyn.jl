@@ -492,8 +492,12 @@ end
     water_plume_surface_fraction!(ᶜf, Y, p)
 
 Write into `ᶜf` the surface flux's part of the water the updraft's lowest cell
-takes in, `f = Δ⁺ / (r q_b + e q⁰ + Δ⁺)`, and zero above that cell. The cell
-takes in three supplies, per unit mass of updraft air and per second:
+takes in, and zero above that cell:
+
+    f = Δ⁺ / (max(r, 0) max(q_b, 0) + max(e, 0) max(q⁰, 0) + Δ⁺),
+
+and `f = 0` where the denominator is zero. The cell takes in three supplies,
+per unit mass of updraft air and per second:
 
   - the relaxation toward the buoyant surface value, `r q_b`, at the rate
     `r = mass_flux_source / max(ρaʲ, ρʲ a_min)`
@@ -507,8 +511,15 @@ Every loss there takes each tag by its share. So where the environment has the
 grid mean's composition, the copies' mirrors hold the cell at the shares
 `(1 - f) φ̄ᵢ + f gᵢ`, with `gᵢ` the fifth mirror's weight
 (`water_tag_copies_surface_flux_tendency!`). Dew leaves by share, so it gives
-`f = 0`, and so does `disable_surface_flux_tendency`. It reads the state and
-the precomputed quantities, and writes only `ᶜf`.
+`f = 0`, and so does `disable_surface_flux_tendency`.
+
+Each supply is clipped at zero, so `0 ≤ f ≤ 1`. For water all four factors
+are meant to be non-negative. The source is clipped at zero
+(`edmfx_sfc_mass_flux_source`), `e` is a rate, and `q_b` and `q⁰` are water
+contents. So the clip does nothing there. If a factor still comes out
+negative, as a slightly negative `q̄` could make `q_b`, that supply counts as
+none rather than as water taken away. It reads the state and the precomputed
+quantities, and writes only `ᶜf`.
 """
 function water_plume_surface_fraction!(ᶜf, Y, p)
     FT = eltype(Y.c.ρ)

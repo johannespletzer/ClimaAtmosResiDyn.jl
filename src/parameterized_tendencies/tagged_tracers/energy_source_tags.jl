@@ -2318,9 +2318,12 @@ end
     energy_plume_surface_fraction!(ᶜf, Y, p, c)
 
 Write into `ᶜf` the surface flux's part of the energy the updraft's lowest cell
-takes in, `f = Δ⁺ / (r (Ā + X) + e A⁰ + Δ⁺)`, and zero above that cell. The
-three supplies are in the tags' units, energy per unit mass plus the offset
-`c`, per second:
+takes in, and zero above that cell:
+
+    f = Δ⁺ / (max(r, 0) max(Ā + X, 0) + max(e, 0) max(A⁰, 0) + Δ⁺),
+
+and `f = 0` where the denominator is zero. The three supplies are in the tags'
+units, energy per unit mass plus the offset `c`, per second:
 
   - the relaxation toward the buoyant surface value at the rate
     `r = mass_flux_source / max(ρaʲ, ρʲ a_min)`. The copies' targets under M2
@@ -2333,8 +2336,16 @@ three supplies are in the tags' units, energy per unit mass plus the offset
     `surface_flux_tendency!` gives `mseʲ`. A specific increment carries no `c`.
 
 So `f` depends on the offset. A cooling flux leaves by share in M1, so it
-gives `f = 0`, and so does `disable_surface_flux_tendency`. It reads the
-state and the precomputed quantities, and writes only `ᶜf`.
+gives `f = 0`, and so does `disable_surface_flux_tendency`.
+
+Each supply is clipped at zero, so `0 ≤ f ≤ 1`. Here the clip can act.
+`Ā + X` and `A⁰` are energies relative to the model's reference plus `c`. They
+are negative where the cell's energy is below `-c`, which a cold lowest cell
+can give with a small offset or none. Such a supply counts as none, so `f` is
+the flux's part of the positive supplies. The start then differs from the
+copies' steady state, but its shares stay a mixture of the grid mean's and
+the flux's, and the partition's still sum to one. It reads the state and the
+precomputed quantities, and writes only `ᶜf`.
 """
 function energy_plume_surface_fraction!(ᶜf, Y, p, c)
     FT = eltype(Y.c.ρ)
@@ -2398,8 +2409,10 @@ end
 
 # The surface flux's part of the three supplies of the updraft's lowest cell:
 # the increment `Δ`, the relaxation at the rate `r` toward `b`, and
-# entrainment at the rate `e` of the environment's `x⁰`. Shared by the water
-# and the energy source tags.
+# entrainment at the rate `e` of the environment's `x⁰`. Each factor is
+# clipped at zero, so a negative supply counts as none, and the part is in
+# [0, 1]. It is zero where nothing is supplied, not `0 / 0`. Shared by the
+# water and the energy source tags.
 @inline function _surface_supply_fraction(Δ, r, b, e, x⁰)
     FT = typeof(Δ)
     gain = max(Δ, zero(FT))
