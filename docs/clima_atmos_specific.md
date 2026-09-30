@@ -314,10 +314,17 @@ The other workflows:
     adding a group does not edit `downgrade.yml` and does not start the matrix
     on a pull request.
   - **`Downstream`, ClimaCoupler's AMIP tests on 1.11.** It takes about an hour
-    without a cache, so it runs after a merge, not on each pull request. It
-    runs on `main` when `src/`, `ext/`, `config/`, `toml/` or `Project.toml`
-    changes, weekly (Monday 04:00 UTC), and on demand. A pull request runs it
-    only when it changes the workflow.
+    without a cache, so it runs weekly (Monday 04:00 UTC), on tags and on
+    demand, not after each merge, where it held a job slot for up to two
+    hours. A pull request runs it only when it changes the workflow.
+  - **`Invalidations`.** It runs when a pull request that changes `src/`,
+    `ext/` or `Project.toml` is not a draft. It builds the package twice
+    without a cache and reports a count, and is not a required check.
+  - **`Manifest compat`.** It runs on pull requests and on `main` when a
+    `Project.toml` or `Manifest-*.toml` changes, and weekly.
+  - **`Documentation`.** It builds on every pull request and deploys a
+    preview. Two previews pushed at the same time made one push fail; the
+    deploy now tries up to three times.
   - **Caches.** `ci`, `Documentation` and `Downgrade` keep depot caches under
     the paths in `DEPOT_CACHE_PATHS`. `ci` keeps one per check-bounds setting,
     Julia patch version and day, shared by all groups. The two settings build
