@@ -229,7 +229,7 @@ simulation(extra, job_id) =
     # only the manual cache has. The check builds the autodiff Jacobian of the
     # run's model, with its tags, and solves with it. It checks the solve's
     # path, not the increment. On this column the autodiff Jacobian does not
-    # write the entries of the blocks to `u₃`, at upstream's code too. They
+    # write the entries of the blocks to `u₃`, at upstream d331fe30 too. They
     # keep leftover memory, so the increment is not always finite, and the
     # column takes no finite step.
     @testset "The sparse autodiff Jacobian solves" begin
@@ -241,7 +241,7 @@ simulation(extra, job_id) =
         ΔY_auto = zero(Y_off)
         CA.invert_jacobian!(auto_alg, auto_cache, ΔY_auto, Y_off)
         @test any(!iszero, parent(ΔY_auto.c))
-        # The solve is upstream's: the matrix with its own solver.
+        # The solve is the call upstream makes: the matrix with its own solver.
         ΔY_direct = zero(Y_off)
         CA.LinearAlgebra.ldiv!(ΔY_direct, auto_cache.matrix, Y_off)
         @test isequal(parent(ΔY_auto.c), parent(ΔY_direct.c))
