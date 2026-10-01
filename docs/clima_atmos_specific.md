@@ -73,10 +73,10 @@ A file under `src/parameterized_tendencies/` should not contain orchestration lo
 The `parent_budget` group holds the parent-budget tests that drive real
 simulations: `envelope_tests.jl`, `implicit_attribution_tests.jl`,
 `implicit_smagorinsky_tests.jl`, `explicit_attribution_tests.jl`,
-`transfer_tests.jl`, `restart_tests.jl` and `report_tests.jl` in
-`test/parent_budget/`. Each builds several `AtmosSimulation`s and compiles the
-tendency pipeline for each. They stay out of `infrastructure`, which runs the
-parent budget's state-free unit tests.
+`transfer_tests.jl`, `restart_tests.jl`, `report_tests.jl` and
+`vapor_constraint_tests.jl` in `test/parent_budget/`. Each builds several
+`AtmosSimulation`s and compiles the tendency pipeline for each. They stay out of
+`infrastructure`, which runs the parent budget's state-free unit tests.
 
 The `tagging_*` groups are split by tag set. A tag name is a type parameter, so each tag set recompiles the whole tendency and solve pipeline, which takes several minutes per simulation on Julia 1.11. The files share no compilation. Combined they would overrun the 90-minute time limit of a test job. Memory splits them too. A GitHub runner has 16 GB, and every model type a process compiles stays in its memory. An EDMF build holds about 12 to 14 GiB. A job that runs out is shut down and reads "The operation was canceled.", not a failed test. Keep new tagged-simulation tests here, and prefer reusing a tag set that another test in the same file already builds. A second simulation with an identical tag signature costs seconds instead of minutes.
 
