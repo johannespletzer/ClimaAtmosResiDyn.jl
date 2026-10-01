@@ -193,7 +193,8 @@ function run_case(label)
         L_sum = Float64(sum(Y.c.q_tag_exp_negative))
         acted = L_sum > L_before
         L_before = L_sum
-        n_sum = has_n ? Float64(sum(tagged.integrator.p.tagging.ᶜq_tag_negative_change)) : NaN
+        n_sum =
+            has_n ? Float64(sum(tagged.integrator.p.tagging.ᶜq_tag_negative_change)) : NaN
         if acted
             push!(acted_steps, step)
             push!(n_at_acted, n_sum)

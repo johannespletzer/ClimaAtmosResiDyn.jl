@@ -1108,6 +1108,7 @@ between the cell centres, with the end cells mirrored. On site 23 it gives
     date, and the text "proposed … waits for the owner" goes.
     `PROPOSED_RISE_GOES` becomes `RISE_GOES = 0.1`, with the comment "Set by
     the owner on 2026-09-30 (question 7), before any run".
+
  2. `cr_windows_score.py`, `score_rise`: after W2,
     `goes = R48 > 0 and R <= RISE_GOES * R48`, printed as "W5: R/R48 …, the
     rise goes if R <= 0.1 R48" through `verdict(f"W5 {a}-{b}", goes)`. W3's
@@ -1115,6 +1116,7 @@ between the cell centres, with the end cells mirrored. On site 23 it gives
     W48's fails W5 for that rise too. The exit clause becomes "It exits 1 if
     W0, W1, W2 or W5 fails or the data are missing", and the result line "W0
     to W2 and W5 pass".
+
  3. `cr_validate.py`, V3: `t*` per column in place of `ever_negative` per
     cell. `hus` comes from `cr_s26`, daily and 6-hourly, and from
     `cr_s26_untagged`, daily. The vertical axis is found by the NetCDF
@@ -1128,19 +1130,23 @@ between the cell centres, with the end cells mirrored. On site 23 it gives
     value in a column lies at an output time of at least `t* − 1e-6 s`. It
     fails if a value differs and there is no `t*`, or before it. The script
     prints `t*` and its source. The docstring's V3 line follows.
+
  4. `cr_validate.py`, V5: the two reported items above.
     `exp_negative_retained` a day, as `per_day` computes the others. The
     source tags' negative water from the daily `q_tag_evap`, `q_tag_fcg` and
     `rhoa`, with the cells' thickness rebuilt from the cell centres. Missing
     data are printed, not failed. The docstring's V5 list follows.
+
  5. `ic_miss_probe2.jl` (`:55-66`): `:q_tag_exp_negative` joins `LEDGERS`.
     That gives the reported column `ledger_q_tag_exp_negative_in_excess`,
     which `cr_windows_score.py` already prints with the other ledgers. No
     scored rule changes. The driver skips a ledger that the state lacks
     (`:332`).
+
  6. The three configs: the diagnostics above. The `_main` and `_untagged`
     configs stay: `main` has no such field, and the untagged runs have no
     tags.
+
  7. New synthetic checks, committed beside the scripts as
     `ic_miss_score2_synthetic.py` was. `cr_windows_score_synthetic.py`:
     `R = 0.05 R48` and `R = 0.1 R48` pass, `R = 0.15 R48` fails, and
@@ -1149,14 +1155,14 @@ between the cell centres, with the end cells mirrored. On site 23 it gives
     never negative, passes; a difference with no `t*` fails; a `t*` that only
     the ledger sets, with no negative `hus` and no event, lets a later
     difference pass.
+
  8. Before any run, both scripts run on W42's and W48's outputs in place of
     the new ones. Expected: `cr_validate.py` reproduces W42's numbers, and
     reports the audit's `exp_negative_retained` missing, without failing.
     `cr_windows_score.py` fails W1, W2 and W5 for every rise. The result goes
     into the Scoring paragraph above.
 
-    *Result, 2026-09-30.* Run with W42's runs (`ic_s{23,26}_{c,untagged,
-    before}`) standing in for `cr_s{23,26}{,_untagged,_main}`, and W48's probe
+    *Result, 2026-09-30.* Run with W42's runs (`ic_s{23,26}_{c,untagged, before}`) standing in for `cr_s{23,26}{,_untagged,_main}`, and W48's probe
     for `cr_probe_s23`, through links under
     `$SCRATCH/claude_work/crev_score_smoke`. `cr_validate.py` gives the same
     lines as before its change, apart from the added ones: V2 at site 23
