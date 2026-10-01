@@ -444,7 +444,7 @@ function _check_exchange_partition(
              or `inside: false`, or set `energy_source_tag_updraft_copy: true`, \
              whose copies need no partition."
     isempty(names) && error(
-        "The energy source tags exchange provenance at the updraft's mass \
+        "The energy source tags exchange composition at the updraft's mass \
         flux under `turbconv: prognostic_edmfx`, and a tag's share there is \
         its value over the sum of the region tags without sources. These \
         tags have none, so the exchange would do nothing. $advice",
@@ -455,7 +455,7 @@ function _check_exchange_partition(
     )
     deviation = maximum(abs.(mask_sum .- 1))
     deviation > 0.01 && error(
-        "The energy source tags exchange provenance at the updraft's mass \
+        "The energy source tags exchange composition at the updraft's mass \
         flux under `turbconv: prognostic_edmfx`, and a tag's share there is \
         its value over the sum of the region tags without sources. Their \
         masks sum to 1 only to within $deviation. Where they leave a gap, \
@@ -765,7 +765,7 @@ function _check_parent_positivity(Y, model)
     @warn(
         "$parent is non-positive over $(fraction * 100)% of the domain " *
         "volume at initialization. The energy source tags divide by it to get " *
-        "each tag's donor share, so the shares are undefined there and " *
+        "each tag's share, so the shares are undefined there and " *
         "`energy_source_fraction` returns zero rather than a meaningful " *
         "number. Moist total energy has no physical zero, so this usually " *
         "means the chosen thermodynamic or gravitational reference puts part " *

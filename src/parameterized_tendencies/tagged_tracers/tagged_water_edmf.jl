@@ -56,7 +56,7 @@ function _check_water_tag_exchange_partition(
              or `inside: false`, or set `water_tag_updraft_copy: true`, whose \
              copies need no partition."
     isempty(names) && error(
-        "The water tags exchange provenance at the updraft's mass flux under \
+        "The water tags exchange composition at the updraft's mass flux under \
         `turbconv: prognostic_edmfx`, and a tag's share there is its value \
         over the sum of the region tags without sources. These tags have \
         none, so the exchange would do nothing. $advice",
@@ -67,7 +67,7 @@ function _check_water_tag_exchange_partition(
     # together, rather than some while the others go on and wait for them.
     deviation = _collective_maximum(maximum(abs.(mask_sum .- 1)), first(masks))
     deviation > 0.01 && error(
-        "The water tags exchange provenance at the updraft's mass flux under \
+        "The water tags exchange composition at the updraft's mass flux under \
         `turbconv: prognostic_edmfx`, and a tag's share there is its value \
         over the sum of the region tags without sources. Their masks sum to 1 \
         only to within $deviation. Where they leave a gap, that sum is too \

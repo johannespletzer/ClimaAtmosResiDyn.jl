@@ -509,9 +509,9 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
                            "run and carried through a restart, so the " *
                            "change over an interval is the difference of two " *
                            "outputs, and a time average of this variable is " *
-                           "not meaningful. For a partition tag (a region, no " *
+                           "not meaningful. For a region tag (a region, no " *
                            "source), partition repair writes here whenever " *
-                           "transport has driven any partition tag negative, " *
+                           "transport has driven any region tag negative, " *
                            "even with no limiter configured. A source tag gets " *
                            "only the rescale that follows a limiter, " *
                            "nonnegativity constraint or prescribed flow " *
@@ -722,7 +722,7 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
             "gave the tags, or took from them, because the parent's negative " *
             "part changed: the tags partition max(ρq_tot, 0), whose column " *
             "total grows by the negative water a solve creates. Zero where " *
-            "the parent stays non-negative (known issue 7, option C). It " *
+            "the parent stays non-negative. It " *
             "also holds the positive part of a crossing whose gain the rule " *
             "withheld inside the solve, which the tags take in that cell." *
             (
@@ -774,8 +774,8 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
             comments = "The non-negative part of the parent's " *
                        "$(lowercase(title)) less the sum of the region " *
                        "tags' parts of it, per unit mass of moist air. The " *
-                       "parts partition that non-negative part (known issue " *
-                       "7, option C, per compartment). Only under " *
+                       "parts partition that non-negative part, per " *
+                       "compartment. Only under " *
                        "water_tag_precipitation: true.",
             compute! = (out, u, p, t) -> compute_q_tag_part_res!(
                 out,
@@ -805,7 +805,7 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
             comments = "The parent's negative water, min(ρq_tot, 0) / ρ. " *
                        "The region tags partition the non-negative part, " *
                        "max(ρq_tot, 0), so this is the remainder they leave, " *
-                       "beside q_tag_res (known issue 7, option C). Zero " *
+                       "beside q_tag_res. Zero " *
                        "wherever q_tot is not negative." *
                        (
                            precipitation ?

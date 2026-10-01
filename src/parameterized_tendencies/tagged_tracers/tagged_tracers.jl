@@ -817,26 +817,26 @@ all three. `energy_source_tags` and `water_tracers` both divide by the parent to
 get a share they then depend on. `energy_tracers` never divides by it at all.
 """
 function nonpositive_parent_note(family)
-    family == "energy_source" && return "Donor shares are undefined there, so \
+    family == "energy_source" && return "Each tag's share is undefined there, so \
         the loss half of the attribution rule does not run. For moist total \
         energy this usually means the chosen thermodynamic or gravitational \
         reference puts part of the domain below zero. An \
         `energy_source_tag_offset` large enough to lift the partitioned \
         total positive removes the region without moving that reference."
     family == "water" && return "Water tags take loss in proportion to what \
-        they hold, so their shares are undefined there and the tags of those \
-        cells carry no provenance. Nothing in the model keeps `ρq_tot` \
+        they hold, so their shares are undefined there, and there the tags \
+        say nothing about where the water came from. Nothing in the model keeps `ρq_tot` \
         non-negative: `tracer_nonnegativity_method` is off unless configured, \
         and transport alone can take a cell below zero. Those cells have their \
         tags emptied by `rescale_water_tags!` whenever a constraint clips the \
         parent. The partition's target is the parent's non-negative water, \
         so where the parent is negative the tags aim at zero and the negative \
-        water is reported apart, as `q_tag_negative` (known issue 7, option \
-        C). A large fraction is worth investigating as a sign that the run is \
-        under-resolved or the timestep too long."
-    return "This family applies the whole signed increment by mask and uses \
-        no donor share, so its attribution is unaffected. It does mean the \
-        closure denominator is degenerate where this happens."
+        water is reported apart, as `q_tag_negative`. A large fraction is \
+        worth investigating as a sign that the run is under-resolved or the \
+        timestep too long."
+    return "This family applies the whole signed tendency by mask and uses \
+        no share of what a tag holds, so its attribution is unaffected. It \
+        does mean the closure denominator is degenerate where this happens."
 end
 
 """

@@ -81,11 +81,11 @@ function check_restart_before_option_c(restart_file, Y, water_model)
     (isempty(found) || :q_tag_inc_negative in found) && return nothing
     error(
         "The restart file $restart_file holds the water tags' increment \
-        ledger without `q_tag_inc_negative`. It was written before known \
-        issue 7's option C (#116), and may be older still. Under option C \
-        the tags partition the parent's non-negative water, \
-        `max(ρq_tot, 0)`, and the follower keeps that ledger. The tags in the file partition `ρq_tot` itself. Restart \
-        from a checkpoint written by this version, or start a new run.",
+        ledger without `q_tag_inc_negative`. An older version wrote it, and its \
+        tags partition `ρq_tot` itself. The tags of this version partition the \
+        parent's non-negative water, `max(ρq_tot, 0)`, and the correction after \
+        each solve records the parent's negative part in `q_tag_inc_negative`. \
+        Restart from a checkpoint written by this version, or start a new run.",
     )
 end
 
@@ -288,7 +288,7 @@ function check_water_tag_checkpoint(restart_file, model, Y, context)
             defined as `$old_region`, with sources `$old_sources`. This run \
             defines it as `$(tag_region_text(tag.region))`, with sources \
             `$(energy_source_tag_sources_text(tag))`. The tag holds water by \
-            its old definition, so under a new one its provenance would mix \
+            its old definition, so under a new one its origin would mix \
             the two. Keep the definition, or start a new run.",
         )
     end

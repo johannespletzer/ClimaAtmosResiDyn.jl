@@ -22,7 +22,7 @@ t_end: "1days"
 # fix ledgers are in the default output.
 
 # Required with the tags. The tags partition `ρe_tot + c·ρ`, which this offset
-# makes positive everywhere, so the donor share is defined everywhere. The model
+# makes positive everywhere, so each tag's share is defined everywhere. The model
 # never sees it.
 energy_source_tag_offset: 110495.0
 energy_source_tags:
