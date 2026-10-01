@@ -2369,7 +2369,7 @@ function update_sgs_advection_jacobian!(matrix, Y, p, dtγ)
                     ᶜlateral_rate = @. lazy(
                         dtγ * ifelse(
                             ᶜ∂a∂z < 0,
-                            α_lat * ᶜ∂a∂z * ᶜρʲs.:(1) * ᶜwʲ /
+                            ᶜ∂a∂z * ᶜρʲs.:(1) * ᶜwʲ /
                             max(1 - ᶜa, eps(eltype(ᶜa))),
                             zero(ᶜ∂a∂z),
                         ),

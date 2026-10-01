@@ -454,7 +454,6 @@ function edmfx_sgs_vertical_advection_tendency!(
                     ᶜwʲ,
                     ᶜa,
                     ᶜρ⁰w⁰χ⁰,
-                    α_lat,
                     ᶜinv_ρ̂,
                     ᶠJ,
                 )
