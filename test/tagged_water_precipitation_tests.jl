@@ -31,6 +31,7 @@ What is tested here, without a simulation:
 using Test
 import Random
 import ClimaAtmos as CA
+import ClimaParams as CP
 import ClimaCore.MatrixFields: @name
 import CloudMicrophysics.BulkMicrophysicsTendencies as BMT
 
@@ -397,12 +398,41 @@ function microphysics_states(FT, n; seed = 1234)
     return (params, states)
 end
 
+# A 1-moment parameter set in which `w` matters. ClimaParams 1.2 sets both
+# `*_stratiform_scale` keys to 1, so Kessler1M's timescale and threshold do
+# not depend on `w`. A ten times longer stratiform timescale makes the rain
+# formation depend on it, as in upstream's microphysics_wrappers.jl test.
+function w_active_1m_params(FT)
+    toml_dict = CP.create_toml_dict(
+        FT;
+        override_file = Dict(
+            "rain_autoconversion_timescale_stratiform_scale" =>
+                Dict("value" => 10.0, "type" => "float"),
+        ),
+    )
+    params = CA.ClimaAtmosParameters(toml_dict)
+    return CA.Parameters.microphysics_1m_params(params)
+end
+
 @testset "The microphysics by gross flows" begin
     for FT in (Float32, Float64)
         (params, states) = microphysics_states(FT, 400)
-        mp = CA.Parameters.microphysics_1m_params(params)
+        mp = w_active_1m_params(FT)
         tps = CA.Parameters.thermodynamics_params(params)
         dt = FT(60)
+        # `w` reaches the reference: at rest and in an updraft it forms rain
+        # at different rates. Else the replay below could drop `w` unseen.
+        w_dependent = count(states) do s
+            rain(w) =
+                BMT.bulk_microphysics_tendencies(
+                    BMT.LinearizedAverage(),
+                    BMT.Microphysics1Moment(),
+                    mp, tps, s.ρ, s.T, w, s.q_tot, s.q_lcl, s.q_icl, s.q_rai,
+                    s.q_sno, dt, 1,
+                ).dq_rai_dt
+            rain(FT(0)) != rain(FT(5))
+        end
+        @test w_dependent > 10
         two_way = 0
         for s in states, nsub in (1, 3)
             reference = BMT.bulk_microphysics_tendencies(
