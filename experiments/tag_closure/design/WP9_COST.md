@@ -190,3 +190,80 @@ What changes, and nothing else:
 
 The budget proposal of section 5 is made from the rerun, and stays marked as
 waiting for the owner.
+
+## 8. Amendment of 2026-10-01: the P2/P3 profile
+
+Section 5's trigger fired in the exclusive rerun (`output/wp9_cost_excl/`).
+Allocation per step grows with `N`. Water under EDMF, default mode, takes
+264 KB per step at 2 tags and 5.1 MB at 32. Energy takes 1.9 MB and 14.6 MB.
+The local exponent of the added step time from 8 to 32 tags is 1.5 to 2.3.
+The owner approved the profile on 2026-10-01, at `43b01ca1`, the commit the
+trigger fired at. The step-time measure itself waits for its own amendment and
+rerun, after PR #139 and the vapour-row PR merge. This section does not change
+it.
+
+**Arms.** One job per arm, `--exclusive`, account `pn49go-c`, partition
+`hpda2_compute`. The model, Julia, depot, modules, single rank and thread, and
+the tags are section 4's. Points run in turn, each in its own process, with a
+90 min limit.
+
+| Arm                | Base config             | Mode    | Rain, snow | Points |
+|:------------------ |:----------------------- |:------- |:---------- |:------ |
+| `prof_water_edmf`  | `wp9_water_trmm0m_edmf` | default | no         | 2, 32  |
+| `prof_energy_edmf` | `wp9_energy_d4_edmf`    | default | n/a        | 2, 32  |
+| `prof_water_1m_on` | `wp9_water_1m_column`   | n/a     | yes        | 2, 8   |
+
+The first two are section 5's default mode. The third is the steepest growth
+in the rerun: 1.2 MB per step at 2 tags and 8.2 MB at 8, a ratio of 9.9 at 8.
+Its 32-tag point is left out, since its build alone took 45 min. No copies,
+ledgers or records: section 5 names the default mode.
+
+**Tool.** `analysis/wp9_profile_driver.jl`, through `runscripts/wp9_cost.sh`
+with `DRIVER_NAME=wp9_profile_driver.jl`, submitted by
+`PROFILE=1 runscripts/submit_wp9.sh`. Results go to
+`$SCRATCH/tag_closure/output/wp9_profile/<arm>/`. The driver builds the
+point exactly as the cost driver does, and takes its first step and its 10
+warm-up steps. Then it runs, in order:
+
+ 1. one timed block of 20 steps (time and bytes per step), and 20 steps that
+    count the allocations;
+ 2. a time profile (`Profile`, 1 ms sampling) over at least 20 steps and at
+    least 5 s;
+ 3. an allocation profile (`Profile.Allocs`) over 10 steps, at a sample rate
+    that records about 200,000 allocations, scaled back to bytes per step.
+
+Each sample and each allocation gets a phase: the outermost stack frame that
+names a stepper hook (`update_jacobian!`, `implicit_tendency!`,
+`remaining_tendency!`, `set_precomputed_quantities!`,
+`set_implicit_precomputed_quantities!`, the limiter, DSS, constraint and
+initialiser hooks, `ldiv!`), `callbacks`, or `other`. It also gets a frame,
+the innermost one in the model's `src/`. It is marked as tag code when a frame
+on its stack is in `src/parameterized_tendencies/tagged_tracers/`. The
+functions that P2 and P3 name, `_energy_source_share_norm!` and
+`is_energy_source_tag_name`, are counted whenever they are on the stack. The
+bytes of type `String` are counted too.
+
+**Outputs.** Per point: a summary CSV, time and allocation by phase, the top 80
+frames by time and by allocation, the P2/P3 functions, and the top 40 types.
+`analysis/wp9_profile_table.py` lays each arm's two points side by side, in
+`output/wp9_profile/table.md`.
+
+**How it is read.**
+
+  - Where the allocation growth comes from: the frames ranked by the growth in
+    bytes per step from the low to the high point, until they hold 80% of the
+    growth. Their phases say whether it is in the implicit or the explicit
+    tendency, the Jacobian or the cache. The same is done for time.
+  - A profile attributes cost to frames. It bounds where the cost is recorded,
+    not why it grows. The sampled shares have sampling error, and the table
+    prints the sample counts.
+  - P2 shows if `_energy_source_share_norm!` is on the stack in at least 5% of
+    the energy arm's time samples at either point. P3 shows if
+    `is_energy_source_tag_name` holds at least 5% of the bytes per step, or
+    `String` bytes grow with `N`, at either point of any arm. P3 was named
+    "under the audit". If that is the closure check, it is off here
+    (section 4), and a P3 that does not show here is not shown absent there.
+  - The profile's step time carries the sampler's overhead. The timed block,
+    taken before it, is the step time quoted. Both are one run per point.
+  - Nothing here sets a budget or changes model code. A fix to P2 or P3 is a
+    model change and needs the owner.

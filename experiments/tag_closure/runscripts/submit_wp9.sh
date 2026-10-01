@@ -43,6 +43,7 @@ TABLE=(
   "energy_copies energy copies 0 wp9_energy_d4_edmf 2,4,8,8:ledgers 64G 12:00:00"
   "energy_copies_32 energy copies 0 wp9_energy_d4_edmf 32 200G 05:00:00"
 )
+# The account is pn49go-c from 2026-10-01 (hpda-c before). ACCOUNT overrides it.
 # EXCLUSIVE=1 takes the whole node for each job, and sends the results to
 # output/wp9_cost_excl (design/WP9_COST.md, amendment of 2026-09-29).
 EXTRA=()
@@ -50,6 +51,18 @@ OUT_ROOT="${OUT_ROOT:-wp9_cost}"
 if [[ "${EXCLUSIVE:-0}" == 1 ]]; then
     EXTRA=(--exclusive)
     OUT_ROOT=wp9_cost_excl
+fi
+# PROFILE=1 submits the P2/P3 profile of design/WP9_COST.md section 8 instead:
+# its own arms, the profile driver, whole nodes, results in output/wp9_profile.
+if [[ "${PROFILE:-0}" == 1 ]]; then
+    TABLE=(
+      "prof_water_edmf water default 0 wp9_water_trmm0m_edmf 2,32 200G 03:00:00"
+      "prof_energy_edmf energy default 0 wp9_energy_d4_edmf 2,32 200G 04:00:00"
+      "prof_water_1m_on water default 1 wp9_water_1m_column 2,8 200G 03:00:00"
+    )
+    EXTRA=(--exclusive)
+    OUT_ROOT=wp9_profile
+    export DRIVER_NAME=wp9_profile_driver.jl BUILD_LIMIT="${BUILD_LIMIT:-90m}"
 fi
 export OUT_ROOT
 LOGS="${SCRATCH:?}/tag_closure/logs/${OUT_ROOT}"
@@ -60,7 +73,7 @@ for row in "${TABLE[@]}"; do
         [[ " ${ARMS[*]} " == *" ${arm} "* ]] || continue
     fi
     points="${points//,/ }"
-    cmd=(sbatch --parsable --account=hpda-c --partition=hpda2_compute --nodes=1 --ntasks=1
+    cmd=(sbatch --parsable --account="${ACCOUNT:-pn49go-c}" --partition=hpda2_compute --nodes=1 --ntasks=1
          --cpus-per-task=4 --mem="${mem}" ${EXTRA[@]+"${EXTRA[@]}"} --time="${time}" -J "wp9${EXTRA[@]+x}_${arm}"
          -o "${LOGS}/%x-%j.out" "${REC_TREE}/experiments/tag_closure/runscripts/wp9_cost.sh")
     if (( DRY )); then

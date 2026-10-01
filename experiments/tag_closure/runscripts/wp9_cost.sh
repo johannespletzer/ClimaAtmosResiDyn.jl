@@ -41,7 +41,8 @@ export MODEL_COMMIT="${RUN_SHA}"
     exit 1
 }
 CONFIG_FILE="${REC_TREE}/experiments/tag_closure/configs/${BASE}.yml"
-DRIVER="${REC_TREE}/experiments/tag_closure/analysis/wp9_cost_driver.jl"
+# DRIVER_NAME=wp9_profile_driver.jl runs the P2/P3 profile (design section 8).
+DRIVER="${REC_TREE}/experiments/tag_closure/analysis/${DRIVER_NAME:-wp9_cost_driver.jl}"
 [[ -f "${CONFIG_FILE}" ]] || { echo "ERROR: ${CONFIG_FILE} not found." >&2; exit 1; }
 [[ -f "${DRIVER}" ]] || { echo "ERROR: ${DRIVER} not found." >&2; exit 1; }
 
