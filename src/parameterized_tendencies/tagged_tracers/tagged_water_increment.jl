@@ -2,23 +2,18 @@
 ##### The water tags follow the parent's implicit increment
 #####
 ##### Under `water_tag_transport: increment` the tags take the parent's own
-##### increment of `ρq_tot` in each implicit stage. The parent advects `ρq_tot`
-##### vertically in the implicit step, and its sub-grid mass flux, diffusion and
-##### sedimentation have Jacobian blocks there. The tags' own implicit terms have
-##### fewer blocks, so with one Newton iteration they lag the parent's solve
-##### (FINDINGS W21, G3_PLAN 4.3). After each solve the partition's lag is moved
-##### to it as a vertical flux, as `correct_energy_source_increment!` does for
-##### the energy source tags. The tags' explicit vertical advection is skipped,
-##### because the parent's increment carries it.
+##### increment of `ρq_tot` in each implicit stage. The parent's Jacobian has
+##### more blocks than the tags' own, so with one Newton iteration the tags lag
+##### the parent's solve. After each solve the lag is moved to the partition as
+##### a vertical flux, as `correct_energy_source_increment!` does for the energy
+##### source tags. The tags' explicit vertical advection is skipped, because the
+##### parent's increment carries it.
 #####
-##### Under `water_tag_precipitation: true` the tags' `ρq_tag_<name>` fields
-##### follow the parent's increment of the water that is neither rain nor snow,
-##### `ρq_tot - ρq_rai - ρq_sno`. `ρq_tot` is advected implicitly with its rain
-##### and snow, and `ρq_rai` and `ρq_sno` explicitly. So the rain and snow parts
-##### keep their explicit advection and hand it back to the non-precipitating
-##### part (`water_tag_precip_advection!`), and they follow their own implicit
-##### terms, which are their species' by construction (the design note WP4b-D,
-##### section 6).
+##### Under `water_tag_precipitation: true` the `ρq_tag_<name>` fields follow
+##### the increment of `ρq_tot - ρq_rai - ρq_sno`. The rain and snow parts keep
+##### their explicit advection and hand it back to the non-precipitating part
+##### (`water_tag_precip_advection!`). They follow their own implicit terms,
+##### which are their species' by construction.
 
 # The names of the increment ledger, in the state's order.
 const WATER_TAG_LEDGER_NAMES =
@@ -41,12 +36,12 @@ and `(;)` otherwise:
   - `q_tag_inc_moved`: the water the correction has moved between levels, in
     kg/m³, since the start of the run. It is the part of the mismatch that sums
     to zero in each column: mostly the parent's vertical advection, which the
-    tags no longer take explicitly, and the column-neutral part of their lag
+    tags do not take explicitly, and the column-neutral part of their lag
     behind the parent's other implicit terms.
   - `q_tag_inc_negative`: the water the correction has given the tags, or
     taken from them, because the parent's negative part changed, in kg/m³,
-    since the start of the run (known issue 7, option C). The tags partition
-    the parent's non-negative water, `max(ρq_tot, 0)`. Where a solve takes a
+    since the start of the run. The tags partition the parent's non-negative
+    water, `max(ρq_tot, 0)`. Where a solve takes a
     cell below zero, that part grows by the negative water, and the column's
     total with it. That change is not a lag, so the tags take it, where the
     mismatch has its sign, by the cells' composition. Zero wherever the
@@ -122,7 +117,7 @@ _water_tag_increment_cache(Y, model) =
         ᶠq_tag_left_weight_integral = Fields.Field(eltype(Y.c.ρ), axes(Y.f)),
         q_tag_mismatch_total = zeros(axes(Fields.level(Y.f, half))),
         q_tag_left_weight_total = zeros(axes(Fields.level(Y.f, half))),
-        # The negative part's change and its spread (option C).
+        # The negative part's change and its spread.
         ᶜq_tag_negative_change = similar(Y.c.ρ),
         ᶜq_tag_negative_weight = similar(Y.c.ρ),
         ᶠq_tag_negative_weight_integral =
@@ -232,35 +227,35 @@ out in a cell is `M` times its weight over the column's. That total is at least
 """
     correct_water_tag_increment!(dY, U, p)
 
-After the Newton solve of an implicit stage, make the partition tags take the
-parent's increment of `ρq_tot`. `U` is the solved stage value, and `dY` already
-holds the parent's own post-solve correction, which the stepper adds as
-`dtγ·dY`.
+Make the partition tags take the parent's increment of `ρq_tot` after the
+Newton solve of an implicit stage.
+
+`U` is the solved stage value. `dY` already holds the parent's own post-solve
+correction, which the stepper adds as `dtγ·dY`. This is
+`correct_energy_source_increment!` for water, without the offset.
 
 In each cell, the mismatch `m` is the parent's increment of `ρq_tot` since the
-snapshot less the partition's. The part of `m` that changes a column's total,
-`M = ∫m`, cannot be moved within the column. It is left out of the tags,
-spread over the cells whose `m` has `M`'s sign in proportion to `m` there, and
-stays in `q_tag_res`. The
-rest integrates up the column to a face flux that is zero at both boundaries,
-whose divergence is that rest. Each tag takes the flux times its share in the
-cell the flux leaves, as with the default mode's sub-grid mass flux
-(`_sgs_water_tag_fluxes!`), and the flux is added to `dY` divided by `dtγ`.
-The partition's shares add up to one, so the partition then follows the
-parent's increment, up to the part left out. A tag that carries a source takes
-its own share of the flux. This is `correct_energy_source_increment!` for
-water, without the offset.
+snapshot less the partition's. Its column total, `M = ∫m`, cannot be moved
+within the column. It is left out of the tags and stays in `q_tag_res`. It is
+spread over the cells whose `m` has `M`'s sign, in proportion to `m` there.
 
-**The target** is the parent's non-negative water, `max(ρq_tot, 0)` (known
-issue 7, option C; [`water_tag_partition_target`](@ref)). Where a solve takes a
-cell below zero, the parent moves water that cell does not hold, and the
-target's column total grows by the negative water created. That part, the
-column total `N` of `-Δ min(ρq_tot, 0)`, is not a lag, so the tags take it:
-it goes to the cells whose mismatch has its sign, in proportion to it, and
-only where the partition holds water to give it a composition, each tag by its
-share there. It is recorded in `q_tag_inc_negative`. Where no cell can take it,
-it is left out with the rest. Where the parent stays non-negative, `N` is zero
-and every number here is what it was, bit for bit.
+The rest integrates up the column to a face flux that is zero at both
+boundaries. Each tag takes the flux times its share in the cell the flux leaves,
+as with the default mode's sub-grid mass flux (`_sgs_water_tag_fluxes!`). The
+flux is added to `dY` divided by `dtγ`. The partition's shares add up to one, so
+the partition follows the parent's increment, up to the part left out. A tag
+that carries a source takes its own share of the flux.
+
+**The target** is the parent's non-negative water, `max(ρq_tot, 0)`
+([`water_tag_partition_target`](@ref)). Where a solve takes a cell below zero,
+the parent moves water that the cell does not hold. The target's column total
+grows by the negative water created. That part is not a lag, so the tags take
+it. Its column total `N`, of `-Δ min(ρq_tot, 0)`, goes to the cells whose
+mismatch has its sign, in proportion to it. It goes only where the partition
+holds water to give it a composition, and each tag takes its share there. It is
+recorded in `q_tag_inc_negative`. Where no cell can take it, it is left out
+with the rest. Where the parent stays non-negative, `N` is zero and every
+number here is unchanged, bit for bit.
 
 A gain the rule withheld inside the solve, `δL`, the change of
 `q_tag_exp_negative`, reached the parent and not the partition. So `N` takes
@@ -268,9 +263,9 @@ it too, less `g`, its part beyond the cell's deficit at the stage's start and
 up to the target's rise. The partition takes `g` in that cell, by mask.
 
 Under `water_tag_precipitation: true` the `ρq_tag_<name>` fields partition the
-non-precipitating water, `ρq_tot - ρq_rai - ρq_sno` ([`water_tag_parent`](@ref)),
-and option C applies to that compartment. The target is its non-negative part,
-and `N` comes from its negative part. The shares switch to the partition's own
+non-precipitating water, `ρq_tot - ρq_rai - ρq_sno`
+([`water_tag_parent`](@ref)). The target is that water's non-negative part, and
+`N` comes from its negative part. The shares switch to the partition's own
 composition where that water is negative, not where `ρq_tot` is. The rain and
 snow parts follow their own implicit terms and take no part in this.
 
@@ -278,29 +273,29 @@ What it cannot do:
 
   - **Change a column's total**, apart from the negative part above. The flux
     vanishes at both boundaries, so each stage changes the partition's column
-    total by exactly its own implicit tendencies and `N`. A lag that changes the total, such as the linearized surface
-    outflow of sedimentation (FINDINGS W23 on the record branch), stays in the
-    net closure residual, and `q_tag_inc_left` records it.
+    total by exactly its own implicit tendencies and `N`. A lag that changes the
+    total, such as the linearized surface outflow of sedimentation, stays in
+    the net closure residual, and `q_tag_inc_left` records it.
   - **Say where that part arose.** The part left out, `M`, is spread over the
     cells whose mismatch has `M`'s sign, in proportion to it. That mismatch is
-    dominated by the parent's vertical advection, which the tags no longer
-    take, so the part left out lands where the advection is strong, not
+    dominated by the parent's vertical advection, which the tags do not take
+    explicitly. So the part left out lands where the advection is strong, not
     necessarily where the lag arose. The column totals of `q_tag_inc_left` are
-    exact; its profile is not a map of the lag. Where `N` is zero, no cell
+    exact. Its profile is not a map of the lag. Where `N` is zero, no cell
     leaves out or moves more than its own mismatch.
   - **Move water a partition does not hold.** The shares are normalized, so a
     donor cell sends the parent's whole flux whatever its partition holds. A
-    residual pinned in a cell stays there, and a draining cell's partition can
-    go negative while the parent does not; the partition repair then moves it.
+    residual pinned in a cell stays there. A draining cell's partition can go
+    negative while the parent does not, and the partition repair then moves it.
   - **Follow explicit processes, the copies, or a donor cell with an empty
     partition**, whose faces move nothing.
 
-Under `update_constrain_state_every: dss` the constraints run inside the
-window between the snapshot and the solve, so their changes to `ρq_tot` and
-the tags' repair enter `m` too.
+Under `update_constrain_state_every: dss` the constraints run inside the window
+between the snapshot and the solve. Their changes to `ρq_tot` and the tags'
+repair then enter `m` too.
 
-The part left out, the part given for the negative water and the part moved
-are added to the ledger, `q_tag_inc_left`, `q_tag_inc_negative` and
+The part left out, the part given for the negative water and the part moved are
+added to the ledger, `q_tag_inc_left`, `q_tag_inc_negative` and
 `q_tag_inc_moved` (see [`water_tag_increment_ledger_variables`](@ref)).
 """
 function correct_water_tag_increment!(dY, U, p)
@@ -325,9 +320,9 @@ function correct_water_tag_increment!(dY, U, p)
     _water_partition_sum!(ᶜm, U.c, dY.c, dtγ, model.tags)
     # The water the tags' `ρq_tag_<name>` fields partition after the stage:
     # `ρq_tot`, or under `water_tag_precipitation: true` its non-precipitating
-    # part. The partition's target is its non-negative part (known issue 7,
-    # option C, per compartment under the key). Where it is non-negative on
-    # both sides of the stage this is its increment, bit for bit.
+    # part. The partition's target is its non-negative part. Where it is
+    # non-negative on both sides of the stage, this is its increment, bit for
+    # bit.
     ᶜparent_new = _water_tag_parent_after(U.c, dY.c, dtγ, model)
     @. ᶜm =
         (
@@ -407,9 +402,9 @@ function correct_water_tag_increment!(dY, U, p)
     # is left out only where the mismatch has its sign, in proportion to it
     # there. Each cell then leaves out at most its own mismatch, with its
     # sign, and moves at most its own mismatch, so no cell's correction is
-    # larger than its mismatch (the owner's review of #102, point 4).
-    # Spreading `M` by `|m|` instead moved more than that where the signs
-    # differ. Where the parent is non-negative, `N` is zero and this is `M`.
+    # larger than its mismatch. Spreading `M` by `|m|` instead would move more
+    # than that where the signs differ. Where the parent is non-negative, `N`
+    # is zero and this is `M`.
     @. q_tag_mismatch_total -= q_tag_negative_total
     @. ᶜq_tag_left_weight =
         water_increment_left_weight(ᶜm, q_tag_mismatch_total)
@@ -471,8 +466,8 @@ function correct_water_tag_increment!(dY, U, p)
     )
     # Each tag's own ledger, where kept, takes the same flux and the same
     # share of the negative part, so it holds what the correction moved into
-    # or out of that tag (WP6, step 3). The same kernels write it, from a zero
-    # entry as the tag's is, so it is the tag's change bit for bit. They take
+    # or out of that tag. The same kernels write it, from a zero entry as the
+    # tag's is, so it is the tag's change bit for bit. They take
     # the same parent too, so under `water_tag_precipitation: true` the shares
     # divide by the non-precipitating water. Its absolute value per stage goes
     # to `attempted`.
@@ -544,7 +539,7 @@ function correct_water_tag_increment!(dY, U, p)
     )
     @. dY.c.q_tag_inc_negative += ᶜq_tag_negative_weight / dtγ
     # What this stage left out, gave and moved, in absolute value, whether or
-    # not the step keeps it (WP6, step 3).
+    # not the step keeps it.
     add_attempted!(p, Val(:q_tag_inc_left), ᶜq_tag_left_weight)
     add_attempted!(p, Val(:q_tag_inc_negative), ᶜq_tag_negative_weight)
     return nothing
@@ -583,7 +578,7 @@ _water_tag_parent_after(ᶜU, ᶜdY, dtγ, model) =
 # is negative, the share is the tag's clamped fraction of the partition's own
 # positive water, `ᶜpos`. The parent's shares are undefined there, and without
 # these a cell whose parent a solve took below zero could not give up the tags
-# it held (known issue 7, option C).
+# it held.
 function _water_tag_follower_share_field(ᶜY, ᶜnorm, ᶜpos, tag, ᶜparent)
     ᶜρq_tag = tag_field(ᶜY, tag)
     ᶜshare = _water_tag_share_field(ᶜY, ᶜnorm, tag, ᶜparent)
@@ -668,8 +663,8 @@ over the domain, a transfer counting once out and once in, and also over
 
 And, per state ledger of the water tags, what the accepted steps retained, what
 its writers attempted, and the events, with each tag's own ledgers against the
-tag's water, its absolute burden and `∫ρq_tot`, where kept (`tag_ledger_audit`,
-WP6 step 3). Collective, as `tag_audit` is.
+tag's water, its absolute burden and `∫ρq_tot`, where kept (`tag_ledger_audit`).
+Collective, as `tag_audit` is.
 """
 function water_tag_extra_audit(Y, p, model, scale)
     per_scale(x) = iszero(scale) ? zero(x) : x / scale
@@ -788,8 +783,8 @@ the same check decides them:
     would make the stepper refresh the implicit cache after each solve, which
     the model's constraints read, and so change the model's fields;
   - with 1M microphysics stepped explicitly, the tags' sedimentation cross
-    blocks (WP5b) let the tags follow the parent's surface outflow in the
-    solve; without them the lag changed the column's total (FINDINGS W23).
+    blocks let the tags follow the parent's surface outflow in the solve.
+    Without them the lag changes the column's total.
 
 Called when the integrator is built. A no-op for the default transport.
 """

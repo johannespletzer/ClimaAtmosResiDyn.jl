@@ -672,9 +672,8 @@ function default_diagnostics(
     # `register_*_diagnostics!` functions before this one runs (see
     # `setup_diagnostics_and_writers` in `simulation/AtmosSimulations.jl`).
     # Collect every configured family, then decide once whether anything was
-    # found. Returning early on a subset of the fields is how the process
-    # records came to be silently absent from the defaults: a run configured
-    # with records and no tags produced no tagging output at all.
+    # found. Do not return early on a subset of the fields. A run configured
+    # with process records and no tags would then get no tagging output at all.
     tag_diagnostics = String[]
     tagging_model = atmos_tagging.tagging_model
     if !isnothing(tagging_model)

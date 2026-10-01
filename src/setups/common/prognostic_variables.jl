@@ -96,12 +96,12 @@ function grid_scale_center_variables(physical_state, local_geometry, params, atm
             ρe_tot,
             atmos_model.energy_source_tagging_model,
         )...,
-        # The energy source tags' ledgers per mechanism (WP6).
         energy_source_mechanism_variables(
             ρe_tot,
             atmos_model.energy_source_tagging_model,
         )...,
-        # Each energy source tag's own ledgers, where kept (WP6, step 3).
+        # Each energy source tag's own ledgers, under
+        # `energy_source_tag_ledger_per_tag: true` only.
         energy_source_per_tag_ledger_variables(
             ρe_tot,
             atmos_model.energy_source_tagging_model,
@@ -131,22 +131,23 @@ function grid_scale_center_variables(physical_state, local_geometry, params, atm
             ρ * q_tot,
             atmos_model.water_tagging_model,
         )...,
-        # The water tags' ledgers per mechanism (WP6).
         water_tag_mechanism_variables(
             ρ * q_tot,
             atmos_model.water_tagging_model,
         )...,
-        # The diffusion leak correction's ledgers, where it is on (WP4c).
+        # The diffusion leak correction's ledgers, under
+        # `water_tag_leak_correction: true` only.
         water_tag_leak_mechanism_variables(
             ρ * q_tot,
             atmos_model.water_tagging_model,
         )...,
-        # Each water tag's own ledgers, where kept (WP6, step 3).
+        # Each water tag's own ledgers, under `water_tag_ledger_per_tag: true`
+        # only.
         water_tag_per_tag_ledger_variables(
             ρ * q_tot,
             atmos_model.water_tagging_model,
         )...,
-        # The records of the water tags' microphysics audit, under
+        # The fields of the water tags' microphysics audit, under
         # `water_tag_precipitation` only. No `ρ` prefix either.
         water_tag_precipitation_audit_variables(
             ρ * q_tot,

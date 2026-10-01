@@ -1,30 +1,15 @@
 #####
 ##### The rain and snow parts of the water tags
 #####
-##### Under `water_tag_precipitation: true` each water tag has three parts
-##### (design/RAIN_SNOW_TAGS.md on the record branch, WP4b). `ρq_tag_<name>`,
-##### called `N` here, holds the water that is neither rain nor snow: vapour,
-##### cloud liquid and cloud ice. `ρq_rtag_<name>`, `R`, holds rain, and
-##### `ρq_stag_<name>`, `S`, holds snow. Each part is a share of one compartment
-##### of the parent: `N` of `ρq_tot - ρq_rai - ρq_sno`, `R` of `ρq_rai` and `S` of
-##### `ρq_sno`. The tag's total water is the sum of its parts. It is derived for
-##### output.
-#####
-##### This is stage 1 of the note (its section 13): a 1-moment column without
-##### EDMF. The key is refused under EDMF and with updraft copies.
-#####
-##### What moves the parts:
-#####
-#####   - rain and snow sediment linearly in their part, by the parent species'
-#####     own operator and Jacobian block (`sediment_water_tags!`);
-#####   - `N` sediments its cloud by its share, as the tags do without the key;
-#####   - the microphysics moves water between the parts by its gross flows
-#####     (`water_tag_microphysics_change`), with an audit against the net-flow
-#####     rule;
-#####   - the limiters and constraints move each compartment's change between
-#####     its part and `N` (`rescale_water_tags!`);
-#####   - rain and snow take no vertical diffusion, hyperdiffusion or sponge,
-#####     and `N` takes those of the diffusing water `q_tot_eff`.
+##### Under `water_tag_precipitation: true` each water tag has three parts, and
+##### each part is a share of one compartment of the parent:
+#####   - `ρq_tag_<name>` (`N`): water that is neither rain nor snow, a share of
+#####     `ρq_tot - ρq_rai - ρq_sno`;
+#####   - `ρq_rtag_<name>` (`R`): rain, a share of `ρq_rai`;
+#####   - `ρq_stag_<name>` (`S`): snow, a share of `ρq_sno`.
+##### The tag's total water is the sum of its parts and is derived for output.
+##### The key needs 1-moment microphysics and is refused under EDMF and with
+##### updraft copies. How the parts move: docs/src/tagged_water_precipitation.md.
 
 # ============================================================================
 # The three parts
@@ -71,7 +56,7 @@ end
     return :(MatrixFields.FieldName($(QuoteNode(field_name))))
 end
 
-# The audit's state records of a tag (`water_tag_microphysics_audit`).
+# The audit fields of a tag (`water_tag_microphysics_audit`).
 @generated rain_audit_field(obj, ::WaterTag{name}) where {name} =
     :(obj.$(Symbol(:q_rtag_aud_, name)))
 @generated snow_audit_field(obj, ::WaterTag{name}) where {name} =
@@ -125,9 +110,8 @@ water_tag_parent(ᶜY, model) =
 
 What the partition's `part`s partition, lazily: the non-negative part of their
 compartment, [`water_tag_partition_target`](@ref) of
-[`water_tag_part_parent`](@ref). This is known issue 7's option C, applied per
-compartment. Where the compartment is not negative, it is the compartment
-itself, bit for bit.
+[`water_tag_part_parent`](@ref). Where the compartment is not negative, it is
+the compartment itself, bit for bit.
 """
 function water_tag_part_target(ᶜY, part)
     ᶜparent = water_tag_part_parent(ᶜY, part)
@@ -139,14 +123,13 @@ end
     water_partition_negative_part(ᶜY, model)
 
 What the region tags partition with all their parts, and the negative remainder
-they leave, lazily (known issue 7, option C). Without `water_tag_precipitation`
-they are `water_tag_partition_target(ρq_tot)` and
-`water_tag_negative_part(ρq_tot)`. With it, option C applies per compartment.
-The remainder is the sum of the three compartments' negative parts, and the
-target the sum of their non-negative parts. The two add up to `ρq_tot`, to
-rounding, and where no compartment is negative the target is `ρq_tot` itself,
-bit for bit. The
-closure check and `q_tag_res` compare the partition with the target, and
+they leave, lazily. Without `water_tag_precipitation` they are
+`water_tag_partition_target(ρq_tot)` and `water_tag_negative_part(ρq_tot)`.
+With it, the rule applies to each compartment separately. The remainder is the
+sum of the three compartments' negative parts, and the target the sum of their
+non-negative parts. The two add up to `ρq_tot`, to rounding. Where no
+compartment is negative the target is `ρq_tot` itself, bit for bit. The closure
+check and `q_tag_res` compare the partition with the target, and
 `q_tag_negative` reports the remainder.
 """
 water_partition_target(ᶜY, model) =
@@ -216,7 +199,7 @@ end
 """
     is_water_tag_audit_name(name)
 
-Whether `name`, a `Symbol`, is a state record of the microphysics audit,
+Whether `name`, a `Symbol`, is a state field of the microphysics audit,
 `q_rtag_aud_<name>` or `q_stag_aud_<name>`.
 """
 is_water_tag_audit_name(name::Symbol) =
@@ -241,7 +224,7 @@ water_tag_precip_part_state_names(model::WaterTaggingModel) =
     water_tag_audit_state_names(model)
 
 `Tuple` of the state-field `Symbol`s of the microphysics audit, the rain
-records and then the snow records, and `()` without the key.
+fields and then the snow fields, and `()` without the key.
 """
 water_tag_audit_state_names(::Nothing) = ()
 water_tag_audit_state_names(model::WaterTaggingModel) =
@@ -286,8 +269,8 @@ The water tags' state for a single grid point. Without the key it is
 `water_tagging_variables(ρq_tot, local_geometry, model)`. With it, each tag's
 non-precipitating part starts from `ρq_tot - ρq_rai - ρq_sno` and its rain and
 snow parts from `ρq_rai` and `ρq_sno`, each times the tag's mask. Each takes
-the non-negative part of its compartment, [`water_tag_partition_target`](@ref),
-as known issue 7's option C does per compartment. A tag with a `source` starts
+the non-negative part of its compartment,
+[`water_tag_partition_target`](@ref). A tag with a `source` starts
 at zero in every part. The non-precipitating parts come first, then the rain
 parts, then the snow parts.
 """
@@ -329,7 +312,7 @@ _part_variables(entry, ρq, coord, tags::Tuple) = merge(
 """
     water_tag_precipitation_audit_variables(value, model)
 
-The microphysics audit's state records for a single grid point, as zeros of the
+The microphysics audit's state fields for a single grid point, as zeros of the
 type of `value`: `q_rtag_aud_<name>` and `q_stag_aud_<name>` for each tag,
 under `water_tag_precipitation: true` only. See
 [`water_tag_microphysics_audit`](@ref).
@@ -656,9 +639,8 @@ net is the tendency's net, both to the rounding of the step's water over the
 step: the compiler may fuse a `muladd` in one and not in the other. A test
 holds them to that.
 
-This is the per-process decomposition that the design note's section 9 calls
-the gross flows. Each flow is later attributed with its donor's composition
-([`water_tag_microphysics_change`](@ref)).
+These are the gross flows. Each flow is later attributed with its donor's
+composition ([`water_tag_microphysics_change`](@ref)).
 """
 @inline function water_tag_1m_flows(
     mp,
@@ -878,8 +860,8 @@ no-op without the key, and while the cache is built, before `p.tagging` exists.
 The flows start at zero, so a tendency read before they are set moves the
 parts by the net-flow rule alone.
 
-It costs about as much as the microphysics itself (the design note, section
-9).
+It evaluates the microphysics rates again, so its cost is of the same order as
+the microphysics.
 """
 set_water_tag_microphysics_flows!(Y, p) = _set_water_tag_microphysics_flows!(
     Y,
@@ -1005,7 +987,7 @@ end
 """
     water_tag_net_flow_change(ΔN, ΔR, ΔS, φN, φR, φS, negN = false, negR = false, negS = false)
 
-The net-flow rule of the design note's section 9 for one tag. The parent's
+The net-flow rule for one tag. The parent's
 compartments change by `ΔN`, `ΔR` and `ΔS`, which sum to zero. A compartment
 that loses gives its own composition, and one that gains takes the losers'
 compositions weighted by their losses. Returns the tag's `(ΔN, ΔR, ΔS)`, which
@@ -1262,7 +1244,7 @@ end
 """
     water_tag_microphysics_audit(F, dq_rai_dt, dq_sno_dt, qN, qR, qS, Δt, φN, φR, φS, negN = false, negR = false, negS = false)
 
-The audit of the design note's section 12, for one tag: the net-flow rule's
+The audit for one tag: the net-flow rule's
 change of the tag's rain and snow parts, minus the change the model applies
 ([`water_tag_microphysics_change`](@ref)). Returns `(ΔR, ΔS)`. Both rules keep
 each tag's total, so the non-precipitating part's difference is minus their
@@ -1329,8 +1311,8 @@ Move each tag's water between its three parts as the 1-moment microphysics
 moves the parent's between its compartments: by the gross flows, each with its
 donor's composition over the step ([`water_tag_microphysics_change`](@ref)). The flows are
 frozen in `p.tagging.ᶜwater_mp_flows` with the model's own tendencies, and the
-shares are taken from `Y`. It also adds the audit's difference to the state
-records `q_rtag_aud_<name>` and `q_stag_aud_<name>`
+shares are taken from `Y`. It also adds the audit's difference to the audit
+fields `q_rtag_aud_<name>` and `q_stag_aud_<name>`
 ([`water_tag_microphysics_audit`](@ref)). Where a compartment of `Y` is
 negative, the transfers into it take the target's treatment, and the ledgers
 `q_tag_exp_negative` and `q_tag_exp_negative_precip` take what it keeps.
@@ -1632,7 +1614,7 @@ The water that a correction moves into the rain or snow part of a *partition*
 tag, and out of its non-precipitating part, when it changes the compartment
 from `before` to `after` at fixed `ρq_tot`. `pos_part` and `pos_nonprecip` are
 the sums of the partition's non-negative parts of each kind in the cell. The
-design note's section 8:
+rules are:
 
   - a compartment that decreases gives its own composition back to the
     non-precipitating parts, `Δ ρq_part⁺ / pos_part`, with `Δ` floored at
@@ -1643,10 +1625,9 @@ design note's section 8:
     emptied into the non-precipitating part.
 
 `Δ` is the change of the compartment's non-negative part,
-[`water_tag_partition_target`](@ref), which the parts partition (known issue
-7, option C, per compartment). So a compartment that was negative gives its
-parts only the water it now holds. Where `before` is not negative, `Δ` is
-`after - before`, bit for bit.
+[`water_tag_partition_target`](@ref), which the parts partition. So a
+compartment that was negative gives its parts only the water it now holds.
+Where `before` is not negative, `Δ` is `after - before`, bit for bit.
 
 What the floors leave out surfaces in the compartment's residual. Where a
 compartment crosses zero, `-Δ` is not the change of the non-precipitating
@@ -1769,17 +1750,17 @@ end
 # non-precipitating part, so the partition's non-precipitating sum changes by
 # `-S`, `S` the sum of the shifts. Its target changes by
 # `T(N_after) - T(N_before)`, with `T` the non-negative part. The two agree
-# where no compartment is negative. Where rain or snow crosses zero they do not:
-# a compartment's negative part changes, and the parts it partitions do not see
-# that change. For example, rain from -1e-4 to 2e-4 at fixed `ρq_tot` lowers `N`
-# by 3e-4, but moves only 2e-4 into the rain parts.
+# where no compartment is negative. Where rain or snow crosses zero they differ,
+# because the parts do not see a compartment's negative part. For example, rain
+# from -1e-4 to 2e-4 at fixed `ρq_tot` lowers `N` by 3e-4 but moves only 2e-4
+# into the rain parts.
 #
-# So, in the cells where `N` or the compartment is negative before or after,
-# the non-precipitating parts then take the rest,
-# `T(N_after) - (T(N_before) - S)`, by the rescale's rule: the partition by its
-# composition, floored at what it holds, and each source tag by its own share.
-# It goes to the same ledgers as the rescale. Elsewhere nothing more moves, and
-# the result is bit for bit that of the follow alone.
+# In cells where `N` or the compartment is negative before or after, the
+# non-precipitating parts then take the rest, `T(N_after) - (T(N_before) - S)`,
+# by the rescale's rule: the partition by its composition, floored at what it
+# holds, and each source tag by its own share. The rest goes to the same ledgers
+# as the rescale. Elsewhere nothing more moves, and the result is bit for bit
+# that of the follow alone.
 function _follow_water_tag_part!(
     ᶜY,
     ledger,
@@ -1887,7 +1868,6 @@ function _apply_part_follow!(
             ᶜpos_part,
             ᶜpos_nonprecip,
         )
-        # The partition's shifts, summed, for the rest in the caller.
         @. ᶜshift_sum += ᶜshift
     else
         @. ᶜshift = water_tag_source_part_follow_shift(
@@ -1955,7 +1935,7 @@ tag's non-precipitating part gives back, under `water_tag_precipitation: true`
 and `water_tag_transport: increment`. The non-precipitating parts follow the
 parent's implicit increment of its non-precipitating water, and `ρq_tot` is
 advected implicitly with its rain and snow. So each takes minus its own rain's
-and snow's explicit advection (the design note, section 6).
+and snow's explicit advection.
 """
 water_tag_moves_precip_advection(p, name) =
     has_water_tag_precipitation(p.atmos.water_tagging_model) &&
@@ -2004,7 +1984,7 @@ the tag's share of its compartment ([`water_tag_part_share`](@ref)) and
 `q_tot_r` the reference profile the parent's water is hyperdiffused against.
 The parent hyperdiffuses `q_tot_eff - q_tot_r`, and the partition's shares sum
 to one, so the partition's non-precipitating parts then move as the parent's
-diffusing water (the design note, section 3). Called after the tracer
+diffusing water. Called after the tracer
 Laplacians are computed, before their DSS. A no-op without the key.
 """
 function prep_water_tag_hyperdiffusion!(ᶜ∇²specific_tracers, Y, p)
@@ -2044,7 +2024,7 @@ and of its share of the cloud liquid and ice, at the bottom face. It is built
 as `set_precipitation_surface_fluxes!` builds the model's, from the level-1
 values, the terminal velocities and the extrapolated surface density, so the
 partition's fluxes sum to the model's wherever its rain and snow parts sum to
-`ρq_rai` and `ρq_sno` at level 1 (the design note, section 10). Upward
+`ρq_rai` and `ρq_sno` at level 1. Upward
 positive, as the model's. Uses `p.scratch.ᶜtemp_scalar` and the tags' share
 denominators.
 """
@@ -2098,10 +2078,10 @@ end
 """
     check_water_tag_precipitation_supported(microphysics_model, turbconv)
 
-Refuse `water_tag_precipitation: true` where its parts are not built yet: with
-microphysics other than 1-moment, whose rain and snow are the prognostic
-`ρq_rai` and `ρq_sno` the parts partition, and under EDMF, which is stage 2 of
-the design note. Updraft copies are refused where the model is built.
+Refuse `water_tag_precipitation: true` with microphysics other than 1-moment,
+whose rain and snow are the prognostic `ρq_rai` and `ρq_sno` the parts
+partition, and under EDMF. Updraft copies are refused where the model is
+built.
 """
 function check_water_tag_precipitation_supported(microphysics_model, turbconv)
     microphysics_model isa NonEquilibriumMicrophysics1M || error(

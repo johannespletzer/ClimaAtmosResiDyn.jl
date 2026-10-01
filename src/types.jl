@@ -2408,7 +2408,7 @@ struct IncrementWaterTagTransport <: AbstractWaterTagTransport end
     WaterTaggingModel(tags::Tuple; updraft_copies = false,
                       transport = TracerWaterTagTransport(),
                       ledger_per_tag = false, precipitation = false,
-                      leak_correction = false)
+                      leak_correction = false, rainout_jacobian = false)
 
 Model component holding a `Tuple` of [`WaterTag`](@ref)s. Constructed from the
 `water_tracers` config entry; see `AtmosTagging(::AtmosConfig)` in
@@ -2443,6 +2443,11 @@ and it is refused here with updraft copies. See
 vertical diffusion of its share of the rain and snow, which the parent does not
 diffuse, on the grid mean and on the copies (WP4c). Off by default. A type
 parameter too. See [`correct_water_tag_diffusion_leak!`](@ref).
+
+`rainout_jacobian`, from `water_tag_rainout_jacobian`, gives the tags' rows of
+the manual Jacobian the derivatives of their implicit 0M rain-out, in the tag
+and in `ρq_tot` (known issue 4). Off by default. A type parameter too. See
+`has_water_tag_rainout_jacobian`.
 """
 struct WaterTaggingModel{
     T <: Tuple,
@@ -2451,6 +2456,7 @@ struct WaterTaggingModel{
     LedgerPerTag,
     Precipitation,
     LeakCorrection,
+    RainoutJacobian,
 }
     tags::T
     transport::TR
@@ -2462,6 +2468,7 @@ function WaterTaggingModel(
     ledger_per_tag::Bool = false,
     precipitation::Bool = false,
     leak_correction::Bool = false,
+    rainout_jacobian::Bool = false,
 )
     # The copies of the rain and snow parts are stage 3 of the design note
     # (design/RAIN_SNOW_TAGS.md on the record branch, section 13). Their build
@@ -2495,6 +2502,7 @@ function WaterTaggingModel(
         ledger_per_tag,
         precipitation,
         leak_correction,
+        rainout_jacobian,
     }(
         tags,
         transport,
@@ -2558,6 +2566,20 @@ has_water_tag_leak_correction(::Nothing) = false
 has_water_tag_leak_correction(
     ::WaterTaggingModel{T, U, TR, L, P, LeakCorrection},
 ) where {T, U, TR, L, P, LeakCorrection} = LeakCorrection
+
+"""
+    has_water_tag_rainout_jacobian(model)
+
+Whether the tags' rows of the manual Jacobian carry the derivatives of their
+implicit 0M rain-out, from the `water_tag_rainout_jacobian` config key (known
+issue 4). The entries go in only where the tags lose water by the grid rule on
+the implicit path, and only with the split solver
+(`water_tag_rainout_jacobian_names`). `false` without water tags.
+"""
+has_water_tag_rainout_jacobian(::Nothing) = false
+has_water_tag_rainout_jacobian(
+    ::WaterTaggingModel{T, U, TR, L, P, LC, RainoutJacobian},
+) where {T, U, TR, L, P, LC, RainoutJacobian} = RainoutJacobian
 
 """
     EnergySourceTag{name}(region, source = :none)

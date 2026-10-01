@@ -311,6 +311,33 @@ transport leakage, and when `ρq_tot` is positive but negligible.
     ρq_tot > zero(ρq_tot) ?
     min(max(ρq_tag / ρq_tot, zero(ρq_tot)), one(ρq_tot)) : zero(ρq_tot)
 
+# Whether `water_tag_fraction` is the unclamped share `ρq_tag / ρq_tot`, so that
+# it moves with both. At the clamp's two ends it takes the unclamped slope.
+@inline _water_tag_fraction_unclamped(ρq_tag, ρq_tot) =
+    ρq_tot > zero(ρq_tot) && zero(ρq_tot) <= ρq_tag / ρq_tot <= one(ρq_tot)
+
+"""
+    water_tag_fraction_derivative_tag(ρq_tag, ρq_tot)
+
+The derivative of [`water_tag_fraction`](@ref) in `ρq_tag`: `1 / ρq_tot` where
+the unclamped share lies in `[0, 1]`. Where the clamp binds, or where there is
+no water, the share does not move, so it is zero. The implicit Jacobian's
+rain-out entries use it (`water_tag_rainout_jacobian`, known issue 4).
+"""
+@inline water_tag_fraction_derivative_tag(ρq_tag, ρq_tot) =
+    _water_tag_fraction_unclamped(ρq_tag, ρq_tot) ? inv(ρq_tot) : zero(ρq_tot)
+
+"""
+    water_tag_fraction_derivative_parent(ρq_tag, ρq_tot)
+
+The derivative of [`water_tag_fraction`](@ref) in `ρq_tot`: `−ρq_tag / ρq_tot²`
+where the unclamped share lies in `[0, 1]`, and zero elsewhere, as for
+`water_tag_fraction_derivative_tag`.
+"""
+@inline water_tag_fraction_derivative_parent(ρq_tag, ρq_tot) =
+    _water_tag_fraction_unclamped(ρq_tag, ρq_tot) ?
+    -(ρq_tag / ρq_tot) / ρq_tot : zero(ρq_tot)
+
 """
     water_tag_partition_target(ρq_tot)
     water_tag_negative_part(ρq_tot)

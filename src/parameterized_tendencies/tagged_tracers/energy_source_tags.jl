@@ -2142,8 +2142,9 @@ mix by mass,
 
 which is the steady updraft equation `wʲ ∂εʲ/∂z = (ε + ε_turb)(ε⁰ - εʲ)`, taken
 implicitly in `z`, with the environment `ε⁰` from the grid mean and the updraft.
-The plume starts in the lowest cell with the grid mean's composition, and
-starts again wherever the updraft is absent or does not rise. It assumes one
+The plume starts in the lowest cell with the updraft's surface energy
+(`energy_source_plume!`), and anew from the grid mean's composition
+wherever the updraft is absent or does not rise. It assumes one
 updraft, since the environment is the grid mean less that updraft. It is exact when
 the updraft adjusts faster than the shares change. The environment's shares
 follow from the grid mean and the updraft. Negative tags count as zero in every
@@ -2155,23 +2156,14 @@ one updraft, which `check_energy_source_tagging_supported` enforces.
 """
 function sgs_exchange_of_energy_source_tags!(Yₜ, Y, p, turbconv_model, model)
     (; edmfx_sgsflux_upwinding) = p.atmos.numerics
-    (; ᶠu³, ᶠu³ʲs, ᶜKʲs, ᶜρʲs, ᶜuʲs) = p.precomputed
+    (; ᶠu³, ᶠu³ʲs, ᶜKʲs, ᶜρʲs) = p.precomputed
     (; ᶜp, ᶠu³⁰, ᶜK⁰, ᶜT⁰, ᶜq_tot_nonneg⁰, ᶜq_liq⁰, ᶜq_ice⁰) = p.precomputed
-    (;
-        ᶜturb_entrʲs,
-        ᶜentr_vel_scaleʲs,
-        ᶜentr_nonvel_rateʲs,
-        ᶜarea_bounding_entr_detrʲs,
-    ) = p.precomputed
     (; dt) = p
-    FT = eltype(Y.c.ρ)
     thermo_params = CAP.thermodynamics_params(p.params)
     c = _mass_energy(model.offset)
     upwinding = _exchange_upwinding(edmfx_sgsflux_upwinding)
-    ᶜlg = Fields.local_geometry_field(Y.c)
-    ᶜJ = ᶜlg.J
+    ᶜJ = Fields.local_geometry_field(Y.c).J
     ᶠJ = Fields.local_geometry_field(Y.f).J
-    ᶜΔz = Fields.Δz_field(Y.c)
     ᶜρaʲ = Y.c.sgsʲs.:(1).ρa
     ᶜρʲ = ᶜρʲs.:(1)
     ᶜρa⁰ = @. lazy(ρa⁰(Y.c.ρ, Y.c.sgsʲs, turbconv_model))
@@ -2187,45 +2179,16 @@ function sgs_exchange_of_energy_source_tags!(Yₜ, Y, p, turbconv_model, model)
         ᶜq_liq⁰,
         ᶜq_ice⁰,
     )
-    ᶜentrʲ = @. lazy(
-        compute_entrainment(
-            ᶜentr_vel_scaleʲs.:(1),
-            ᶜentr_nonvel_rateʲs.:(1),
-            ᶜarea_bounding_entr_detrʲs.:(1),
-            get_physical_w(ᶜuʲs.:(1), ᶜlg),
-        ) + ᶜturb_entrʲs.:(1),
-    )
-    # The model advects an updraft tracer with the velocity at the face below
-    # each cell, so the plume marches with that one.
-    ᶠlg = Fields.local_geometry_field(Y.f)
-    ᶜwʲ = @. lazy(ᶜbottom_bias(get_physical_w(ᶠu³ʲs.:(1), ᶠlg)))
     flags = _energy_partition_flags(model.tags)
     updraft_differences = ShareDifferences(flags, false)
     environment_differences = ShareDifferences(flags, true)
-    # The grid mean's specific tag values, negative ones as zero. They are
-    # stored as one tuple per cell, so the tag fields are read once, and each
-    # tag's kernel below reads a few tuple fields rather than every tag.
+    # The grid mean's specific tag values, negative ones as zero, and the
+    # updraft's from the plume. They are stored as one tuple per cell, so the
+    # tag fields are read once, and each tag's kernel below reads a few tuple
+    # fields rather than every tag.
     ᶜε̄ = p.scratch.ᶜe_src_mean
-    set_nonnegative_specific!(ᶜε̄, Y.c, model.tags)
-
-    # The updraft's specific tag values, from the plume.
     ᶜεʲ = p.scratch.ᶜe_src_plume
-    ᶜplume_input = Base.Broadcast.broadcasted(
-        _plume_level,
-        ᶜε̄,
-        Y.c.ρ,
-        ᶜρaʲ,
-        ᶜρa⁰,
-        ᶜentrʲ,
-        ᶜwʲ,
-        ᶜΔz,
-    )
-    Operators.column_accumulate!(
-        _plume_step,
-        ᶜεʲ,
-        ᶜplume_input;
-        init = ntuple(_ -> FT(NaN), Val(length(model.tags))),
-    )
+    energy_source_plume!(ᶜεʲ, ᶜε̄, Y, p, turbconv_model, model)
 
     # Each subdomain's energy per unit mass, `e_tot + c`, with `e_tot = mse +
     # K - p/ρ`, and its area fraction and face density.
@@ -2272,6 +2235,278 @@ function sgs_exchange_of_energy_source_tags!(Yₜ, Y, p, turbconv_model, model)
     _exchange_energy_source_tags!(Yₜ.c, subdomains, dt, upwinding, model.tags, 1)
     return nothing
 end
+
+"""
+    energy_source_plume!(ᶜεʲ, ᶜε̄, Y, p, turbconv_model, model, ᶜε_start, ᶜf)
+
+Write the exchange's plume into `ᶜεʲ`: the updraft's specific tag values from
+the steady entraining plume of [`sgs_exchange_of_energy_source_tags!`](@ref).
+`ᶜε̄` gets the grid mean's specific tag values, negative ones as zero, which
+the plume mixes in. In the lowest cell it starts with the updraft's surface
+energy, as the copies' mirror M1 gives it (`energy_plume_surface_fraction!`,
+`start_plume_at_surface!`). `ᶜε_start` and `ᶜf` are scratch, the exchange's
+by default.
+"""
+function energy_source_plume!(
+    ᶜεʲ,
+    ᶜε̄,
+    Y,
+    p,
+    turbconv_model,
+    model,
+    ᶜε_start = p.scratch.ᶜe_src_environment,
+    ᶜf = p.scratch.ᶜe_src_room,
+)
+    (; ᶠu³ʲs, ᶜuʲs) = p.precomputed
+    (;
+        ᶜturb_entrʲs,
+        ᶜentr_vel_scaleʲs,
+        ᶜentr_nonvel_rateʲs,
+        ᶜarea_bounding_entr_detrʲs,
+    ) = p.precomputed
+    FT = eltype(Y.c.ρ)
+    ᶜlg = Fields.local_geometry_field(Y.c)
+    ᶜΔz = Fields.Δz_field(Y.c)
+    ᶜρaʲ = Y.c.sgsʲs.:(1).ρa
+    ᶜρa⁰ = @. lazy(ρa⁰(Y.c.ρ, Y.c.sgsʲs, turbconv_model))
+    ᶜentrʲ = @. lazy(
+        compute_entrainment(
+            ᶜentr_vel_scaleʲs.:(1),
+            ᶜentr_nonvel_rateʲs.:(1),
+            ᶜarea_bounding_entr_detrʲs.:(1),
+            get_physical_w(ᶜuʲs.:(1), ᶜlg),
+        ) + ᶜturb_entrʲs.:(1),
+    )
+    # The model advects an updraft tracer with the velocity at the face below
+    # each cell, so the plume marches with that one.
+    ᶠlg = Fields.local_geometry_field(Y.f)
+    ᶜwʲ = @. lazy(ᶜbottom_bias(get_physical_w(ᶠu³ʲs.:(1), ᶠlg)))
+    set_nonnegative_specific!(ᶜε̄, Y.c, model.tags)
+    # Where the plume starts: the grid mean's values, and in the lowest cell
+    # the surface flux's energy besides (W21's rule, which the owner extended
+    # to these tags on 2026-09-29).
+    energy_plume_surface_fraction!(ᶜf, Y, p, _mass_energy(model.offset))
+    start_plume_at_surface!(
+        ᶜε_start,
+        ᶜε̄,
+        ᶜf,
+        p.tagging.ᶜenergy_source_masks,
+        model.tags,
+        _energy_partition_flags(model.tags),
+        _energy_source_copy_gain_weight,
+    )
+    ᶜplume_input = Base.Broadcast.broadcasted(
+        _plume_level,
+        ᶜε_start,
+        Y.c.ρ,
+        ᶜρaʲ,
+        ᶜρa⁰,
+        ᶜentrʲ,
+        ᶜwʲ,
+        ᶜΔz,
+    )
+    Operators.column_accumulate!(
+        _plume_step,
+        ᶜεʲ,
+        ᶜplume_input;
+        init = ntuple(_ -> FT(NaN), Val(length(model.tags))),
+    )
+    return nothing
+end
+
+"""
+    energy_plume_surface_fraction!(ᶜf, Y, p, c)
+
+Write into `ᶜf` the surface flux's part of the energy the updraft's lowest cell
+takes in, and zero above that cell:
+
+    f = Δ⁺ / (max(r, 0) max(Ā + X, 0) + max(e, 0) max(A⁰, 0) + Δ⁺),
+
+and `f = 0` where the denominator is zero. The three supplies are in the tags'
+units, energy per unit mass plus the offset `c`, per second:
+
+  - the relaxation toward the buoyant surface value at the rate
+    `r = mass_flux_source / max(ρaʲ, ρʲ a_min)`. The copies' targets under M2
+    sum to `Ā + X`, with `Ā = ρe_tot / ρ + c` and `X = mse_b - mse̅`;
+  - entrainment at the plume's own rate `e`, of the environment's
+    `A⁰ = (E - ρaʲ Aʲ) / ρa⁰`, with `E = ρe_tot + c ρ` and
+    `Aʲ = mseʲ + Kʲ - p / ρʲ + c`, regularized as the model's environment
+    values are;
+  - the surface enthalpy flux, `Δ⁺ = max(Δʲ, 0)`, with `Δʲ` the increment
+    `surface_flux_tendency!` gives `mseʲ`. A specific increment carries no `c`.
+
+So `f` depends on the offset. A cooling flux leaves by share in M1, so it
+gives `f = 0`, and so does `disable_surface_flux_tendency`.
+
+Each factor is clipped at zero, so a supply counts only where both its
+factors are positive, and `0 ≤ f ≤ 1`. Here the clip can act.
+`Ā + X` and `A⁰` are energies relative to the model's reference plus `c`. They
+are negative where the cell's energy is below `-c`, which a cold lowest cell
+can give with a small offset or none. Such a supply counts as none, so `f` is
+the flux's part of the positive supplies. The start then differs from the
+copies' steady state, but its shares stay a mixture of the grid mean's and
+the flux's, and the partition's still sum to one. It reads the state and the
+precomputed quantities, and writes only `ᶜf`.
+"""
+function energy_plume_surface_fraction!(ᶜf, Y, p, c)
+    FT = eltype(Y.c.ρ)
+    if p.atmos.disable_surface_flux_tendency
+        @. ᶜf = zero(ᶜf)
+        return nothing
+    end
+    turbconv_model = p.atmos.turbconv_model
+    (; ᶜρʲs, ᶜKʲs, ᶜuʲs, ᶜturb_entrʲs, ᶜh_tot, ᶜK, ᶜp) = p.precomputed
+    (; ᶜentr_vel_scaleʲs, ᶜentr_nonvel_rateʲs, ᶜarea_bounding_entr_detrʲs) =
+        p.precomputed
+    (; sfc_mass_flux_sourceʲs, sfc_mse_buoyantʲs) = p.precomputed
+    a_min = FT(CAP.min_area(CAP.turbconv_params(p.params)))
+    # The surface flux's increment of `mseʲ`, from the flux and the operator
+    # the model and M1 use. It is zero above the lowest cell.
+    btt = boundary_tendency_scalar(
+        ᶜh_tot,
+        p.precomputed.sfc_conditions.ρ_flux_h_tot,
+    )
+    @. ᶜf = -specific(btt, ᶜρʲs.:(1))
+    # In the lowest cell, the increment's part of the three supplies.
+    level_values(field) = Fields.field_values(Fields.level(field, 1))
+    f = level_values(ᶜf)
+    ρ = level_values(Y.c.ρ)
+    ρe_tot = level_values(Y.c.ρe_tot)
+    ρʲ = level_values(ᶜρʲs.:(1))
+    ρaʲ = level_values(Y.c.sgsʲs.:(1).ρa)
+    mseʲ = level_values(Y.c.sgsʲs.:(1).mse)
+    Kʲ = level_values(ᶜKʲs.:(1))
+    pressure = level_values(ᶜp)
+    h_tot = level_values(ᶜh_tot)
+    K = level_values(ᶜK)
+    source = level_values(sfc_mass_flux_sourceʲs.:(1))
+    mse_b = level_values(sfc_mse_buoyantʲs.:(1))
+    velocity_scale = level_values(ᶜentr_vel_scaleʲs.:(1))
+    nonvelocity_rate = level_values(ᶜentr_nonvel_rateʲs.:(1))
+    area_rate = level_values(ᶜarea_bounding_entr_detrʲs.:(1))
+    turbulent_rate = level_values(ᶜturb_entrʲs.:(1))
+    uʲ = level_values(ᶜuʲs.:(1))
+    lg = level_values(Fields.local_geometry_field(Y.c))
+    @. f = _surface_supply_fraction(
+        f,
+        source / max(ρaʲ, ρʲ * a_min),
+        ρe_tot / ρ + c + (mse_b - (h_tot - K)),
+        compute_entrainment(
+            velocity_scale,
+            nonvelocity_rate,
+            area_rate,
+            get_physical_w(uʲ, lg),
+        ) + turbulent_rate,
+        specific(
+            ρe_tot + c * ρ - ρaʲ * (mseʲ + Kʲ - pressure / ρʲ + c),
+            ρ - ρaʲ,
+            ρe_tot + c * ρ,
+            ρ,
+            turbconv_model,
+        ),
+    )
+    return nothing
+end
+
+# The surface flux's part of the three supplies of the updraft's lowest cell:
+# the increment `Δ`, the relaxation at the rate `r` toward `b`, and
+# entrainment at the rate `e` of the environment's `x⁰`. Each factor is
+# clipped at zero, so a negative supply counts as none, and the part is in
+# [0, 1]. It is zero where nothing is supplied, not `0 / 0`. Shared by the
+# water and the energy source tags.
+@inline function _surface_supply_fraction(Δ, r, b, e, x⁰)
+    FT = typeof(Δ)
+    gain = max(Δ, zero(FT))
+    supply =
+        max(r, zero(FT)) * max(b, zero(FT)) +
+        max(e, zero(FT)) * max(x⁰, zero(FT)) +
+        gain
+    return supply > zero(FT) ? gain / supply : zero(FT)
+end
+
+"""
+    start_plume_at_surface!(ᶜε_start, ᶜε̄, ᶜf, ᶜmasks, tags, flags, gain_weight)
+
+Write where a plume starts into `ᶜε_start`: the grid mean's specific tag values
+`ᶜε̄` in every cell but the lowest. There each tag takes
+`(1 - f) ε̄ᵢ + f gᵢ Σ_P ε̄`, with `f` the surface flux's part of the cell's
+supplies and `Σ_P ε̄` the partition's sum. `gᵢ` is the surface-flux mirror's
+weight: `gain_weight(ᶜmasks, tag)` where the tag receives `surface_flux`, and
+zero where it does not. So the shares there are `(1 - f) φ̄ᵢ + f gᵢ` where the
+partition's masks sum to one. Shared by the water and the energy source tags.
+"""
+function start_plume_at_surface!(
+    ᶜε_start,
+    ᶜε̄,
+    ᶜf,
+    ᶜmasks,
+    tags,
+    flags,
+    gain_weight::G,
+) where {G}
+    # A copy of the whole column, so the plume reads one field of starts.
+    parent(ᶜε_start) .= parent(ᶜε̄)
+    level_values(field) = Fields.field_values(Fields.level(field, 1))
+    _start_plume_at_surface!(
+        ᶜε_start,
+        level_values(ᶜε̄),
+        level_values(ᶜf),
+        ᶜmasks,
+        flags,
+        gain_weight,
+        tags,
+        ntuple(Val, Val(length(tags))),
+    )
+    return nothing
+end
+_start_plume_at_surface!(ᶜε_start, ε̄, f, ᶜmasks, flags, gain_weight, ::Tuple{}, ::Tuple{}) =
+    nothing
+# The tags and their indices, as `Val`s, are walked together. `Val(i + 1)` made
+# in the recursion does not infer on Julia 1.10, and the call then boxes its
+# arguments (280 B on the EDMF column).
+function _start_plume_at_surface!(
+    ᶜε_start,
+    ε̄,
+    f,
+    ᶜmasks,
+    flags,
+    gain_weight::G,
+    tags::Tuple,
+    indices::Tuple,
+) where {G}
+    tag = first(tags)
+    index = first(indices)
+    εᵢ = Fields.field_values(Fields.level(getproperty(ᶜε_start, _val(index)), 1))
+    receives = tag_receives_source(tag, :surface_flux)
+    gain = _lowest_level_values(gain_weight(ᶜmasks, tag))
+    start = PlumeStartValue(index, flags)
+    @. εᵢ = start(ε̄, f, receives * gain)
+    return _start_plume_at_surface!(
+        ᶜε_start,
+        ε̄,
+        f,
+        ᶜmasks,
+        flags,
+        gain_weight,
+        Base.tail(tags),
+        Base.tail(indices),
+    )
+end
+_val(::Val{i}) where {i} = i
+_lowest_level_values(weight::Bool) = weight
+_lowest_level_values(ᶜweight::Fields.Field) =
+    Fields.field_values(Fields.level(ᶜweight, 1))
+
+# One tag's start in the lowest cell: its grid-mean value, less the surface
+# flux's part, plus that part of the partition's sum by the tag's weight. A
+# callable type, so that the tag's index and the partition travel in the type.
+# Passed as arguments, each `Val` is wrapped in a `Ref` that allocates, 16
+# bytes per tag and call on the EDMF column.
+struct PlumeStartValue{i, partition} end
+PlumeStartValue(::Val{i}, ::Val{partition}) where {i, partition} =
+    PlumeStartValue{i, partition}()
+@inline (::PlumeStartValue{i, partition})(ε̄, f, gain) where {i, partition} =
+    (1 - f) * ε̄[i] + f * gain * _partition_total(ε̄, partition)
 
 _exchange_energy_source_tags!(ᶜYₜ, subdomains, dt, upwinding, ::Tuple{}, i) =
     nothing

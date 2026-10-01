@@ -301,8 +301,8 @@ values are scaled so that the partition's sum is the updraft's own water,
 `sgsʲs.q_tot`. The shares stay what the mixing made them, and the next level
 mixes the right amounts. The updraft loses water by rain-out and sedimentation,
 and a plume without the rescale would weight the water it entrained low down too
-heavily. The plume starts in the lowest cell with the grid mean's composition,
-and again wherever the updraft is absent or does not rise.
+heavily. The plume starts in the lowest cell with the updraft's surface water,
+and anew from the grid mean's where the updraft does not rise.
 
 It needs one updraft and region tags that partition the domain, which
 `check_water_tracers_transport_supported` and
@@ -412,17 +412,25 @@ function water_exchange_inputs!(Y, p, turbconv_model, model)
 end
 
 """
-    water_tag_plume!(ᶜεʲ, ᶜε̄, Y, p, turbconv_model, model)
+    water_tag_plume!(ᶜεʲ, ᶜε̄, Y, p, turbconv_model, model, ᶜε_start, ᶜf)
 
 Write the default mode's plume into `ᶜεʲ`: the updraft's specific tag values
 from a steady entraining plume, rescaled at each level so that the partition
 holds `q_totʲ` (`WaterPlumeStep`). `ᶜε̄` gets the grid mean's specific tag
-values, negative ones as zero, which the plume mixes in. Both hold one tuple of
-the tags' values per cell. It reads only the state and the precomputed
-quantities, so [`start_water_tag_copies_from_plume!`](@ref) can call it with
-fields of its own.
+values, negative ones as zero, which the plume mixes in. It starts with the
+updraft's surface water (`start_water_plume!`). The scratch `ᶜε_start` and
+`ᶜf` default to the exchange's.
 """
-function water_tag_plume!(ᶜεʲ, ᶜε̄, Y, p, turbconv_model, model)
+function water_tag_plume!(
+    ᶜεʲ,
+    ᶜε̄,
+    Y,
+    p,
+    turbconv_model,
+    model,
+    ᶜε_start = p.scratch.ᶜq_tag_environment,
+    ᶜf = p.scratch.ᶜq_tag_room,
+)
     (; ᶠu³ʲs, ᶜuʲs) = p.precomputed
     (;
         ᶜturb_entrʲs,
@@ -452,12 +460,17 @@ function water_tag_plume!(ᶜεʲ, ᶜε̄, Y, p, turbconv_model, model)
     # The grid mean's specific tag values, negative ones as zero, one tuple per
     # cell, so each tag's kernel below reads a few tuple fields.
     set_nonnegative_specific!(ᶜε̄, Y.c, model.tags)
+    # Where the plume starts: the grid mean's values, and in the lowest cell
+    # the surface flux's water besides (W21, the owner's decision of
+    # 2026-09-28). The plume mixes in the grid mean's values above.
+    water_plume_surface_fraction!(ᶜf, Y, p)
+    start_water_plume!(ᶜε_start, ᶜε̄, ᶜf, p.tagging.ᶜwater_masks, model.tags)
 
     # The updraft's specific tag values, from the plume, rescaled at each level
     # to the updraft's water.
     ᶜplume_input = Base.Broadcast.broadcasted(
         _water_plume_level,
-        ᶜε̄,
+        ᶜε_start,
         ᶜq_totʲ,
         Y.c.ρ,
         ᶜρaʲ,
@@ -476,6 +489,108 @@ function water_tag_plume!(ᶜεʲ, ᶜε̄, Y, p, turbconv_model, model)
 end
 
 """
+    water_plume_surface_fraction!(ᶜf, Y, p)
+
+Write into `ᶜf` the surface flux's part of the water the updraft's lowest cell
+takes in, and zero above that cell:
+
+    f = Δ⁺ / (max(r, 0) max(q_b, 0) + max(e, 0) max(q⁰, 0) + Δ⁺),
+
+and `f = 0` where the denominator is zero. The cell takes in three supplies,
+per unit mass of updraft air and per second:
+
+  - the relaxation toward the buoyant surface value, `r q_b`, at the rate
+    `r = mass_flux_source / max(ρaʲ, ρʲ a_min)`
+    (`edmfx_boundary_condition_tendency!`);
+  - entrainment, `e q⁰`, at the plume's own rate `e`, with the environment's
+    water `q⁰` (`ᶜq_tot_nonneg⁰`);
+  - the surface moisture flux, `Δ⁺ = max(Δʲ, 0)`, with `Δʲ` the increment
+    `surface_flux_tendency!` gives `q_totʲ`.
+
+Every loss there takes each tag by its share. So where the environment has the
+grid mean's composition, the copies' mirrors hold the cell at the shares
+`(1 - f) φ̄ᵢ + f gᵢ`, with `gᵢ` the fifth mirror's weight
+(`water_tag_copies_surface_flux_tendency!`). Dew leaves by share, so it gives
+`f = 0`, and so does `disable_surface_flux_tendency`.
+
+Each factor is clipped at zero, so a supply counts only where both its
+factors are positive, and `0 ≤ f ≤ 1`. For water all four factors
+are meant to be non-negative. The source is clipped at zero
+(`edmfx_sfc_mass_flux_source`), `e` is a rate, and `q_b` and `q⁰` are water
+contents. So the clip does nothing there. If a factor still comes out
+negative, as a slightly negative `q̄` could make `q_b`, that supply counts as
+none rather than as water taken away. It reads the state and the precomputed
+quantities, and writes only `ᶜf`.
+"""
+function water_plume_surface_fraction!(ᶜf, Y, p)
+    FT = eltype(Y.c.ρ)
+    if p.atmos.disable_surface_flux_tendency
+        @. ᶜf = zero(ᶜf)
+        return nothing
+    end
+    (; ᶜρʲs, ᶜuʲs, ᶜturb_entrʲs, ᶜq_tot_nonneg⁰) = p.precomputed
+    (; ᶜentr_vel_scaleʲs, ᶜentr_nonvel_rateʲs, ᶜarea_bounding_entr_detrʲs) =
+        p.precomputed
+    (; sfc_mass_flux_sourceʲs, sfc_q_tot_buoyantʲs) = p.precomputed
+    a_min = FT(CAP.min_area(CAP.turbconv_params(p.params)))
+    # The surface flux's increment of `q_totʲ`, from the flux and the operator
+    # the model and the fifth mirror use. It is zero above the lowest cell.
+    ᶜq_tot = @. lazy(specific(Y.c.ρq_tot, Y.c.ρ))
+    btt = boundary_tendency_scalar(
+        ᶜq_tot,
+        p.precomputed.sfc_conditions.ρ_flux_q_tot,
+    )
+    @. ᶜf = -specific(btt, ᶜρʲs.:(1))
+    # In the lowest cell, the increment's part of the three supplies.
+    level_values(field) = Fields.field_values(Fields.level(field, 1))
+    f = level_values(ᶜf)
+    ρʲ = level_values(ᶜρʲs.:(1))
+    ρaʲ = level_values(Y.c.sgsʲs.:(1).ρa)
+    source = level_values(sfc_mass_flux_sourceʲs.:(1))
+    q_b = level_values(sfc_q_tot_buoyantʲs.:(1))
+    q⁰ = level_values(ᶜq_tot_nonneg⁰)
+    velocity_scale = level_values(ᶜentr_vel_scaleʲs.:(1))
+    nonvelocity_rate = level_values(ᶜentr_nonvel_rateʲs.:(1))
+    area_rate = level_values(ᶜarea_bounding_entr_detrʲs.:(1))
+    turbulent_rate = level_values(ᶜturb_entrʲs.:(1))
+    uʲ = level_values(ᶜuʲs.:(1))
+    lg = level_values(Fields.local_geometry_field(Y.c))
+    @. f = _surface_supply_fraction(
+        f,
+        source / max(ρaʲ, ρʲ * a_min),
+        q_b,
+        compute_entrainment(
+            velocity_scale,
+            nonvelocity_rate,
+            area_rate,
+            get_physical_w(uʲ, lg),
+        ) + turbulent_rate,
+        q⁰,
+    )
+    return nothing
+end
+
+"""
+    start_water_plume!(ᶜε_start, ᶜε̄, ᶜf, ᶜmasks, tags)
+
+Write where the default mode's plume starts into `ᶜε_start`
+(`start_plume_at_surface!`), with the fifth mirror's weight for the
+label `surface_flux`: the tag's mask if it receives the flux, one if it has no
+region, and zero if it does not receive it. The plume rescales the start to
+`q_totʲ`, which gives the shares `(1 - f) φ̄ᵢ + f gᵢ` where the partition's
+masks sum to one.
+"""
+start_water_plume!(ᶜε_start, ᶜε̄, ᶜf, ᶜmasks, tags) = start_plume_at_surface!(
+    ᶜε_start,
+    ᶜε̄,
+    ᶜf,
+    ᶜmasks,
+    tags,
+    _water_partition_flags(tags),
+    _surface_gain_weight,
+)
+
+"""
     start_water_tag_copies_from_plume!(Y, p)
 
 Set each updraft copy to the default mode's plume ([`water_tag_plume!`](@ref)),
@@ -483,9 +598,9 @@ not to `q_totʲ φ̄ᵢ`, the grid mean's composition, which the model starts th
 with. The comparison runs of G3_PLAN 6 call it once, after the simulation is
 built, so that a default run and its copies twin start from one updraft
 composition, and the first hour measures the dynamics, not a spin-up. The model
-never calls it. It allocates two fields. Where the updraft holds no water, or
-the partition nothing, the plume is left as mixed, and the copies' repair
-closes the partition at the first step. Errors without copies.
+never calls it; it allocates. Where the updraft holds no water, or the
+partition nothing, the plume is left as mixed, and the copies' repair closes
+the partition at the first step. Errors without copies.
 """
 function start_water_tag_copies_from_plume!(Y, p)
     model = p.atmos.water_tagging_model
@@ -498,7 +613,10 @@ function start_water_tag_copies_from_plume!(Y, p)
     tag_values() = Fields.Field(NTuple{length(model.tags), FT}, axes(Y.c))
     ᶜεʲ = tag_values()
     ᶜε̄ = tag_values()
-    water_tag_plume!(ᶜεʲ, ᶜε̄, Y, p, turbconv_model, model)
+    # The copies mode has no exchange scratch, so the start gets its own.
+    ᶜε_start = tag_values()
+    ᶜf = similar(Y.c.ρ)
+    water_tag_plume!(ᶜεʲ, ᶜε̄, Y, p, turbconv_model, model, ᶜε_start, ᶜf)
     _copies_from_plume!(Y.c.sgsʲs.:(1), ᶜεʲ, model.tags, 1)
     return nothing
 end

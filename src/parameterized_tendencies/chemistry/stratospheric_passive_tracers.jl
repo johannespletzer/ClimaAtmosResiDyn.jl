@@ -1,24 +1,13 @@
 ###
 ### Stratospheric passive tracers
 ###
-###
 ### Passive, chemically inert tracers. Each has one source, a constant
-### production rate inside a (latitude band × height band) region, and one
-### sink, removal below the model tropopause. Once a tracer's burden stops
-### drifting, source and sink balance and its residence time is
-###
-###     τ = M / S
-###
-### with `M` the global burden (kg) and `S` the global source rate (kg s⁻¹).
-### The tracer-budget callback measures both from the state, so `τ` stands on
-### its own without the prescribed production rate being read back correctly.
-###
-### The source regions are small, well-separated boxes that sample the domain
-### above the tropopause. Latitude bands run narrow from pole to pole, and
-### height bands sit shallow and stacked above the local tropopause. Keeping a
-### box small is what makes its residence time meaningful. A tracer emitted
-### over a deep layer or a wide latitude range reports an average over
-### conditions that can differ by years. The gaps between boxes are deliberate.
+### production rate inside one (latitude band × height band) box, and one sink,
+### removal below the model tropopause. Once a tracer's burden stops drifting,
+### its residence time is τ = M / S, with M the global burden (kg) and S the
+### global source rate (kg s⁻¹). The tracer-budget callback measures both from
+### the state. The boxes are small and leave gaps between them, so that each
+### residence time belongs to one place. See docs/src/passive_tracers.md.
 ###
 
 import ClimaComms
@@ -171,11 +160,10 @@ function StratosphericPassiveTracers(
     end
 
     # Boxes may overlap. The tracers are independent, so a point inside two of
-    # them simply feeds both, and each budget stays self-consistent. Nesting is
-    # deliberate in at least one case: a box spanning the whole domain, used as
-    # a bulk reference, encloses the sampled boxes. What is refused is two boxes
-    # with the same latitude *and* height range, which `stratospheric_tracer_symbols`
-    # rejects because they would claim the same name.
+    # them feeds both, and each budget stays self-consistent. A box spanning the
+    # whole domain, used as a bulk reference, encloses the sampled boxes. Two
+    # boxes with the same latitude and height range are refused, because
+    # `stratospheric_tracer_symbols` would give them the same name.
     names = stratospheric_tracer_symbols(boxes)
     n = length(boxes)
     return StratosphericPassiveTracers{
@@ -595,13 +583,11 @@ function stratospheric_tracer_budget(
 
         burden[tracer_index] = sum(ᶜρχ)
 
-        # Advection undershoots at the sharp box edges, so part of the burden
-        # can be negative mass. `stratospheric_tracer_loss` clamps, so the sink
-        # acts on positive mass alone. That negative part therefore lands in
-        # `burden` while staying out of `loss`. It biases `residence_time` low
-        # and holds `imbalance` off zero even in equilibrium. Reporting it keeps
-        # that visible, and `burden + negative_burden` is the positive mass the
-        # sink sees.
+        # Advection undershoots at the box edges, so part of the burden can be
+        # negative mass. `stratospheric_tracer_loss` clamps, so the sink acts on
+        # positive mass alone. The negative part is in `burden` but not in
+        # `loss`, which biases `residence_time` low. `negative_burden` reports
+        # it.
         @. ᶜwork = min(ᶜρχ, zero(ᶜρχ))
         negative_burden[tracer_index] = -sum(ᶜwork)
 

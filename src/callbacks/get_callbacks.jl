@@ -771,12 +771,13 @@ end
 Install the online closure checks of the three tag families.
 
 The families are checked separately, on their own cadence and against their own
-tolerance, where one is set, because their residuals are not comparable: the
-energy tags never receive implicit transport or EDMFX SGS mass fluxes, so theirs
-is legitimately the larger one. The energy source tags have no default
-tolerance, so by default their check only reports: their residual is normalized
-by a quantity whose zero is a convention, so it is not comparable across runs
-that use different energy references.
+tolerance, because their residuals are not comparable. The energy tags never
+receive implicit transport or EDMFX SGS mass fluxes, so their residual is
+legitimately the larger one. The energy source tags default to one tolerance per
+transport: 1.0 for `tracer`, 0.1 for `enthalpy` and 0.01 for
+`enthalpy_increment`. Their residual is normalized by a quantity whose zero is a
+convention, so it is not comparable across runs that use different energy
+references.
 
 Each block also carries a `void_above` level, above which the check warns once
 and marks its rows `closure_void` while the run goes on, also after a restart.
@@ -863,10 +864,10 @@ end
 tag_closure_callback(::Nothing, tagging_model; kwargs...) = ()
 
 # The per-step gross of the tags' state ledgers, after every step, where the
-# tags keep any (WP6). It reads the state and writes only its own cache. With
-# water tags, the same callback compares the parent's negative water with the
-# water check's `negative_water_void_above` (known issue 7). It comes before
-# the closure checks, so a row in the same step already sees the flag.
+# tags keep any. It reads the state and writes only its own cache. With water
+# tags, the same callback compares the parent's negative water with the water
+# check's `negative_water_void_above`. It comes before the closure checks, so a
+# row in the same step already sees the flag.
 tag_ledger_gross_callback(tagging, water_closure_check = nothing) =
     isempty(tag_state_ledger_names(tagging)) ? () :
     (
@@ -909,8 +910,8 @@ water_extra_audit(model) =
 
 # The energy source family's own audit columns, as a function of
 # `(Y, p, closure, t)`, or `nothing` without the tags: the family's audit, then
-# the residual report (G4.4). The report's forecast needs the previous check,
-# which the `Ref` keeps; a restart builds a new one.
+# the residual report. The report's forecast needs the previous check, which the
+# `Ref` keeps. A restart builds a new one.
 energy_source_extra_audit(::Nothing) = nothing
 function energy_source_extra_audit(model)
     previous = Ref{Any}(nothing)
@@ -920,9 +921,9 @@ function energy_source_extra_audit(model)
     )
 end
 
-# The energy source family's own closure columns, the offset's headroom (U9)
-# and the gross source throughput (G4.5), as a function of `(Y, p, closure)`,
-# or `nothing` without the tags.
+# The energy source family's own closure columns, the offset's headroom and the
+# gross source throughput, as a function of `(Y, p, closure)`, or `nothing`
+# without the tags.
 energy_source_extra_closure(::Nothing) = nothing
 energy_source_extra_closure(model) =
     (Y, p, closure) -> energy_source_closure_columns(Y, p, model, closure)
@@ -990,16 +991,16 @@ function tag_closure_callback(
     # so that a row due at the same time already has the reference.
     spin_up = get(check, :spin_up, nothing)
     reference = isnothing(spin_up) ? nothing : Ref{Any}(nothing)
-    # Past the void level every later row is marked `closure_void` (known
-    # issue 7). The flag lives in the cache, not here, so that a checkpoint
-    # carries it through a restart (`tag_closure_checkpoint.jl`).
+    # Past the void level every later row is marked `closure_void`. The flag
+    # lives in the cache, not here, so that a checkpoint carries it through a
+    # restart (`tag_closure_checkpoint.jl`).
     void_above = get(check, :void_above, nothing)
     family_key = Symbol(family)
     # The energy source tags' second warning level, against the throughput.
     throughput_tolerance = get(check, :throughput_tolerance, nothing)
     # The water check also reads the parent's negative water. Its flag lives in
     # the cache for the same reason. Its accumulator sits in the tags' step
-    # cache, beside their ledgers (WP6).
+    # cache, beside their ledgers.
     negative_water_void_above = get(check, :negative_water_void_above, nothing)
     negative_water(p) =
         reads_negative_water ?

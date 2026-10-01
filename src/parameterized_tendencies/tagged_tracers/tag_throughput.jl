@@ -1,14 +1,13 @@
 #####
-##### The gross throughput of the tags' cache ledgers (WP6)
+##### The gross throughput of the tags' cache ledgers
 #####
 ##### The cache ledgers `q_tag_fix_<name>`, `q_tag_upfix_<name>` and
-##### `e_src_fix_<name>` are signed and cumulative: a correction of `+x` and
-##### then `−x` reads zero, as does none at all. Beside each, a gross twin adds
-##### the absolute value of every change and a count adds one for every
-##### cell-event whose change exceeds rounding. Both record what was
-##### attempted: every call, including those inside a step that the stepper
-##### later discards (design/GROSS_ACCUMULATORS.md on the record branch,
-##### section 3.4).
+##### `e_src_fix_<name>` are signed and cumulative. A correction of `+x` and
+##### then `−x` reads zero, as does none at all.
+##### Beside each, a gross twin adds the absolute value of every change.
+##### A count adds one for every cell-event whose change exceeds rounding.
+##### Both record what was attempted: every call, including calls inside a
+##### step that the stepper later discards.
 #####
 ##### They are kept in Float64 whatever the model's float type. In Float32 a
 ##### sum of many small changes after a large one loses nearly all of them.
@@ -60,8 +59,8 @@ tag_throughput_fields(ᶜρ, tags::Tuple) = merge(
 
 The fields a correction writes for each tag: the signed ledger `fix`, its gross
 twin and its count, each a `NamedTuple` keyed like the state, and, where each
-tag keeps its own state ledger (WP6, step 3), `state`, a
-[`TagLedgerView`](@ref) of the state, or `nothing`.
+tag keeps its own state ledger, `state`, a [`TagLedgerView`](@ref) of the
+state, or `nothing`.
 """
 tag_ledger(fix, gross, count, state = nothing) = (; fix, gross, count, state)
 
@@ -108,13 +107,13 @@ function tag_event_total(fields)
 end
 
 #####
-##### The state ledgers per mechanism, and their gross per step (WP6, step 2)
+##### The state ledgers per mechanism, and their gross per step
 #####
 ##### Each correction also adds, per application, the water or energy it moved
-##### over the partition's tags to a state field of its own. The stepper then
+##### over the partition's tags to a state field of its own. The stepper
 ##### weights that field as it weights the tags, so it holds what the steps
-##### retained. A read-only callback adds `|L − L_prev|` per step, the retained
-##### gross. design/GROSS_ACCUMULATORS.md, sections 3.1, 3.2 and 9.
+##### retained. A read-only callback adds `|L − L_prev|` per step. That sum is
+##### the retained gross.
 
 """
     WATER_TAG_MECHANISM_NAMES
@@ -139,7 +138,7 @@ const WATER_TAG_ALL_MECHANISM_NAMES =
 """
     WATER_TAG_LEAK_MECHANISM_NAMES
 
-The water tags' state ledgers of the diffusion leak's correction (WP4c), under
+The water tags' state ledgers of the diffusion leak's correction, under
 `water_tag_leak_correction: true` only: `q_tag_led_leaknet`, the partition's
 correction, the net of what it gave the partition's tags.
 `WATER_TAG_COPY_LEAK_MECHANISM_NAMES` adds the copies', `q_tag_led_upleaknet`,
@@ -250,11 +249,10 @@ is_tag_mechanism_ledger_name(name::Symbol) =
     tag_state_ledger_names(atmos)
 
 Every state ledger of the tags that the per-step gross follows: the ledgers per
-mechanism, the leak correction's (WP4c), the increment corrections' ledgers,
-the water tags' ledgers of the withheld gain, and each tag's own ledgers where
-the tags keep them (step 3), of both families. The ledgers of the withheld
-gain are a tendency's, as the leak correction's are, so they have no
-`attempted` total.
+mechanism, the leak correction's, the increment corrections' ledgers, the
+water tags' ledgers of the withheld gain, and each tag's own ledgers where the
+tags keep them, of both families. The ledgers of the withheld gain are a
+tendency's, as the leak correction's are, so they have no `attempted` total.
 """
 tag_state_ledger_names(atmos) = (
     water_tag_mechanism_names(atmos.water_tagging_model)...,
@@ -282,7 +280,7 @@ the sum over the steps of `|L − L_prev|`; `colgross`, the sum over the steps o
 the change exceeded rounding against the cell's total (`tag_event`). `ᶜdiff`
 and `coldiff` are scratch. `(;)` without state ledgers.
 
-Beside them (step 3): `attempted`, per ledger that a kernel or the increment
+Beside them: `attempted`, per ledger that a kernel or the increment
 correction writes, the sum over every call of the absolute value of what that
 call added, including calls on stage values that the stepper discards;
 `before`, per ledger per mechanism, the ledger kept before a call; and
@@ -345,13 +343,13 @@ function tag_ledger_step_cache(Y, atmos)
 end
 
 #####
-##### The parent's negative water, over time (known issue 7)
+##### The parent's negative water, over time
 #####
 ##### The water closure check writes the parent's negative water at its rows
-##### only. So after every accepted step this accumulator adds it up, and
+##### only. After every accepted step this accumulator adds it up.
 ##### `check_negative_water_step!` compares it with the check's level. A
-##### negative excursion between two rows is then counted, and it sets the
-##### flag if it passes the level.
+##### negative excursion between two rows is counted, and it sets the flag if
+##### it passes the level.
 
 """
     negative_water_accumulator_cache(Y, water_tagging_model)
@@ -423,10 +421,9 @@ end
 """
     check_negative_water_step!(integrator, void_above)
 
-The tag-closure contract's row "Parent validity: negative water" at the end of
-every accepted step (the owner's decision on #118's review). Above
-`void_above` of `∫ρq_tot`, a run's water results are not scored, whether or
-not a row of the water closure check sees it.
+Compare the parent's negative water with `void_above` at the end of every
+accepted step. Above `void_above` of `∫ρq_tot`, a run's water results are not
+scored, whether or not a row of the water closure check sees it.
 
 It takes [`negative_water_step_relative`](@ref) of the step's end state. Where
 that passes `void_above`, it sets the water check's flag in
@@ -558,14 +555,14 @@ function accumulate_tag_ledger_gross!(
         _energy_ledger_total(Y, atmos.energy_source_tagging_model),
         Val(keys(ledgers)),
     )
-    # The parent's negative water, from the step's end state (known issue 7).
-    # It is weighted by the length of the step just accepted. ClimaTimeSteppers'
-    # `__step!` (0.10.6 to 1.0.1) sets `integrator.dt` to
-    # `min(_dt, first(tstops) - t)` before it steps, moves `t` by that, and
-    # only then runs the callbacks. So here `integrator.dt` is that step,
-    # shortened where it met a stop. ClimaAtmos keeps time as `ITime`, whose
-    # sum is exact, so `t` moved by exactly `dt`. `tagged_water_integration.jl`
-    # checks the accumulator against the elapsed times over shortened steps.
+    # The parent's negative water, from the step's end state. It is weighted
+    # by the length of the step just accepted. ClimaTimeSteppers' `__step!`
+    # (0.10.6 to 1.0.1) sets `integrator.dt` to `min(_dt, first(tstops) - t)`
+    # before it steps, moves `t` by that, and only then runs the callbacks.
+    # So `integrator.dt` is that step, shortened where it met a stop.
+    # ClimaAtmos keeps time as `ITime`, whose sum is exact, so `t` moved by
+    # exactly `dt`. `tagged_water_integration.jl` checks the accumulator
+    # against the elapsed times over shortened steps.
     isnothing(negative_water) || accumulate_negative_water!(
         negative_water,
         Y.c.ρq_tot,
@@ -582,15 +579,14 @@ _water_ledger_total(Y, ::Nothing) = nothing
 _water_ledger_total(Y, model) = Y.c.ρq_tot
 _energy_ledger_total(Y, ::Nothing) = nothing
 _energy_ledger_total(Y, model) = _energy_source_parent_field(Y, model.offset)
-# The names are type parameters, and each field is named by a literal, so the
+# The names are type parameters and each field is named by a literal. So the
 # ledgers' part of the callback needs no run-time symbol and allocates nothing
-# on a column. The one call that has allocated, about 200 bytes, in some
-# measurements is ClimaCore's `column_integral_definite!`, which the model's
-# surface precipitation calls every step too. The check of the parent's
-# negative water, where the water check has a level, does allocate: ClimaCore's
-# `sum` wraps each global sum in a one-element array for the allreduce. That is
-# 48 bytes a sum on Julia 1.11 and 288 on Julia 1.10, measured on a column, with
-# one sum on a clean parent and two after a step with negative water.
+# on a column. The exception is ClimaCore's `column_integral_definite!`, which
+# the model's surface precipitation calls every step too. The check of the
+# parent's negative water allocates where the water check has a level.
+# ClimaCore's `sum` wraps each global sum in a one-element array for the
+# allreduce. The check takes one sum on a clean parent and two after a step
+# with negative water.
 @generated function _accumulate_ledger_gross!(
     Y,
     ledgers,
@@ -625,11 +621,9 @@ end
                                 config_key)
 
 Compare the ledgers per mechanism in the restored state `Y` with `expected`, as
-`check_restart_fields` does. A checkpoint written before these ledgers holds
-none of them. It is refused with its own message, since the ledgers would
-otherwise start at zero partway through the run. Whether to start them at zero
-with a warning instead is the owner's decision (design/GROSS_ACCUMULATORS.md,
-section 8).
+`check_restart_fields` does. A checkpoint with none of these ledgers is refused
+with its own message, since the ledgers would otherwise start at zero partway
+through the run.
 """
 function check_tag_mechanism_ledgers(
     restart_file,
@@ -663,10 +657,9 @@ function check_tag_mechanism_ledgers(
 end
 
 #####
-##### Step 3 (WP6): each tag's own ledgers, what was attempted beside what the
-##### steps retained, the audit's report per ledger, and the accumulators
-##### carried through a restart. design/GROSS_ACCUMULATORS.md on the record
-##### branch, section 10.
+##### Each tag's own ledgers: what was attempted beside what the steps
+##### retained, the audit's report per ledger, and the accumulators carried
+##### through a restart
 #####
 
 """
@@ -677,9 +670,9 @@ A view of a state or tendency `obj`, such as `Y.c` or `Yₜ.c`, whose
 tag: `q_tag_led_<Kind>_<name>` for a water tag and `e_src_led_<Kind>_<name>` for
 an energy source tag. `Kind` is `:fix`, for the limiters' rescale and the
 repair, `:inc`, for the increment correction, or, for water tags only, `:leak`
-and `:upleak`, for the diffusion leak's correction of the tag and of its copies
-(WP4c). A kernel that changes the tags writes the same change into it, so each
-ledger follows its tag's correction.
+and `:upleak`, for the diffusion leak's correction of the tag and of its copies.
+A kernel that changes the tags writes the same change into it, so each ledger
+follows its tag's correction.
 """
 struct TagLedgerView{Kind, O}
     obj::O
@@ -721,13 +714,19 @@ _tag_type_name(::Type{<:EnergySourceTag{name}}) where {name} = name
     water_tag_per_tag_ledger_names(model)
 
 Each water tag's own state ledgers, in state order, under
-`water_tag_ledger_per_tag: true`, and `()` otherwise: `q_tag_led_fix_<name>`
-for every tag, what the limiters' rescale and the partition repair changed it
-by; under `water_tag_transport: increment`, `q_tag_led_inc_<name>`, what
-the follower moved into or out of it; and under `water_tag_leak_correction: true`, `q_tag_led_leak_<name>`, what the diffusion leak's correction gave it,
-and with copies `q_tag_led_upleak_<name>`, what it gave its copies, times `ρaʲ`
-(WP4c). Their names carry no `ρ` prefix, so no transport operator sees them,
-and the tag names `led_*` are reserved.
+`water_tag_ledger_per_tag: true`, and `()` otherwise:
+
+  - `q_tag_led_fix_<name>` for every tag: what the limiters' rescale and the
+    partition repair changed it by.
+  - `q_tag_led_inc_<name>` under `water_tag_transport: increment`: what the
+    follower moved into or out of it.
+  - `q_tag_led_leak_<name>` under `water_tag_leak_correction: true`: what the
+    diffusion leak's correction gave it.
+  - `q_tag_led_upleak_<name>` under `water_tag_leak_correction: true` with
+    updraft copies: what the correction gave its copies, times `ρaʲ`.
+
+Their names carry no `ρ` prefix, so no transport operator sees them. The tag
+names `led_*` are reserved.
 """
 water_tag_ledger_fix_names(::Nothing) = ()
 water_tag_ledger_fix_names(model::WaterTaggingModel) =
@@ -766,12 +765,13 @@ Each energy source tag's own state ledgers, in state order, under
 `energy_source_tag_transport: enthalpy_increment`, `e_src_led_inc_<name>`, what
 the correction after each solve moved into or out of it; and
 `e_src_led_src_<name>` for every tag, what the sources' brackets
-(`attribute_energy_source_tags!`) put into it or took out of it. The last one's
-per-step gross is OD4's scale (`energy_source_throughput`).
+(`attribute_energy_source_tags!`) put into it or took out of it. The per-step
+gross of the last one is the sources' gross throughput
+(`energy_source_throughput`).
 
 The source ledgers end with `e_src_led_src_res`, the residual's own: what the
 brackets did to `e_src_res`, the part of the total the partition's tags did
-not take (G4.4). It is the net residual source attribution. Only where the
+not take. It is the net residual source attribution. Only where the
 pure region tags' masks are a verified partition is its per-step gross the
 loss rule's flush of the residual. The tag name `res` is refused, so the name
 cannot collide with a tag's.
@@ -964,8 +964,8 @@ end
     TAG_LEDGER_SMALL_TAG_BOUND
 
 The small-tag bound for a tag's own ledgers, as a fraction of the family's
-parent scale: 2e-4, as in G3's small-tag rule. Below it a tag holds too little
-for a ratio to the tag to be read, and the audit reports that ratio as not
+parent scale: 2e-4. Below it a tag holds too little for a ratio to the tag to
+be read, and the audit reports that ratio as not
 applicable ([`tag_ledger_normalization`](@ref)).
 """
 const TAG_LEDGER_SMALL_TAG_BOUND = 2e-4
@@ -1039,7 +1039,7 @@ prefix. Over the domain, as `scale` is:
 
 With a tag's own ledgers, `ledger_parent_scale`: `parent_scale`, the family's
 parent scale, `∫ρq_tot` for the water tags and for the energy source tags
-`energy_source_ledger_parent_scale`, OD4's gross source throughput. And
+`energy_source_ledger_parent_scale`, the gross source throughput. And
 `ledger_cadence_step`: 1 at
 `update_constrain_state_every: step`, 0 otherwise. `(;)` without the ledger
 cache. Collective, as `sum` is.
@@ -1085,7 +1085,7 @@ function _tag_ledger_audit(steps, Y, prefix, scale, fix_gross, parent_scale)
         column!("$(short)_attempted_relative", per_scale(attempted))
         column!("$(short)_events", tag_event_total((ledger.ᶜevents,)))
         # The residual's source ledger belongs to no tag, so it has no
-        # inventory to set its gross against (G4.4).
+        # inventory to set its gross against.
         if is_tag_per_tag_ledger_name(name) &&
            name != ENERGY_SOURCE_RESIDUAL_LEDGER
             per_tag = true
@@ -1134,10 +1134,9 @@ end
 """
     energy_source_throughput(Y, p, model)
 
-OD4's scale (the owner, 2026-09-24 and 2026-09-25): the gross energy the
-sources put into the energy source tags, over the domain and since the start
-of the run. It is the sum over the partition's tags, the region tags without
-sources, of the per-step gross of each tag's source ledger,
+The gross energy the sources put into the energy source tags, over the domain
+and since the start of the run. It is the sum over the partition's tags, the
+region tags without sources, of the per-step gross of each tag's source ledger,
 `Σ_steps |Δ e_src_led_src_<name>|`, integrated. The partition's tags receive
 every source in full, gains by their masks and losses by their shares, so each
 unit of source energy counts once; the source tags overlay it and are left out.
@@ -1165,7 +1164,7 @@ end
 """
     tag_ledger_checkpoint_fields(tagging)
 
-The tags' accumulators a checkpoint carries (WP6, step 3), as a vector of
+The tags' accumulators a checkpoint carries, as a vector of
 `name => field`: the cache ledgers `ᶜwater_fix`, `ᶜwater_upfix` and
 `ᶜenergy_source_fix` with their gross twins and counts, and, per state ledger,
 the per-step gross, column gross, events and attempted. `ᶜprev` is not carried:
@@ -1208,8 +1207,8 @@ function tag_ledger_checkpoint_fields(tagging)
     return fields
 end
 
-# The negative water accumulator's fields in a checkpoint. A checkpoint written
-# before they were carried lacks only these, so a restart treats them apart
+# The negative water accumulator's fields in a checkpoint. A checkpoint may
+# lack only these, so a restart treats them apart
 # (`restore_tag_ledger_checkpoint!`).
 negative_water_checkpoint_fields(::Nothing) = Pair{String, Any}[]
 negative_water_checkpoint_fields(accumulator) = Pair{String, Any}[
@@ -1242,17 +1241,17 @@ carries anyway.
 
 The policy for a checkpoint without the accumulators:
 
-  - It holds none of them: it was written before they were carried. They start
-    at zero with a warning. The run then begins a new accumulator segment, and
-    their totals, the audit's `_retained`, `_attempted` and `_events` among
-    them, cover that segment only. They are not whole-run totals.
-  - It holds some but not all of them: it is refused. Another configuration of
-    the tags' ledgers wrote it.
+  - A checkpoint with none of them starts them at zero, with a warning. The
+    run then begins a new accumulator segment. Their totals, the audit's
+    `_retained`, `_attempted` and `_events` among them, cover that segment
+    only. They are not whole-run totals.
+  - A checkpoint with some but not all of them is refused. Another
+    configuration of the tags' ledgers wrote it.
 
-The parent's negative water accumulator came later than the others, so a checkpoint
-may lack only it. Then it starts at zero, with its own warning, and the
-audit's `negative_water_*` columns cover only this segment. The other
-accumulators are read as above.
+The parent's negative water accumulator is treated apart. A checkpoint without
+it starts it at zero, with its own warning, and the audit's `negative_water_*`
+columns cover only this segment. A checkpoint with only part of it is refused.
+The other accumulators are read as above.
 """
 function restore_tag_ledger_checkpoint!(tagging, restart_file, context)
     all_fields = tag_ledger_checkpoint_fields(tagging)
@@ -1296,8 +1295,8 @@ function restore_tag_ledger_checkpoint!(tagging, restart_file, context)
     return nothing
 end
 
-# Read the negative water accumulator's fields, or warn and keep the zeros where the
-# checkpoint has none of them. Some but not all is refused, as for the others.
+# Read the negative water accumulator's fields. Where the checkpoint has none of
+# them, warn and keep the zeros. Some but not all is refused, as for the others.
 function restore_negative_water_accumulator!(reader, fields, restart_file)
     isempty(fields) && return nothing
     present = map(((name, _),) -> haskey(reader.file, "fields/$name"), fields)

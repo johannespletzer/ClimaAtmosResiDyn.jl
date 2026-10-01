@@ -253,6 +253,82 @@ end
         end
     end
 
+    # 2b. W21's surface rule, which the owner extended to these tags on
+    # 2026-09-29: in the lowest cell the plume starts with the updraft's
+    # surface energy. Each tag starts at `(1 - f) ε̄ᵢ + f gᵢ Σ_P ε̄`, the copies'
+    # steady state there. `f` is the surface enthalpy flux's part of the cell's
+    # three supplies, in the tags' units, and `gᵢ` the surface flux's weight:
+    # a region tag's mask, and zero for `rad`, which does not receive it.
+    # `f` is rebuilt here from the model's own tendencies. The tags get set
+    # shares, so that every tag's start moves by about `f` of its value.
+    @testset "The plume starts with the updraft's surface energy" begin
+        lowest(ᶜx) = vec(Array(parent(CA.Fields.level(ᶜx, 1))))
+        lowest_one(ᶜx) = only(lowest(ᶜx))
+        Y_set = copy(Y)
+        ᶜE = @. Y.c.ρe_tot + c * Y.c.ρ
+        shares = (; strat = 0.3, tropo = 0.7, rad = 0.2)
+        for (name, share) in pairs(shares)
+            getproperty(Y_set.c, Symbol(:ρe_src_, name)) .= share .* ᶜE
+        end
+        ᶜsgsʲ = Y_set.c.sgsʲs.:(1)
+        (; ᶜρʲs, ᶜKʲs, ᶜh_tot, ᶜK, ᶜp) = p.precomputed
+        (; sfc_mass_flux_sourceʲs, sfc_mse_buoyantʲs) = p.precomputed
+        # The surface enthalpy flux's increment of `mseʲ`.
+        Yₜ = zero(Y)
+        CA.surface_flux_tendency!(Yₜ, Y_set, p, t)
+        Δ = lowest_one(Yₜ.c.sgsʲs.:(1).mse)
+        # The relaxation's rate, as the model's tendency has it.
+        mse_b = only(vec(Array(parent(sfc_mse_buoyantʲs))))
+        a_min = CA.CAP.min_area(CA.CAP.turbconv_params(p.params))
+        ρ = lowest_one(Y.c.ρ)
+        ρaʲ = lowest_one(ᶜsgsʲ.ρa)
+        ρʲ = lowest_one(ᶜρʲs.:(1))
+        r =
+            only(vec(Array(parent(sfc_mass_flux_sourceʲs)))) /
+            max(ρaʲ, ρʲ * a_min)
+        Yₜ = zero(Y)
+        CA.edmfx_boundary_condition_tendency!(Yₜ, Y_set, p, t, turbconv_model)
+        mseʲ = lowest_one(ᶜsgsʲ.mse)
+        @test lowest_one(Yₜ.c.sgsʲs.:(1).mse) ≈ r * (mse_b - mseʲ) rtol = 1e-12
+        # Entrainment's rate, from the model's tendency of `q_totʲ`.
+        ᶜq⁰ = similar(Y.c.ρ)
+        ᶜq⁰ .= CA.ᶜspecific_env_value(CA.@name(q_tot), Y_set, p)
+        Yₜ = zero(Y)
+        CA.edmfx_entr_detr_tendency!(Yₜ, Y_set, p, t, turbconv_model)
+        e =
+            lowest_one(Yₜ.c.sgsʲs.:(1).q_tot) /
+            (lowest_one(ᶜq⁰) - lowest_one(ᶜsgsʲ.q_tot))
+        # The supplies in the tags' units, energy plus the offset.
+        E = lowest_one(Y.c.ρe_tot) + c * ρ
+        Ā = E / ρ
+        X = mse_b - (lowest_one(ᶜh_tot) - lowest_one(ᶜK))
+        Aʲ = mseʲ + lowest_one(ᶜKʲs.:(1)) - lowest_one(ᶜp) / ρʲ + c
+        A⁰ = CA.specific(E - ρaʲ * Aʲ, ρ - ρaʲ, E, ρ, turbconv_model)
+        f = max(Δ, 0) / (r * (Ā + X) + e * A⁰ + max(Δ, 0))
+        @info "The surface flux's part of the lowest cell's supplies" Δ r * (Ā + X) e * A⁰ f
+        # A part well above rounding, so the check below can fail.
+        @test f > 1e-4
+        masks = p.tagging.ᶜenergy_source_masks
+        gains = (;
+            strat = lowest_one(masks.ρe_src_strat),
+            tropo = lowest_one(masks.ρe_src_tropo),
+            rad = 0.0,
+        )
+        ᶜε̄ = p.scratch.ᶜe_src_mean
+        ᶜεʲ = p.scratch.ᶜe_src_plume
+        CA.energy_source_plume!(ᶜεʲ, ᶜε̄, Y_set, p, turbconv_model, model)
+        names = map(CA.tag_name, model.tags)
+        ε̄ = Dict(zip(names, lowest(ᶜε̄)))
+        plume = Dict(zip(names, lowest(ᶜεʲ)))
+        total = ε̄[:strat] + ε̄[:tropo]
+        for name in names
+            expected = (1 - f) * ε̄[name] + f * getproperty(gains, name) * total
+            @test plume[name] ≈ expected rtol = 1e-10
+        end
+        # `rad` starts below its grid-mean value, by its share of `f`.
+        @test plume[:rad] < ε̄[:rad] * (1 - f / 2)
+    end
+
     # 3. Sedimentation. Under EDMF the parent's energy flux has an updraft and
     # an environment correction besides the grid mean's.
     @testset "Sedimentation moves the tags with the corrections" begin
