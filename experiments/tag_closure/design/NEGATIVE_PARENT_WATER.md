@@ -1162,7 +1162,9 @@ between the cell centres, with the end cells mirrored. On site 23 it gives
     `cr_windows_score.py` fails W1, W2 and W5 for every rise. The result goes
     into the Scoring paragraph above.
 
-    *Result, 2026-09-30.* Run with W42's runs (`ic_s{23,26}_{c,untagged, before}`) standing in for `cr_s{23,26}{,_untagged,_main}`, and W48's probe
+    *Result, 2026-09-30.* Run with W42's runs
+    (`ic_s{23,26}_{c,untagged,before}`) standing in for
+    `cr_s{23,26}{,_untagged,_main}`, and W48's probe
     for `cr_probe_s23`, through links under
     `$SCRATCH/claude_work/crev_score_smoke`. `cr_validate.py` gives the same
     lines as before its change, apart from the added ones: V2 at site 23
