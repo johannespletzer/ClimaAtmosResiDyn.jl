@@ -1246,10 +1246,13 @@ end
 
 The audit for one tag: the net-flow rule's
 change of the tag's rain and snow parts, minus the change the model applies
-([`water_tag_microphysics_change`](@ref)). Returns `(ΔR, ΔS)`. Both rules keep
-each tag's total, so the non-precipitating part's difference is minus their
-sum. Both terms take the same gates for a negative compartment, so the audit
-still compares the gross flows with the net-flow rule.
+([`water_tag_microphysics_change`](@ref)). Returns `(ΔR, ΔS)`. Both terms take
+the same gates for a negative compartment, so each record still compares the
+two rules for its own compartment. Where no compartment is negative, both rules
+keep each tag's total, and the non-precipitating part's difference is minus the
+sum of the two. Where one is, a gated part does not change, so neither rule
+keeps the total. The non-precipitating part's difference is then not minus
+their sum, and no record holds it.
 """
 @inline function water_tag_microphysics_audit(
     F,

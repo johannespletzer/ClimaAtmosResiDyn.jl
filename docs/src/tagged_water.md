@@ -123,8 +123,8 @@ Two consequences:
     of water, and can move provenance between cells no water moved between.
     Every bracket gives the tags the target's gain: where the parent is
     below zero, a gain fills the negative part, and the ledger
-    `q_tag_exp_negative` records it. The follower reads that ledger, so it
-    does not take a withheld gain from the partition again.
+    `q_tag_exp_negative` records it. The follower reads the gain withheld in
+    each solve, so it does not take it from the partition again.
 
     The closure can pass while the parent is negative. So the water closure
     check also reads the parent's own negative water, from the raw

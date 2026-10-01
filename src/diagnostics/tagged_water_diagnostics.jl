@@ -451,7 +451,8 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
                 "net-flow rule would give, less the change the gross flows " *
                 "gave, per unit mass of moist air, cumulative since the " *
                 "start of the run. The non-precipitating part's difference " *
-                "is minus the sum of this and `q_stag_aud_$name`.",
+                "is minus the sum of this and `q_stag_aud_$name` only " *
+                "while no compartment of the cell is negative.",
                 Symbol(:q_rtag_aud_, name),
             ),
             (

@@ -177,6 +177,10 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
     # DO NOT add additional velocity tendencies after this function
     zero_velocity_tendency!(Yₜ, Y, p, t)
 
+    # The water tags' follower reads the gain withheld in the solve from the
+    # ledger's tendency at the solve's last evaluation. It writes only scratch.
+    keep_water_tag_exp_rate!(p, Yₜ)
+
     return nothing
 end
 

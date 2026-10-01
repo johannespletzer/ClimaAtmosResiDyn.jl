@@ -2785,6 +2785,7 @@ end
             ),
             scratch = (;
                 ᶜtagging_q_share_norm = similar(ᶜbase),
+                ᶜtagging_q_exp_rate = similar(ᶜbase),
                 ᶜtemp_scalar = similar(ᶜbase),
             ),
         )
@@ -3264,10 +3265,12 @@ end
     end
 end
 
-# The follower reads the ledger of the withheld gain (the owner, 2026-09-30;
+# The follower reads the gain withheld in the solve (the owner, 2026-09-30;
 # the design note, 11.11.3). A gain the rule withheld inside the solve reached
-# the parent and not the partition. Without the ledger the follower's negative
-# part would take it from the partition a second time.
+# the parent and not the partition. Without it the follower's negative part
+# would take it from the partition a second time. It reads the gain from the
+# ledger's implicit tendency in the stage, not from the cumulative ledger (the
+# owner's review of #137, 2026-10-01).
 @testset "C's revision extended: the follower reads the withheld gain" begin
     CC = CA.ClimaCore
     for FT in (Float32, Float64)
@@ -3342,6 +3345,7 @@ end
             ),
             scratch = (;
                 ᶜtagging_q_share_norm = similar(ᶜbase),
+                ᶜtagging_q_exp_rate = similar(ᶜbase),
                 ᶜtemp_scalar = similar(ᶜbase),
             ),
         )
@@ -3349,9 +3353,17 @@ end
         set!(field, k, value) = (parent(field)[k] = value; field)
         dtγ = FT(60)
         # One stage from `Y` to `U`, with the parent's post-solve `dY` zero.
-        function stage(Y, U)
+        # The solve's evaluations keep the ledger's implicit tendency. Here it
+        # is the ledger's change over `dtγ`, as the solve gives it, unless set.
+        function stage(Y, U, ᶜrate = nothing)
             p = cache()
             CA.snapshot_water_tag_increment!(Y, p, dtγ)
+            if isnothing(ᶜrate)
+                @. p.scratch.ᶜtagging_q_exp_rate =
+                    (U.c.q_tag_exp_negative - Y.c.q_tag_exp_negative) / dtγ
+            else
+                p.scratch.ᶜtagging_q_exp_rate .= ᶜrate
+            end
             dY = zero(U)
             CA.correct_water_tag_increment!(dY, U, p)
             after = copy(U)
@@ -3436,6 +3448,46 @@ end
         @test any(!iszero, parent(dY3.c.q_tag_inc_negative))
         @test any(!iszero, parent(dY3.c.q_tag_inc_left))
         @test bits_checksum(parent(dY3.c)) == PINNED_FOLLOWER_CHECKSUMS[FT]
+
+        # Case 4: `δL` does not depend on the ledger's cumulative value (the
+        # owner's review of #137). Case 1 again, with a gain of 60·2⁻³², about
+        # 1.4e-8, which the ledger also takes. The ledger starts at 0, 1 or
+        # 1e6. In Float32 a difference of a ledger at 1 rounds that gain to
+        # zero, and the follower would take it from the partition again. The
+        # states, the tendencies and the kept rate are the same, so every
+        # correction is the same, bit for bit.
+        r = FT(2)^-32
+        x4 = dtγ * r
+        ᶜrate = set!(zero(ᶜbase), 3, r)
+        corrections = map((0, 1, 1e6)) do offset
+            Y4 = closed!(state(), set!(copy(ᶜbase), 3, -u))
+            @. Y4.c.q_tag_exp_negative = FT(offset)
+            U4 = copy(Y4)
+            set!(U4.c.ρq_tot, 3, -u + x4)
+            set!(U4.c.q_tag_exp_negative, 3, FT(offset) + x4)
+            set!(U4.c.ρq_tot, 4, at(Y4.c.ρq_tot, 4) + u)
+            set!(U4.c.ρq_tot, 5, at(Y4.c.ρq_tot, 5) - u)
+            _, dY4 = stage(Y4, U4, ᶜrate)
+            @test all(iszero, parent(dY4.c.q_tag_inc_negative))
+            dY4
+        end
+        names4 = (
+            :ρq_tag_tropo,
+            :ρq_tag_strat,
+            :ρq_tag_evap,
+            :q_tag_inc_left,
+            :q_tag_inc_moved,
+            :q_tag_inc_negative,
+            :q_tag_led_inc_tropo,
+            :q_tag_led_inc_strat,
+            :q_tag_led_inc_evap,
+        )
+        for dY4 in corrections[2:end], name in names4
+            @test isequal(
+                parent(getproperty(dY4.c, name)),
+                parent(getproperty(corrections[1].c, name)),
+            )
+        end
     end
 end
 

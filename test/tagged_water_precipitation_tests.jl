@@ -785,6 +785,43 @@ end
         @test CA.water_tag_microphysics_withheld(F, dq_rai, dq_sno, neg...) == (0.0, 0.0)
     end
 
+    # (i) The audit records rain's and snow's differences only (the owner's
+    # review of #137). Under the gates neither rule keeps the tag's total, so
+    # the non-precipitating part's difference is not minus their sum. The
+    # review's counterexample: water cycles through negative rain, from `N` to
+    # rain, rain to snow and snow to `N`. Over `Δt = 1` the pools are
+    # `(2, 0, 1)`, and the tag holds all of `N`.
+    F = flows(NR = 2.0, RS = 1.0, SN = 1.0)
+    (q, φ) = ((2.0, 0.0, 1.0), (1.0, 0.0, 0.0))
+    (dq_rai, dq_sno) = (net_rai(F), net_sno(F))
+    @test (dq_rai, dq_sno) == (1.0, 0.0)
+    rules(neg...) = (
+        CA.water_tag_microphysics_change(F, dq_rai, dq_sno, q..., 1.0, φ..., neg...),
+        CA.water_tag_net_flow_change(-(dq_rai + dq_sno), dq_rai, dq_sno, φ..., neg...),
+        CA.water_tag_microphysics_audit(F, dq_rai, dq_sno, q..., 1.0, φ..., neg...),
+    )
+    (gross, net, audit) = rules(rain_negative...)
+    @test gross[1] ≈ -6 / 5 rtol = 1e-14
+    @test gross[2] == 0
+    @test gross[3] ≈ 2 / 5 rtol = 1e-14
+    @test net == (-1.0, 0.0, 0.0)
+    @test sum(gross) ≈ -4 / 5 rtol = 1e-14
+    @test sum(net) == -1
+    # Each record is its compartment's difference of the two rules.
+    @test audit == (net[2] - gross[2], net[3] - gross[3])
+    @test audit[1] == 0
+    @test audit[2] ≈ -2 / 5 rtol = 1e-14
+    # `N`'s difference is 1/5. Minus the records' sum is 2/5.
+    @test net[1] - gross[1] ≈ 1 / 5 rtol = 1e-13
+    @test -(audit[1] + audit[2]) ≈ 2 / 5 rtol = 1e-14
+    @test !isapprox(net[1] - gross[1], -(audit[1] + audit[2]); rtol = 0.1)
+    # Without the gates both rules keep the total, and `N`'s difference is
+    # minus the records' sum.
+    (gross₀, net₀, audit₀) = rules(false, false, false)
+    @test abs(sum(gross₀)) <= 1e-15
+    @test sum(net₀) == 0
+    @test net₀[1] - gross₀[1] ≈ -(audit₀[1] + audit₀[2]) rtol = 1e-14
+
     # Through the model's entry points, on one cell: the flags come from the
     # state, and the ledgers take `ρ` times the water.
     tags = precipitation_tags()
@@ -1596,6 +1633,7 @@ end
                 ᶜtagging_q_share_norm = similar(ᶜbase),
                 ᶜtagging_q_share_norm_rai = similar(ᶜbase),
                 ᶜtagging_q_share_norm_sno = similar(ᶜbase),
+                ᶜtagging_q_exp_rate = similar(ᶜbase),
                 ᶜtemp_scalar = similar(ᶜbase),
             ),
         )
@@ -1715,9 +1753,13 @@ end
         parent(ρq_tot_negative)[3] = rai + sno - FT(2)^-10
         Y4 = closed!(state(), ρq_tot_negative)
         @test level(ᶜN(Y4), 3) < 0
+        # The solve's evaluations keep the ledger's implicit tendency, here
+        # its change over `dtγ`, as the solve gives it.
         function follow(Y, U)
             p = cache()
             CA.snapshot_water_tag_increment!(Y, p, dtγ)
+            @. p.scratch.ᶜtagging_q_exp_rate =
+                (U.c.q_tag_exp_negative - Y.c.q_tag_exp_negative) / dtγ
             dY = zero(U)
             CA.correct_water_tag_increment!(dY, U, p)
             after = copy(U)
@@ -2241,6 +2283,7 @@ end
                 ᶜtagging_q_share_norm = zeros(FT, 3),
                 ᶜtagging_q_share_norm_rai = zeros(FT, 3),
                 ᶜtagging_q_share_norm_sno = zeros(FT, 3),
+                ᶜtagging_q_exp_rate = ones(FT, 3),
             ),
             tagging = (;
                 ᶜwater_pos = zeros(FT, 3),
@@ -2258,9 +2301,9 @@ end
         @test p.tagging.ᶜq_tag_ρq_tot_snapshot == FT[4, -2, 4]
         @test p.tagging.ᶜq_tag_partition_snapshot == FT[4, 4, 12]
         @test p.tagging.q_tag_dtγ[] == dtγ
-        # And the ledger of the withheld gain, whose change in the solve the
-        # follower reads.
-        @test p.tagging.ᶜq_tag_exp_change == FT[0.25, 0.5, 0]
+        # It zeroes the kept rate of the ledger of the withheld gain, which the
+        # solve's evaluations then set. It does not read the ledger.
+        @test p.scratch.ᶜtagging_q_exp_rate == zeros(FT, 3)
         # After the solve it takes `N` again, with the post-solve `dY`.
         ᶜdY = (;
             ρq_tot = FT[0.5, -1, 0.25],

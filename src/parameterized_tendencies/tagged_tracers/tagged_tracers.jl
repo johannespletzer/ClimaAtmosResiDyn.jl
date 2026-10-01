@@ -339,7 +339,10 @@ output time for `pr_tag` ([`update_water_tag_rainouts!`](@ref)), and
 denominators and snapshots.
 `ᶜtagging_q_leak_correction`, under `water_tag_leak_correction: true` only,
 holds one tag's correction of the diffusion's leak at a time
-([`correct_water_tag_diffusion_leak!`](@ref)).
+([`correct_water_tag_diffusion_leak!`](@ref)). `ᶜtagging_q_exp_rate`, under
+`water_tag_transport: increment` only, holds the implicit tendency of the
+ledger `q_tag_exp_negative` at the last evaluation
+([`keep_water_tag_exp_rate!`](@ref)).
 """
 tagging_scratch(Y, atmos::AtmosModel) = (;
     (
@@ -355,6 +358,10 @@ tagging_scratch(Y, atmos::AtmosModel) = (;
             (
                 has_water_tag_leak_correction(atmos.water_tagging_model) ?
                 (; ᶜtagging_q_leak_correction = similar(Y.c.ρ)) : (;)
+            )...,
+            (
+                follows_water_increment(atmos.water_tagging_model) ?
+                (; ᶜtagging_q_exp_rate = similar(Y.c.ρ)) : (;)
             )...,
             _water_tag_precipitation_scratch(Y, atmos.water_tagging_model)...,
             # Each tag's part of the 0M rain-out, for `pr_tag`.
