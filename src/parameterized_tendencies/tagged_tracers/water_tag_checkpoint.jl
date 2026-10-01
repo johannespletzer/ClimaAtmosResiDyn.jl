@@ -84,8 +84,8 @@ function check_restart_before_option_c(restart_file, Y, water_model)
         ledger without `q_tag_inc_negative`. An older version wrote it, and its \
         tags partition `ρq_tot` itself. The tags of this version partition the \
         parent's non-negative water, `max(ρq_tot, 0)`, and the correction after \
-        each solve records the parent's negative part in `q_tag_inc_negative`. \
-        Restart from a checkpoint written by this version, or start a new run.",
+        each solve books in `q_tag_inc_negative` what it gives the tags, or \
+        takes from them, as the parent's negative part changes. Restart from a checkpoint written by this version, or start a new run.",
     )
 end
 

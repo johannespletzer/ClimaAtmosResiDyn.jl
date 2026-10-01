@@ -1800,8 +1800,7 @@ const _EXPLICIT_ONE_MOMENT_INCREMENT_MESSAGE = "`water_tag_transport: \
     lag the parent's sedimentation by about 0.8% of the column's water an \
     hour on a DYCOMS RF02 EDMF column with one Newton iteration. The lag \
     changes the column's total, which the correction after each solve cannot \
-    move. Use the manual \
-    Jacobian, the default, step the microphysics implicitly, or set \
+    move. Use the manual Jacobian, the default, step the microphysics implicitly, or set \
     `water_tag_transport: tracer`, which lags alike."
 
 """
@@ -1948,9 +1947,9 @@ function check_water_tag_leak_correction_supported(parsed_args, microphysics_mod
     get(parsed_args, "turbconv", nothing) in ("prognostic_edmfx", "edonly_edmfx") ||
         error(
             "`water_tag_leak_correction: true` needs `turbconv: \
-            prognostic_edmfx` or `edonly_edmfx`. It corrects the EDMF vertical \
-            diffusive flux, and with updraft copies the same diffusion the \
-            copies take, and nothing else. Drop the key.",
+            prognostic_edmfx` or `edonly_edmfx`. It corrects only the EDMF \
+            vertical diffusive flux and, with updraft copies, the copies' part \
+            of that diffusion. Drop the key.",
         )
     isnothing(get(parsed_args, "vert_diff", nothing)) || error(
         "`water_tag_leak_correction: true` is refused with `vert_diff: \

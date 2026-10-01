@@ -824,8 +824,8 @@ function nonpositive_parent_note(family)
         `energy_source_tag_offset` large enough to lift the partitioned \
         total positive removes the region without moving that reference."
     family == "water" && return "Water tags take loss in proportion to what \
-        they hold, so their shares are undefined there, and there the tags \
-        say nothing about where the water came from. Nothing in the model keeps `ρq_tot` \
+        they hold, so their shares are undefined there, and the tags of \
+        those cells say nothing about where the water came from. Nothing in the model keeps `ρq_tot` \
         non-negative: `tracer_nonnegativity_method` is off unless configured, \
         and transport alone can take a cell below zero. Those cells have their \
         tags emptied by `rescale_water_tags!` whenever a constraint clips the \

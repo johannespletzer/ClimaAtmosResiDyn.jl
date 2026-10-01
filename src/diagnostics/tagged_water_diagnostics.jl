@@ -509,8 +509,8 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
                            "run and carried through a restart, so the " *
                            "change over an interval is the difference of two " *
                            "outputs, and a time average of this variable is " *
-                           "not meaningful. For a region tag (a region, no " *
-                           "source), partition repair writes here whenever " *
+                           "not meaningful. For a region tag, partition " *
+                           "repair writes here whenever " *
                            "transport has driven any region tag negative, " *
                            "even with no limiter configured. A source tag gets " *
                            "only the rescale that follows a limiter, " *
@@ -672,8 +672,8 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
                        "unit mass of grid-mean air, in closed form from the " *
                        "state. It is the raw difference: the path's tendency " *
                        "of the tags' sum minus its tendency of total water. " *
-                       "It is taken where the partition is closed to option " *
-                       "C's target, max(ρq_tot, 0), and on the updrafts' " *
+                       "It is taken where the partition is closed to its " *
+                       "target, max(ρq_tot, 0), and on the updrafts' " *
                        "paths max(q_totʲ, 0). The path moves the tags " *
                        "on their whole value, and total water only by the " *
                        "water that diffuses, without rain and snow. The " *

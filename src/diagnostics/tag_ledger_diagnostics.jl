@@ -52,9 +52,9 @@ const _TAG_MECHANISM_TEXT = (;
                          "water_tag_precipitation: true also the net inflow " *
                          "into the non-precipitating water while negative",
     q_tag_exp_negative_precip = "the net inflow the microphysics and the " *
-                                "vapour constraint gave rain and snow while " *
-                                "negative, which no tag's part " *
-                                "took",
+                                "vapour nonnegativity tendency " *
+                                "(tracer_nonnegativity_method: vapor_tendency) gave " *
+                                "rain and snow while negative, which no tag's part took",
     e_src_led_repair = "the energy the partition repair moved between the " *
                        "tags, half the sum of the tags' changes less their " *
                        "net (repair_energy_source_tags!)",
