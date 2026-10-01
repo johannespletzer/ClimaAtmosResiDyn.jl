@@ -1,0 +1,158 @@
+{
+ "cr_s23": {
+  "largest_gross": 0.00040559739366781726,
+  "largest_gross_day": 56.0,
+  "closure_rows": 361,
+  "void_rows": 324,
+  "first_void_day": 9.25,
+  "led_fix_pbl": {
+   "first_above_2pct_day": 31.0,
+   "max": 0.07330019709505958,
+   "max_day": 90.0,
+   "day90": 0.07330019709505958,
+   "outputs_above": 223,
+   "outputs": 357
+  },
+  "led_fix_free": {
+   "first_above_2pct_day": 31.0,
+   "max": 0.06600666734604768,
+   "max_day": 82.25,
+   "day90": 0.06519629282974873,
+   "outputs_above": 237,
+   "outputs": 357
+  },
+  "led_fix_evap": {
+   "first_above_2pct_day": null,
+   "max": 0.0,
+   "max_day": 1.0,
+   "day90": 0.0,
+   "outputs_above": 0,
+   "outputs": 357
+  },
+  "led_fix_fcg": {
+   "first_above_2pct_day": null,
+   "max": 0.0,
+   "max_day": 1.0,
+   "day90": 0.0,
+   "outputs_above": 0,
+   "outputs": 357
+  }
+ },
+ "cr_s26": {
+  "largest_gross": 5.687618071683217e-12,
+  "largest_gross_day": 85.25,
+  "closure_rows": 361,
+  "void_rows": 0,
+  "first_void_day": null,
+  "led_fix_pbl": {
+   "first_above_2pct_day": null,
+   "max": 0.00022908125718120402,
+   "max_day": 85.25,
+   "day90": 0.0002126322170898034,
+   "outputs_above": 0,
+   "outputs": 357
+  },
+  "led_fix_free": {
+   "first_above_2pct_day": null,
+   "max": 6.356943036488339e-05,
+   "max_day": 81.25,
+   "day90": 6.08330946168195e-05,
+   "outputs_above": 0,
+   "outputs": 357
+  },
+  "led_fix_evap": {
+   "first_above_2pct_day": null,
+   "max": 0.0,
+   "max_day": 1.0,
+   "day90": 0.0,
+   "outputs_above": 0,
+   "outputs": 357
+  },
+  "led_fix_fcg": {
+   "first_above_2pct_day": null,
+   "max": 0.0,
+   "max_day": 1.0,
+   "day90": 0.0,
+   "outputs_above": 0,
+   "outputs": 357
+  }
+ },
+ "cr_s23_main": {
+  "largest_gross": 0.022428443851586956,
+  "largest_gross_day": 74.5,
+  "closure_rows": 361,
+  "void_rows": 324,
+  "first_void_day": 9.25,
+  "led_fix_pbl": {
+   "first_above_2pct_day": 54.75,
+   "max": 0.027282794881862533,
+   "max_day": 90.0,
+   "day90": 0.027282794881862533,
+   "outputs_above": 119,
+   "outputs": 357
+  },
+  "led_fix_free": {
+   "first_above_2pct_day": 56.25,
+   "max": 0.023888525410555566,
+   "max_day": 82.5,
+   "day90": 0.022735665617129735,
+   "outputs_above": 136,
+   "outputs": 357
+  },
+  "led_fix_evap": {
+   "first_above_2pct_day": null,
+   "max": 0.0,
+   "max_day": 1.0,
+   "day90": 0.0,
+   "outputs_above": 0,
+   "outputs": 357
+  },
+  "led_fix_fcg": {
+   "first_above_2pct_day": null,
+   "max": 0.0,
+   "max_day": 1.0,
+   "day90": 0.0,
+   "outputs_above": 0,
+   "outputs": 357
+  }
+ },
+ "cr_s26_main": {
+  "largest_gross": 5.687618071683217e-12,
+  "largest_gross_day": 85.25,
+  "closure_rows": 361,
+  "void_rows": 0,
+  "first_void_day": null,
+  "led_fix_pbl": {
+   "first_above_2pct_day": null,
+   "max": 0.00022908125718120402,
+   "max_day": 85.25,
+   "day90": 0.0002126322170898034,
+   "outputs_above": 0,
+   "outputs": 357
+  },
+  "led_fix_free": {
+   "first_above_2pct_day": null,
+   "max": 6.356943036488339e-05,
+   "max_day": 81.25,
+   "day90": 6.08330946168195e-05,
+   "outputs_above": 0,
+   "outputs": 357
+  },
+  "led_fix_evap": {
+   "first_above_2pct_day": null,
+   "max": 0.0,
+   "max_day": 1.0,
+   "day90": 0.0,
+   "outputs_above": 0,
+   "outputs": 357
+  },
+  "led_fix_fcg": {
+   "first_above_2pct_day": null,
+   "max": 0.0,
+   "max_day": 1.0,
+   "day90": 0.0,
+   "outputs_above": 0,
+   "outputs": 357
+  }
+ }
+}

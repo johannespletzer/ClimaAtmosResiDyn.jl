@@ -556,6 +556,11 @@ to #126 were read from GitHub on 2026-09-28.
     design is section 11.11, revised after an agent's review. 11.7 carries the
     dated amendments, made before any run. Nothing is built or run. The owner
     reviews 11.11 next (its 11.11.13).
+  - **2026-10-01, `crev`, the 90-day validation (W49):** all seven jobs
+    (`14015465` to `14015471`) completed. V1, V2 (4.056e-4), V2b, V3, V4,
+    V4b and W0 to W5 pass. V5 fails at site 23: `led_fix` of `pbl` 7.33e-2
+    and of `free` 6.52e-2 at day 90, limit 2e-2 (`main`: 2.73e-2, 2.27e-2).
+    It measured `0eb329b2`, not #137's head. The owner decides.
 
 ## The housekeeping, H0 to H7: done
 
