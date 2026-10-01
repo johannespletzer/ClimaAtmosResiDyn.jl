@@ -122,6 +122,94 @@ main
 - ![][badge-✨feature/enhancement] Add `post_processing/plot_tracer_burdens.jl`, which plots every tracer's burden against time in one panel at 300 dpi. Colour encodes the height box and dash pattern the latitude box, so the legend has `n_latitude + n_height` entries rather than their product — the default configuration carries 48 tracers, which no categorical palette can distinguish. Written automatically by the experiment script and the CI job.
 - ![][badge-✨feature/enhancement] Register the stratospheric passive tracer diagnostics from the model at simulation setup instead of statically at package load. The source-region grid previously had to fit a fixed set of variables registered when ClimaAtmos loaded, which capped it at 12 latitude by 12 height bands; it is now unbounded, and a run that carries no passive tracers no longer pays for their diagnostics. Mirrors how the tagged tracers already register theirs.
 - ![][badge-✨feature/enhancement] Diagnose the WMO lapse-rate (thermal) tropopause online from the model temperature, as the new `ztrop` diagnostic and as the lower boundary of the stratospheric passive tracers. Two column sweeps, so it is GPU-compatible; columns where no tropopause exists fall back to a latitude-dependent climatology.
+- ![][badge-🔥behavioralΔ] Add empirical mixing length `l_TKE = l_0·sqrt(x)·(1+x)·exp(−x)`,
+  `x = TKE/(l_inf/tau_eps)^2`, to the mixing-length closure.
+- ![][badge-🔥behavioralΔ] Update to ClimaParams 1.1.16, which provides the
+  SGS-quadrature parameters and changes the defaults.
+  The SGS covariance, quadrature and cloud-fraction
+  closure parameters move from `TurbulenceConvectionParameters` to a new
+  `SGSQuadratureParameters` set, held as `sgs_quadrature_params`. `CAP.x(params)`
+  accessors and TOML names are unchanged; code that reads these fields from
+  `turbconv_params` must read them from `sgs_quadrature_params`.
+- ![][badge-✨feature/enhancement] Two parameters,
+  `sgs_liquid_uniform_fraction` and `sgs_ice_uniform_fraction`,
+  blend the SGS-quadrature condensate reconstruction of the 1-moment
+  microphysics between the excess split (a species sits only at supersaturated
+  nodes, in proportion to its excess) and a uniform distribution (the
+  subdomain mean at every node, like rain and snow).
+
+0.42.12
+-------
+- ![][badge-🔥behavioralΔ] The CI environment updates to ClimaParams 1.1.14, which sets the
+  default `EDMF_interface_entr_efficiency` to `0.0` (from `0.4`), turning off the interfacial
+  cloud-top entrainment closure by default.
+- ![][badge-🐛bugfix] File-based initial conditions (`WeatherModel`,
+  `MoistFromFile`, `AMIPFromERA5`) now interpolate the face pressure to cell
+  centers in log space (`exp(ᶜinterp(log(p)))`) when computing the initial
+  density, instead of the arithmetic mean `ᶜinterp(p)`, which overestimated
+  center pressure and left the initial column ~1 hPa too heavy.
+- ![][badge-✨feature/enhancement] `WeatherModel` ERA5 IC filenames now use the
+  `HHMM` of `start_date` (e.g. `start_date = "20191231-1200"` →  `..._1200.nc`),
+  matching the ClimaCoupler subseasonal / WeatherQuest naming; date-only strings
+  still default to `0000`.
+- ![][badge-🐛bugfix] With several PROPHET updrafts, the entrainment, the physical-constraint
+  clipping, the Rayleigh sponge, and the sedimentation cache act on the SGS tracers
+  (microphysics species and passive tracers) of the updraft they are called for; they acted
+  on updraft 1 throughout. The default single updraft is unaffected.
+- ![][badge-🐛bugfix] The pressure drag coefficient is computed by the function
+  `pressure_drag_coefficient` for the momentum equation and the TKE return-to-isotropy
+  source, with the environment area clamped to `[1 - a_max, 1]` in both; the TKE source
+  floored it at `a_min`.
+- ![][badge-🐛bugfix] The AMD eddy viscosity divides by the norm of the unscaled velocity
+  gradient. Its numerator and denominator shared one scratch tensor, so the denominator
+  was evaluated after the filter-scaled derivative had overwritten it, leaving a
+  viscosity smaller by roughly the square of the filter width (a factor of order `1e6`
+  in a 3.2 km box) and with the units of an inverse time.
+- ![][badge-🐛bugfix] The LES closures (Smagorinsky-Lilly, AMD, constant horizontal
+  diffusion) diffuse energy through the split enthalpy flux
+  `-ρ D [∇s_d + (h_eff + Φ) ∇q_tot_eff]` used by the other diffusive terms, in place of a
+  lumped `h_tot`. The horizontal AMD scalar diffusivity divides by the physical norm of
+  the gradient, as the vertical one already did.
+- ![][badge-🐛bugfix] Hyperdiffusion scales the P3 ice number `ρn_ice`, rime mass `ρq_rim`, and
+  rime volume `ρb_rim` with the cloud ice tendency; `ρn_ice` received that and a second
+  full-strength `∇⁴` tendency, and the rime species received the latter only.
+- ![][badge-🐛bugfix] The ERA5 forcing-file coverage checks report a file that does not
+  cover the run, so a stale cached file is regenerated; they always reported success.
+- ![][badge-🐛bugfix] `job_id_from_config_file` detects configuration files that share a base
+  name; the comparison never matched.
+- ![][badge-🐛bugfix] The ISDAC setup follows the shared convention `prognostic_tke ? 0 :
+  prescribed profile`; its operands were reversed. `Setups.Larcform1` drops the
+  `prognostic_tke` keyword it never read.
+- ![][badge-🐛bugfix] A `Setups.DecayingProfile()` constructed without parameters builds a
+  simulation, taking the thermodynamics parameters from the model.
+- ![][badge-💥breaking] `SurfaceBoundaryOverrides` drops the `p` and `beta` fields, which were
+  stored and never applied; the setups that set `p` no longer do. The `orographic_gravity_wave:
+  "linear"` option and `LinearOrographicGravityWave` are removed; the option errored at
+  runtime. `AtmosNumerics` and the `EDMFXModel` keyword constructor reject unrecognized
+  keywords with a `MethodError`; they absorbed them.
+- ![][badge-🔥behavioralΔ] `vert_diff` combined with `turbconv`, `amd_les`, or a vertically
+  acting `smagorinsky_lilly` is rejected at model construction. The two AMD configurations
+  set `hyperdiff: ~`, like the Smagorinsky ones.
+- ![][badge-🐛bugfix] The vertical Smagorinsky-Lilly diffusion follows `implicit_diffusion`:
+  with `implicit_diffusion: true` it is part of the implicit tendency, with the eddy viscosity
+  refreshed on every Newton iterate, matching the Jacobian block that already existed for it.
+  A vertically-acting Smagorinsky-Lilly closure now satisfies the implicit-diffusion
+  configuration check on its own. Running the closure under the autodiff Jacobians
+  (`use_auto_jacobian`, `use_dense_jacobian`) needs ClimaCore 1.0, whose tensor return
+  types keep Dual storage; the default manual sparse Jacobian works on any supported
+  ClimaCore.
+- ![][badge-🐛bugfix] The number-density redistribution in vertical diffusion, hyperdiffusion,
+  the viscous sponge, and the PROPHET diffusive flux looks up the P3 ice number field `ρn_ice`;
+  it looked up `ρn_icl`, which no configuration carries, so the ice-number branches never ran.
+- The four AMD precomputed fields that no tendency read are no longer allocated.
+
+- ![][badge-💥breaking]![][badge-🚀performance] `AtmosNumerics` stores
+  `test_dycore_consistency` and `reproducible_restart` as `Bool` fields instead
+  of type parameters, and the `TestDycoreConsistency` and `ReproducibleRestart`
+  marker types are removed. Pass `true`/`false` instead. Both switches reach the
+  tendencies through `p.atmos`, so lifting them to the type domain gave any run
+  that set them a private set of specializations; the restart tests, which set
+  both, shared no compiled code with the rest of CI.
 
 0.42.11
 -------
@@ -130,6 +218,9 @@ main
   `c_g (c_Δx Δx_h)² |∇_h ψ|²` for the SGS quadrature (`sgs_variance_horizontal_scale_factor` switches it on), with a closure-validity bound on
   σ_q (`sgs_variance_max_rel_std`); The new parameters default to the historical closure.
 - [#4828](https://github.com/CliMA/ClimaAtmos.jl/pull/4828) Update to ClimaTimeSteppers v1 and update benchmark test
+- [#4837](https://github.com/CliMA/ClimaAtmos.jl/pull/4837) ![][badge-✨feature/enhancement] Richardson-number stability weight on the geometric SGS
+  variance term (`sgs_variance_geometric_Ri_factor`, 0 = off), built on the saturated moist buoyancy gradient and the strain rate, fading the
+  term where the resolved flow is turbulent or conditionally unstable.
 
 0.42.10
 -------

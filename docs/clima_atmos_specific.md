@@ -59,7 +59,8 @@ A file under `src/parameterized_tendencies/` should not contain orchestration lo
 | EDMFX diffusion                     | `dynamics_edmfx`    | `prognostic_edmfx_*`                     |
 | Tagged tracers/water                | `tagging_*`         | `baroclinic_wave_tagged_*`               |
 | Microphysics / EDMF                 | `parameterizations` | `prognostic_edmfx_*`                     |
-| Restarts                            | `restarts`          | `restart_*`                              |
+| Restarts                            | Buildkite only      | `Restarting` group                       |
+| Initialization from file            | `restarts`          | `test_init_with_file.jl`                 |
 | Diagnostics                         | `diagnostics`       | any `--diagnostics` job                  |
 | Config semantics                    | `infrastructure`    | `config.jl`                              |
 | Parent budget                       | `parent_budget`     | none; GitHub Actions only                |
