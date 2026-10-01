@@ -1436,6 +1436,17 @@ crossing episodes among it, are in FINDINGS W49. No threshold or reading of
     compares by column and time, from the first time the parent is negative
     anywhere in the column (amended in 11.7).
 
+**10. W49's verdicts** (added 2026-10-01). W49's V2 passes and its V5
+`led_fix` fails at site 23 (FINDINGS W49). The pre-registration states no
+consequence of a V5 failure. *Decided 2026-10-01 by the owner:* W49's V2
+counts as C's validation. At site 23, V2's largest gross is 4.1e-4 against the
+tolerance of 2e-3, and the control on `main` is at 2.2e-2. V5 `led_fix` fails
+at site 23: `pbl` is at 7.33% and `free` at 6.52% of the inventory, against 2%.
+The control on `main` is at 2.73% and 2.27%, so the rise is about 2.7 to 2.9
+times. The cause is not traced. It is recorded as an open failure, not as a
+pass. #137 merges once its CI is green. It merged on 2026-10-01 as `b4ebfca5`.
+A follow-up probe traces the rise of `led_fix`.
+
 *2026-09-30:* the points still open for the owner are in 11.11.13.
 
 ### 11.11 The extension, as the owner decided on 2026-09-30

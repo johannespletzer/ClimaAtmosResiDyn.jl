@@ -218,6 +218,21 @@ The list as it stood before this classification, kept as written:
 >     and the copies under first-order upwinding (W25). **Waiting.**
 >     [FINDINGS W25](FINDINGS.md)
 
+## 2026-10-01
+
+  - **C's revision: the owner's decision on W49's verdicts**
+    (`design/NEGATIVE_PARENT_WATER.md`, 11.10 item 10; FINDINGS W49).
+      + **W49's V2 counts as C's validation.** At site 23, V2 is 4.1e-4
+        against 2e-3. The control on `main` is at 2.2e-2. **In force.**
+      + **V5 `led_fix` fails at site 23, and stays an open failure.** `pbl` is
+        at 7.33% and `free` at 6.52%, against 2%. The control is at 2.73% and
+        2.27%, a rise of about 2.7 to 2.9 times. The cause is not traced.
+        **In force.**
+      + **#137 merges once its CI is green.** It merged on 2026-10-01 as
+        `b4ebfca5`. **Done.**
+      + **A follow-up probe traces the rise of `led_fix`.** **In force.** The
+        probe is not run yet.
+
 ## 2026-09-30
 
   - **C's revision: the owner's answers to section 11's questions**

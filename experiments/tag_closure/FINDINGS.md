@@ -2049,6 +2049,10 @@ The windows, `cr_probe_s23`, each rise divided by W48's `R48` (the rise in
     The pre-registration states no consequence of a V5 failure. The owner
     decides on V5 and on 2%.
 
+  - **The owner's decision (2026-10-01).** V2 counts as C's validation, V5
+    stays an open failure and a probe traces the rise: see
+    `design/NEGATIVE_PARENT_WATER.md` 11.10 item 10 and `DECISIONS.md`.
+
 *`hpda2_compute`, 2026-10-01, jobs `14015465` (`cr_s23`), `14015466`
 (`cr_s23_untagged`), `14015467` (`cr_s26`), `14015468` (`cr_s26_untagged`)
 and `14015471` (`cr_probe_s23`) from `../ClimaAtmosResiDyn-crev-run` at

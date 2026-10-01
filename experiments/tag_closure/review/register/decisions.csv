@@ -1,4 +1,8 @@
 date,decided_by,decision,doc,section,still_in_force,superseded_by
+2026-10-01,owner,"W49: V2 counts as C's validation; at site 23 V2 is 4.1e-4 against 2e-3, the control on main at 2.2e-2.",design/NEGATIVE_PARENT_WATER.md,11.10,yes,
+2026-10-01,owner,"W49: V5 led_fix fails at site 23 (pbl 7.33%, free 6.52% against 2%; control 2.73% and 2.27%, a rise of about 2.7 to 2.9 times, cause untraced); recorded as an open failure.",design/NEGATIVE_PARENT_WATER.md,11.10,yes,
+2026-10-01,owner,#137 merges once its CI is green; it merged on 2026-10-01 as b4ebfca5.,design/NEGATIVE_PARENT_WATER.md,11.10,done,
+2026-10-01,owner,A follow-up probe traces the rise of led_fix at site 23 (W49).,design/NEGATIVE_PARENT_WATER.md,11.10,yes,
 2026-09-30,owner,"C's revision, Q2: the stages split a crossing step; accepted as built.",design/NEGATIVE_PARENT_WATER.md,11.10,yes,
 2026-09-30,owner,"C's revision, Q3: extend the target's-gain rule to the implicit microphysics bracket, now.",design/NEGATIVE_PARENT_WATER.md,11.10,yes,
 2026-09-30,owner,"C's revision, Q4: extend the rule to source tags and to region tags that list sources, now; needs a new design of a source tag's target where the parent is at or below zero.",design/NEGATIVE_PARENT_WATER.md,11.10,yes,
