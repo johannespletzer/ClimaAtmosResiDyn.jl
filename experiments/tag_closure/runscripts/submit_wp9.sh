@@ -25,8 +25,6 @@ for tree in "${RUN_TREE}" "${REC_TREE}"; do
 done
 RUN_SHA="$(git -C "${RUN_TREE}" rev-parse HEAD)"
 REC_SHA="$(git -C "${REC_TREE}" rev-parse HEAD)"
-[[ "${RUN_SHA}" == 43b01ca1d* ]] || [[ -n "${ALLOW_OTHER_MODEL_COMMIT:-}" ]] || {
-    echo "ERROR: the model tree is at ${RUN_SHA}, not 43b01ca1." >&2; exit 1; }
 git -C "${REC_TREE}" fetch -q origin
 git -C "${REC_TREE}" branch -r --contains "${REC_SHA}" | grep -q . || {
     echo "ERROR: ${REC_SHA} is not on any remote branch. Push the record branch." >&2; exit 1; }
@@ -64,7 +62,42 @@ if [[ "${PROFILE:-0}" == 1 ]]; then
     OUT_ROOT=wp9_profile
     export DRIVER_NAME=wp9_profile_driver.jl BUILD_LIMIT="${BUILD_LIMIT:-90m}"
 fi
+# SET=b34 submits the rerun of the amendment of 2026-10-02 (design section 9) at
+# main b34bbd8b: every arm runs its own untagged point 0 first, 50 warm-up steps,
+# whole nodes. SET=b34check submits its short check jobs to hpda2_test.
+PARTITION=hpda2_compute
+EXPECT_SHA=43b01ca1d
+if [[ "${SET:-}" == b34 || "${SET:-}" == b34check ]]; then
+    EXPECT_SHA=b34bbd8b8
+    export WP9_WARMUP=50
+    TABLE=(
+      "water_default water default 0 wp9_water_trmm0m_edmf 0,2,4,8,8:ledgers,8:tracer,8:increment 200G 08:00:00"
+      "water_default_32 water default 0 wp9_water_trmm0m_edmf 0,32 200G 04:00:00"
+      "water_copies water copies 0 wp9_water_trmm0m_edmf 0,2,4,8,8:ledgers 200G 08:00:00"
+      "water_1m_off water default 0 wp9_water_1m_column 0,2,4,8,32 200G 08:00:00"
+      "water_1m_on water default 1 wp9_water_1m_column 0,2,4,8,32 200G 10:00:00"
+      "energy_default energy default 0 wp9_energy_d4_edmf 0,2,4,8,8:ledgers,8:records 200G 12:00:00"
+      "energy_default_32 energy default 0 wp9_energy_d4_edmf 0,32 200G 06:00:00"
+      "energy_copies energy copies 0 wp9_energy_d4_edmf 0,2,4,8,8:ledgers 200G 12:00:00"
+      "both_default both default 0 wp9_energy_d4_edmf 0,8,8:ledgers 200G 08:00:00"
+    )
+    EXTRA=(--exclusive)
+    OUT_ROOT=wp9_cost_b34
+    if [[ "${SET}" == b34check ]]; then
+        export WP9_WARMUP=1 WP9_STEPS=3 WP9_REPEATS=2
+        TABLE=(
+          "check_water_copies water copies 0 wp9_water_trmm0m_edmf 0,2 64G 02:00:00"
+          "check_both both default 0 wp9_energy_d4_edmf 0,8 64G 02:00:00"
+          "check_water_1m_on water default 1 wp9_water_1m_column 2 64G 02:00:00"
+        )
+        EXTRA=()
+        PARTITION=hpda2_test
+        OUT_ROOT=wp9_check_b34
+    fi
+fi
 export OUT_ROOT
+[[ "${RUN_SHA}" == "${EXPECT_SHA}"* ]] || [[ -n "${ALLOW_OTHER_MODEL_COMMIT:-}" ]] || {
+    echo "ERROR: the model tree is at ${RUN_SHA}, not ${EXPECT_SHA}." >&2; exit 1; }
 LOGS="${SCRATCH:?}/tag_closure/logs/${OUT_ROOT}"
 mkdir -p "${LOGS}"
 for row in "${TABLE[@]}"; do
@@ -73,7 +106,7 @@ for row in "${TABLE[@]}"; do
         [[ " ${ARMS[*]} " == *" ${arm} "* ]] || continue
     fi
     points="${points//,/ }"
-    cmd=(sbatch --parsable --account="${ACCOUNT:-pn49go-c}" --partition=hpda2_compute --nodes=1 --ntasks=1
+    cmd=(sbatch --parsable --account="${ACCOUNT:-pn49go-c}" --partition="${PARTITION}" --nodes=1 --ntasks=1
          --cpus-per-task=4 --mem="${mem}" ${EXTRA[@]+"${EXTRA[@]}"} --time="${time}" -J "wp9${EXTRA[@]+x}_${arm}"
          -o "${LOGS}/%x-%j.out" "${REC_TREE}/experiments/tag_closure/runscripts/wp9_cost.sh")
     if (( DRY )); then

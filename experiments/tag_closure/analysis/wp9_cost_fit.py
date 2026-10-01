@@ -24,35 +24,42 @@ for f in sorted(glob.glob(root + "/*/*.csv")):
     got = list(csv.DictReader(open(f)))
     if len(got) != 1:
         sys.exit(f"{f}: one row expected")
+    got[0]["arm"] = f.split("/")[-2]
     rows.append(got[0])
+# Since the amendment of 2026-10-02 every arm has its own baseline on its own
+# node, and each point is read against it. Before, one baseline per base config.
+same_node = {r["arm"] for r in rows if r["ntags"] == "0"} == {r["arm"] for r in rows}
 base = {}
 for r in rows:
     if r["ntags"] == "0":
-        if r["base"] in base:
-            sys.exit(f"two baselines for {r['base']}")
-        base[r["base"]] = r
+        k = r["arm"] if same_node else r["base"]
+        if k in base:
+            sys.exit(f"two baselines for {k}")
+        base[k] = r
+def baseline(r):
+    return base[r["arm"] if same_node else r["base"]]
 groups = defaultdict(list)
 for r in rows:
     if r["variant"] == "none" and r["ntags"] != "0":
-        groups[(r["base"], r["mode"], r["precip"])].append(r)
+        groups[(r["family"], r["base"], r["mode"], r["precip"])].append(r)
 def fit(ns, ys):
     k, a = np.polyfit(np.log(ns), np.log(ys), 1)
     return k
 print("base, mode, precip: exponent of added step time | of build time | local exponents of added step time")
 for key, pts in sorted(groups.items()):
-    if key[0] not in base:
-        sys.exit(f"no baseline for {key[0]}")
-    b0 = base[key[0]]
     pts.sort(key=lambda r: int(r["ntags"]))
     ns = np.array([int(r["ntags"]) for r in pts], float)
-    add = np.array([float(r["step_ms_min"]) - float(b0["step_ms_min"]) for r in pts])
+    add = np.array([float(r["step_ms_min"]) - float(baseline(r)["step_ms_min"]) for r in pts])
     build = np.array([float(r["build_s"]) for r in pts])
+    if len(ns) < 2:
+        print(key, "N=%s" % [int(n) for n in ns], "one point, no fit; added step %.3f ms" % add[0])
+        continue
     loc = [np.log(add[i + 1] / add[i]) / np.log(ns[i + 1] / ns[i]) for i in range(len(ns) - 1)]
     print(key, "N=%s" % [int(n) for n in ns], "k_step=%.2f" % fit(ns, add), "k_build=%.2f" % fit(ns, build),
           "local", [round(x, 2) for x in loc])
     # spread of the block ratios, dropping nothing
     for r in pts:
-        q = np.array(r["step_ms_blocks"].split(";"), float) / np.array(b0["step_ms_blocks"].split(";"), float)
+        q = np.array(r["step_ms_blocks"].split(";"), float) / np.array(baseline(r)["step_ms_blocks"].split(";"), float)
         q4 = q[1:]
         print("   N=%s ratio blocks %s spread %.1f%% (blocks 2-5 %.1f%%)" % (r["ntags"], np.round(q, 2),
               100 * (q.max() / q.min() - 1), 100 * (q4.max() / q4.min() - 1)))

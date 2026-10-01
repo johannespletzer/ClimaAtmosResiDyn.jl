@@ -73,12 +73,17 @@ for point in ${POINTS}; do
     n="${point%%:*}"
     variant="none"
     [[ "${point}" == *:* ]] && variant="${point#*:}"
+    # Point 0 is the untagged baseline, run in every arm since the amendment of
+    # 2026-10-02 so that it shares the arm's node. It has no mode and no rain
+    # and snow tags.
+    point_mode="${MODE}" point_precip="${PRECIP}"
+    [[ "${n}" == 0 ]] && point_mode=default point_precip=0
     log="${OUT}/${point//:/_}.log"
     [[ -f "${log}" ]] && { echo "ERROR: ${log} exists. Not overwriting." >&2; exit 1; }
     echo "== point ${point} start $(date -Is)"
     start=$SECONDS
     set +e
-    FAMILY="${FAMILY}" MODE="${MODE}" PRECIP="${PRECIP}" NTAGS="${n}" VARIANT="${variant}" \
+    FAMILY="${FAMILY}" MODE="${point_mode}" PRECIP="${point_precip}" NTAGS="${n}" VARIANT="${variant}" \
         OUTDIR="${OUT}" \
         timeout "${BUILD_LIMIT}" "${JULIA}" --startup-file=no \
         --project="${RUN_TREE}/.buildkite" "${DRIVER}" "${CONFIG_FILE}" \

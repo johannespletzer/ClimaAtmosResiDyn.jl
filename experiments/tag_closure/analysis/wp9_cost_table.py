@@ -78,9 +78,9 @@ def read_points(root):
                 row[c] = float(row[c])
             row["ntags"] = int(row["ntags"])
             row["arm"] = arm.name
-            if row["label"] in rows:
-                sys.exit(f"Two CSVs have the label {row['label']}.")
-            rows[row["label"]] = row
+            if (arm.name, row["label"]) in rows:
+                sys.exit(f"Two CSVs in {arm.name} have the label {row['label']}.")
+            rows[(arm.name, row["label"])] = row
     return rows, statuses
 
 
@@ -117,11 +117,19 @@ def main():
     rows, statuses = read_points(args.root)
     not_finished = check_statuses(rows, statuses)
 
+    # Since the amendment of 2026-10-02 every arm runs its own untagged point on
+    # its own node. Then each arm is read against its own baseline. Before it,
+    # the baseline of a base config served every arm of that base config.
+    arms_with_base = {r["arm"] for r in rows.values() if r["ntags"] == 0}
+    same_node = arms_with_base == {r["arm"] for r in rows.values()}
     groups = defaultdict(list)
     for r in rows.values():
-        groups[(r["family"], r["base"])].append(r)
+        groups[(r["arm"],) if same_node else (r["family"], r["base"])].append(r)
     lines = []
-    for (family, base), points in sorted(groups.items()):
+    for key, points in sorted(groups.items()):
+        family = next(r["family"] for r in points if r["ntags"] > 0) if any(
+            r["ntags"] > 0 for r in points) else points[0]["family"]
+        base = points[0]["base"]
         commits = {r["commit"] for r in points}
         if len(commits) != 1:
             sys.exit(f"{base} ran at more than one commit: {sorted(commits)}.")
@@ -129,16 +137,19 @@ def main():
         if len(baselines) != 1:
             sys.exit(f"{base} has {len(baselines)} untagged baselines, not one.")
         base0 = baselines[0]
+        if same_node and {r["host"] for r in points} != {base0["host"]}:
+            sys.exit(f"Arm {key[0]} ran on more than one node.")
+        title = f"{family}, `{base}`" + (f", arm `{key[0]}`, node `{base0['host']}`" if same_node else "")
         lines += [
-            f"### {family}, `{base}`, commit `{next(iter(commits))[:8]}`",
+            f"### {title}, commit `{next(iter(commits))[:8]}`",
             "",
             f"Untagged: build {fmt(base0['build_s'])} s, step {base0['step_ms_min']:.3f} ms "
             f"(min) / {base0['step_ms_median']:.3f} ms (median), {base0['bytes_per_step_min']:.0f} B/step, "
             f"peak {base0['maxrss_final_gb']:.2f} GB.",
             "",
             "| mode | precip | variant | tags | build s | compile s | first step s | step ms min | step ms median "
-            "| block spread | compile in blocks s | x untagged (min) | ms per tag | B/step | peak GB | follower |",
-            "|:--|:--|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|:--|",
+            "| block spread | ratio spread | compile in blocks s | x untagged (min) | ms per tag | B/step | peak GB | follower |",
+            "|:--|:--|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|:--|",
         ]
         order = sorted(
             (r for r in points if r["ntags"] > 0),
@@ -147,12 +158,19 @@ def main():
         for r in order:
             blocks = np.array([float(x) for x in r["step_ms_blocks"].split(";")])
             spread = (blocks.max() - blocks.min()) / blocks.min()
+            # The ratio to the baseline block by block: block k covers the same
+            # model time in both, so a cost that moves with model time cancels.
+            q = blocks / np.array([float(x) for x in base0["step_ms_blocks"].split(";")])
+            ratio_spread = q.max() / q.min() - 1
             ratio = r["step_ms_min"] / base0["step_ms_min"]
-            per_tag = (r["step_ms_min"] - base0["step_ms_min"]) / r["ntags"]
+            # A combined point carries ntags water and ntags energy tags.
+            n_total = r["ntags"] * (2 if r["family"] == "both" else 1)
+            per_tag = (r["step_ms_min"] - base0["step_ms_min"]) / n_total
+            tags = f"{r['ntags']}+{r['ntags']}" if r["family"] == "both" else f"{r['ntags']}"
             lines.append(
-                f"| {mode_label(r)} | {'yes' if r['precip'] == '1' else 'no'} | {r['variant']} | {r['ntags']} "
+                f"| {mode_label(r)} | {'yes' if r['precip'] == '1' else 'no'} | {r['variant']} | {tags} "
                 f"| {fmt(r['build_s'])} | {fmt(r['build_compile_s'])} | {fmt(r['first_step_s'])} "
-                f"| {r['step_ms_min']:.3f} | {r['step_ms_median']:.3f} | {100 * spread:.1f}% | {r['block_compile_s_max']:.2f} "
+                f"| {r['step_ms_min']:.3f} | {r['step_ms_median']:.3f} | {100 * spread:.1f}% | {100 * ratio_spread:.1f}% | {r['block_compile_s_max']:.2f} "
                 f"| {ratio:.3f} | {per_tag:.4f} | {r['bytes_per_step_min']:.0f} "
                 f"| {r['maxrss_final_gb']:.2f} | {r['follower']} |"
             )

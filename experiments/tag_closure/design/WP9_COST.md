@@ -267,3 +267,94 @@ frames by time and by allocation, the P2/P3 functions, and the top 40 types.
     taken before it, is the step time quoted. Both are one run per point.
   - Nothing here sets a budget or changes model code. A fix to P2 or P3 is a
     model change and needs the owner.
+
+## 9. Amendment of 2026-10-02: the rerun on the new physics
+
+Written before any job of this section, and pushed first. The owner approved
+the rerun on 2026-10-02 (task 5 of that day's goals). It follows the merge of
+PR #139 (upstream `a9287b2d`, ClimaParams 1.2, CloudMicrophysics 0.43), #140
+and #141. The results of sections 4 and 7 keep their commit, `43b01ca1`. They
+count as prior evidence only (OD12 to OD14) and are not pooled with this run.
+
+**Commit.** The model is `main` `b34bbd8b`, in a clean detached run tree,
+`../ClimaAtmosResiDyn-wp9-run-b34`, with `.buildkite/LocalPreferences.toml`
+copied in. Julia, depot, modules, one rank and one thread are section 4's.
+
+**Warm-up.** In the exclusive rerun the excess sat in block 1 (water under
+EDMF, 1M) or in blocks 1 and 2 (energy), and in the untagged baselines too.
+Over blocks 3 to 5 every point spread by at most 2.4%. So the warm-up grows
+from 10 steps to 50, which puts the first timed block after the last step of
+the old block 2. The measure keeps its form: 5 blocks of 20 steps, the
+minimum block, and the spread over all five. No block is dropped after the
+fact. This was chosen over a measure on the later blocks because it changes
+one number and leaves the rule as it was. It costs 40 steps per point, under
+a minute except for 1M with rain and snow at 32 tags (about 35 s). Block `k`
+still covers the same model time in every arm of a base config. The CSV
+records the warm-up.
+
+**Baseline on the same node.** Every arm runs its own untagged point `0`
+first, in the same exclusive job. Each ratio is read against the baseline of
+its own arm only. The table refuses an arm whose points ran on more than one
+node. This removes the cross-node bias of section 7, which was at least 17%
+for one pair.
+
+**The combined arm.** `both_default` puts 8 water tags and 8 energy tags on
+D4 (`wp9_energy_d4_edmf`, 1M, EDMF), default mode. The energy tags are
+G4.15's eight. The water tags are the two region tags, split at 750 m as the
+energy regions are, and six surface-flux source tags. Its points are `0`,
+`8` (8 + 8) and `8:ledgers` (both families' per-tag ledgers). D4 is chosen
+because the energy tags' offset and regions are set for it. The water tags
+need only a region height. Its ratio is the 8 + 8 number the budget needs.
+
+**Arms.** One exclusive job each, account `pn49go-c`, partition
+`hpda2_compute`. Points run in turn, each in its own process, with section
+4's 4 h build limit.
+
+| Arm                 | Base config             | Mode    | Rain, snow | Points                                       |
+|:------------------- |:----------------------- |:------- |:---------- |:-------------------------------------------- |
+| `water_default`     | `wp9_water_trmm0m_edmf` | default | no         | 0, 2, 4, 8, 8:ledgers, 8:tracer, 8:increment |
+| `water_default_32`  | `wp9_water_trmm0m_edmf` | default | no         | 0, 32                                        |
+| `water_copies`      | `wp9_water_trmm0m_edmf` | copies  | no         | 0, 2, 4, 8, 8:ledgers                        |
+| `water_1m_off`      | `wp9_water_1m_column`   | n/a     | no         | 0, 2, 4, 8, 32                               |
+| `water_1m_on`       | `wp9_water_1m_column`   | n/a     | yes        | 0, 2, 4, 8, 32                               |
+| `energy_default`    | `wp9_energy_d4_edmf`    | default | n/a        | 0, 2, 4, 8, 8:ledgers, 8:records             |
+| `energy_default_32` | `wp9_energy_d4_edmf`    | default | n/a        | 0, 32                                        |
+| `energy_copies`     | `wp9_energy_d4_edmf`    | copies  | n/a        | 0, 2, 4, 8, 8:ledgers                        |
+| `both_default`      | `wp9_energy_d4_edmf`    | default | n/a        | 0, 8 (8 + 8), 8:ledgers                      |
+
+Point `0` of a copies arm or of `water_1m_on` is the plain base config, with
+no mode and no rain and snow tags. Not run: copies at 32 tags. Water did not
+build in 8 h (W34) and energy did not finish in 4 h twice (jobs 13999635 and
+14005221), both at `43b01ca1`. They are reported with that commit and not
+retried.
+
+**Check jobs first.** Three short jobs on `hpda2_test`, with 1 warm-up step
+and 2 blocks of 3 steps, results in `$SCRATCH/tag_closure/output/wp9_check_b34/`:
+`check_water_copies` (0, 2), `check_both` (0, 8) and `check_water_1m_on` (2).
+They cover point `0` in a copies arm, the combined family and the rain and
+snow tags on the new physics. The real jobs are submitted only if every check
+point exits 0 and writes its CSV. With the 9 arms that is 12 jobs. From the
+exclusive rerun's point times the arms should take about 18 h of wall time in
+all, run in parallel. Results go to `$SCRATCH/tag_closure/output/wp9_cost_b34/`.
+
+**The spread rule, as amended.** For every finished point, the tagged ones and
+the baselines:
+
+  - the block spread, max over min of its 5 blocks less 1, is at most 10%;
+  - for a tagged point, the spread of its ratio to its arm's baseline, block
+    by block, is at most 10% too.
+
+If any point fails either, it is reported with its spreads, nothing is rerun,
+and the work stops for the owner before any finding is drafted.
+
+**How it is read.** As section 5, with the ratio to the same arm's baseline.
+The step time quoted is the minimum block, with the median beside it, and the
+less favourable of the two goes into a finding. The fit is
+`analysis/wp9_cost_fit.py`, now per arm baseline. The cost budget is proposed
+from it, marked as waiting for the owner. It is not set here.
+
+**Changes to the tools, all before the jobs.** The driver takes `FAMILY=both`
+and writes the warm-up into the CSV. The runscript runs point `0` without mode
+or rain and snow tags. `submit_wp9.sh` takes `SET=b34` and `SET=b34check`. The
+table and the fit read each arm against its own baseline when every arm has
+one, and the table prints the ratio spread.
