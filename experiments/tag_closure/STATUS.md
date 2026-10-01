@@ -76,6 +76,28 @@ not checked, it says so.
 
 ## Where things stand
 
+  - **Update, 2026-10-02: the owner's walk-through.** The owner chose the
+    recommended option on all five items (DECISIONS.md, 2026-10-02). Nothing
+    was run. The record was changed only.
+
+      + **Provenance pathway:** OD12, OD13 and OD14 are accepted, because
+        they gate runs. OD9 to OD11 stay proposed until a gated result
+        exists. OD15 is answered at PX25's pre-registration.
+      + **New rule:** gated runs use post-#139 `main` (`24c1aaa0` or later;
+        #139 merged 2026-10-01 with upstream `a9287b2d`). Numbers measured on
+        the old physics keep their commit label and are prior evidence only.
+      + **WP4b:** one fix PR, two to three days, for the five points and the
+        review's four should-fix findings. Not built.
+      + **W50:** the copies' repair is open. First, rerun W50's 60-level
+        copies day and its twin on post-#139 `main` (two jobs) and score
+        PX5's rule. Then PX12 on TRMM 0M (about 12 short jobs). Not
+        submitted.
+      + **G4.3 to G4.6:** the definitions are decided (points 1, 4's form, 5
+        and 7). The levels of points 2, 3, 4 and 6 are set from post-#139 runs
+        at G4's start.
+      + **KI4-COPIES and UP1:** a fixed-parent one-step probe is folded into
+        PX12. UP1 is decided by its own rule.
+
   - **Update, 2026-09-30.**
 
       + **Merged:** #127 (the #121 follow-ups), #128 (ClimaParams capped at
@@ -744,7 +766,10 @@ changes the model's fields (`AGENTS.md`, "Fork parity with upstream").
 
 ## The owner's open decisions
 
-*Scope added (provenance pathway, 2026-09-26):* OD9 to OD15 are proposed, not
+*Update 2026-10-02:* OD12 to OD14 are accepted. OD9 to OD11 and OD15 stay
+proposed.
+
+*Scope added (provenance pathway, 2026-09-26):* OD9 to OD15 were proposed, not
 yet open. OD15 was added on 2026-09-27. Each becomes open when the owner
 accepts it ([PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), section 9).
 
@@ -797,7 +822,9 @@ OD7 is the only open numbered decision. Open now, each with its entry in
     The 30-day parity of Q8 passed twice. The 90-day validation waits for
     these answers.
 
-  - **The WP4b walk-through, with the stage-1 review's findings**
+  - ~~**The WP4b walk-through, with the stage-1 review's findings**~~
+    *Decided 2026-10-02: one fix PR (the update line of that date).* The
+    text as it stood
     (`review/agent_reviews/wp4b_stage1_review_2026-09-30.md`): 12 findings
     kept, none moving a model field. The should-fix ones are micro-1,
     transport-1, transport-2 (in #135), state-1 and state-2. The review
@@ -805,8 +832,9 @@ OD7 is the only open numbered decision. Open now, each with its entry in
     micro-3 favours a gate or sub-key for P3, and transport-1 is a sign
     problem in P4's correction. To be walked through one point at a time.
 
-  - **OD9 to OD15, G4.3 to G4.6's seven points, WP4b's five points:** to be
-    walked through one at a time (the register, 2026-09-28).
+  - ~~**OD9 to OD15, G4.3 to G4.6's seven points, WP4b's five points**~~
+    *Walked through 2026-10-02 (the register).* Still open from it: OD9 to
+    OD11, OD15 at PX25's pre-registration, and G4's levels at G4's start.
 
 Not plan decisions, kept as they stood on 2026-09-23 and not rechecked:
 

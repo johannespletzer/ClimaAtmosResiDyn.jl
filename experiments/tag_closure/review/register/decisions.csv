@@ -1,4 +1,13 @@
 date,decided_by,decision,doc,section,still_in_force,superseded_by
+2026-10-02,owner,"OD12, OD13 and OD14 are accepted (walk-through, option B), because they gate runs (PX11, PX12, PX16, PX23, step 8b).",PROVENANCE_PATHWAY.md,9,yes,
+2026-10-02,owner,"OD9 to OD11 (the evidence labels, the screen arithmetic, the rule classification) stay proposed until a gated result exists.",PROVENANCE_PATHWAY.md,9,waiting_owner,
+2026-10-02,owner,OD15 is answered at PX25's pre-registration.,PROVENANCE_PATHWAY.md,9,waiting_owner,
+2026-10-02,owner,"Gated runs use post-#139 main (24c1aaa0 or later; upstream a9287b2d, ClimaParams 1.2, CloudMicrophysics 0.43); old-physics numbers count as prior evidence only.",PROVENANCE_PATHWAY.md,9,yes,
+2026-10-02,owner,"WP4b stage 1: one fix PR (option A, two to three days): a per-compartment closing step after the follow, booked in the rescale's ledgers (micro-1 on every path, P2's revision); the rescale orders the N-raising steps first (state-1); transport-1 measured on the sphere, then the passive-tracer form; state-2 stays raw with its docstring corrected; P1 stands; P3 gets an audit sub-key defaulting to on; P5 gets a registry row. No model field changes; the PR also checks whether #137's Q5 rule covers micro-1 in the microphysics hook.",review/agent_reviews/wp4b_stage1_review_2026-09-30.md,"findings micro-1, state-1, transport-1, state-2",yes,
+2026-10-02,owner,"W50's copies repair: C then B. C: rerun W50's 60-level copies day and its twin on post-#139 main (2 jobs) and score PX5's rule on it. B: PX12 on TRMM 0M (about 12 short jobs), unblocked by OD12.",FINDINGS.md,W50,yes,
+2026-10-02,owner,"G4.3 to G4.6, option B: values on the interim are estimates (point 1); A5's group sum is the partition's sum (point 5); document C4's size, 0.55% of a day's Θx (E87) (point 7); point 4's form is a per-transport default.",G4_TODO.md,G4.3 to G4.6,yes,
+2026-10-02,owner,"G4.3 to G4.6: the levels for points 2, 3, 4 and 6 are set from post-#139 runs at G4's start.",G4_TODO.md,G4.3 to G4.6,waiting_owner,
+2026-10-02,owner,"KI4-COPIES and UP1, option B: fold a fixed-parent one-step probe (W35's pattern) into PX12 on its 0M copies states; decide UP1 by its own rule.",PROVENANCE_PATHWAY.md,PX12,yes,
 2026-10-01,owner,"W49: V2 counts as C's validation; at site 23 V2 is 4.1e-4 against 2e-3, the control on main at 2.2e-2.",design/NEGATIVE_PARENT_WATER.md,11.10,yes,
 2026-10-01,owner,"W49: V5 led_fix fails at site 23 (pbl 7.33%, free 6.52% against 2%; control 2.73% and 2.27%, a rise of about 2.7 to 2.9 times, cause untraced); recorded as an open failure.",design/NEGATIVE_PARENT_WATER.md,11.10,yes,
 2026-10-01,owner,#137 merges once its CI is green; it merged on 2026-10-01 as b4ebfca5.,design/NEGATIVE_PARENT_WATER.md,11.10,done,

@@ -49,8 +49,9 @@ keeps, G4.3 to G4.6 with offset-invariant scales (OD4), the G4.15 decision
 last (OD6). ROADMAP.md, "Rev. 2 of the work plan", holds the contract and the
 register.
 
-*Scope added (provenance pathway, 2026-09-26, pending OD9 to OD14; revised
-after the owner's review):* the provenance pathway,
+*Scope added (provenance pathway, 2026-09-26, pending OD9 to OD11; OD12 to
+OD14 accepted 2026-10-02; revised after the owner's review):* the provenance
+pathway,
 [PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), applies in OD4's units at a
 fixed `c` and source convention (OD11). Energy tests are conditional budget
 tests, valid for that `c` and convention. The `c`/2`c` spread and `C4`'s
@@ -196,6 +197,27 @@ two-iteration run?
 
 Claim contracts for energy source tags, process records and the parent-budget
 ledger.
+
+*Decided 2026-10-02 (the walk-through, option B; DECISIONS.md), for G4.3 to
+G4.6's seven points.* The definitions are decided. The levels wait for G4's
+start. Nothing below is built yet.
+
+  - [ ] **The four definitions, into the contracts, tests and docs.**
+      + Point 1: values on the interim throughput are estimates, not bounds.
+        Say so in G4.3's interim rule (E84).
+      + Point 5: A5's "its group's sum" is the partition's sum
+        (`design/RESIDUAL_REPORT.md`). Its tests and docs follow.
+      + Point 7: document C4's size, 0.55% of a day's Θx on D4 (E87), as a
+        limitation. It is not shared as transport.
+      + Point 4's form: a per-transport default for water's warning. The
+        level is not set here.
+  - [ ] **The levels for points 2, 3, 4 and 6, at G4's start.** Set them from
+    post-#139 runs, with the full re-check of the energy findings. They were
+    calibrated on old-physics D4:
+      + point 2: the energy aggregate-intervention threshold (E86);
+      + point 3: `throughput_tolerance` (5e-2 and 0.3, or off);
+      + point 4: water's warning level (1e-10 fires on every follower run);
+      + point 6: whether a high settling ratio warns.
 
 *Scope added (provenance pathway, 2026-09-26, pending OD11):*
 

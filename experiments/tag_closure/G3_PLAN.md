@@ -104,8 +104,9 @@ assessable, and the Insight 10 tests (refinement, per-tag intervention,
 aggregation) bound it under OD5. Criterion 11's plateau is replaced by OD6's
 ceiling and growth bound (6.1).
 
-*Scope added (provenance pathway, 2026-09-26, pending OD9, OD11, OD12 and
-OD14; revised after the owner's review):* the criteria and the pathway's
+*Scope added (provenance pathway, 2026-09-26, pending OD9 and OD11; OD12 and
+OD14 accepted 2026-10-02; revised after the owner's review):* the criteria
+and the pathway's
 evidence levels. The criteria are judged as approved. The levels are reported
 beside them.
 

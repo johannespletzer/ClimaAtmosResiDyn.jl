@@ -1,6 +1,8 @@
 # The provenance pathway
 
-Proposed on 2026-09-26, pending the owner's decisions OD9 to OD15. Revised the
+Proposed on 2026-09-26. The owner accepted OD12, OD13 and OD14 on 2026-10-02
+(walk-through, option B). OD9 to OD11 stay proposed until a gated result
+exists, and OD15 is answered at PX25's pre-registration. Revised the
 same day after the owner's review (section 0). PT15, PT16, PX25 and OD15 were
 added on 2026-09-27, from the owner's review of #121 (section 0). It is written
 on `claude/tag-provenance-certainty-zwkx73`, from `claude/plan-rev2` at
@@ -1219,7 +1221,10 @@ the L∞ route; it cannot certify either.
     point 2 of G4.3 to G4.6.
   - Code: none. Two D4 jobs.
 
-**PX12. TRMM 0M comparator eligibility on current code.** [K] A second
+**PX12. TRMM 0M comparator eligibility on current code.** [K] *Queued
+2026-10-02: runs on post-#139 `main`, with OD12 accepted. The walk-through
+folds a fixed-parent one-step probe (W35's pattern) into it, on its 0M copies
+states, for KI4-COPIES and UP1.* A second
 benchmark, for the sub-grid rules. W21's TRMM runs predate WP6 and the current
 copies, so new runs are needed: default, copies and untagged; `dt` 150 and
 75 s; two and ten Newton iterations; one P1 probe for the parent's error. OD12
@@ -1503,7 +1508,15 @@ untagged twin, and a draft PR that only the owner merges. OD13 approves them.
 
 These enter the register in [ROADMAP.md](ROADMAP.md) as proposals. Each
 becomes an open "OWNER DECISION REQUIRED" row when the owner accepts it. No
-agent fills one in. The panel that designed this page proposed eight; they are
+agent fills one in.
+
+*Update 2026-10-02 (walk-through, option B):* **OD12, OD13 and OD14 are
+accepted (2026-10-02),** because they gate runs. OD9 to OD11 stay proposed.
+OD15 is answered at PX25's pre-registration. A new rule applies to every gated
+run: it uses post-#139 `main` (`24c1aaa0` or later). Old-physics numbers count
+as prior evidence only.
+
+The panel that designed this page proposed eight; they are
 merged into six to spare the owner's time. They were revised after the owner's
 review (section 0). OD15 was added on 2026-09-27, from the owner's review of
 #121, so seven are proposed.
@@ -1526,7 +1539,8 @@ review (section 0). OD15 was added on 2026-09-27, from the owner's review of
     they fix `c` (110,495 J/kg unless the owner names another) and the source
     convention for the conditional tests. Needed before PX22 is scored, and
     before any Val-1, Val-2 or convention-sensitive label.
-  - **OD12. Reference validity.** A reference validates only rules that are
+  - **OD12. Reference validity.** *Accepted 2026-10-02.* A reference
+    validates only rules that are
     active in the case and that it does not share. The excluded processes are
     measured inactive. Its floors (surface, initialization, parent error,
     contamination) are each at most a quarter of the tolerance. Copies validate
@@ -1537,10 +1551,12 @@ review (section 0). OD15 was added on 2026-09-27, from the owner's review of
     owner's revision of 2026-09-25). Arms that solve their own transport stay
     gated unless the parent's error is at most 1e-3. These arms are the copies,
     tracer mode and a passive tracer. Needed before PX11 is scored.
-  - **OD13. The probe PRs.** PP-SUB only, and only after PX8 finds subsidence
+  - **OD13. The probe PRs.** *Accepted 2026-10-02.* PP-SUB only, and only
+    after PX8 finds subsidence
     material. The others are deferred with their triggers. Probe accounting
     instead of new state ledgers. Needed before PX16.
-  - **OD14. Held-out hygiene.** Name one held-out case, its window and its
+  - **OD14. Held-out hygiene.** *Accepted 2026-10-02.* Name one held-out
+    case, its window and its
     metrics, before any rule is tuned on PX11's result. The case needs a
     reference that is valid there (PX23). Soares, TRMM 0M and sites 23 and 26
     are development cases. The owner stated on 2026-09-26 that criterion 8's
@@ -1692,8 +1708,9 @@ listed with every energy verdict.
   - **The L∞ rows** (5% and 25%) have no route without a comparator, unless
     positivity is shown for the operators of a case.
   - **Data durability.** Every [R] item depends on scratch until PX0 is done.
-  - **The owner's bandwidth.** Seven proposed decisions (OD15 added on
-    2026-09-27), OD7, and at most one probe PR on the gated path.
+  - **The owner's bandwidth.** Seven decisions were proposed (OD15 added on
+    2026-09-27); OD12 to OD14 are accepted (2026-10-02). OD7 is open, and at
+    most one probe PR runs on the gated path.
   - **Multiple testing.** Only pre-registered decision rules count. Everything
     else is reported.
   - **Two meanings of provenance.** "Tag provenance" is this page's subject.

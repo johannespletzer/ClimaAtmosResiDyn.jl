@@ -38,7 +38,7 @@ The twelve criteria of the plan, section 2, in short:
 | 5  | Per-tag accuracy against the copies, at 24 h and in the first hour                             | not assessable: copies ineligible on D4-W (W21, W38 R5, R7); first hour 13.1% (W50 rule) against 14.3% (main), budget 1%; R5 fails on all rungs (W50)                                                                                             |
 | 6  | Convergence of the default's error and of the copies                                           | not assessable: no eligible comparator (W38); centred rows R6, R9, R10 pass; first-order breaks the copies (R4, R6)                                                                                                                               |
 | 7  | Precipitation provenance: the 0M split, rain and snow tags, `Σ pr_tag = pr`, the audit         | partial: 0M split validated (W26); WP4a-V passes (W32); rain/snow stage 1 without EDMF (W43); stages 2 and 3, V-W5 and the audit's acceptance open                                                                                                |
-| 8  | Held-out columns: RICO, BOMEX, ARM SGP, GCM-driven 0M                                          | not started: waits on V-W5 and OD14                                                                                                                                                                                                               |
+| 8  | Held-out columns: RICO, BOMEX, ARM SGP, GCM-driven 0M                                          | not started: waits on V-W5 (OD14 accepted 2026-10-02)                                                                                                                                                                                             |
 | 9  | Float32 twin                                                                                   | not started: the Float64-twin helper exists                                                                                                                                                                                                       |
 | 10 | Cost, both modes and both families                                                             | in progress: WP9 first pass noisy (19 of 30 points spread over 10%; W52 to follow); exclusive-node rerun pending (jobs 14005213–21); 32 water copies not built in 8 h; rain/snow under EDMF not buildable at 43b01ca1; budget waits for the owner |
 | 11 | Ten days on the sphere (superseded 2026-09-24: 90 days at 60 levels), a copies twin, a restart | not started: waits on step 8a (crev) and step 8 (WP9)                                                                                                                                                                                             |
@@ -48,6 +48,17 @@ Restated 2026-09-30 from the findings; the plan's section 2 holds the criteria's
 
 ## Decisions
 
+  - [x] **The walk-through of 2026-10-02: the recommended option on all five
+    items** (DECISIONS.md). The work it queues is open, under the items named:
+      + OD12, OD13 and OD14 accepted, OD9 to OD11 proposed, OD15 at PX25's
+        pre-registration. Gated runs use post-#139 `main` (`24c1aaa0` or
+        later), and old-physics numbers are prior evidence only ("Provenance
+        pathway");
+      + WP4b: one fix PR ("WP4b");
+      + W50: C, then B ("The surface rule in the first hour", and PX12);
+      + G4.3 to G4.6: the definitions decided, the levels at G4's start
+        (G4_TODO.md, G4.3);
+      + KI4-COPIES and UP1: a probe folded into PX12.
   - [x] **WP4a-J: does `water_tag_rainout_jacobian` become a default?**
     *Decided 2026-09-29, after W51 (DECISIONS.md): no. It stays an
     experimental key, opt-in and off by default, as proposed.* ~~Open.~~ The
@@ -86,7 +97,10 @@ Restated 2026-09-30 from the findings; the plan's section 2 holds the criteria's
         against 2e-3, and the control on `main` is 2.2e-2. The owner counted
         it as C's validation. V5's `led_fix` fails at site 23 and stays open
         (the item "Trace V5" under known issue 7's fix).
-  - [ ] **OD9 to OD14, proposed by the provenance pathway.** *Scope added
+  - [ ] **OD9 to OD14, proposed by the provenance pathway.** *Walk-through
+    2026-10-02 (option B): OD12, OD13 and OD14 are accepted, because they gate
+    runs. OD9 to OD11, the labels, stay proposed until a gated result
+    exists. This item stays open for them.* *Scope added
     (provenance pathway, 2026-09-26):*
     [PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), section 9. They are in [the
     register](ROADMAP.md#the-decision-register) as proposals, not yet open. They
@@ -96,7 +110,8 @@ Restated 2026-09-30 from the findings; the plan's section 2 holds the criteria's
     the probe PRs, and held-out hygiene. OD3 and OD5 stay as decided. No agent
     fills one in.
   - [ ] **OD15, proposed by the provenance pathway from the owner's review of
-    #121.** *Scope added (provenance pathway, 2026-09-27):*
+    #121.** *2026-10-02: answered at PX25's pre-registration.* *Scope added
+    (provenance pathway, 2026-09-27):*
     [PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), section 9 and PX25. It is
     in [the register](ROADMAP.md#the-decision-register) as a proposal, not
     yet open. It answers the review's question on the acceptable closure
@@ -254,6 +269,18 @@ Restated 2026-09-30 from the findings; the plan's section 2 holds the criteria's
     1.10.12 and 1.11.9) passed, at `2ebf7648`, one docs-only commit before
     the PR head (RUNS, "W50 and E89: the review checks of #136"). What remains
     open is the copies' repair.*
+      + [ ] **W50's copies repair, C then B (decided 2026-10-02,
+        DECISIONS.md).** The repair fails 2e-3 a day in every measurement so
+        far (W21 to W50), on the old physics.
+          * [ ] C: rerun W50's 60-level copies day and its twin on post-#139
+            `main` (two jobs), then score PX5's rule on it (the filter share
+            at least 0.7, growing at least 1.5 times per halving). Not
+            submitted.
+          * [ ] B: PX12 on TRMM 0M, about 12 short jobs ("Provenance
+            pathway"). Not submitted.
+          * If C confirms a per-step cause, the owner may choose to declare
+            that D4-W has no eligible comparator at production cost
+            (option D of the brief).
   - [x] **The prognostic fields of the rain and snow tags**, settled in the
     design note WP4b-D and its review. *Decided 2026-09-25:* the three parts;
     `ρq_tag_<name>` holds the non-precipitating water, beside `ρq_rtag_<name>`
@@ -707,7 +734,8 @@ the explicit path (the owner's review of #105, finding 7).
     counts OD8 keeps. With their blocks, the copies must still pass
     comparator eligibility in each run where they serve as the audit
     (ROADMAP.md, the acceptance contract). *2026-09-24 (OD8):* at 8 tags.
-  - *Scope added (provenance pathway, 2026-09-26, pending OD12):* before copies
+  - *Scope added (provenance pathway, 2026-09-26; OD12 accepted 2026-10-02):*
+    before copies
     serve as the comparator on D4-W, PX5 would name the cause of their repair.
     Eligibility is not independence: eligible copies validate only the active
     rules they do not share.
@@ -845,6 +873,8 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     RUNS rows; `output/wp4aj/`, with the #130 fix's checks in
     `output/wp4aj/tests_130/`; the decision in DECISIONS. The copies' part
     of known issue 4 (KI4-COPIES) and UP1 are follow-ups for the owner.
+    *2026-10-02: the owner chose to fold a fixed-parent one-step probe into
+    PX12 ("Provenance pathway"). UP1 is decided by its own rule.*
 
 ## WP4b: rain and snow carry their own tags (draft PR #121)
 
@@ -881,7 +911,29 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     kept, none moving a model field. The should-fix ones are micro-1,
     transport-1, transport-2, state-1 and state-2. transport-2 is being fixed
     in PR #135 (open, its tests running). No fix is recorded for the others. The
-    walk-through with the owner is open.*
+    walk-through with the owner was held on 2026-10-02: one fix PR, below.*
+
+  - [ ] **The WP4b fix PR** (decided 2026-10-02, option A, two to three days;
+    DECISIONS.md). It covers P1 to P5 and the review's four open should-fix
+    findings. No model field changes, and the tags change under the key.
+    Not built. It holds:
+
+      + [ ] a per-compartment closing step after the follow, booked in the
+        rescale's ledgers (micro-1 on every path, and P2's revision);
+      + [ ] the rescale ordered so that the steps raising N come first
+        (state-1);
+      + [ ] transport-1 measured on the sphere, then the passive-tracer form;
+      + [ ] state-2 stays raw, with its docstring corrected;
+      + [ ] P1 stands (no change);
+      + [ ] P3: an audit sub-key, on by default;
+      + [ ] P5: a row in the parent-budget coverage registry;
+      + [ ] a check of whether #137's Q5 rule already covers micro-1 in the
+        microphysics hook. Sedimentation and advection are not shown covered
+        by it. The one-cell test has not been run on `main`.
+
+    Stages 2 and 3, PX25's pre-registration (with OD15) and WP9's cost with
+    rain and snow on wait for it. WP9's P2 and P3 profiling can price the
+    audit (micro-3).
 
   - [ ] The hyperdiffusion correction (note section 3) is built, but no model
     run exercises it: the test column has no horizontal extent. A sphere or
@@ -1028,11 +1080,13 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     pathway proposes increment as the recommended mode for precipitation
     provenance. The owner decides.
 
-## Provenance pathway (proposed 2026-09-26, pending OD9 to OD15)
+## Provenance pathway (proposed 2026-09-26; OD12 to OD14 accepted 2026-10-02)
 
-*Scope added (provenance pathway, 2026-09-26, pending OD9 to OD14; revised
-after the owner's review):* the gated plan of
-[PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), section 7. Each decision rule
+*Scope added (provenance pathway, 2026-09-26, pending OD9 to OD11 and OD15;
+OD12 to OD14 accepted 2026-10-02; revised after the owner's review):* the
+gated plan of [PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), section 7. Gated
+runs use post-#139 `main` (`24c1aaa0` or later). Old-physics numbers are prior
+evidence only. Each decision rule
 is committed in a dated design note before any file it judges is opened. Every
 job follows STATUS.md, "What needs approval". Each gated result writes the
 verdict record of the pathway's section 2. If a prerequisite fails, it says
@@ -1057,8 +1111,19 @@ verdict record of the pathway's section 2. If a prerequisite fails, it says
         are fixed. The owner, 2026-09-26: a site-23-derived case does not
         count as held out for a rule developed using site 23.
   - [ ] Gate E (G4). PX22: the energy budget and `C4` checks at a fixed `c`.
+  - [ ] **PX5 on W50's rerun** (walk-through 2026-10-02, option C). See "The
+    surface rule in the first hour" for the two jobs. PX5's rule scores the
+    copies' repair there.
+  - [ ] **PX12, TRMM 0M comparator eligibility,** on post-#139 `main`, about 12
+    short jobs, unblocked by OD12 (walk-through 2026-10-02). It runs after
+    the W50 rerun is scored. It carries the KI4 probe, below.
+      + [ ] **The KI4-COPIES probe, folded into PX12 (option B).** A
+        fixed-parent one-step probe, W35's pattern, on PX12's 0M copies
+        states. UP1 is decided by its own rule on the result. Known issue 4's
+        copies part and UP1 stay open until then.
   - Deferred until a measured result needs them, each with its trigger in the
-    pathway's section 7.2: PX2 to PX6, PX9, PX10, PX12 to PX15, PX17 to PX21,
+    pathway's section 7.2: PX2 to PX4, PX6, PX9, PX10, PX13 to PX15, PX17 to
+    PX21,
     and the probe PRs PP-TRACER, PP-BAND, PP-SFC, PP-FACE, PP-JAC and
     PP-SRCOFF. *Scope added (provenance pathway, 2026-09-27, from the
     owner's review of #121):* also PX25, WP4b's refinement matrix.

@@ -68,7 +68,9 @@ record; the answered and superseded entries are in the next section.
     to probe more first (`design/NEGATIVE_PARENT_WATER.md`, section 9.7).
     [G3T](G3_TODO.md#decisions)
 
-  - **G4.3 to G4.6's seven points** (raised 2026-09-25 with #120 and E86;
+  - ~~**G4.3 to G4.6's seven points**~~ *Answered 2026-10-02: the
+    definitions are decided; the levels of points 2, 3, 4 and 6 are set from
+    post-#139 runs at G4's start* (below). Raised 2026-09-25 with #120 and E86;
     the proposals are in `review/od4_restatement.md` and the design notes it
     names):
 
@@ -90,8 +92,9 @@ record; the answered and superseded entries are in the next section.
 
     [G4T](G4_TODO.md)
 
-  - **WP4b stage 1's points** (raised 2026-09-25 with #121 and W43; the
-    design note's section 17):
+  - ~~**WP4b stage 1's points**~~ *Answered 2026-10-02: one fix PR, with
+    the review's four open should-fix findings* (below). Raised 2026-09-25
+    with #121 and W43; the design note's section 17:
 
       + whether each gross flow carrying its donor's composition over the
         step stands as the reading of section 9;
@@ -106,7 +109,11 @@ record; the answered and superseded entries are in the next section.
 
     [G3T](G3_TODO.md)
 
-*Scope added (provenance pathway, 2026-09-26):* **OD9 to OD15** are proposed,
+*Update 2026-10-02:* the owner accepted **OD12, OD13 and OD14**, and gated
+runs use post-#139 `main` (below). OD9 to OD11 stay proposed. OD15 is answered
+at PX25's pre-registration.
+
+*Scope added (provenance pathway, 2026-09-26):* **OD9 to OD15** were proposed,
 not yet open ([PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), section 9). OD15,
 WP4b's acceptance for precipitation provenance, was added on 2026-09-27 from
 the owner's review of #121. Each becomes open when the owner accepts it. The
@@ -217,6 +224,57 @@ The list as it stood before this classification, kept as written:
 >   - **When to investigate V-W4's two breaks:** the partition at 120 levels,
 >     and the copies under first-order upwinding (W25). **Waiting.**
 >     [FINDINGS W25](FINDINGS.md)
+
+## 2026-10-02
+
+The owner's walk-through of the open items. The owner chose the recommended
+option on all five. The brief was
+`agent-progress/walkthrough-2026-10-02.md` (outside the repository), read from
+`claude/plan-rev2` at `68cec4f5` and `main` at `5e67d344`.
+
+  - **OD9 to OD15 (the provenance pathway): option B**
+    ([PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), section 9).
+      + **OD12, OD13 and OD14 are accepted now,** because they gate runs
+        (PX11, PX12, PX16, PX23, step 8b). **In force.**
+      + **OD9 to OD11, the labels, stay proposed** until a gated result
+        exists. **Waiting.**
+      + **OD15 is answered at PX25's pre-registration.** **Waiting.**
+      + **New rule: gated runs use post-#139 `main`** (`24c1aaa0` or later).
+        #139 merged on 2026-10-01 and brought upstream `a9287b2d`, with
+        ClimaParams 1.2 and CloudMicrophysics 0.43. Numbers measured on the
+        old physics keep their commit label and count as prior evidence
+        only. **In force.**
+  - **WP4b stage 1: one fix PR (option A), two to three days.** It covers
+    the five points and the review's four open should-fix findings (micro-1,
+    state-1, transport-1, state-2;
+    `review/agent_reviews/wp4b_stage1_review_2026-09-30.md`). No model field
+    changes. Tags change under the key. **In force.** The PR is not built.
+      + A per-compartment closing step after the follow, booked in the
+        rescale's ledgers: micro-1 on every path, and P2's revision.
+      + The rescale orders the steps that raise N first (state-1).
+      + transport-1 is measured on the sphere, then the passive-tracer form
+        is applied.
+      + state-2 stays raw, as decided on 2026-09-25. Its docstring is
+        corrected.
+      + P1 stands. P3 gets an audit sub-key that defaults to on. P5 gets a
+        registry row.
+      + The PR also checks whether #137's Q5 rule already covers micro-1 in
+        the microphysics hook.
+  - **W50's copies repair: C, then B.** **In force.**
+      + C: rerun W50's 60-level copies day and its twin on post-#139 `main`
+        (two jobs). Score PX5's rule on it.
+      + B: PX12 on TRMM 0M (about 12 short jobs), now unblocked by OD12.
+  - **G4.3 to G4.6's seven points: option B.**
+    The definitions are decided. **In force.**
+      + Point 1: values on the interim are estimates.
+      + Point 5: A5's "group sum" is the partition's sum.
+      + Point 7: document C4's size, 0.55% of a day's Θx (E87).
+      + Point 4's form: a per-transport default.
+      + **Waiting:** the levels for points 2, 3, 4 and 6 are set from
+        post-#139 runs at G4's start.
+  - **KI4-COPIES and UP1: option B.** **In force.** Fold a fixed-parent
+    one-step probe (W35's pattern) into PX12, on its 0M copies states. Decide
+    UP1 by its own rule.
 
 ## 2026-10-01
 
