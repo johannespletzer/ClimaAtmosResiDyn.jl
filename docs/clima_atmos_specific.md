@@ -16,7 +16,7 @@ This file contains everything specific to the ClimaAtmos.jl repository: director
       + `gravity_wave_drag/`: non-orographic and orographic GWD.
       + `les_sgs_models/`: Smagorinsky–Lilly, anisotropic minimum dissipation, constant horizontal diffusion.
       + `sponge/`: Rayleigh and viscous sponge tendencies.
-      + `tagged_tracers/`: tagged prognostic energy (`tagged_tracers.jl`, `ρe_tag_*`, config key `energy_tracers`) and water (`tagged_water.jl`, `ρq_tag_*`, config key `water_tracers`) tracers — smooth region masks, state builders, and the snapshot/attribute brackets consumed by `remaining_tendency.jl` and `implicit/implicit_tendency.jl`. `energy_source_tags.jl` holds the energy source tags (`ρe_src_*`, config key `energy_source_tags`), which partition the same `ρe_tot` under the water tags' donor-proportional rule rather than the signed process record. `process_record.jl` holds the process-change records (`prc_e_*` and `prc_q_*` prognostic fields, config keys `energy_process_record` and `water_process_record`), which reuse the same brackets. They are prognostic so the timestepper integrates the rate the bracket yields, but carry no `ρ` prefix, so `gs_tracer_names` does not see them and nothing transports them. Their config parsing lives in `src/config/tracer_config.jl`.
+      + `tagged_tracers/`: tagged prognostic energy (`tagged_tracers.jl`, `ρe_tag_*`, config key `energy_tracers`) and water (`tagged_water.jl`, `ρq_tag_*`, config key `water_tracers`) tracers: smooth region masks, state builders, and the snapshot and attribute calls around each attributed process, which `remaining_tendency.jl` and `implicit/implicit_tendency.jl` make. `energy_source_tags.jl` holds the energy source tags (`ρe_src_*`, config key `energy_source_tags`). They split the same `ρe_tot` with the water tags' rule, in proportion to what each tag holds, and not as the signed process record does. `process_record.jl` holds the process-change records (`prc_e_*` and `prc_q_*` prognostic fields, config keys `energy_process_record` and `water_process_record`), which read the same applied-update events. They are prognostic so that the timestepper integrates the process's tendency. They carry no `ρ` prefix, so `gs_tracer_names` does not see them and nothing transports them. Their config parsing lives in `src/config/tracer_config.jl`.
   - EDMF code lives in `src/cache/{prognostic,diagnostic}_edmf_precomputed_quantities.jl` and `src/prognostic_equations/edmfx_*.jl`, not under `parameterized_tendencies/`.
   - `src/parent_budget/`: the parent budget, an internal accounting layer that reconciles mass, total water and total energy against the accepted discrete update. It lives under `ClimaAtmos.Internals.ParentBudget`, which is unstable by declaration: nothing in it is exported, no top-level alias forwards to it, and its names and behavior may change in any release. `ParentBudget.jl` is the module and includes the rest in dependency order. `integrals.jl` defines the accounting precision and the three authoritative integrals, all local so nothing there communicates. `schema.jl` declares what a configuration is expected to produce — reservoirs and their per-quantity applicability, control volumes, accepted channels, final accepted-state maps, and transfer events with their declared topology and exterior counterparties, plus the per-quantity disposition each declaration expects, which is where a proven-zero obligation lives — before anything is collected. `reduction.jl` holds the fixed packet layout, the explicit unset/measured/not-applicable slot states, and the single global collective a step spends. `journal.jl` holds the legs and per-component evidence. `transaction.jl` holds the per-step transaction and the three separate reconciliations, parent, attribution and transfer. `transfer_legs.jl` reads each modeled leg of a transfer event on its own side, from the applied-update event's total where it isolates the leg and from the flux field the tendency reads where it does not. `checkpoint.jl` carries the parent budget's endpoint through a checkpoint, checks a restored state against it exactly, and declares the custom callbacks a run may install beside the parent budget. `calibration.jl` reads the committed κ table `kappa_calibration.yaml` and states the protocol that fills it; `report.jl` writes the claim certificate `parent_budget_report.yaml` at the end of a successful solve. `coverage_registry.jl` holds every path that writes a parent field as a row, with its table cells from [coverage.md](src/parent_budget/coverage.md) kept verbatim and a guard over the configuration, and builds the schema a configuration selects from those rows; a test holds the page and the registry to exact agreement. `adapter.jl` is the only place allowed to know about `ClimaTimeSteppers` stage weights and hook order: it meters the explicit tendency and the state-writing hooks during the step, listens to the applied-update events in audit mode, and runs as the first discrete callback after every accepted step, packing the endpoints, every channel's envelope, the final maps and the process rows into one collective and driving the transactions. `src/prognostic_equations/applied_update.jl` holds the applied-update event, `open_applied_update!` and `close_applied_update!`, the one bracket around every parent-writing process in `remaining_tendency.jl` that feeds the tag families, the process records and the parent budget; the implicit path calls the parent-budget half directly. Declarations and observations are kept apart on purpose: every reconciliation is enumerated from the schema, so a channel or event that recorded nothing is a blocked row naming it rather than an absent one, and an entry the schema does not declare is refused. It is a diagnostic and never writes to the state. The parent budget is off unless the `parent_budget_mode` key is `summary` or `audit`; on, it refuses out-of-scope configurations at setup, checks a restarted state exactly against the endpoint its checkpoint carries, and accepts a custom callback only inside a `ReadOnlyCallback` declaration; a run whose tolerance neither the calibration table nor `parent_budget_tolerances` supplies keeps its parent claims blocked naming it. The normative documents are [contract.md](src/parent_budget/contract.md), [architecture.md](src/parent_budget/architecture.md), [coverage.md](src/parent_budget/coverage.md) and [plan.md](src/parent_budget/plan.md).
   - `src/callbacks/`, `src/diagnostics/`, `src/setups/`, `src/surface_conditions/`, `src/topography/`, `src/parameters/`, `src/utils/`: remaining domain subtrees. Search by physics/runtime concept first.
@@ -75,159 +75,31 @@ simulations, `test/parent_budget/envelope_tests.jl`,
 and compiles the tendency pipeline for each, so they are kept out of
 `infrastructure`, which still runs the parent budget's state-free unit tests.
 
-The `tagging_*` groups are one file each: `tagging_energy` runs
-`test/tagged_tracers_integration.jl`, `tagging_water` runs
-`test/tagged_water_integration.jl`, `tagging_source` runs
-`test/energy_source_tags_integration.jl` and
-`test/energy_source_tags_cold_column.jl`, `tagging_record` runs
-`test/process_record_integration.jl`, `tagging_source_float32` runs
-`test/energy_source_tags_float32_integration.jl`, `tagging_source_edmf`
-runs `test/energy_source_tags_edmf_integration.jl`,
-`tagging_source_increment` runs
-`test/energy_source_tags_increment_integration.jl`, `tagging_source_updraft`
-runs `test/energy_source_tags_updraft_integration.jl`,
-`tagging_water_edmf`, `tagging_water_edmf_copies`,
-`tagging_water_edmf_copies_leak`, `tagging_water_edmf_0m` and
-`tagging_water_edmf_0m_explicit` run `test/tagged_water_edmf_integration.jl`,
-`test/tagged_water_edmf_copies_integration.jl`,
-`test/tagged_water_edmf_copies_leak_integration.jl`,
-`test/tagged_water_edmf_0m_integration.jl` and
-`test/tagged_water_edmf_0m_explicit_integration.jl`, and `tagging_water_increment`
-and `tagging_water_increment_explicit` run
-`test/tagged_water_increment_integration.jl` and
-`test/tagged_water_increment_explicit_integration.jl`, `tagging_water_leak`
-runs `test/tagged_water_leak_correction_integration.jl`,
-`tagging_water_precipitation` and `tagging_water_precipitation_sphere` run
-`test/tagged_water_precipitation_integration.jl` and
-`test/tagged_water_precipitation_sphere_integration.jl`, and
-`tagging_water_rainout_jacobian` runs
-`test/tagged_water_rainout_jacobian_integration.jl`. They are split because a tag
-name is a type parameter, so each tag set recompiles the whole tendency and
-solve pipeline, roughly seven minutes per simulation on Julia 1.11, and the
-files share no compilation between them. Combined they overran the 90-minute
-job timeout on Julia 1.11, which cancelled the job before the last two files
-ran at all. Memory splits them too. A GitHub runner has 16 GB, and every
-model type a process compiles stays in its memory: an EDMF build holds about
-12 to 14 GiB. A job that runs out is shut down and reads "The operation was
-canceled.", not a failed test. Keep new tagged-simulation tests here, and
-prefer reusing a tag set another test in the same file already builds: a
-second simulation with an identical tag signature costs seconds instead of
-minutes.
+The `tagging_*` groups are split by tag set. A tag name is a type parameter, so each tag set recompiles the whole tendency and solve pipeline, which takes several minutes per simulation on Julia 1.11. The files share no compilation. Combined they would overrun the 90-minute time limit of a test job. Memory splits them too. A GitHub runner has 16 GB, and every model type a process compiles stays in its memory. An EDMF build holds about 12 to 14 GiB. A job that runs out is shut down and reads "The operation was canceled.", not a failed test. Keep new tagged-simulation tests here, and prefer reusing a tag set that another test in the same file already builds. A second simulation with an identical tag signature costs seconds instead of minutes.
 
-`tagging_source_float32` runs the energy source tags and the process records
-together, in `FLOAT_TYPE: Float32`, through one real solve with 1-moment
-sedimentation, the offset, the repair and the closure check all active. It is
-a separate group from `tagging_source` and `tagging_record` rather than folded
-into either, because the combined model is a type neither of those two files'
-models share, so it costs its own compile wherever it lives, and this keeps
-the other two groups' CI time exactly as already measured.
+Except for the cold-column file and the Float32 file, each file also checks that the model's fields are those without tags, bit for bit.
 
-`tagging_source_edmf` runs the energy source tags on the DYCOMS RF02 column
-under `PrognosticEDMFX`, with 1-moment microphysics and the updrafts' vertical
-diffusion on. It checks that the tags take their shares of the sub-grid mass
-flux and of the sedimentation corrections, that the exchange of provenance
-at the mass flux sums to zero over the partition, and that its plume starts in
-the lowest cell with the updraft's surface energy (W21's rule). The EDMF column is the most
-expensive model in the suite to build, and the file builds it twice, with the
-tags and without them, to check that the model's own fields do not move.
-
-`tagging_source_increment` runs the tags under
-`energy_source_tag_transport: enthalpy_increment`, where they take the parent's
-increment after each implicit solve. It checks the correction on a set
-increment, with its donors, its increment ledger and its audit columns, and
-that on the EDMF column the model's fields are those of the same column without
-tags, bit for bit. It also checks that the exchange of provenance at the mass
-flux sums to zero over the partition and allocates only the parent helper's
-8 bytes. So it builds the EDMF column twice. The face-area scaling under a
-deep atmosphere is checked in the unit tests, on a small sphere built with
-ClimaCore alone.
-
-`tagging_source_updraft` runs the tags with
-`energy_source_tag_updraft_copy: true`, the audit with a copy of each tag in the
-updraft, on the EDMF column with the updrafts' vertical diffusion on. It checks
-that the copies exist and fill, that the model's SGS tracer flux moves the tags
-while the donor-share flux and the exchange do nothing, that the partition
-stays closed, and that the model's fields are those without tags, bit for bit.
-It builds the EDMF column twice. The copies double the time to build it, so
-with the increment's two builds in one group the three would overrun the job.
-
-The three `tagging_water_edmf*` groups run the water tags under
-`PrognosticEDMFX`, each on the EDMF column with and without the tags, so each
-builds it twice.
-
-  - `tagging_water_edmf` runs the default mode under 1M. It checks that the
-    partition's sub-grid tendencies sum to the parent's, that one composition
-    everywhere moves as the parent does without the surface moisture flux,
-    that the plume starts in the lowest cell with the updraft's surface water
-    at the shares the model's own supplies give (W21's rule), that the
-    vertical diffusion's leak in closed form is the difference the diffusion
-    makes, and the audit's columns.
-  - `tagging_water_edmf_copies` runs the copies under 1M, with the
-    microphysics explicit, so that parity covers the explicit path, and ten
-    Newton iterations: with one, the tags lag the parent's solve there by
-    0.8% of the column's water in an hour, which the closure bounds would
-    fail (WP5 follows that lag). It checks
-    the rebuild and the start from the plume, that the default mode's flux
-    does nothing, the copies' residual, the surface-flux mirror, and that one
-    composition moves with `q_totʲ` up to the diffusion's leak.
-  - `tagging_water_edmf_copies_leak` runs the same copies with
-    `water_tag_leak_correction: true` for five steps. It checks that the
-    correction runs in the model's tendency, the copies' leak ledgers and the
-    audit's columns. As a third EDMF model type it has a process of its own.
-  - `tagging_water_edmf_0m` runs the copies under 0M, with the microphysics
-    implicit, the default, and a passive chemistry tracer. It checks that the
-    tracer, set to a copy's values, takes the copy's tendency apart from its
-    mirrors, the rain-out split by subdomain in both modes, and that `pr` less
-    the partition's `pr_tag` is the rain-out the shares leave.
-  - `tagging_water_edmf_0m_explicit` runs the split with the microphysics
-    explicit, in both modes. It checks that the `:microphysics` bracket of
-    `remaining_tendency!` gives the tags the split, that each subdomain gives
-    each region tag a part, and the partition's sums at each level and at the
-    surface.
-
-The tagged runs write the closure audit and the leak diagnostics, which use
-scratch from callbacks, so parity covers them too. The default mode under 0M
-also runs in V-W3's TRMM pair.
-
-`tagging_water_increment` runs `water_tag_transport: increment` on the same
-1M column, with the updrafts' vertical diffusion, as D4-W has it. It checks the
-correction on a set increment (what is left in place and what is moved, the
-donor cell at each face, the hook running the parent's own correction
-unchanged, no allocations), the closure after an hour, the ledger in the
-audit, the diagnostics and the split solver, and parity. It also builds the
-column twice. `tagging_water_increment_explicit` runs it with the microphysics
-explicit and one Newton iteration. It checks the closure after an hour, the
-tags' sedimentation cross blocks against the parent's and their solve by the
-split solver, and parity.
-
-`tagging_water_leak` runs `water_tag_leak_correction: true` on the same column
-under the follower, with each tag's ledgers. It checks that the partition's
-EDMF diffusion is the parent's, with one composition everywhere and with one
-that varies in space, that each tag's correction and ledger is the diffusion of
-its share of the rain and snow, the ledgers after an hour, the audit and the
-split solver, and parity. It then steps the column with the correction off
-beside a corrected run. It checks that the leak the partition takes falls by a
-set factor, that the closure stays within its bound and that the model's fields
-are the same, and it prints the follower's and the repairs' ledgers. So it
-builds the column three times.
-
-`tagging_water_precipitation` runs the water tags' rain and snow parts
-(`water_tag_precipitation: true`) on a 1-moment precipitating column without
-EDMF. It checks each compartment's closure under `increment` with first-order
-upwinding, the parts' diagnostics, `pr_tag` against `pr`, a tag that holds all
-the water moving as the parent operator by operator, the split solver and the
-audit, the restart guard, and the default transport. It builds the column
-three times: with the parts under each transport, and without tags. A column
-has no horizontal operators, so `tagging_water_precipitation_sphere` builds a
-small sphere with the viscous sponge on, twice, with the parts and without
-tags, in a process of its own: after the column's builds it took Julia 1.10
-past a runner's 16 GB. There hyperdiffusion and the
-sponge are checked one at a time: rain and snow parts take nothing, the
-non-precipitating parts add up to the tendency of the parent's diffusing water
-before and after DSS, each part moves by its own gradients rather than by a
-share of the parent's tendency, and the parent's tendencies do not change.
-
-Each checks that the model's fields are those without tags, bit for bit.
+| Group                                | Files in `test/`                                                         | What it checks                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+|:------------------------------------ |:------------------------------------------------------------------------ |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `tagging_energy`                     | `tagged_tracers_integration.jl`                                          | The energy tags on a coarse baroclinic wave: the partition at the start, finite tags, a small closure residual, a nonzero source tag                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `tagging_water`                      | `tagged_water_integration.jl`                                            | The water tags on a 0M column: the partition at the start, finite tags, a small closure residual, and a source tag split across the partition that sums to the unsplit one                                                                                                                                                                                                                                                                                                                                                                             |
+| `tagging_source`                     | `energy_source_tags_integration.jl`, `energy_source_tags_cold_column.jl` | The energy source tags wired into a simulation: masks, closure, a checkpoint round trip, the split Jacobian solve, the offset. On a cold precipitating column, the sedimentation branch for ice, whose energy is negative against the reference plus the offset                                                                                                                                                                                                                                                                                        |
+| `tagging_record`                     | `process_record_integration.jl`                                          | The process records exist, start at zero, are not tracers, integrate under the real timestepper, survive a checkpoint and allocate nothing                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `tagging_source_float32`             | `energy_source_tags_float32_integration.jl`                              | The energy source tags and the process records together in `FLOAT_TYPE: Float32`, through one real solve with 1-moment sedimentation, the offset, the repair and the closure check. It is a group of its own because the combined model is a type that the other two files' models do not share                                                                                                                                                                                                                                                        |
+| `tagging_source_edmf`                | `energy_source_tags_edmf_integration.jl`                                 | The energy source tags on the DYCOMS RF02 column under `PrognosticEDMFX` with 1-moment microphysics and the updrafts' vertical diffusion. The tags take their shares of the sub-grid mass flux and of the sedimentation corrections. The exchange of composition at the mass flux sums to zero over the partition. The plume starts in the lowest cell with the updraft's surface energy. The file builds the column twice, with and without tags, which makes it the most expensive build in the suite                                                |
+| `tagging_source_increment`           | `energy_source_tags_increment_integration.jl`                            | `energy_source_tag_transport: enthalpy_increment`, where the tags take the parent's increment after each implicit solve. The correction on a set increment with its donor cells, the increment ledger, the audit columns, the exchange, and an allocation of only the parent helper's 8 bytes. It builds the EDMF column twice. The face-area scaling under a deep atmosphere is checked in the unit tests                                                                                                                                             |
+| `tagging_source_updraft`             | `energy_source_tags_updraft_integration.jl`                              | `energy_source_tag_updraft_copy: true`, the comparison mode with a copy of each tag in the updraft. The copies exist and fill. The model's SGS tracer flux moves the tags, while the share-of-the-parent's-flux term and the exchange do nothing. The partition stays closed. It builds the EDMF column twice, and the copies double the build time                                                                                                                                                                                                    |
+| `tagging_water_edmf`                 | `tagged_water_edmf_integration.jl`                                       | The default mode under 1M: the partition's sub-grid tendencies sum to the parent's, one composition everywhere moves as the parent does without the surface moisture flux, the plume starts in the lowest cell with the updraft's surface water at the shares the model's own supplies give, the closed-form leak of the vertical diffusion is the difference the diffusion makes, and the audit columns                                                                                                                                               |
+| `tagging_water_edmf_copies`          | `tagged_water_edmf_copies_integration.jl`                                | The copies under 1M with explicit microphysics, so that parity covers the explicit path, and ten Newton iterations. With one iteration the tags lag the parent's solve there, and the closure bounds would fail. The rebuild and the start from the plume, the default mode's flux doing nothing, the copies' residual, the surface-flux change of the copies, and one composition moving with `q_totʲ` up to the diffusion's leak                                                                                                                     |
+| `tagging_water_edmf_copies_leak`     | `tagged_water_edmf_copies_leak_integration.jl`                           | The same copies with `water_tag_leak_correction: true` for five steps: the correction runs in the model's tendency, the copies' leak ledgers and the audit columns. It is a third EDMF model type, so it has a process of its own                                                                                                                                                                                                                                                                                                                      |
+| `tagging_water_edmf_0m`              | `tagged_water_edmf_0m_integration.jl`                                    | The copies under 0M with implicit microphysics, the default, and a passive chemistry tracer. The tracer, set to a copy's values, takes the copy's tendency apart from the changes the copies get beyond a tracer's. The rain-out split by subdomain in both modes. `pr` less the partition's `pr_tag` is the rain-out the shares leave                                                                                                                                                                                                                 |
+| `tagging_water_edmf_0m_explicit`     | `tagged_water_edmf_0m_explicit_integration.jl`                           | The split with explicit microphysics, in both modes: the `:microphysics` applied-update event of `remaining_tendency!` gives the tags the split, each subdomain gives each region tag a part, and the partition's sums at each level and at the surface                                                                                                                                                                                                                                                                                                |
+| `tagging_water_increment`            | `tagged_water_increment_integration.jl`                                  | `water_tag_transport: increment` on the 1M column with the updrafts' vertical diffusion. The correction on a set increment (what is left in place and what is moved, the donor cell at each face, the hook running the parent's own correction unchanged, no allocations), the closure after an hour, the ledger in the audit, the diagnostics and the split solver. It builds the column twice                                                                                                                                                        |
+| `tagging_water_increment_explicit`   | `tagged_water_increment_explicit_integration.jl`                         | Increment transport with explicit microphysics and one Newton iteration: the closure after an hour, the tags' sedimentation cross blocks against the parent's and their solve by the split solver                                                                                                                                                                                                                                                                                                                                                      |
+| `tagging_water_leak`                 | `tagged_water_leak_correction_integration.jl`                            | `water_tag_leak_correction: true` on the same column under increment transport, with each tag's ledgers. The partition's EDMF diffusion is the parent's, with one composition everywhere and with one that varies in space. Each tag's correction and ledger is the diffusion of its share of the rain and snow. A second column without the correction beside a corrected run shows that the leak the partition takes falls by a set factor, the closure stays within its bound and the model's fields are the same. It builds the column three times |
+| `tagging_water_precipitation`        | `tagged_water_precipitation_integration.jl`                              | The rain and snow parts (`water_tag_precipitation: true`) on a 1-moment precipitating column without EDMF: each compartment's closure under `increment` with first-order upwinding, the parts' diagnostics, `pr_tag` against `pr`, a tag that holds all the water moving as the parent operator by operator, the split solver and the audit, the restart guard, and the default transport. It builds the column three times, with the parts under each transport and without tags                                                                      |
+| `tagging_water_precipitation_sphere` | `tagged_water_precipitation_sphere_integration.jl`                       | A small sphere with the viscous sponge on, built with the parts and without tags, in a process of its own because the column's builds took Julia 1.10 past a runner's 16 GB. Hyperdiffusion and the sponge are checked one at a time: rain and snow parts take nothing, the non-precipitating parts add up to the tendency of the parent's diffusing water before and after DSS, each part moves by its own gradients and not by a share of the parent's tendency, and the parent's tendencies do not change                                           |
+| `tagging_water_rainout_jacobian`     | `tagged_water_rainout_jacobian_integration.jl`                           | `water_tag_rainout_jacobian`: the DYCOMS RF02 column under 0M without EDMF, run with and without the key. The Jacobian has the tags' rain-out entries and every other block as without the key, the split solver gives the model's fields the same increments, the entries add no allocation, and a checkpoint written without the key restarts with it                                                                                                                                                                                                |
 
 ### The package-load preflight
 
@@ -239,10 +111,9 @@ starts every test job and fails them all the same way. `test` depends on
 
 ### Which jobs run when
 
-The account runs 20 jobs at a time on GitHub Free, shared by every run. On
-2026-09-29 one `ci` run on both Julia versions was 49 jobs and about 1,450
-job-minutes, and a pull request waited 3 to 7 hours for a green result, most
-of it in the queue. Almost every test minute is compilation. So `ci` runs in
+The account runs 20 jobs at a time on GitHub Free, shared by every run. A full
+`ci` run on both Julia versions is dozens of jobs, so a pull request can wait
+hours in the queue. Almost every test minute is compilation. So `ci` runs in
 tiers, and the `plan` job picks one per event with `.github/ci_plan.sh`.
 
   - **Draft pull request: quick.** The `load` jobs,
@@ -261,8 +132,7 @@ tiers, and the `plan` job picks one per event with `.github/ci_plan.sh`.
     an earlier one.
   - **Nightly, Monday to Saturday at 01:00 UTC.** The `load` jobs and the
     fork's groups on Julia 1.10, which `Project.toml` promises. It resolves the dependencies afresh,
-    so it also catches a release that breaks `main` without a commit, as
-    ClimaParams 1.1.16 did (#128). It skips a night on which the last green
+    so it also catches a release that breaks `main` without a commit. It skips a night on which the last green
     scheduled run already tested the same commit of `main`, and runs when that
     history cannot be read.
   - **Weekly on Sunday at 01:00 UTC, and tags.** Every group on 1.11 and the
@@ -285,10 +155,8 @@ difference between Julia versions inside upstream code is upstream's to find.
 
 Every tier runs the tests with `julia-runtest`'s `check_bounds: auto`, except
 the weekly run and tags, which keep `yes`. With `yes`, Julia checks bounds
-inside `@inbounds` code too, and compiles each new model more slowly. On
-2026-09-29 `auto` compiled `parent_budget`, `tagging_water` and
-`tagging_source_edmf` 2.3, 2.8 and 1.4 times faster on Julia 1.11, 2.2 times
-summed. No test checks bounds itself, so the weekly run is where an access out
+inside `@inbounds` code too, and compiles each new model more slowly. `auto` compiles
+the large test models noticeably faster. No test checks bounds itself, so the weekly run is where an access out
 of bounds still shows up.
 
 Three checks summarise a run:
@@ -306,8 +174,8 @@ Three checks summarise a run:
     `curl -s 'https://api.github.com/repos/johannespletzer/ClimaAtmosResiDyn.jl/issues?labels=nightly-red'`.
 
 `ALLOW_FAIL` in `ci.yml` quarantines a flaky job by `<version>/<group>`. The
-job still runs and shows its result, but it no longer fails the run. It is
-empty unless the owner adds a job to it.
+job still runs and shows its result, but it does not fail the run. It is
+empty unless a job is quarantined.
 
 The other workflows:
 
@@ -322,8 +190,7 @@ The other workflows:
     on a pull request.
   - **`Downstream`, ClimaCoupler's AMIP tests on 1.11.** It takes about an hour
     without a cache, so it runs weekly (Monday 04:00 UTC), on tags and on
-    demand, not after each merge, where it held a job slot for up to two
-    hours. A pull request runs it only when it changes the workflow.
+    demand, and not after each merge, where it would hold a job slot. A pull request runs it only when it changes the workflow.
   - **`Invalidations`.** It runs on a pull request to `main` that changes
     `src/`, `ext/` or `Project.toml` and is not a draft. It builds the package
     twice without a cache and reports a count, and is not a required check.
@@ -333,7 +200,7 @@ The other workflows:
   - **`Documentation`.** It builds on every pull request. For a pull request
     from this repository it also deploys a preview. A pull request from a fork
     has no deploy key and gets no preview. Two previews pushed at the same
-    time made one push fail, so the deploy now tries up to three times.
+    time can make one push fail, so the deploy tries up to three times.
     `Doc Preview Cleanup` removes a closed pull request's preview the same
     way, with a lease-protected push that it retries.
   - **Caches.** `ci`, `Documentation` and `Downgrade` keep depot caches under
@@ -344,30 +211,28 @@ The other workflows:
         included. In `ci`, the first job to finish on a given day saves that
         day's cache, and later runs find the key and save nothing. Every
         other run, pull requests and tags included, restores the newest cache
-        from `main` and saves nothing. GitHub keeps 10 GB per repository. On
-        2026-09-17 the caches of pull request runs pushed `main`'s out within
-        half an hour.
+        from `main` and saves nothing. GitHub keeps 10 GB per repository, and
+        the caches of pull request runs would push `main`'s out within hours.
       + **`precompile`.** A test group that runs no tests. `Pkg.test` builds
         the test environment before `runtests.jl` runs, so `cache-warm` uses
         it to save a complete cache when a merge skips the tests.
-      + **What fits.** A push to `main` saved about 4.4 GB: the two test
-        depots, the minimum-compat depot and the docs depot. The weekly
+      + **What fits.** A push to `main` saves the two test depots, the
+        minimum-compat depot and the docs depot, about 4.4 GB. The weekly
         `Downgrade` run adds about 2.3 GB. `Downstream` and `Manifest compat`
-        keep no cache. Theirs were 4.5 GB and 2.8 GB, and would push the
-        others out.
+        keep no cache, because theirs would push the others out.
       + **`load`.** It restores the test cache and never saves. It loads the
         package with the tier's check-bounds setting, the flag the test jobs
         pass to `Pkg.test`, so their package images fit.
       + **CPU target.** GitHub's runners mix Intel and AMD models. A package
-        image built for one was rejected on the other, and all its
-        dependencies were built again. So the cached workflows set
+        image built for one is rejected on the other, and all its
+        dependencies are built again. So the cached workflows set
         `JULIA_CPU_TARGET: 'haswell,-rdrnd'`, a target every runner supports.
         It only affects the images saved to disk, not the code compiled while
         the tests run. The target is part of each cache name. Each job that
         uses a cache prints its CPU model.
-  - **No coverage.** Nothing was ever uploaded, because the repository has no
+  - **No coverage.** Nothing is uploaded, because the repository has no
     Codecov token, and on Julia 1.10 coverage stops the tests from using
-    package images. To restore it, set the `CODECOV_TOKEN` secret and add
+    package images. To enable it, set the `CODECOV_TOKEN` secret and add
     `julia-processcoverage` and `codecov/codecov-action` after `julia-runtest`,
     on the 1.11 jobs only.
   - **No merge queue.** GitHub offers merge queues to organization-owned
@@ -395,15 +260,15 @@ When reviewing or writing changes, name the validation surface explicitly:
 
   - **`test/runtests.jl` test groups** for unit-level coverage.
   - **`.buildkite/ci_driver.jl` jobs** for config or runtime-workflow changes. Check `.buildkite/pipeline.yml` to identify the affected jobs.
-  - **`reproducibility_tests/`** for changes that may shift simulation output. The reference counter in `reproducibility_tests/ref_counter.jl` must be incremented when output intentionally changes; do not edit it without explicit direction from the user. In this fork only an upstream merge may change output; see [Fork parity with upstream](#fork-parity-with-upstream).
+  - **`reproducibility_tests/`** for changes that may shift simulation output. The reference counter in `reproducibility_tests/ref_counter.jl` must be incremented when output intentionally changes; do not edit it without explicit direction from the user. In this fork only an upstream merge may change output. See [Fork parity with upstream](#fork-parity-with-upstream).
   - **`perf/` allocation benchmarks** are not run by this repository's GitHub Actions CI. Allocation regressions must be caught during review using the `@allocated` pattern.
 
 ## Fork parity with upstream
 
 ClimaAtmosResiDyn develops diagnostics on top of upstream [CliMA/ClimaAtmos.jl](https://github.com/CliMA/ClimaAtmos.jl): the stratospheric passive tracers, the tagged energy and water tracers, the energy source tags, the process records and the parent budget. It must not change the simulation. This is a boundary condition on every change in this repository.
 
-  - **Without a diagnostic.** A configuration that upstream can run gives bit-for-bit the same results here as at the upstream commit last merged into `main`. That commit is the second parent of the last "Merge upstream CliMA/ClimaAtmos.jl main" commit (currently a9287b2d, release v0.42.12 plus 12 commits). Compare the prognostic state and every output field with `isequal` on the parent arrays, not with a tolerance; `==` accepts a signed-zero difference and rejects matching `NaN`s.
-  - **With a diagnostic.** Every field upstream has stays bit for bit the same as in the same run without the diagnostic. Only the diagnostic's own prognostic fields (such as `ρe_tag_*`, `ρq_tag_*`, `ρe_src_*` and `prc_*`), its cache, callbacks and output may differ, and so may the run time. A diagnostic is off when its family key is at its default; the defaults of its sub-keys do not count. This clause is claimed for the default solver, a fixed number of Newton iterations with the direct block solver. With `use_krylov_method` or `use_newton_rtol` the residual norm spans the diagnostic's fields too, so a tagged run there is not expected to match, and that mismatch is not a defect of the diagnostic.
+  - **Without a diagnostic.** A configuration that upstream can run gives bit-for-bit the same results here as at the upstream commit last merged into `main`. That commit is the second parent of the last "Merge upstream CliMA/ClimaAtmos.jl main" commit (currently a9287b2d, release v0.42.12 plus 12 commits). Compare the prognostic state and every output field with `isequal` on the parent arrays, not with a tolerance. `==` accepts a signed-zero difference and rejects matching `NaN`s.
+  - **With a diagnostic.** Every field upstream has stays bit for bit the same as in the same run without the diagnostic. Only the diagnostic's own prognostic fields (such as `ρe_tag_*`, `ρq_tag_*`, `ρe_src_*` and `prc_*`), its cache, callbacks and output may differ, and so may the run time. A diagnostic is off when its family key is at its default. The defaults of its sub-keys do not count. This clause is claimed for the default solver, a fixed number of Newton iterations with the direct block solver. With `use_krylov_method` or `use_newton_rtol` the residual norm spans the diagnostic's fields too, so a tagged run there is not expected to match, and that mismatch is not a defect of the diagnostic.
   - **What is compared.** Bit-for-bit holds within one machine, one Julia and `Manifest`, one float type and one process count. The same run on Levante and on terrabyte agrees only to rounding, so compare two runs from one machine.
 
 What follows for a change:
@@ -418,7 +283,7 @@ What follows for a change:
 
 Known departures, to be removed as they are resolved:
 
-  - dd06318f changed two guards in `limiters_func!` from `@name(ρq_tot)` to `:ρq_tot` (`src/prognostic_equations/limited_tendencies.jl`). With an explicit `vertical_water_borrowing_species` list that names `ρq_tot`, the fork runs `enforce_mass_energy_consistency!`, which writes `ρ` and `ρe_tot`, where upstream skips it, still at a9287b2d. No shipped config sets the list. It stays as a named exception, as the owner decided on 2026-09-18, and no upstream fix is proposed from this fork.
+  - Two guards in `limiters_func!` read `:ρq_tot` where upstream has `@name(ρq_tot)` (`src/prognostic_equations/limited_tendencies.jl`). With an explicit `vertical_water_borrowing_species` list that names `ρq_tot`, the fork runs `enforce_mass_energy_consistency!`, which writes `ρ` and `ρe_tot`. Upstream skips it, also at a9287b2d. No shipped config sets the list. It stays as a named exception, and no upstream fix is proposed from this fork.
 
 A test runs the same column with a diagnostic off and on and compares every model field with `isequal`: for the parent budget in `test/parent_budget/envelope_tests.jl` ("The trajectory is bitwise unchanged with the parent budget on"), and for the tagged energy and water tracers, the energy source tags and the process records in their integration tests ("The model's fields do not depend on the tags", and "... on the records"). The stratospheric passive tracers have no such test yet. A new diagnostic gets one. These cover the default solver on one column each. No CI job compares the fork with upstream, so the fork-versus-upstream clause is checked by a run against the last merged upstream commit on one machine.
 

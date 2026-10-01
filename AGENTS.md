@@ -46,7 +46,7 @@ Always read the ClimaAtmos-specific guide before working in this repository:
 - For package tests, prefer `Pkg.test()` over manually `include`ing `test/runtests.jl` because test-only deps are loaded through the package test path.
 - Keep edits inside the owning subtree when possible; use [src/ClimaAtmos.jl](src/ClimaAtmos.jl) to trace where a feature is wired.
 - Match existing style: explicit names, narrow imports, comments that explain why.
-- Write comments in simple sentences. Prefer a few short sentences over one long one strung together with colons, dashes and parentheses.
+- Write comments in simple sentences. Prefer a few short sentences over one long one strung together with colons, dashes and parentheses. Use few semicolons. Two clauses become two sentences.
 - Comments describe the code as it is. Never document previously existing code or what
   a change fixed ("used to", "previously", "no longer"); that history belongs in the
   commit message, and in `NEWS.md` when behavior changes.
@@ -64,8 +64,9 @@ Always read the ClimaAtmos-specific guide before working in this repository:
   limit. A budget in the physical sense (energy, water, TKE) keeps the word,
   and so does the stratospheric tracers' tracer budget, a separate feature.
   The code follows the rule: the parent budget's names include
-  `BudgetJournal` (held in `adapter.journal`) and `TimestepperPin`. See
-  [the glossary](docs/src/glossary.md).
+  `BudgetJournal` (held in `adapter.journal`) and `TimestepperPin`. Say
+  applied-update event, attributed process and the process's tendency, not
+  bracket. See [the glossary](docs/src/glossary.md).
 - Docs and comments on `main` describe the current code in the present tense.
   Plan and finding IDs, PR numbers, dates and decisions go in commit messages,
   NEWS.md and the record branch, not in docs or comments.

@@ -1,28 +1,22 @@
 #####
 ##### The tagged water tracers under prognostic EDMF
 #####
-##### Under `turbconv: prognostic_edmfx` the updraft moves water: the SGS mass
-##### flux carries `ρq_tot` with the updraft's own water, the updraft rains out
-##### and sediments, and it relaxes toward a moister value at the surface. The
-##### tags follow it in one of two modes, set by `water_tag_updraft_copy`:
+##### Under `turbconv: prognostic_edmfx` the updraft moves water. The setting
+##### `water_tag_updraft_copy` selects how the tags follow it:
 #####
-#####   - the default, `false`: the tags stay grid-scale. Each takes its share of
-#####     the parent's SGS flux of `ρq_tot` from the cell the flux leaves, and an
-#####     exchange at the updraft's mass flux, which sums to zero over the
-#####     partition, adds the mixing of provenance an updraft copy would carry.
-#####     The updraft's shares come from a steady entraining plume, rescaled at
-#####     each level to the updraft's water.
-#####   - the audit, `true`: each tag has a copy `q_tag_<name>` in the updraft,
-#####     which the model's updraft machinery moves as any updraft tracer. What
-#####     that machinery does not do for a tracer, the water does, and is
-#####     mirrored here.
+#####   - `false`, the default. The tags stay grid-scale and each takes its share
+#####     of the parent's SGS flux of `ρq_tot`. An exchange at the updraft's mass
+#####     flux gives each tag the updraft's composition instead of the grid
+#####     mean's. The updraft's shares come from a steady entraining plume,
+#####     rescaled at each level to the updraft's water.
+#####   - `true`, the comparison mode. Each tag has a copy `q_tag_<name>` in the
+#####     updraft, which the model's updraft machinery moves as a tracer. The
+#####     model changes the updraft's water in five ways that it does not change
+#####     a tracer. The copies get the same change as the updraft.
 #####
 ##### The energy source tags follow the updraft the same way
-##### (`energy_source_tags.jl`, PR #95), and the helpers there that do not
-##### depend on the weight are used as they are: the plume's level, the bound
-##### and the share differences. The water weight is `q_totᵏ` where the energy
-##### tags use `Aᵏ = e_totᵏ + c`. The design is `experiments/tag_closure/G3_PLAN.md`,
-##### section 4.1, on the fork's record branch.
+##### (`energy_source_tags.jl`) and their weight-free helpers are reused. The
+##### water weight is `q_totᵏ`, where the energy tags use `Aᵏ = e_totᵏ + c`.
 
 # ============================================================================
 # Configuration checks that need the built cache
@@ -130,14 +124,14 @@ function _water_tag_edmf_scratch(Y, model, ::PrognosticEDMFX, atmos)
 end
 
 # ============================================================================
-# The default mode: the donor share and the exchange
+# The default mode: the shares and the exchange
 # ============================================================================
 
 """
     sgs_mass_flux_of_water_tags!(Yₜ, Y, p, turbconv_model)
 
 Under `PrognosticEDMFX` with its SGS mass flux on, move the water tags by their
-shares of the parent's own SGS mass flux of `ρq_tot`, and exchange provenance
+shares of the parent's own SGS mass flux of `ρq_tot`, and exchange composition
 between them at the updraft's mass flux.
 
 For each subdomain `k`, the updraft and the environment, the parent moves
@@ -146,16 +140,16 @@ For each subdomain `k`, the updraft and the environment, the parent moves
 subdomain's part with the parent's own reconstruction, and summed. Each tag
 takes that face flux times its share in the cell the flux leaves: the cell below
 where it points up, the cell above where it points down. The partition's shares
-add up to one, so its fluxes add up to the parent's at every face, and closure
-holds. Then [`sgs_exchange_of_water_tags!`](@ref) adds the mixing of
-provenance.
+add up to one, so its fluxes add up to the parent's at every face, and tag
+closure holds. Then [`sgs_exchange_of_water_tags!`](@ref) gives each tag the
+updraft's composition.
 
 It runs in the implicit tendency, right after the parent's flux, with no
-Jacobian block, as the energy source tags' flux has none. A tag that lags the
-parent's Newton solve is followed by WP5's increment follower where that
-matters (G3_PLAN 4.3). Under `water_tag_updraft_copy: true` it does nothing:
-the model's SGS tracer flux moves the copies' grid-mean tags. A no-op without
-water tags, without `PrognosticEDMFX`, and with the SGS mass flux off.
+Jacobian block, as the energy source tags' flux has none. Increment transport
+corrects a tag that lags the parent's Newton solve. Under
+`water_tag_updraft_copy: true` it does nothing, because the model's SGS tracer
+flux moves the copies' grid-mean tags. A no-op without water tags, without
+`PrognosticEDMFX`, and with the SGS mass flux off.
 """
 sgs_mass_flux_of_water_tags!(Yₜ, Y, p, turbconv_model) = nothing
 sgs_mass_flux_of_water_tags!(Yₜ, Y, p, turbconv_model::PrognosticEDMFX) =
@@ -200,7 +194,7 @@ function _sgs_mass_flux_of_water_tags!(
     ᶜq_tot = @. lazy(specific(Y.c.ρq_tot, Y.c.ρ))
 
     # The environment's part first, so that it sets `ᶠflux` and the updrafts
-    # add to it, as the parent's code adds them in the other order; the sum is
+    # add to it, as the parent's code adds them in the other order. The sum is
     # the same. Zeroing a vector field would need a `Ref`, which allocates.
     ᶠflux = p.scratch.ᶠq_tag_sgs_flux
     ᶠu³_diff⁰ = @. lazy(ᶠu³⁰ - ᶠu³)
@@ -233,13 +227,13 @@ function _sgs_mass_flux_of_water_tags!(
     return nothing
 end
 
-# A tag's share of the local water, as the sedimentation mirror takes it: the
-# partition's shares renormalized to sum to one, a source tag's its own clamped
+# A tag's share of the local water, as the sedimentation flux takes it: the
+# region tags' shares renormalized to sum to one, a source tag's its own clamped
 # share. `_is_partition_tag` resolves on the tag's type. The tag's field is
 # looked up outside the broadcast, which cannot take the tag itself.
 #
-# `ᶜparent` is the water the tags partition, `ρq_tot` unless the increment
-# follower passes the non-precipitating water (`water_tag_parent`).
+# `ᶜparent` is the water the tags partition, `ρq_tot` unless the correction
+# after each solve passes the non-precipitating water (`water_tag_parent`).
 function _water_tag_share_field(ᶜY, ᶜnorm, tag, ᶜparent = ᶜY.ρq_tot)
     ᶜρq_tag = tag_field(ᶜY, tag)
     return _is_partition_tag(tag) ?
@@ -274,8 +268,9 @@ end
 """
     sgs_exchange_of_water_tags!(Yₜ, Y, p, turbconv_model, model)
 
-Exchange provenance between the water tags at the SGS mass flux, as an updraft
-copy of the tags would, without one. Each tag `i` takes
+Exchange composition between the water tags at the SGS mass flux, as an updraft
+copy of the tags would, without one. The exchange gives each tag the updraft's
+composition instead of the grid mean's. Each tag `i` takes
 
     Xᵢ = Σₖ ρᵏ aᵏ (u³ᵏ - u³) (φᵏᵢ - φ̄ᵢ) q_totᵏ
 
@@ -284,8 +279,8 @@ of the water in subdomain `k`, `φ̄ᵢ` its share in the grid mean. A share is 
 tag's specific value over the sum of the partition's, the region tags without
 sources, in each subdomain. Where a subdomain's sum or the grid mean's is not
 positive, the tags exchange nothing. `X` is the part of the flux an updraft copy
-would add to the donor-share flux of [`sgs_mass_flux_of_water_tags!`](@ref): air
-of one composition rises and air of another sinks, each with its whole water.
+would add to the flux of [`sgs_mass_flux_of_water_tags!`](@ref). Air of one
+composition rises and air of another sinks, each with its whole water.
 
 It is the energy source tags' exchange
 ([`sgs_exchange_of_energy_source_tags!`](@ref)) with the weight `q_totᵏ` in
@@ -342,7 +337,7 @@ Fill the scratch the water tags' exchange reads, for the current state, and
 return it with the lazy fields the exchange needs: the grid mean's specific tag
 values `ᶜε̄`, the updraft's from the rescaled plume `ᶜεʲ`, and the bound's room
 and water ratio. [`sgs_exchange_of_water_tags!`](@ref) applies the exchange from
-these; the audit ([`water_tag_edmf_audit`](@ref)) recomputes them to report
+these. The audit ([`water_tag_edmf_audit`](@ref)) recomputes them to report
 where the bound binds.
 """
 function water_exchange_inputs!(Y, p, turbconv_model, model)
@@ -387,7 +382,7 @@ function water_exchange_inputs!(Y, p, turbconv_model, model)
     # subdomain carries more of a tag's water than the cell holds. The bound's
     # two ratios are written to scratch first, as in the energy exchange: left
     # lazy they box the kernel's broadcast. `_exchange_room` and
-    # `_exchange_energy_ratio` do not depend on the weight; here it is water.
+    # `_exchange_energy_ratio` do not depend on the weight. Here it is water.
     ᶜroom = p.scratch.ᶜq_tag_room
     @. ᶜroom = _exchange_room(Y.c.ρ, ᶜρaʲ, ᶜρa⁰, ᶜq̄, ᶜq_totʲ, ᶜq_tot⁰)
     ᶜwater_ratio = p.scratch.ᶜq_tag_water_ratio
@@ -461,8 +456,8 @@ function water_tag_plume!(
     # cell, so each tag's kernel below reads a few tuple fields.
     set_nonnegative_specific!(ᶜε̄, Y.c, model.tags)
     # Where the plume starts: the grid mean's values, and in the lowest cell
-    # the surface flux's water besides (W21, the owner's decision of
-    # 2026-09-28). The plume mixes in the grid mean's values above.
+    # the surface flux's water besides. The plume mixes in the grid mean's values
+    # above.
     water_plume_surface_fraction!(ᶜf, Y, p)
     start_water_plume!(ᶜε_start, ᶜε̄, ᶜf, p.tagging.ᶜwater_masks, model.tags)
 
@@ -504,23 +499,22 @@ per unit mass of updraft air and per second:
     (`edmfx_boundary_condition_tendency!`);
   - entrainment, `e q⁰`, at the plume's own rate `e`, with the environment's
     water `q⁰` (`ᶜq_tot_nonneg⁰`);
-  - the surface moisture flux, `Δ⁺ = max(Δʲ, 0)`, with `Δʲ` the increment
+  - the surface moisture flux, `Δ⁺ = max(Δʲ, 0)`, with `Δʲ` the tendency
     `surface_flux_tendency!` gives `q_totʲ`.
 
 Every loss there takes each tag by its share. So where the environment has the
-grid mean's composition, the copies' mirrors hold the cell at the shares
-`(1 - f) φ̄ᵢ + f gᵢ`, with `gᵢ` the fifth mirror's weight
+grid mean's composition, the copies' terms hold the cell at the shares
+`(1 - f) φ̄ᵢ + f gᵢ`, with `gᵢ` the weight of the copies' surface flux term
 (`water_tag_copies_surface_flux_tendency!`). Dew leaves by share, so it gives
 `f = 0`, and so does `disable_surface_flux_tendency`.
 
-Each factor is clipped at zero, so a supply counts only where both its
-factors are positive, and `0 ≤ f ≤ 1`. For water all four factors
-are meant to be non-negative. The source is clipped at zero
-(`edmfx_sfc_mass_flux_source`), `e` is a rate, and `q_b` and `q⁰` are water
-contents. So the clip does nothing there. If a factor still comes out
-negative, as a slightly negative `q̄` could make `q_b`, that supply counts as
-none rather than as water taken away. It reads the state and the precomputed
-quantities, and writes only `ᶜf`.
+Each factor is clipped at zero, so a supply counts only where both its factors
+are positive, and `0 ≤ f ≤ 1`. For water all four factors are meant to be
+non-negative. The source is clipped at zero (`edmfx_sfc_mass_flux_source`), `e`
+is a rate, and `q_b` and `q⁰` are water contents. So the clip does nothing
+there. If a factor still comes out negative, as a slightly negative `q̄` could
+make `q_b`, that supply counts as none rather than as water taken away. It reads
+the state and the precomputed quantities, and writes only `ᶜf`.
 """
 function water_plume_surface_fraction!(ᶜf, Y, p)
     FT = eltype(Y.c.ρ)
@@ -533,15 +527,16 @@ function water_plume_surface_fraction!(ᶜf, Y, p)
         p.precomputed
     (; sfc_mass_flux_sourceʲs, sfc_q_tot_buoyantʲs) = p.precomputed
     a_min = FT(CAP.min_area(CAP.turbconv_params(p.params)))
-    # The surface flux's increment of `q_totʲ`, from the flux and the operator
-    # the model and the fifth mirror use. It is zero above the lowest cell.
+    # The surface flux's tendency of `q_totʲ`, from the flux and the operator
+    # the model and the copies' surface flux term use. It is zero above the
+    # lowest cell.
     ᶜq_tot = @. lazy(specific(Y.c.ρq_tot, Y.c.ρ))
     btt = boundary_tendency_scalar(
         ᶜq_tot,
         p.precomputed.sfc_conditions.ρ_flux_q_tot,
     )
     @. ᶜf = -specific(btt, ᶜρʲs.:(1))
-    # In the lowest cell, the increment's part of the three supplies.
+    # In the lowest cell, the tendency's part of the three supplies.
     level_values(field) = Fields.field_values(Fields.level(field, 1))
     f = level_values(ᶜf)
     ρʲ = level_values(ᶜρʲs.:(1))
@@ -574,9 +569,9 @@ end
     start_water_plume!(ᶜε_start, ᶜε̄, ᶜf, ᶜmasks, tags)
 
 Write where the default mode's plume starts into `ᶜε_start`
-(`start_plume_at_surface!`), with the fifth mirror's weight for the
-label `surface_flux`: the tag's mask if it receives the flux, one if it has no
-region, and zero if it does not receive it. The plume rescales the start to
+(`start_plume_at_surface!`), with the weight of the copies' surface flux term
+for the label `surface_flux`: the tag's mask if it receives the flux, one if it
+has no region, and zero if it does not receive it. The plume rescales the start to
 `q_totʲ`, which gives the shares `(1 - f) φ̄ᵢ + f gᵢ` where the partition's
 masks sum to one.
 """
@@ -595,12 +590,12 @@ start_water_plume!(ᶜε_start, ᶜε̄, ᶜf, ᶜmasks, tags) = start_plume_at_
 
 Set each updraft copy to the default mode's plume ([`water_tag_plume!`](@ref)),
 not to `q_totʲ φ̄ᵢ`, the grid mean's composition, which the model starts them
-with. The comparison runs of G3_PLAN 6 call it once, after the simulation is
-built, so that a default run and its copies twin start from one updraft
-composition, and the first hour measures the dynamics, not a spin-up. The model
-never calls it; it allocates. Where the updraft holds no water, or the
-partition nothing, the plume is left as mixed, and the copies' repair closes
-the partition at the first step. Errors without copies.
+with. A comparison of the two modes calls it once, after the simulation is
+built. A default run and a copies run then start from one updraft composition,
+and the first hour measures the dynamics, not a spin-up. The model never calls
+it, because it allocates. Where the updraft holds no water, or the partition
+nothing, the plume is left as mixed, and the copies' repair closes the partition
+at the first step. Errors without copies.
 """
 function start_water_tag_copies_from_plume!(Y, p)
     model = p.atmos.water_tagging_model
@@ -647,7 +642,7 @@ function _exchange_water_tags!(ᶜYₜ, subdomains, dt, upwinding, tags::Tuple, 
     )
 end
 
-# Which water tags form the partition, as `Val` of a tuple of `Bool`s, built
+# Which water tags are region tags, as `Val` of a tuple of `Bool`s, built
 # from the tags' types so that it is a constant, as for the energy tags.
 @generated _water_partition_flags(::T) where {T <: Tuple} = :(Val(
     $(Tuple(
@@ -685,29 +680,27 @@ WaterPlumeStep(::Val{partition}) where {partition} = WaterPlumeStep{partition}()
     # where the partition holds a denormal amount, and a share cannot.
     # `map`, not `ntuple` over the index: inside the column march the tuple is
     # ClimaCore's `AutoBroadcaster`, whose `map` unrolls, while `ntuple` builds
-    # a plain tuple that the march converts back, allocating in every cell
-    # (`analysis/water/wp9_variants.jl`).
+    # a plain tuple that the march converts back, allocating in every cell.
     return map(ε -> (ε / total) * q_totʲ, mixed)
 end
 
 # ============================================================================
-# The audit mode: updraft copies
+# The comparison mode: updraft copies
 # ============================================================================
 
 ##### Under `water_tag_updraft_copy: true` each tag has a copy `q_tag_<name>`, a
 ##### specific value, in every updraft. `sgs_tracer_names` finds it, so the
 ##### model's updraft machinery moves it as any updraft tracer: advection,
-##### entrainment and detrainment, the SGS mass flux of the grid-mean tag, the
-##### diffusion mirror, hyperdiffusion and the filter. Five things the model
-##### does to the updraft's water it does not do to a tracer, and they are
-##### mirrored here, so that the copies keep summing to `q_totʲ`:
+##### entrainment and detrainment, the SGS mass flux of the grid-mean tag,
+##### diffusion, hyperdiffusion and the filter. The model does five things to the
+##### updraft's water that it does not do to a tracer. The copies get the same
+##### change as the updraft, so that they keep summing to `q_totʲ`:
 #####
-#####   1. the updraft's 0M rain-out, `water_tag_copies_microphysics_tendency!`;
-#####   2. the updraft's 1M sedimentation, `sediment_water_tag_copies!`;
-#####   3. the relaxation at the surface, `water_tag_copies_boundary_condition_tendency!`;
+#####   1. the updraft's 0M rain-out, `water_tag_copies_microphysics_tendency!`,
+#####   2. the updraft's 1M sedimentation, `sediment_water_tag_copies!`,
+#####   3. the relaxation at the surface, `water_tag_copies_boundary_condition_tendency!`,
 #####   4. the surface moisture flux into the updraft,
-#####      `water_tag_copies_surface_flux_tendency!`. G3_PLAN 4.1 lists four
-#####      mirrors; the CI group `tagging_water_edmf_0m` found this one;
+#####      `water_tag_copies_surface_flux_tendency!`,
 #####   5. the filter's clamps, which the copies' repair after it undoes for the
 #####      partition's sum, `repair_water_tag_copies!`.
 
@@ -742,8 +735,8 @@ Add the water tags' copies to every updraft's state at a single grid point,
 under `water_tag_updraft_copy: true`; return `sgs` unchanged otherwise. Each
 copy starts as `q_totʲ φ̄ᵢ`: the updraft's own water, split by the grid mean's
 shares, so that the partition's copies sum to `q_totʲ` from the start. The
-energy source tags' copies start from the grid mean's specific values instead;
-for water that would give the copies the grid mean's water where the updraft
+energy source tags' copies start from the grid mean's specific values instead.
+For water that would give the copies the grid mean's water where the updraft
 holds more.
 """
 with_water_tag_updraft_copies(sgs, gs, model) = _with_water_tag_updraft_copies(
@@ -810,7 +803,7 @@ end
 """
     water_tag_copies_microphysics_tendency!(Yₜ, Y, p, microphysics_model, turbconv_model)
 
-Mirror the updraft's 0M rain-out on the copies. The model removes the rain as
+Give the copies the updraft's 0M rain-out. The model removes the rain as
 `ρaʲ += ρaʲ dq` and `q_totʲ += dq (1 - q_totʲ)`, with `dq ≤ 0` the updraft's
 `dq_tot_dt` (`microphysics_tendency!`). A tracer gets neither. Each copy takes
 `χᵢʲ += dq (φʲᵢ - χᵢʲ)` with `φʲᵢ = clamp(χᵢʲ / q_totʲ, 0, 1)`: its share of the
@@ -819,14 +812,13 @@ over a partition whose copies lie in `[0, q_totʲ]` and sum to `q_totʲ`, this i
 the parent's term exactly. A drift of the sum keeps its ratio to `q_totʲ`, so
 only its absolute size shrinks as the updraft rains out, and the clamp breaks
 exactness where a copy lies outside that range. Call it right after
-`microphysics_tendency!`, on the implicit or
-the explicit path, wherever that runs. A no-op without copies and other than
-under 0M with prognostic EDMF, where the updraft's microphysics never changes
-`q_totʲ`.
+`microphysics_tendency!`, on the implicit or the explicit path, wherever that
+runs. A no-op without copies and other than under 0M with prognostic EDMF, where
+the updraft's microphysics never changes `q_totʲ`.
 
-It has no Jacobian entry, deliberately: `q_totʲ`'s rain-out has none, and an
-entry for the copies alone would part their Newton updates from `q_totʲ`'s.
-See `docs/known_issues.md`, issue 4.
+It has no Jacobian entry, deliberately. The rain-out of `q_totʲ` has none, and an
+entry for the copies alone would part their Newton updates from those of
+`q_totʲ`.
 """
 water_tag_copies_microphysics_tendency!(Yₜ, Y, p, microphysics_model, turbconv_model) =
     nothing
@@ -868,8 +860,8 @@ end
 """
     sediment_water_tag_copies!(Yₜ, Y, p, j, ᶜqʲ, ᶜwʲ, ᶜa, ᶜρ⁰w⁰q⁰, ᶜinv_ρ̂, ᶠJ)
 
-Mirror one sedimenting species' updraft sedimentation on the copies of updraft
-`j`. The model moves the species `qʲ` and `q_totʲ` by
+Give the copies of updraft `j` one sedimenting species' updraft sedimentation.
+The model moves the species `qʲ` and `q_totʲ` by
 `ᶜinv_ρ̂ * updraft_sedimentation!(…, qʲ, …, ρ⁰w⁰q⁰)`: the flux within the
 updraft, and where the updraft narrows with height, the environment's falling
 water flowing in (`edmfx_sgs_vertical_advection_tendency!`). The falling updraft
@@ -1005,9 +997,9 @@ end
 """
     water_tag_copies_boundary_condition_tendency!(Yₜ, Y, p, turbconv_model)
 
-Mirror the updraft's relaxation at the lowest level on the copies. The model
-relaxes `q_totʲ` toward the buoyant surface value `q_b = q̄ + C√σ²` at the rate
-`mass_flux_source / max(ρa, ρ a_min)` (`edmfx_boundary_condition_tendency!`); a
+Give the copies the updraft's relaxation at the lowest level. The model relaxes
+`q_totʲ` toward the buoyant surface value `q_b = q̄ + C√σ²` at the rate
+`mass_flux_source / max(ρa, ρ a_min)` (`edmfx_boundary_condition_tendency!`). A
 tracer gets nothing. Each copy relaxes at the same rate toward `q_b φ̄ᵢ`, the
 grid mean's composition in that cell, the partition's renormalized. So the
 partition's copies relax toward `q_b` together, and no copy gets water the cell
@@ -1087,7 +1079,7 @@ end
 """
     water_tag_copies_surface_flux_tendency!(Yₜ, Y, p, turbconv_model)
 
-Mirror the updraft's share of the surface moisture flux on the copies.
+Give the copies the updraft's share of the surface moisture flux.
 `surface_flux_tendency!` adds the flux to `q_totʲ` in the lowest cell, as the
 grid mean's boundary tendency over the updraft's density. It gives every other
 updraft tracer a zero flux, the copies included. A copy whose tag receives
@@ -1108,7 +1100,7 @@ function water_tag_copies_surface_flux_tendency!(
     model = p.atmos.water_tagging_model
     has_water_tag_updraft_copies(model) || return nothing
     p.atmos.disable_surface_flux_tendency && return nothing
-    # The model's own increment of `q_totʲ`, from the same flux and operator.
+    # The model's own tendency of `q_totʲ`, from the same flux and operator.
     # The flux goes to the operator as it is, so the model's scratch is not
     # written.
     ᶜq_tot = @. lazy(specific(Y.c.ρq_tot, Y.c.ρ))
@@ -1148,8 +1140,8 @@ end
 # `_accumulate_water_tag!` gives it: one without a region, the region's mask
 # with one. Whether it receives the flux is known only at run time, so it is a
 # factor in the broadcast, which keeps the weight's type fixed. The grid's
-# tags also take no gain where the grid's parent is below zero (the brackets'
-# `TargetGain`). The copies keep the gain, since their repair closes them onto
+# tags also take no gain where the grid's parent is below zero (`TargetGain` of
+# the applied-update events). The copies keep the gain, since their repair closes them onto
 # `max(q_totʲ, 0)` after the filter at every step. The default mode's plume
 # starts with the same weight (`start_water_plume!`), as the copies' steady
 # state, so it does not read the grid parent's sign either.
@@ -1166,7 +1158,7 @@ _surface_gain_weight(ᶜmasks, tag::WaterTag) = tag_field(ᶜmasks, tag)
 
 Around the updraft filter (`enforce_physical_constraints!`), add its change of
 the partition copies' water, `Δ(ρaʲ Σᵢ∈P χᵢʲ)`, to the state ledger
-`q_tag_led_upfilter` (WP6). The filter clamps `ρaʲ` and each copy. One snapshot
+`q_tag_led_upfilter`. The filter clamps `ρaʲ` and each copy. One snapshot
 of the sum is kept, so a clamp up and a clamp down of two copies in one cell
 cancel in the ledger. No-ops without copies.
 """
@@ -1205,11 +1197,11 @@ partition's copies onto `q_totʲ` again. The filter clamps each copy and
 floored at what they hold, by [`water_tag_rescale_shift`](@ref), the rule the
 grid-scale tags follow after a limiter. As for the grid mean, the copies
 partition the updraft's non-negative water, and a negative `q_totʲ` leaves
-them at zero (known issue 7, option C). The filter's own increment is not
-handed on as well: the filter already clamped each copy, and doing both would
-count it twice. `r` before the repair is kept in `p.tagging.ᶜwater_copy_residual`
-for the diagnostic `q_tag_copy_res`, and the water moved, times `ρaʲ`, in the
-ledger `q_tag_upfix_<name>`, cumulative since the start of the run. Source tags'
+them at zero. The filter's own change is not handed on as well, because the
+filter already clamped each copy and doing both would count it twice. `r` before
+the repair is kept in `p.tagging.ᶜwater_copy_residual` for the diagnostic
+`q_tag_copy_res`. The water moved, times `ρaʲ`, goes to the fix ledger
+`q_tag_upfix_<name>`, the copies' repair, cumulative since the start of the run. Source tags'
 copies are not part of the sum and are left as the filter left them. A no-op
 without copies.
 """
@@ -1234,10 +1226,10 @@ function _repair_water_tag_copies!(
     @. ᶜwater_copy_sum = 0
     @. ᶜwater_copy_pos = 0
     _accumulate_copy_sums!(ᶜwater_copy_sum, ᶜwater_copy_pos, ᶜsgsʲ, model.tags)
-    # The copies partition the updraft's non-negative water (option C).
+    # The copies partition the updraft's non-negative water.
     @. ᶜwater_copy_residual =
         water_tag_partition_target(ᶜsgsʲ.q_tot) - ᶜwater_copy_sum
-    # What this call adds goes to the ledger's `attempted` (WP6, step 3).
+    # What this call adds goes to the ledger's `attempted`.
     before_tag_ledgers!(p, Y, Val((:q_tag_led_uprepair,)))
     _apply_copy_repair!(
         ᶜsgsʲ,
@@ -1263,16 +1255,15 @@ end
 # `ᶜsum` and `ᶜpos` come from the pre-repair copies and are only read here, so
 # each copy can be rewritten in place.
 # `ᶜled` is the state ledger of the copies' repair, which takes the partition's
-# change summed over the copies, times `ρaʲ` (WP6).
+# change summed over the copies, times `ρaʲ`.
 _apply_copy_repair!(ᶜsgsʲ, ᶜled, ledger, ᶜsum, ᶜpos, ::Tuple{}) = nothing
 function _apply_copy_repair!(ᶜsgsʲ, ᶜled, ledger, ᶜsum, ᶜpos, tags::Tuple)
     tag = first(tags)
     if _is_partition_tag(tag)
         ᶜχʲ = updraft_copy_field(ᶜsgsʲ, tag)
         (ᶜfix, ᶜgross, ᶜcount) = tag_ledger_fields(ledger, tag)
-        # Ledger first, so it records the correction itself. The gross twin
-        # and the count take the same change, the count against the updraft's
-        # water.
+        # Ledger first, so it records the correction itself. The gross and the
+        # count take the same change, the count against the updraft's water.
         @. ᶜled +=
             ᶜsgsʲ.ρa *
             water_tag_rescale_shift(ᶜχʲ, ᶜsgsʲ.q_tot, ᶜsum, ᶜpos)
@@ -1340,16 +1331,15 @@ The water tags' own columns for `water_tag_audit.csv` under prognostic EDMF, or
 
 In the default mode, where the exchange runs: where its bound binds. The
 exchange blends the plume toward the grid mean where a tag would otherwise
-carry more water in a subdomain than the cell holds (decision 5 of G3_PLAN).
-From the current state, `exchange_volume_fraction` is the fraction of the
+carry more water in a subdomain than the cell holds. From the current state, `exchange_volume_fraction` is the fraction of the
 volume where the exchange runs at all, `bound_partition` the fraction of that
 where the partition's factor is below one, and `bound_<name>` the same for each
 source tag's own factor. Where the partition's bound binds, the partition mixes
-less than a copy would; where a source tag's binds, that tag does, and an
+less than a copy would. Where a source tag's binds, that tag does, and an
 identity such as `evap_tropo + evap_strat = evap` stops holding exactly.
 
 With updraft copies: `copy_residual`, the integral of `|q_totʲ - Σᵢ χᵢʲ| ρaʲ`
-before the last repair, and `copy_repair`, the integral of the repair ledgers'
+before the last repair, and `copy_repair`, the integral of the fix ledgers'
 magnitudes, cumulative, each also relative to `scale`.
 """
 water_tag_edmf_audit(Y, p, model, scale) =

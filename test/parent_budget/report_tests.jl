@@ -258,12 +258,12 @@ const SUMMARY_ALLOCATION_OVERHEAD = 256 * 1024
         # sphere, which also takes the parent budget through DSS and the horizontal
         # dynamics the columns never run.
         # The surface DYCOMS flux is F0 exp(-κ LWP) + F1. The two quadratures
-        # agree to round-off only while it is steady within a step, so the
-        # sphere must stay free of liquid. ClimaParams 1.2 sets the geometric
-        # SGS-variance scale factor to 3. The 0M quadrature then makes liquid,
-        # the flux moves by up to 1.6e-2 within a step, and the two
-        # quadratures part by 4.8e-4. Setting the factor to 0 keeps the
-        # sphere free of liquid, as it was under ClimaParams 1.1.15.
+        # agree to round-off only while that flux is steady within a step, so
+        # the sphere must stay free of liquid. With the default geometric
+        # SGS-variance scale factor, 3, the SGS quadrature of 0M microphysics
+        # makes liquid. The flux then moves by up to 1.6e-2 within a step, and
+        # the two quadratures part by 4.8e-4. A factor of 0 keeps the sphere
+        # free of liquid.
         sgs_toml = joinpath(mktempdir(), "no_geometric_sgs_variance.toml")
         write(
             sgs_toml,

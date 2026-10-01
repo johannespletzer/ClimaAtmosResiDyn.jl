@@ -768,7 +768,7 @@ end
                             energy_closure_check = nothing,
                             energy_source_closure_check = nothing, kwargs...)
 
-Install the online closure checks of the three tag families.
+Install the online tag closure checks of the three tag families.
 
 The families are checked separately, on their own cadence and against their own
 tolerance, because their residuals are not comparable. The energy tags never
@@ -901,8 +901,8 @@ negative_water_step_level(water_closure_check, water_tagging_model) =
     (isnothing(water_closure_check) || isnothing(water_tagging_model)) ?
     nothing : get(water_closure_check, :negative_water_void_above, nothing)
 
-# The water family's own audit columns, under prognostic EDMF and under the
-# increment follower, as a function of `(Y, p, closure, t)`, or `nothing`
+# The water family's own audit columns, under prognostic EDMF and under
+# increment transport, as a function of `(Y, p, closure, t)`, or `nothing`
 # without the tags.
 water_extra_audit(::Nothing) = nothing
 water_extra_audit(model) =
@@ -922,7 +922,7 @@ function energy_source_extra_audit(model)
 end
 
 # The energy source family's own closure columns, the offset's headroom and the
-# gross source throughput, as a function of `(Y, p, closure)`, or `nothing`
+# source throughput, as a function of `(Y, p, closure)`, or `nothing`
 # without the tags.
 energy_source_extra_closure(::Nothing) = nothing
 energy_source_extra_closure(model) =
@@ -986,8 +986,8 @@ function tag_closure_callback(
     period = ITime(period_seconds)
     period, _, _, _ = promote(period, t_start, dt, t_end)
 
-    # A check with a spin-up reference takes the residual once, at the spin-up
-    # time, and every row reports the residual since. That callback comes first,
+    # A check with a reference at spin-up takes the residual once, at the
+    # spin-up time, and every row reports the residual since. That callback comes first,
     # so that a row due at the same time already has the reference.
     spin_up = get(check, :spin_up, nothing)
     reference = isnothing(spin_up) ? nothing : Ref{Any}(nothing)
@@ -996,7 +996,8 @@ function tag_closure_callback(
     # restart (`tag_closure_checkpoint.jl`).
     void_above = get(check, :void_above, nothing)
     family_key = Symbol(family)
-    # The energy source tags' second warning level, against the throughput.
+    # The energy source tags' second warning level, against the source
+    # throughput.
     throughput_tolerance = get(check, :throughput_tolerance, nothing)
     # The water check also reads the parent's negative water. Its flag lives in
     # the cache for the same reason. Its accumulator sits in the tags' step

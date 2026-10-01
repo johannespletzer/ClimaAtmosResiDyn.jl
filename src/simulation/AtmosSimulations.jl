@@ -463,8 +463,8 @@ function AtmosSimulation(
         restore_tag_closure_void!(p.tagging, restart_file, context)
     isnothing(restart_file) ||
         restore_negative_water_void!(p.tagging, restart_file, context)
-    # The energy source tags' throughput level needs a verified partition. Only
-    # the cache's masks show whether there is one, so it is checked here.
+    # The energy source tags' `throughput_tolerance` needs a verified partition.
+    # Only the cache's masks show whether there is one, so it is checked here.
     default_callbacks &&
         check_energy_source_throughput_setup(p.tagging, callback_kwargs)
 

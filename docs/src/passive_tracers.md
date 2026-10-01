@@ -196,8 +196,8 @@ The sink acts only on positive mass, so `negative_burden` counts towards
 the sink sees.
 
 `residence_time` and `residence_time_from_loss` agree only in equilibrium.
-Before it they bracket the answer. A tracer that is still filling has
-`burden ≈ source × t`, so `residence_time` is the elapsed time and not a
+Before it they bound the answer from both sides. A tracer that is still
+filling has `burden ≈ source × t`, so `residence_time` is the elapsed time and not a
 result, while the lagging sink makes `residence_time_from_loss` start large and
 fall. The run is long enough when the gap closes.
 

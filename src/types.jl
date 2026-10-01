@@ -2268,7 +2268,7 @@ Definition of one tagged prognostic energy tracer, stored in the state as
 `Y.c.ρe_tag_<name>`. The tag `name` is a type parameter so that state field
 names can be generated at compile time (GPU-compatible).
 
-  - `region`: an [`AbstractTagRegion`](@ref) or `nothing`. A pure region tag
+  - `region`: an [`AbstractTagRegion`](@ref) or `nothing`. A region tag
     (`region` given, no sources) is initialized to `ρe_tot * mask` and
     receives every attributed process, masked. Any tag with sources is
     initialized to zero — including region-restricted ones, which accumulate
@@ -2278,9 +2278,9 @@ names can be generated at compile time (GPU-compatible).
     empty for passive region tags. A single `Symbol` is also accepted
     (`:none` meaning "no sources").
 
-A tag with sources is a *signed process tag*: it starts at zero, accumulates
-the signed increment its processes have added, and goes negative under net
-cooling. It is not a share of the energy present. The `source` key is shared
+A tag with sources is a *signed process tag*. It starts at zero, accumulates
+the signed change its processes have made, and goes negative under net cooling.
+It is not a share of the energy present. The `source` key is shared
 with [`WaterTag`](@ref), which applies a different rule to it.
 
 Do not call it a process-change record. That name belongs to the `prc_*`
@@ -2305,13 +2305,13 @@ Definition of one tagged prognostic water tracer, stored in the state as
 water `ρq_tot` rather than total energy, and it is attributed with a different
 rule (see `parameterized_tendencies/tagged_tracers/tagged_water.jl`):
 
-  - `region`: an [`AbstractTagRegion`](@ref) or `nothing`. A pure region tag
+  - `region`: an [`AbstractTagRegion`](@ref) or `nothing`. A region tag
     (`region` given, no sources) is initialized to `ρq_tot * mask` and receives
     every attributed *production* term, masked. Any source tag is initialized to
     zero and receives only the production of the processes it lists.
   - `sources`: a `Tuple` of `Symbol`s labeling the processes whose `ρq_tot`
     production is attributed to this tag (e.g. `(:surface_flux,)`); empty for a
-    pure region tag. A single `Symbol` is also accepted (`:none` meaning "no
+    region tag. A single `Symbol` is also accepted (`:none` meaning "no
     sources").
 
 Unlike an energy tag, *every* water tag is depleted by *every* attributed loss
@@ -2332,7 +2332,7 @@ WaterTag{name}(region, source::Symbol) where {name} =
 """
     tag_sources(tag::AbstractTracerTag)
 
-The `Tuple` of process labels attributed to a tag; empty for a pure region tag.
+The `Tuple` of process labels attributed to a tag. Empty for a region tag.
 """
 tag_sources(tag::AbstractTracerTag) = tag.sources
 
@@ -2377,11 +2377,11 @@ struct TracerWaterTagTransport <: AbstractWaterTagTransport end
 """
     IncrementWaterTagTransport()
 
-The tags follow the parent's own implicit increment. Their explicit vertical
-advection is skipped. After each Newton solve, the difference between the
-parent's increment of `ρq_tot` and the partition's is moved as a vertical flux,
-and each tag takes its share of it in the cell the flux leaves. See
-`correct_water_tag_increment!`. It needs region tags without sources that
+Increment transport. The tags take the parent's own implicit increment. Their
+explicit vertical advection is skipped. After each Newton solve, the difference
+between the parent's increment of `ρq_tot` and the partition's is moved as a
+vertical flux, and each tag takes its share of it in the cell the flux leaves.
+See `correct_water_tag_increment!`. It needs region tags without sources that
 partition the domain.
 """
 struct IncrementWaterTagTransport <: AbstractWaterTagTransport end
@@ -2398,21 +2398,22 @@ Model component holding a `Tuple` of [`WaterTag`](@ref)s. Constructed from the
 
 `updraft_copies`, from `water_tag_updraft_copy`, gives each tag a copy in every
 updraft under `turbconv: prognostic_edmfx`, which the model's own updraft
-machinery moves: the audit mode. Without it the tags stay grid-scale and take
-their share of the updraft's water flux by a donor share and an exchange: the
-default. It is a type parameter, so the state is built from it at compile
-time.
+machinery moves: the comparison mode. Without it the tags stay grid-scale. They
+take their share of the updraft's water flux, and an exchange gives each tag the
+updraft's composition. That is the default. It is a type parameter, so the state
+is built from it at compile time.
 
 `transport`, from `water_tag_transport`, is how the tags follow the parent's
 implicit terms: as tracers by default, or by the parent's own increment after
-each Newton solve. The increment needs region tags without sources, and is
-refused without them. See [`IncrementWaterTagTransport`](@ref).
+each Newton solve (increment transport). Increment transport needs region tags
+without sources, and is refused without them. See
+[`IncrementWaterTagTransport`](@ref).
 
 `ledger_per_tag`, from `water_tag_ledger_per_tag`, gives each tag its own state
-ledgers of what the corrections changed it by (WP6, step 3): `q_tag_led_fix_<name>`
-for the limiters' rescale and the partition repair, and, under the increment,
-`q_tag_led_inc_<name>` for the follower. Off by default, since each adds a
-state field per tag. A type parameter, like `updraft_copies`.
+ledgers of what the corrections changed it by: `q_tag_led_fix_<name>` for the
+limiters' rescale and the partition repair, and, under increment transport,
+`q_tag_led_inc_<name>` for the correction after each solve. Off by default,
+since each adds a state field per tag. A type parameter, like `updraft_copies`.
 
 `precipitation`, from `water_tag_precipitation`, splits each tag into three
 parts: `ρq_tag_<name>` holds the water that is neither rain nor snow,
@@ -2423,12 +2424,12 @@ and it is refused here with updraft copies. See
 
 `leak_correction`, from `water_tag_leak_correction`, charges each tag the EDMF
 vertical diffusion of its share of the rain and snow, which the parent does not
-diffuse, on the grid mean and on the copies (WP4c). Off by default. A type
+diffuse, on the grid mean and on the copies. Off by default. A type
 parameter too. See [`correct_water_tag_diffusion_leak!`](@ref).
 
 `rainout_jacobian`, from `water_tag_rainout_jacobian`, gives the tags' rows of
 the manual Jacobian the derivatives of their implicit 0M rain-out, in the tag
-and in `ρq_tot` (known issue 4). Off by default. A type parameter too. See
+and in `ρq_tot`. Off by default. A type parameter too. See
 `has_water_tag_rainout_jacobian`.
 """
 struct WaterTaggingModel{
@@ -2452,9 +2453,7 @@ function WaterTaggingModel(
     leak_correction::Bool = false,
     rainout_jacobian::Bool = false,
 )
-    # The copies of the rain and snow parts are stage 3 of the design note
-    # (design/RAIN_SNOW_TAGS.md on the record branch, section 13). Their build
-    # cost is measured first.
+    # The updraft copies of the rain and snow parts are not built.
     precipitation &&
         updraft_copies &&
         error(
@@ -2542,7 +2541,7 @@ has_water_tag_precipitation(
 
 Whether the water tags of `model` are charged the EDMF vertical diffusion of
 their share of the rain and snow, from the `water_tag_leak_correction` config
-key (WP4c). `false` without water tags.
+key. `false` without water tags.
 """
 has_water_tag_leak_correction(::Nothing) = false
 has_water_tag_leak_correction(
@@ -2553,8 +2552,8 @@ has_water_tag_leak_correction(
     has_water_tag_rainout_jacobian(model)
 
 Whether the tags' rows of the manual Jacobian carry the derivatives of their
-implicit 0M rain-out, from the `water_tag_rainout_jacobian` config key (known
-issue 4). The entries go in only where the tags lose water by the grid rule on
+implicit 0M rain-out, from the `water_tag_rainout_jacobian` config key. The
+entries go in only where the tags lose water by the grid rule on
 the implicit path, and only with the split solver
 (`water_tag_rainout_jacobian_names`). `false` without water tags.
 """
@@ -2575,17 +2574,18 @@ differs and that is the whole point of the separate type. A source tag holds an
 amount of moist energy that is present now and is traced back to where it came
 from: production is shared out by region mask and loss is taken from each tag in
 proportion to what it already holds. That reading is **conditional**: it holds
-only where the total the tags partition is positive, so the donor share is
-defined, and only while the tag itself is non-negative. That total is `ρe_tot`,
-or `ρe_tot + c·ρ` when `energy_source_tag_offset` is set. Treat the family as experimental signed
-attribution rather than settled provenance. A `TracerTag` configured with `source`
-instead accumulates the whole signed increment and is a signed process tag.
+only where the total the tags partition is positive, so the share is defined,
+and only while the tag itself is non-negative. That total is `ρe_tot`, or
+`ρe_tot + c·ρ` when `energy_source_tag_offset` is set. The results are an
+attribution defined by the configured rules and the offset, not a unique
+physical history. A `TracerTag` configured with `source` instead accumulates the
+whole signed change of its processes and is a signed process tag.
 
 `ρe_src_*` is **not guaranteed non-negative**. Three separate things can take
 it below zero, and none of them is a defect in the rule.
 
-The loss term is donor-proportional, so the *rate* at which a tag is depleted
-is `φ_k` times the parent's gross loss rate. That bounds the rate, not the
+The loss term is in proportion to what the tag holds, so the *rate* at which a
+tag is depleted is `φ_k` times the parent's gross loss rate. That bounds the rate, not the
 amount. What the attribution step produces is a tendency, and the timestepper
 integrates it over a finite step, so the energy taken from a tag across one
 step is about `dt * φ_k * Δ⁻`. Nothing ties that to the tag's holding. Parent
@@ -2595,24 +2595,24 @@ Clamping `φ_k` to `[0, 1]` cannot prevent this: the clamp acts on the share,
 and the step length is what sets the amount.
 
 Where that total is not positive the share is undefined and
-[`energy_source_fraction`](@ref) returns zero, so no donor-proportional loss is
-applied there at all. Moist total energy has no physical zero, so how much of a
-domain this affects is a property of the chosen energy reference rather than a
-rare edge case. An `energy_source_tag_offset` large enough to lift the total
-positive everywhere is what removes the region, without moving the reference the
-model itself uses.
+[`energy_source_fraction`](@ref) returns zero, so no loss is applied there at
+all. Moist total energy has no physical zero, so how much of a domain this
+affects is a property of the chosen energy reference rather than a rare edge
+case. An `energy_source_tag_offset` large enough to lift the total positive
+everywhere is what removes the region, without moving the reference the model
+itself uses.
 
 The tags are also exempt from both tracer limiters through
 [`is_tagged_tracer_name`](@ref) and ride the unlimited explicit transport path.
 
 These are known limits of the current discrete implementation rather than
 properties of the continuous rule. A negative value invalidates the
-amount-of-energy and provenance reading of that tag while it lasts. So by
+amount-of-energy and origin reading of that tag while it lasts. So by
 default `repair_energy_source_tags!` puts negative tags back after each state
 update, where the total is positive, and logs what it moved. With
 `energy_source_tag_repair: false` nothing does.
 
-`e_src_res` will not reveal it: that residual covers the pure region tags only,
+`e_src_res` will not reveal it: that residual covers the region tags only,
 so a source-labelled tag never enters it and region-tag errors of opposite sign
 can cancel. Inspect each `e_src_<name>` for its minimum or sign instead, and
 use the initialization warning and the closure check's `nonpositive_fraction`
@@ -2620,7 +2620,8 @@ for the parent.
 
 This is the energy counterpart of [`WaterTag`](@ref), which already works this
 way. Moist total energy has no physical zero, so unlike water the resulting
-shares depend on the chosen energy reference; see `docs/src/energy_source_tags.md`.
+shares depend on the chosen `energy_source_tag_offset`. See
+`docs/src/energy_source_tags.md`.
 """
 struct EnergySourceTag{name, R <: Union{Nothing, AbstractTagRegion}, S <: Tuple} <:
        AbstractTracerTag{name}
@@ -2637,8 +2638,8 @@ EnergySourceTag{name}(region, source::Symbol) where {name} =
 
 How the energy source tags are transported, from the
 `energy_source_tag_transport` config key: [`TracerEnergySourceTransport`](@ref),
-the default, [`EnthalpyEnergySourceTransport`](@ref), an audit, or
-[`EnthalpyIncrementEnergySourceTransport`](@ref), a prototype of that audit.
+the default, [`EnthalpyEnergySourceTransport`](@ref), a comparison mode, or
+[`EnthalpyIncrementEnergySourceTransport`](@ref), a prototype.
 """
 abstract type AbstractEnergySourceTransport end
 
@@ -2655,7 +2656,7 @@ struct TracerEnergySourceTransport <: AbstractEnergySourceTransport end
 """
     EnthalpyEnergySourceTransport()
 
-An audit. In vertical and horizontal advection and in hyperdiffusion, each
+A comparison mode. In vertical and horizontal advection and in hyperdiffusion, each
 energy source tag takes its share of the parent's own flux of `ρe_tot + c·ρ`.
 So transport adds nothing to `e_src_res`, up to the timing of the step. It needs
 an `energy_source_tag_offset`. Everything else the tags see is as under
@@ -2666,8 +2667,8 @@ struct EnthalpyEnergySourceTransport <: AbstractEnergySourceTransport end
 """
     EnthalpyIncrementEnergySourceTransport()
 
-A prototype of the enthalpy audit whose implicit part follows the parent's own
-increment. The tags take their shares of the parent's explicit fluxes, as under
+A prototype of the enthalpy comparison mode whose implicit part takes the
+parent's own increment (increment transport). The tags take their shares of the parent's explicit fluxes, as under
 [`EnthalpyEnergySourceTransport`](@ref). In each implicit stage they then take
 the parent's increment of `ρe_tot + c·ρ`: after the Newton solve, the difference
 between the parent's increment and theirs is moved as a vertical flux and
@@ -2698,24 +2699,26 @@ See `repair_energy_source_tags!`.
 
 `transport`, from the `energy_source_tag_transport` config key, is how the tags
 move: as passive tracers by default, by their shares of the parent's own flux
-as an audit, or by the parent's implicit increment as well. The last two need
+as a comparison mode, or by the parent's implicit increment as well. The last
+two need
 an offset, because a share is zero wherever the total is not positive, and
-there the tags would not move. So they are refused without one. The increment
-also needs region tags without sources that partition the domain, and is
-refused without them. See [`EnthalpyEnergySourceTransport`](@ref) and
+there the tags would not move. So they are refused without one. Increment
+transport also needs region tags without sources that partition the domain, and
+is refused without them. See [`EnthalpyEnergySourceTransport`](@ref) and
 [`EnthalpyIncrementEnergySourceTransport`](@ref).
 
 `updraft_copies`, from the `energy_source_tag_updraft_copy` config key, gives
 each tag a copy in the updraft under `PrognosticEDMFX`. It is off by default.
 Off, the sub-grid mass flux moves each tag by its share in the cell the flux
-leaves, and the tags exchange provenance at the updraft's mass flux, from a
-steady entraining plume (`sgs_mass_flux_of_energy_source_tags!`). On, it is an
-audit: the copies are passive updraft tracers, and the model moves them as it
-moves any other. It is refused with the `enthalpy` transport. See
+leaves, and the tags exchange composition at the updraft's mass flux, from a
+steady entraining plume (`sgs_mass_flux_of_energy_source_tags!`). The exchange
+gives each tag the updraft's composition instead of the grid mean's. On, it is a
+comparison mode: the copies are passive updraft tracers, and the model moves
+them as it moves any other. It is refused with the `enthalpy` transport. See
 [`has_energy_source_updraft_copies`](@ref).
 
 `ledger_per_tag`, from `energy_source_tag_ledger_per_tag`, gives each tag its
-own state ledgers of what the corrections changed it by (WP6, step 3):
+own state ledgers of what the corrections changed it by:
 `e_src_led_fix_<name>` for the repair, and, under `enthalpy_increment`,
 `e_src_led_inc_<name>` for the correction after each solve. Off by default,
 since each adds a state field per tag. A type parameter, like
@@ -2823,7 +2826,7 @@ has_energy_source_ledger_per_tag(
 """
     RecordedProcess{name}()
 
-One process whose applied increment is accumulated by a
+One process whose applied change is accumulated by a
 [`ProcessRecordModel`](@ref). The process `name` is a type parameter so that the
 state field `prc_e_<name>` or `prc_q_<name>` can be looked up at compile time,
 exactly as [`TracerTag`](@ref) does for its own state field.
@@ -2845,11 +2848,11 @@ from the `energy_process_record` or `water_process_record` config entry; see
 `AtmosTagging(::AtmosConfig)` in `config/tracer_config.jl`.
 
 A process record answers "what did this process do here", not "where did the
-energy present come from". It accumulates the signed increment each bracketed
+energy present come from". It accumulates the signed change each attributed
 process applies, so gains are positive and losses negative.
 
-Records are prognostic, because the bracket yields a rate and only the
-timestepper can integrate it correctly across the stages. They are still never
+Records are prognostic, because the applied-update event yields a rate and only
+the timestepper can integrate it correctly across the stages. They are still never
 transported: their state names carry no `ρ` prefix, so `gs_tracer_names` does
 not see them.
 """

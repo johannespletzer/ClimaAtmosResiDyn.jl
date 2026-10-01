@@ -18,14 +18,14 @@
 Register the diagnostics of the energy source tags:
 
   - `e_src_<name>`: specific tagged energy `ρe_src_<name> / ρ`, for each tag;
-  - `e_src_fix_<name>`: the energy `repair_energy_source_tags!` has moved into
-    (positive) or out of (negative) each tag, per unit mass, cumulative since
-    the start of the run, carried through a restart by the checkpoint. Zero
-    when `energy_source_tag_repair`
-    is false. It equals what the repair changed in the state only at the
+  - `e_src_fix_<name>`: the fix ledger. It holds the energy
+    `repair_energy_source_tags!` has moved into (positive) or out of (negative)
+    each tag, per unit mass, cumulative since the start of the run. The
+    checkpoint carries it through a restart. Zero when
+    `energy_source_tag_repair` is false. It equals what the repair changed in the state only at the
     default `update_constrain_state_every: step`;
   - `e_src_res`: closure residual `(ρe_tot - Σᵢ ρe_src_i) / ρ`, summed over the
-    pure region tags (only registered when at least one exists). With
+    region tags (only registered when at least one exists). With
     `energy_source_tag_offset` `c` the parent is the total the tags partition,
     so the residual is `(ρe_tot + c·ρ - Σᵢ ρe_src_i) / ρ`;
   - `e_src_inc_left` and `e_src_inc_moved`, under
@@ -34,7 +34,7 @@ Register the diagnostics of the energy source tags:
     See `energy_source_increment_ledger_variables`.
 
 A no-op when energy source tagging is disabled. Per-tag entries already in the
-catalog are kept, since their compute function depends only on the tag name; the
+catalog are kept, since their compute function depends only on the tag name. The
 `e_src_res` entry is replaced, because the set of region tags it sums over can
 differ between setups.
 """
@@ -104,8 +104,8 @@ function register_energy_source_tagging_diagnostics!(
                     compute_e_src_fix!(out, u, p, t, ρe_src_name),
             )
         end
-        # The gross twin and the count of the repair's ledger, keyed by the
-        # tag name alone, as the ledger is.
+        # The gross and the count of the fix ledger, keyed by the tag name
+        # alone, as the ledger is.
         for (short_name, per_mass, units) in (
             ("e_src_fixgross_$name", true, "J kg^-1"),
             ("e_src_fixcount_$name", false, "1"),
@@ -258,7 +258,7 @@ function compute_e_src_copy_res!(out, state, cache, time)
     end
 end
 
-# `e_src_fix_<name>`: the repair ledger for one tag, per unit mass, as the
+# `e_src_fix_<name>`: the fix ledger for one tag, per unit mass, as the
 # water tags' `q_tag_fix_<name>` is computed.
 function compute_e_src_fix!(out, state, cache, time, ρe_src_name)
     ᶜfix = getproperty(cache.tagging.ᶜenergy_source_fix, ρe_src_name)

@@ -19,7 +19,7 @@ The two cannot be read off each other. An amount that has been transported here
 is not a history of what happened here, and a running total of gains and losses
 is not a composition of what is present. A record is never transported, so it
 says what happened in this cell, not what arrived here. That also separates it
-from a process tag, an `energy_tracers` entry with a `source`, which is
+from an energy tag with a `source`, an `energy_tracers` entry, which is
 transported.
 
 Each recorded process adds one field per grid cell, output as `e_prc_<process>`
@@ -42,9 +42,9 @@ with no tags configured.
 
 ## What a record holds
 
-Every attributed process is wrapped in a bracket that differences
-``\rho e_\mathrm{tot}`` and ``\rho q_\mathrm{tot}`` across the block. A record
-accumulates that same difference:
+The model differences ``\rho e_\mathrm{tot}`` and ``\rho q_\mathrm{tot}`` across
+each attributed process. That difference is the process's tendency. A record
+accumulates it:
 
 ```math
 \mathrm{prc}_p \mathrel{+}= \Delta_p (\rho e_\mathrm{tot}),
@@ -54,9 +54,9 @@ so after some time `prc_p` is the net amount that process `p` has added since
 the record started. Nothing is masked and nothing is split by sign.
 
 The output is divided by the current density, so `e_prc_<process>` is in
-J kg⁻¹ and `q_prc_<process>` in kg kg⁻¹. Each increment is accumulated at its
-own step's density, so this is not exactly the sum of the per-step specific
-increments.
+J kg⁻¹ and `q_prc_<process>` in kg kg⁻¹. Each step's amount is accumulated at
+that step's density, so this is not exactly the sum of the steps' specific
+amounts.
 
 !!! note "Cumulative, and carried across a restart"
 
@@ -69,10 +69,10 @@ increments.
     `prc_q_*` fields differ from the configuration is refused before the run is
     built.
 
-The bracket yields a difference of two *tendencies*, so it is a rate, in
-J m⁻³ s⁻¹. A record adds the rate to its own tendency, and the timestepper
+The difference is taken between two *tendencies*, so the process's tendency is
+in J m⁻³ s⁻¹. A record adds it to its own tendency, and the timestepper
 integrates it with each stage's weight, as for any prognostic variable. Summing
-the rate directly would give a total proportional to `dt`.
+the tendency directly would give a total proportional to `dt`.
 
 ## Not transported
 
@@ -87,8 +87,8 @@ hyperdiffuses, sponges or limits a record.
     the correct name. It is not. Adding the prefix would opt the record into
     every transport loop. A test asserts the prefix is absent.
 
-A record gets the fallback identity Jacobian block, so it takes each
-bracketed increment as it is evaluated. That is right for its own row, since no
+A record gets the fallback identity Jacobian block, so it takes the
+process's tendency as it is evaluated. That is right for its own row, since no
 record's tendency depends on a record. It has no cross blocks. With a single
 Newton iteration (`max_newton_iters_ode: 1`), a record takes its implicit
 increments at the stage's first guess, while `ρe_tot` also gets the Jacobian's
@@ -101,8 +101,8 @@ process per tendency evaluation.
 
 ## What is not recorded
 
-  - **A label whose process does not run.** Both tendency paths are bracketed,
-    the explicit one from `remaining_tendency.jl` and the implicit one from
+  - **A label whose process does not run.** Both tendency paths attribute
+    processes, the explicit one from `remaining_tendency.jl` and the implicit one from
     `implicit_tendency.jl`, around the microphysics sink and precipitation
     sedimentation. So `microphysics` is recorded however microphysics is
     stepped, and under 0-moment microphysics that is where rain leaves. Under
@@ -116,7 +116,7 @@ process per tendency evaluation.
     the distinction is drawn when the run is configured.
 
   - **Transport, phase changes, gravity-wave drag and numerical corrections**
-    have no bracket to record, so they are absent. A record covers the
+    are not attributed processes, so they are absent. A record covers the
     processes in `KNOWN_TAG_SOURCES` and `KNOWN_WATER_TAG_SOURCES` and nothing
     else.
 
@@ -133,7 +133,7 @@ A record says what a process applied inside this model, under this
 configuration, with this process grouping. It is not a counterfactual: it does
 not say what would have happened had the process been absent, because the other
 processes would have responded. Splitting one physical process into two
-bracketed steps, or merging two, changes the records without changing the
+attributed processes, or merging two, changes the records without changing the
 simulation.
 
 ## Process record API
