@@ -233,6 +233,34 @@ function _keep_water_tag_exp_rate!(p, Yₜ)
 end
 
 """
+    save_water_tag_exp_rate!(p)
+    restore_water_tag_exp_rate!(p)
+
+Save the kept rate of the ledger `q_tag_exp_negative`
+([`keep_water_tag_exp_rate!`](@ref)), and put it back. The parent budget's
+audit evaluates the implicit tendency once more after the solve, at the solved
+stage, before the post-solve hook runs. That evaluation would overwrite the
+rate at the solve's last evaluation, which
+[`correct_water_tag_increment!`](@ref) reads. So the audit saves the rate
+before it and restores it after. The hook then sees the rate it sees without
+the audit. No-ops unless the tags follow the parent's implicit increment.
+"""
+save_water_tag_exp_rate!(p) =
+    follows_water_increment(p.atmos.water_tagging_model) ?
+    _save_water_tag_exp_rate!(p) : nothing
+function _save_water_tag_exp_rate!(p)
+    @. p.scratch.ᶜtagging_q_exp_rate_saved = p.scratch.ᶜtagging_q_exp_rate
+    return nothing
+end
+restore_water_tag_exp_rate!(p) =
+    follows_water_increment(p.atmos.water_tagging_model) ?
+    _restore_water_tag_exp_rate!(p) : nothing
+function _restore_water_tag_exp_rate!(p)
+    @. p.scratch.ᶜtagging_q_exp_rate = p.scratch.ᶜtagging_q_exp_rate_saved
+    return nothing
+end
+
+"""
     water_increment_left_weight(m, M)
 
 A cell's weight in spreading the column's total mismatch `M` over the column:

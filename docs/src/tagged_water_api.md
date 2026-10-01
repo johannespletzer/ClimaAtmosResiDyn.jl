@@ -66,6 +66,7 @@ ClimaAtmos.follows_water_increment
 ClimaAtmos.snapshot_water_tag_increment!
 ClimaAtmos.correct_water_tag_increment!
 ClimaAtmos.keep_water_tag_exp_rate!
+ClimaAtmos.save_water_tag_exp_rate!
 ClimaAtmos.WaterTagIncrementCorrection
 ClimaAtmos.tag_post_implicit
 ClimaAtmos.water_tag_post_implicit

@@ -18,6 +18,36 @@ end
 const PINNED_FOLLOWER_CHECKSUMS =
     Dict(Float32 => 0x17aa0d9912c41cb0, Float64 => 0x8e64397ce4839aa9)
 
+# A stand-in for the parent budget's adapter in audit mode. It gives
+# `PostImplicitMeter` what its audit branch reads, so the meter runs its extra
+# implicit evaluation and then the hook, as in a run. Its integrals are plain
+# sums, since only the hook's `dY` is checked.
+import ClimaAtmos.Internals.ParentBudget as PB
+struct AuditAdapterStandIn{T, S}
+    dtγ::Dict{Int, Float64}
+    scratch_tendency::T
+    stepper_cache::S
+    slab::Bool
+    defects::Vector{Any}
+    corrections::Vector{Any}
+end
+AuditAdapterStandIn(dtγ, tendency, U₀) = AuditAdapterStandIn(
+    Dict(1 => Float64(dtγ)),
+    tendency,
+    (; temp = U₀),
+    false,
+    Any[],
+    Any[],
+)
+PB.next_call!(::AuditAdapterStandIn, ::Symbol) = (; stage = 1)
+PB.is_audit(::AuditAdapterStandIn) = true
+PB.begin_evaluation!(::AuditAdapterStandIn, ::Symbol, ::Int) = nothing
+PB.end_evaluation!(::AuditAdapterStandIn) = nothing
+PB.parent_integrals(::AuditAdapterStandIn, Y) =
+    (sum(parent(Y.c.ρ)), sum(parent(Y.c.ρq_tot)), 0.0)
+PB.parent_magnitudes(::AuditAdapterStandIn, Y) =
+    (sum(abs, parent(Y.c.ρ)), sum(abs, parent(Y.c.ρq_tot)), 0.0)
+
 # `AtmosModel` takes a grid. These tests read only the model's tagging fields,
 # so the smallest column serves.
 column_atmos_model(; kwargs...) =
@@ -3346,6 +3376,7 @@ end
             scratch = (;
                 ᶜtagging_q_share_norm = similar(ᶜbase),
                 ᶜtagging_q_exp_rate = similar(ᶜbase),
+                ᶜtagging_q_exp_rate_saved = similar(ᶜbase),
                 ᶜtemp_scalar = similar(ᶜbase),
             ),
         )
@@ -3489,6 +3520,56 @@ end
                 parent(getproperty(corrections[1].c, name)),
             )
         end
+
+        # Case 5: the parent budget's audit (the Opus review of #137). Its
+        # meter evaluates the implicit tendency once more at the solved stage,
+        # before the hook, and that evaluation keeps the ledger's rate there.
+        # The hook needs the rate at the solve's last evaluation. Metered and
+        # bare, on the same state, it gives the same `dY`, bit for bit. Case
+        # 2's crossing has the rate 0 at the solved stage, where it would lose
+        # its `δL`. Case 3's stage withheld nothing and has a rate at the
+        # solved stage, where it would gain a `δL`.
+        post!(dY, U, p, t) = (dY .= zero(eltype(dY)); nothing)
+        function hook_dY(Y, U, ᶜrate, ᶜrate_solved, metered)
+            p = cache()
+            CA.snapshot_water_tag_increment!(Y, p, dtγ)
+            p.scratch.ᶜtagging_q_exp_rate .= ᶜrate
+            hook = CA.WaterTagIncrementCorrection(post!)
+            if metered
+                # The implicit tendency at the solved stage, as far as the hook
+                # can see it: the ledger's rate there, which it keeps last.
+                implicit = function (Yₜ, U, p, t)
+                    Yₜ .= zero(eltype(Yₜ))
+                    Yₜ.c.q_tag_exp_negative .= ᶜrate_solved
+                    CA.keep_water_tag_exp_rate!(p, Yₜ)
+                    return nothing
+                end
+                adapter = AuditAdapterStandIn(dtγ, zero(U), copy(Y))
+                hook = PB.PostImplicitMeter(hook, implicit, adapter)
+            end
+            dY = zero(U)
+            hook(dY, U, p, zero(FT))
+            return dY
+        end
+        ᶜrate2 = @. (U2.c.q_tag_exp_negative - Y2.c.q_tag_exp_negative) / dtγ
+        ᶜrate3 = set!(zero(ᶜbase), 3, u / dtγ)
+        for (Y5, U5, ᶜrate, ᶜrate_solved) in (
+            (Y2, U2, ᶜrate2, zero(ᶜbase)),
+            (Y3, U3, zero(ᶜbase), ᶜrate3),
+        )
+            @test !isequal(parent(ᶜrate), parent(ᶜrate_solved))
+            bare = hook_dY(Y5, U5, ᶜrate, ᶜrate_solved, false)
+            metered = hook_dY(Y5, U5, ᶜrate, ᶜrate_solved, true)
+            @test isequal(parent(metered.c), parent(bare.c))
+            @test isequal(parent(metered.f), parent(bare.f))
+        end
+        # The bare hook is the one the cases above check.
+        @test dtγ *
+              at(hook_dY(Y2, U2, ᶜrate2, zero(ᶜbase), false).c.q_tag_inc_negative, 3) ≈
+              g rtol = 100 * eps(FT)
+        @test bits_checksum(
+            parent(hook_dY(Y3, U3, zero(ᶜbase), ᶜrate3, false).c),
+        ) == PINNED_FOLLOWER_CHECKSUMS[FT]
     end
 end
 

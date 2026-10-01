@@ -1129,7 +1129,9 @@ first argument.
 
 Neither measurement writes anything the stepper reads afterwards: the extra
 evaluation writes the adapter's own scratch tendency and the cache's temporary
-fields, which every consumer refills before use.
+fields, which every consumer refills before use. It also writes the water
+tags' kept ledger rate, which the correction reads. So the meter saves the
+rate before it and puts it back after.
 """
 struct PostImplicitMeter{F, T, A}
     f::F
@@ -1146,7 +1148,12 @@ function (meter::PostImplicitMeter)(Yₜ, U, p, t)
         # The one implicit tendency evaluation the adapter owns is also where
         # the implicit channel's process rows are measured.
         begin_evaluation!(adapter, :implicit, call.stage)
+        # The evaluation keeps the water tags' ledger rate, which the hook reads
+        # at the solve's last evaluation. So the rate is saved and put back,
+        # and the hook sees what it sees without the audit.
+        save_water_tag_exp_rate!(p)
         meter.implicit_tendency(tendency, U, p, t)
+        restore_water_tag_exp_rate!(p)
         end_evaluation!(adapter)
         start = parent_integrals(adapter, adapter.stepper_cache.temp)
         applied = parent_integrals(adapter, tendency)

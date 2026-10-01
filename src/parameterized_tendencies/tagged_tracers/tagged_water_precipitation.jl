@@ -1250,8 +1250,8 @@ change of the tag's rain and snow parts, minus the change the model applies
 the same gates for a negative compartment, so each record still compares the
 two rules for its own compartment. Where no compartment is negative, both rules
 keep each tag's total, and the non-precipitating part's difference is minus the
-sum of the two. Where one is, a gated part does not change, so neither rule
-keeps the total. The non-precipitating part's difference is then not minus
+sum of the two. Where one is, a gated part does not change, so the rules need
+not keep the total. The non-precipitating part's difference is then not minus
 their sum, and no record holds it.
 """
 @inline function water_tag_microphysics_audit(

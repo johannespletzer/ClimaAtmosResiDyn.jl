@@ -786,11 +786,11 @@ end
     end
 
     # (i) The audit records rain's and snow's differences only (the owner's
-    # review of #137). Under the gates neither rule keeps the tag's total, so
-    # the non-precipitating part's difference is not minus their sum. The
-    # review's counterexample: water cycles through negative rain, from `N` to
-    # rain, rain to snow and snow to `N`. Over `Δt = 1` the pools are
-    # `(2, 0, 1)`, and the tag holds all of `N`.
+    # review of #137). Under the gates the rules need not keep the tag's total.
+    # Here they do not, so the non-precipitating part's difference is not minus
+    # their sum. The review's counterexample: water cycles through negative
+    # rain, from `N` to rain, rain to snow and snow to `N`. Over `Δt = 1` the
+    # pools are `(2, 0, 1)`, and the tag holds all of `N`.
     F = flows(NR = 2.0, RS = 1.0, SN = 1.0)
     (q, φ) = ((2.0, 0.0, 1.0), (1.0, 0.0, 0.0))
     (dq_rai, dq_sno) = (net_rai(F), net_sno(F))
