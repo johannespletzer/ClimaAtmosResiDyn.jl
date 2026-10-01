@@ -336,8 +336,7 @@ function correct_water_tag_increment!(dY, U, p)
     @. ᶜn =
         water_tag_negative_part(ᶜq_tag_ρq_tot_snapshot) -
         water_tag_negative_part(ᶜparent_new)
-    # The gain the rule withheld inside the solve, `δL`, from its ledger
-    # (the owner, 2026-09-30; design/NEGATIVE_PARENT_WATER.md, 11.11.3). The
+    # The gain the rule withheld inside the solve, `δL`, from its ledger. The
     # parent took it and the partition did not, so without it `n` would take
     # it from the partition a second time. The part of it beyond the cell's
     # deficit at the stage's start, and no more than the target's rise, is a

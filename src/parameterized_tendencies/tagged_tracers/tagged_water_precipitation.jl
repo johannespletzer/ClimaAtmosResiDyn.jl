@@ -998,9 +998,9 @@ the tag nothing, so its water stays untagged. Without any loss nothing moves. A
 source tag's shares are not normalized, as elsewhere.
 
 A compartment flagged negative (`negN`, `negR`, `negS`) takes no gain: its
-target stays zero, and the gain fills its negative part (known issue 7; the
-owner, 2026-09-30). The tag's sum then falls short of zero by that gain. Where
-no flag is set, the result is the old one, bit for bit.
+target stays zero, and the gain fills its negative part. The tag's sum then
+falls short of zero by that gain. Where no flag is set, the result is the old
+one, bit for bit.
 """
 @inline function water_tag_net_flow_change(
     ΔN,
@@ -1044,14 +1044,14 @@ the fallback. `qN`, `qR` and `qS` are the compartments' water per unit mass,
 and `φN`, `φR`, `φS` the tag's shares of them. Returns `(ΔN, ΔR, ΔS)`.
 
 In a cell where a compartment is flagged negative (`negN`, `negR`, `negS`, the
-parent's sign at the stage), the transfers into it take the target's treatment
-(known issue 7; the owner, 2026-09-30). A flow that touches a negative
-compartment is read in its actual direction. A negative compartment's parts do
-not change. Its pool starts empty, so it passes on only what came in, with
-that water's composition: what it keeps fills its negative part, and what it
-gives beyond its inflow carries no tag's water and lands in `q_tag_res`. See
-`water_tag_microphysics_withheld` for the ledger. Where no flag is set, every
-number is the old one, bit for bit.
+parent's sign at the stage), the transfers into it take the target's
+treatment. A flow that touches a negative compartment is read in its actual
+direction. A negative compartment's parts do not change. Its pool starts
+empty, so it passes on only what came in, with that water's composition: what
+it keeps fills its negative part, and what it gives beyond its inflow carries
+no tag's water and lands in `q_tag_res`. See
+[`water_tag_microphysics_withheld`](@ref) for the ledger. Where no flag is
+set, every number is the old one, bit for bit.
 """
 @inline function water_tag_microphysics_change(
     F,

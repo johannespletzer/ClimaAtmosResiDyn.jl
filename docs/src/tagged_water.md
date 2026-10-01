@@ -73,8 +73,8 @@ two halves are attributed by **different rules**:
 
   - **Production is mask-weighted.** ``M_k`` is the tag's region mask (1 for a
     region-less source tag, 0 if the tag does not list this process). New water
-    carries the label of where it entered. An explicit process gives a
-    partition tag none where ``\rho q_\mathrm{tot} < 0``.
+    carries the label of where it entered. No tag gains where
+    ``\rho q_\mathrm{tot} < 0``, since the target does not rise there.
   - **Loss is donor-proportional.** Water leaves in proportion to what is
     actually present, and **every** tag is depleted — including source tags,
     whatever processes they list. This is what makes ``\rho q_{\mathrm{tag},k}``
@@ -122,7 +122,7 @@ Two consequences:
     Every bracket gives the tags the target's gain: where the parent is
     below zero, a gain fills the negative part, and the ledger
     `q_tag_exp_negative` records it. The follower reads that ledger, so it
-    does not take a withheld gain from the partition again (known issue 7).
+    does not take a withheld gain from the partition again.
 
     The closure can pass while the parent is negative. So the water closure
     check also reads the parent's own negative water, from the raw

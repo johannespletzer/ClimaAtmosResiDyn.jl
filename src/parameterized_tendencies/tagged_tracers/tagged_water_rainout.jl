@@ -242,10 +242,10 @@ end
 _add_split_rainout_copies_each!(ᶜdest, Y, p, ᶜsgsʲ, args, ::Tuple{}) = nothing
 # The updraft's part of every tag takes the bracket's gain rule
 # (`water_tag_split_change`): under `TargetGain` its gain is withheld where the
-# grid parent is below zero, for a source tag too (the owner, 2026-09-30). The
-# copies' own rain-out (`water_tag_copies_microphysics_tendency!`) is not changed: each
-# copy loses its share of `q_totʲ`'s sink, and the copies' repair closes the
-# copies onto `max(q_totʲ, 0)` after the filter.
+# grid parent is below zero, for a source tag too. The copies' own rain-out
+# (`water_tag_copies_microphysics_tendency!`) is not changed: each copy loses
+# its share of `q_totʲ`'s sink, and the copies' repair closes the copies onto
+# `max(q_totʲ, 0)` after the filter.
 function _add_split_rainout_copies_each!(ᶜdest, Y, p, ᶜsgsʲ, args, tags::Tuple)
     tag = first(tags)
     (; ᶜΔʲ, ᶜΔ⁰, ᶜS, ᶜnorm⁰, ᶜq_tot⁰, rule) = args

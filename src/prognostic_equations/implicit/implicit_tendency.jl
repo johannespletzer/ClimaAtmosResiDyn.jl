@@ -93,12 +93,11 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
         # The water tags' rain and snow parts take the microphysics' flows.
         water_tag_precipitation_microphysics_tendency!(Yₜ, Y, p)
         close_parent_budget_event!(p.parent_budget, Yₜ, Y, p, :microphysics)
-        # The tags take the target's gain here too (the owner, 2026-09-30):
-        # none where the parent is below zero at this Newton iterate. The
-        # withheld gain goes to the ledger `q_tag_exp_negative`. Under 0M this
-        # increment is a sink, except where a subdomain's area is negative.
-        # The diagnostics' rain-out reads `microphysics_gain_rule` too, so the
-        # two agree.
+        # The tags take the target's gain here too: none where the parent is
+        # below zero at this Newton iterate. The withheld gain goes to the
+        # ledger `q_tag_exp_negative`. Under 0M this increment is a sink,
+        # except where a subdomain's area is negative. The diagnostics'
+        # rain-out reads `microphysics_gain_rule` too, so the two agree.
         attribute_tagged_ρq_tot!(
             Yₜ,
             Y,

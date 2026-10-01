@@ -378,17 +378,15 @@ for bit.
 that is the non-precipitating water, `ρq_tot - ρq_rai - ρq_sno`
 (`water_tag_parent`), whose sign decides, not that of `ρq_tot`.
 
-Every bracket gives every tag that receives its label this gain, by mask
-(known issue 7, option C, as the owner revised it on 2026-09-29 and extended
-it on 2026-09-30; the record's `design/NEGATIVE_PARENT_WATER.md`, sections 11
-and 11.11). The loss half already follows the target: a tag's share is zero
-where the parent is not positive. So on a closed partition a bracket's
-tendency is the target's. A source tag is a part of the target too.
+Every bracket gives every tag that receives its label this gain, by mask. The
+loss half already follows the target: a tag's share is zero where the parent
+is not positive. So on a closed partition a bracket's tendency is the
+target's. A source tag is a part of the target too.
 
 The rule is read at the state of each stage. The tableau's explicit weights
 include negative ones, so in a step whose parent crosses zero the partition's
 gain over the step can be negative, and a tag that holds nothing can end the
-step below zero (the design note, section 11.2).
+step below zero.
 """
 @inline water_tag_target_gain(Δ, ρq_tot) =
     ifelse(ρq_tot < zero(ρq_tot), zero(Δ), max(Δ, 0))
@@ -401,13 +399,11 @@ How a bracket gives a process's gain to the tags.
 
   - `TargetGain()`, every bracket, explicit and implicit: the gain of the
     partition's target, `water_tag_target_gain`, for every tag that receives
-    the label. The owner's rule of 2026-09-29, extended on 2026-09-30 to the
-    implicit microphysics bracket and to the tags that list sources. The
-    split 0M rain-out in copies mode applies it to the updraft's part
-    (`water_tag_split_change`). What it withholds goes to the ledger
-    `q_tag_exp_negative`.
-  - `ParentGain()`: `max(Δ, 0)` wherever the parent is, the rule before the
-    revision. No bracket of the model uses it. The tests compare with it.
+    the label, a tag that lists sources too. The split 0M rain-out in copies
+    mode applies it to the updraft's part (`water_tag_split_change`). What it
+    withholds goes to the ledger `q_tag_exp_negative`.
+  - `ParentGain()`: `max(Δ, 0)` wherever the parent is. No bracket of the
+    model uses it. The tests compare with it.
 """
 abstract type WaterTagGainRule end
 struct TargetGain <: WaterTagGainRule end
@@ -419,8 +415,7 @@ Base.broadcastable(rule::WaterTagGainRule) = tuple(rule)
     water_tag_target_gain(Δ, ρq_tot)
 @inline water_tag_gain(::ParentGain, Δ, ρq_tot) = max(Δ, 0)
 # Every tag that receives a label takes the bracket's rule. A source tag is a
-# part of the target, which is zero where the parent is below zero (the
-# owner's definition A, 2026-09-30).
+# part of the target, which is zero where the parent is below zero.
 _tag_gain_rule(rule, tag) = rule
 
 """
@@ -469,8 +464,8 @@ is_water_tag_exp_ledger_name(name::Symbol) = name in WATER_TAG_EXP_LEDGER_NAMES
 # below zero, as the brackets withhold theirs, and a loss is kept. A partition
 # tag's part of the environment's rain-out is zero there already, since its
 # share is scaled by the grid shares' sum `S`, which is zero where the parent
-# is not positive. A source tag's environment part is not changed (the design
-# note, 11.11.4). Where the parent is not negative this is `x`, bit for bit.
+# is not positive. A source tag's environment part is not changed. Where the
+# parent is not negative this is `x`, bit for bit.
 @inline water_tag_split_change(::ParentGain, x, ρq_tot) = x
 @inline water_tag_split_change(::TargetGain, x, ρq_tot) =
     ifelse(ρq_tot < zero(ρq_tot), min(x, zero(x)), x)
@@ -479,9 +474,9 @@ is_water_tag_exp_ledger_name(name::Symbol) = name in WATER_TAG_EXP_LEDGER_NAMES
     microphysics_gain_rule(atmos)
 
 The gain rule of the `:microphysics` bracket: `TargetGain()`, on the implicit
-path and on the explicit one (the owner, 2026-09-30). On the implicit path the
-sign is read at each Newton iterate. The diagnostics' rain-out follows the
-bracket by this function, so the two agree.
+path and on the explicit one. On the implicit path the sign is read at each
+Newton iterate. The diagnostics' rain-out follows the bracket by this
+function, so the two agree.
 """
 microphysics_gain_rule(atmos) =
     _microphysics_gain_rule(atmos.microphysics_tendency_timestepping)
