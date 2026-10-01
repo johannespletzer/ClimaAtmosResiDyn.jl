@@ -6,6 +6,8 @@ import ClimaAtmos.Internals.ParentBudget as PB
 import ClimaTimeSteppers as CTS
 import YAML
 
+include("wrapped_hooks.jl")
+
 # The claim certificate, the κ calibration and the performance gates.
 #
 # The certificate is what a run publishes: which claim levels held for which
@@ -353,6 +355,78 @@ const SUMMARY_ALLOCATION_OVERHEAD = 256 * 1024
         for check in filter(c -> c.event === :radiation, PB.latest_transfer_checks(adapter))
             @test check.bracket[3] ≈ check.legs[3] rtol = 1e-9
         end
+    end
+
+    @testset "Each radiation quadrature holds while the surface flux varies" begin
+        # The cross-check above keeps the sphere free of liquid, because there
+        # the two quadratures of the surface radiation must agree. With the
+        # default SGS-variance scale factor the sphere makes liquid, and the
+        # surface flux changes from stage to stage. The two quadratures then
+        # differ, and each is checked against its own definition instead. A
+        # wrapper around the explicit tendency samples the surface flux each
+        # explicit stage leaves in the cache, with the callback's own integral.
+        # The parent budget's leg is the stage samples weighted by `b_exp`. The
+        # callback's accumulator gains `Δt` times the last stage's sample. On
+        # terrabyte each holds to 1e-15, while the two part by 4.8e-4.
+        config = CA.AtmosConfig(
+            Dict(
+                "initial_condition" => "MoistBaroclinicWave",
+                "microphysics_model" => "0M",
+                "rad" => "DYCOMS",
+                "h_elem" => 4,
+                "z_elem" => 10,
+                "dt" => "300secs",
+                "t_end" => "3600secs",
+                "FLOAT_TYPE" => "Float64",
+                "output_default_diagnostics" => false,
+                "output_dir" => mktempdir(),
+                "parent_budget_mode" => "audit",
+                "check_conservation" => true,
+            );
+            job_id = "parent_budget_varying_flux",
+        )
+        simulation = CA.get_simulation(config)
+        adapter = adapter_of(simulation)
+        p = simulation.integrator.p
+        samples = Float64[]
+        surface_flux(p) = Float64(
+            CA.horizontal_integral_at_boundary(p.radiation.ᶠradiation_flux, CA.half)[],
+        )
+        # The explicit hook takes `(Yₜ, Yₜ_lim, U, p, t)`. The flux is sampled
+        # after the evaluation that sets it.
+        sampling(hook) = function (args...)
+            hook(args...)
+            push!(samples, surface_flux(args[4]))
+            return nothing
+        end
+        integrator = with_wrapped_hooks(simulation.integrator; T_exp_T_lim! = sampling)
+        b_exp = Float64.(collect(integrator.cache.tableau.b_exp.coeffs))
+        Δt = Float64(float(integrator.dt))
+        accumulated = Float64(p.net_energy_flux_sfc[][])
+        spreads = Float64[]
+        for _ in 1:12
+            empty!(samples)
+            CTS.step!(integrator)
+            # One sample and one weight per stage of the tableau.
+            @test length(samples) == length(b_exp)
+            leg = only(
+                filter(
+                    r ->
+                        r.event === Symbol("xfer.radiation_surface") &&
+                        r.quantity === :energy &&
+                        r.control_volume === :atmosphere_only,
+                    PB.latest_commit(adapter).transfer,
+                ),
+            ).total
+            @test leg ≈ Δt * sum(b_exp .* samples) rtol = 1e-12
+            gained = Float64(p.net_energy_flux_sfc[][]) - accumulated
+            accumulated += gained
+            @test gained ≈ Δt * samples[end] rtol = 1e-12
+            push!(spreads, (maximum(samples) - minimum(samples)) / abs(samples[end]))
+        end
+        # The flux moves within a step, or the check could not tell the two
+        # quadratures apart. On terrabyte the largest spread is 1.6e-2.
+        @test maximum(spreads) > 1e-3
     end
 
     @testset "Summary mode is bounded and audit mode is not" begin
