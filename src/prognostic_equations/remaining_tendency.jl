@@ -115,10 +115,9 @@ is found.
 NVTX.@annotate function additional_tendency!(Yₜ, Y, p, t)
 
     ᶜuₕ = Y.c.uₕ
-    ᶠu₃ = Y.f.u₃
     ᶜρ = Y.c.ρ
     (; radiation_mode, microphysics_model, turbconv_model) = p.atmos
-    (; rayleigh_sponge, viscous_sponge) = p.atmos
+    (; rayleigh_sponge) = p.atmos
     (; ls_adv, scm_coriolis) = p.atmos
     (; params) = p
     thermo_params = CAP.thermodynamics_params(params)
@@ -153,8 +152,8 @@ NVTX.@annotate function additional_tendency!(Yₜ, Y, p, t)
             ᶜρχ = MatrixFields.get_field(Y.c, ρχ_name)
             ᶜχ = @. lazy(specific(ᶜρχ, Y.c.ρ))
             for j in 1:n
-                ᶜsgs_χ = MatrixFields.get_field(Y.c.sgsʲs.:(1), χ_name)
-                ᶜsgs_χₜ = MatrixFields.get_field(Yₜ.c.sgsʲs.:(1), χ_name)
+                ᶜsgs_χ = MatrixFields.get_field(Y.c.sgsʲs.:($j), χ_name)
+                ᶜsgs_χₜ = MatrixFields.get_field(Yₜ.c.sgsʲs.:($j), χ_name)
                 rst_sgs_χ = rayleigh_sponge_tendency_sgs_tracer(ᶜsgs_χ, ᶜχ, rayleigh_sponge)
                 @. ᶜsgs_χₜ += rst_sgs_χ
             end
@@ -303,7 +302,9 @@ NVTX.@annotate function additional_tendency!(Yₜ, Y, p, t)
     sl = p.atmos.smagorinsky_lilly
     open_applied_update!(Yₜ, p, :smagorinsky_lilly)
     horizontal_smagorinsky_lilly_tendency!(Yₜ, Y, p, t, sl)
-    vertical_smagorinsky_lilly_tendency!(Yₜ, Y, p, t, sl)
+    if p.atmos.diff_mode == Explicit()
+        vertical_smagorinsky_lilly_tendency!(Yₜ, Y, p, t, sl)
+    end
     close_applied_update!(Yₜ, Y, p, :smagorinsky_lilly)
 
     amd = p.atmos.amd_les

@@ -95,6 +95,10 @@ large_scale_advection(c::RegistryContext) = !isnothing(c.atmos.ls_adv)
 external_forcing(c::RegistryContext) = !isnothing(c.atmos.external_forcing)
 advection_test(c::RegistryContext) = c.atmos.advection_test === true
 smagorinsky(c::RegistryContext) = !isnothing(c.atmos.smagorinsky_lilly)
+# With implicit diffusion the vertical Smagorinsky-Lilly diffusion is applied in
+# the implicit tendency, and only the horizontal part in the explicit one.
+implicit_smagorinsky(c::RegistryContext) =
+    smagorinsky(c) && c.atmos.diff_mode == Implicit()
 amd(c::RegistryContext) = !isnothing(c.atmos.amd_les)
 constant_diffusion(c::RegistryContext) =
     !isnothing(c.atmos.constant_horizontal_diffusion)
@@ -743,7 +747,7 @@ const COVERAGE_ROWS = CoverageRow[
         Symbol("expl.smagorinsky_lilly"),
         "`horizontal_/vertical_smagorinsky_lilly_tendency!`",
         "`Yₜ`",
-        "SGS diffusion configured",
+        "SGS diffusion configured; the vertical part with `diff_mode == Explicit()`",
         "atmosphere",
         "`ρ`, `ρe_tot`, tracers",
         (:measured, :measured, :measured),
@@ -983,6 +987,24 @@ const COVERAGE_ROWS = CoverageRow[
         5,
         implicit_diffusion,
         :vertical_diffusion,
+    ),
+    CoverageRow(
+        :implicit,
+        Symbol("impl.smagorinsky_lilly"),
+        "`vertical_smagorinsky_lilly_tendency!`",
+        "`T_imp!`",
+        "SGS diffusion configured and `diff_mode == Implicit()`",
+        "atmosphere",
+        "`ρ`, `ρe_tot`, tracers",
+        (:measured, :measured, :measured),
+        "diffusive; global zero only if the discrete operator has it",
+        :decomposition,
+        :collected,
+        "applied increment with accepted implicit weight",
+        "`implicit_smagorinsky_tests.jl`",
+        5,
+        implicit_smagorinsky,
+        :smagorinsky_lilly,
     ),
     CoverageRow(
         :implicit,
