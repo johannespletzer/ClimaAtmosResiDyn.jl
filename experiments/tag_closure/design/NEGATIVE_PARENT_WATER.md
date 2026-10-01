@@ -1586,6 +1586,23 @@ fact spreads `N` over every cell whose mismatch has its sign.
     Float64. The Float32 unit tests take a tolerance. The alternative, a real
     stage cache of `w` that the bracket fills on its non-dual evaluation, is
     for the owner (11.11.13).
+    *Amended 2026-10-01 (the owner's review of #137, finding 2):* the stage
+    cache is built. `implicit_tendency!` ends by keeping the ledger's implicit
+    tendency in `p.scratch.ᶜtagging_q_exp_rate`
+    (`keep_water_tag_exp_rate!`; an autodiff Jacobian's dual evaluations
+    write the dual copy of the scratch). The snapshot zeroes it. After the
+    solve, `δL = dtγ·(rate + dY.L)`. A Newton solve evaluates the tendency
+    last at the iterate its last step starts from, so under the manual
+    Jacobian, whose ledger row is `−I`, this is the ledger's change in the
+    solve without the rounding of the cumulative value. Under the dense
+    autodiff Jacobian the ledger's row also holds `w`'s derivatives, and
+    under a Jacobian-free Krylov solve the last evaluation is a perturbed
+    one. There the ledger's change can differ from `δL`. The cumulative
+    ledger is unchanged. A unit test (case 4 of "C's revision extended")
+    gives ledger offsets 0, 1 and 1e6 the same corrections, bit for bit, in
+    Float32 and Float64. The old subtraction fails it in Float32 at 1 and
+    1e6, and in Float64 at 1e6 (mutant job 14016367, 30 failures). The dense
+    autodiff check with the follower passes at the new code (14016259).
   - Two texts are false already wherever `N ≠ 0`, and would stay false: that
     the factors lie in `[-1, 1]` (`tagged_water_increment.jl:464-467`), and
     that no cell leaves out or moves more than its own mismatch (`:276-277`). The
