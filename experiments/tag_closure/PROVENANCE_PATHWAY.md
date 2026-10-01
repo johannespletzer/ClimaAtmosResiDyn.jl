@@ -1396,10 +1396,10 @@ step 8b, beside PX14.
         is the gross microphysical transfer over the same steps, the six
         flows of `water_tag_1m_flows`. The other is the rain or snow mass and
         each tag's accumulated precipitation. Maxima and domain integrals.
-        The fields are cumulative and signed. Both rules give each
-        compartment the same net change, and a compartment's audit sums to
-        zero over the partition's tags. So they are taken per tag, never
-        summed over the tags. Each is read two ways: as each accepted step's
+        The fields are cumulative and signed. Where no compartment is
+        negative, both rules give each compartment the same net change, and
+        a compartment's audit sums to zero over the partition's tags. So
+        they are taken per tag, never summed over the tags. Each is read two ways: as each accepted step's
         change in absolute value, from the probe, and as the field's absolute
         value. The gross transfer comes from an accepted-step probe on
         `wp4c_gate_probe.jl`'s pattern, unless #121 adds a diagnostic for it

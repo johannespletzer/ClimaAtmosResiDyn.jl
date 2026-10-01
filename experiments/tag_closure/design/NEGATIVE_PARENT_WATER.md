@@ -1340,8 +1340,8 @@ pre-registration.
 
 *Amended 2026-10-01, before any run (a job limit, not a tolerance):* the
 time limit is `--time=24:00:00` for all seven jobs, in place of 08:00:00 and
-12:00:00. The partition's maximum is 10 days (`sinfo -p hpda2_compute -o
-"%l"`). The 30-day parity runs of 11.8 took 1:33 h (job `14005271`, node not
+12:00:00. The partition's maximum is 10 days (`sinfo -p hpda2_compute -o "%l"`).
+The 30-day parity runs of 11.8 took 1:33 h (job `14005271`, node not
 shared), 3:12 h (`14005273`, node shared) and 1:44 h each (`14010408`,
 `14010410`) with tags, and 0:33 to 0:37 h without. So a tagged 90-day run
 needs 4.6 to 9.6 h, which can exceed 8 h. The untagged twins need about 1.7
@@ -1566,18 +1566,21 @@ fact spreads `N` over every cell whose mismatch has its sign.
   - Source tags take no part of `g`. They receive the implicit bracket's gain
     only if they list `:microphysics`, and no tag of the validation does. A
     source tag that lists it misses that stage's positive part.
-  - `δL` is exactly the ledger's `dtγ·w`. The parent's response to `w` is
-    the solver's. The implicit transport spreads it within the column. The
-    manual Jacobian has no 0M microphysics block, so there the column's
-    response is `dtγ·w`, as far as the solve keeps column totals. Under the
-    sparse and the dense autodiff Jacobians, `ρq_tot`'s diagonal also holds
-    the rain-out's derivative. So the parent moves by about
-    `dtγ·w/(1 − dtγ·∂Δ/∂P)`. The difference enters `N'`, and the follower
-    gives it to the tags through `q_tag_inc_negative`, or leaves it out where
-    no cell can take it. *Corrected after the review:* the draft said it
-    lands in `q_tag_inc_left`, and that the tags' rows are the identity under
-    0M. Under `implicit_diffusion: true` they hold diffusion blocks. The
-    ledger's row is the identity, so `δL` is exact.
+  - Under the manual and the sparse Jacobians, `δL` is exactly the ledger's
+    `dtγ·w`. The parent's response to `w` is the solver's. The implicit
+    transport spreads it within the column. The manual Jacobian has no 0M
+    microphysics block, so there the column's response is `dtγ·w`, as far as
+    the solve keeps column totals. Under the sparse and the dense autodiff
+    Jacobians, `ρq_tot`'s diagonal also holds the rain-out's derivative. So
+    the parent moves by about `dtγ·w/(1 − dtγ·∂Δ/∂P)`. The difference enters
+    `N'`, and the follower gives it to the tags through `q_tag_inc_negative`,
+    or leaves it out where no cell can take it. *Corrected after the review:*
+    the draft said it lands in `q_tag_inc_left`, and that the tags' rows are
+    the identity under 0M. Under `implicit_diffusion: true` they hold
+    diffusion blocks. Under the manual and the sparse Jacobians the ledger's
+    row is the identity, so `δL` is exact there. For the dense autodiff
+    Jacobian and a Jacobian-free Krylov solve, see the amendment of
+    2026-10-01 in the next bullet.
   - **Float32.** `δL` is a difference of a cumulative ledger. By the review's
     arithmetic, `L = 1e-2` and `dtγ·w = 1e-9` give an error of 6.9%. With
     `dtγ·w = 1e-10`, `δL` is zero, so the stage keeps `n` and the double count
