@@ -69,8 +69,9 @@ simulations, `test/parent_budget/envelope_tests.jl`,
 `test/parent_budget/implicit_attribution_tests.jl`,
 `test/parent_budget/explicit_attribution_tests.jl`,
 `test/parent_budget/transfer_tests.jl`,
-`test/parent_budget/restart_tests.jl` and
-`test/parent_budget/report_tests.jl`. Each builds several `AtmosSimulation`s
+`test/parent_budget/restart_tests.jl`,
+`test/parent_budget/report_tests.jl` and
+`test/parent_budget/vapor_constraint_tests.jl`. Each builds several `AtmosSimulation`s
 and compiles the tendency pipeline for each, so they are kept out of
 `infrastructure`, which still runs the parent budget's state-free unit tests.
 
