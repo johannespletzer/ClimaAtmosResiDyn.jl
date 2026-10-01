@@ -257,6 +257,22 @@ const SUMMARY_ALLOCATION_OVERHEAD = 256 * 1024
         # The check integrates an extruded space only, so this is a small moist
         # sphere, which also takes the parent budget through DSS and the horizontal
         # dynamics the columns never run.
+        # The surface DYCOMS flux is F0 exp(-κ LWP) + F1. The two quadratures
+        # agree to round-off only while it is steady within a step, so the
+        # sphere must stay free of liquid. ClimaParams 1.2 sets the geometric
+        # SGS-variance scale factor to 3. The 0M quadrature then makes liquid,
+        # the flux moves by up to 1.6e-2 within a step, and the two
+        # quadratures part by 4.8e-4. Setting the factor to 0 keeps the
+        # sphere free of liquid, as it was under ClimaParams 1.1.15.
+        sgs_toml = joinpath(mktempdir(), "no_geometric_sgs_variance.toml")
+        write(
+            sgs_toml,
+            """
+            [sgs_variance_horizontal_scale_factor]
+            value = 0.0
+            type = "float"
+            """,
+        )
         config = CA.AtmosConfig(
             Dict(
                 "initial_condition" => "MoistBaroclinicWave",
@@ -271,6 +287,7 @@ const SUMMARY_ALLOCATION_OVERHEAD = 256 * 1024
                 "output_dir" => mktempdir(),
                 "parent_budget_mode" => "audit",
                 "check_conservation" => true,
+                "toml" => [sgs_toml],
             );
             job_id = "parent_budget_cross_check",
         )
