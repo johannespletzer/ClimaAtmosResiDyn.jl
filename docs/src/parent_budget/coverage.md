@@ -1,108 +1,88 @@
 # Parent Budget: Coverage Registry
 
-Every path that can change an authoritative parent field, with the disposition
-it is expected to have and the evidence that would establish it. The
-[contract](contract.md) fixes what the dispositions mean, the
-[architecture](architecture.md) fixes how a row is collected, and the
-[implementation plan](plan.md) says which stack step owns each row.
+The parent budget is an opt-in conservation audit. It is off by default, and
+`parent_budget_mode: summary` or `audit` switches it on. It changes no model
+field. With it on, every model field that exists without it stays bit for bit as
+in the same run with it off, under the default solver settings. Only its own
+fields and output are added. The
+[fork parity contract](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/blob/main/docs/clima_atmos_specific.md#fork-parity-with-upstream)
+gives the limits.
 
-This table is the documentation half of the executable registry in
-`src/parent_budget/coverage_registry.jl`. A hand-maintained inventory of
-dispatches drifts from the code silently, and a coverage claim resting on a
-stale table is worth nothing, so the registry holds every cell below verbatim
+This page lists every path that can change an authoritative parent field, with
+the disposition it is expected to have and the evidence that would establish it.
+The [contract](contract.md) defines the dispositions, the
+[architecture](architecture.md) says how a row is collected and the
+[vocabulary](vocabulary.md) defines the terms. The
+[implementation plan](plan.md) is a development record.
+
+The tables are the documentation half of the registry in
+`src/parent_budget/coverage_registry.jl`. The registry holds every cell verbatim
 beside the guard that selects the row, and `test/parent_budget/registry_tests.jl`
-compares this page with the registry cell by cell. The event identifiers below
-are the registry keys.
-
-The registry is also where a run's schema comes from. For a given configuration
-the schema selects the rows whose guard holds and declares them as expectations
-before collection begins, which is what lets a row that was expected and never
-recorded appear as blocked instead of vanishing. Every column below is therefore
-a declaration about the code, not a summary of what some run happened to report.
-
-No supported configuration may claim closure while a row that writes an
-authoritative parent field is still `open`.
+compares the page with it cell by cell. The event ids are the registry keys. For
+a configuration, the schema selects the rows whose guard holds and declares them
+as expectations before collection begins. A row that was expected and never
+recorded therefore shows as blocked. A row with an `open` disposition blocks the
+claim it feeds.
 
 ## How to read a row
 
-Two different things are called a status and they are kept in separate columns.
-A row can be mathematically zero and still be uncollected, and reading one as
-the other is how an unmeasured term becomes an assumed zero.
+Disposition and collection state are separate columns. A row can be
+mathematically zero and still be uncollected, and reading one as the other turns
+an unmeasured term into an assumed zero.
 
-**Disposition** — what the implemented equation does to the parent variable.
-This is a proof obligation about the code, not a claim about the parent budget.
+| Column            | Value       | Meaning                                                                   |
+|:----------------- |:----------- |:------------------------------------------------------------------------- |
+| Disposition M·W·E | `measured`  | Not provably zero, so the parent budget measures it.                      |
+|                   | `zero`      | Invariant zero, with the proof in the proof obligation cell.              |
+|                   | `n/a`       | The path does not write this parent field in any supported configuration. |
+|                   | `open`      | Not established from the code.                                            |
+| State             | `none`      | Not collected as its own row.                                             |
+|                   | `envelope`  | Covered only by the enclosing channel envelope.                           |
+|                   | `collected` | Collected as its own contribution.                                        |
+|                   | `verified`  | Collected, and a passing test has established its evidence.               |
+| Topology          | `internal`  | Both sides are modeled reservoirs in one control volume.                  |
+|                   | `coupled`   | Both sides are modeled reservoirs in different control volumes.           |
+|                   | `exterior`  | One modeled side and a counterparty the model does not carry as state.    |
+| Step              | a number    | The order in which rows were added to the registry.                       |
 
-| Disposition | Meaning                                                                  |
-|:----------- |:------------------------------------------------------------------------ |
-| `measured`  | Not provably zero, so the parent budget has to measure it                |
-| `zero`      | Invariant zero, with the proof named in the row's note                   |
-| `n/a`       | The path does not write this parent field in any supported configuration |
-| `open`      | Not yet established from the code; blocks the affected claim             |
+The disposition is a proof obligation about the code. It is not a claim about
+the budget. A `zero` is never by itself evidence that anything was checked at
+runtime. A row that is not `collected` or `verified` is uncollected whatever its
+disposition says. Disposition columns describe the effect on the atmosphere
+unless the row's reservoir column says otherwise.
 
-**Collection state** — whether the parent budget reads the row at runtime, and
-how far that has been checked.
+The **level** says which part of the nested reconciliation the row belongs to:
+`envelope`, `decomposition`, `final map` or `transfer`. An envelope row is the
+reference its decomposition rows are reconciled against, and it is never summed
+with them. A `final map` row is a direct term in the parent identity. It is not
+an attribution channel, so it creates no requirement for an envelope of its own.
+The reservoirs column lists modeled reservoirs only. An exterior counterparty
+has no state to integrate and is named in its own column.
 
-| State       | Meaning                                                             |
-|:----------- |:------------------------------------------------------------------- |
-| `none`      | Not collected at all                                                |
-| `envelope`  | Covered only by the enclosing channel envelope, with no attribution |
-| `collected` | Collected as its own contribution                                   |
-| `verified`  | Collected, and its evidence has been established by a passing test  |
+The schema derives a transfer row's topology from the configuration, never from
+the legs that arrived. An `internal` or `coupled` row requires every declared
+leg and tests the signed sum for cancellation. An `exterior` row records its
+modeled leg alone. No counter-leg is fabricated and no cancellation is tested.
+A row whose topology depends on the configuration names both cases, and the
+schema picks one.
 
-A `zero` disposition is never by itself evidence that anything was checked at
-runtime. Until a row reaches `collected` or `verified`, it is uncollected
-whatever its disposition says, and the claim it feeds stays blocked.
-
-**Collection level** — which part of the nested reconciliation the row belongs
-to: `envelope`, `decomposition`, `final map`, or `transfer`. An envelope row is
-the reference its decomposition rows are reconciled against and is never summed
-alongside them. A `final map` row is a direct term in the parent identity and is
-not an attribution channel, so recording one creates no requirement for a channel
-envelope of its own.
-
-**Topology** — for a transfer row, how its two sides relate. The schema derives
-this from the configuration before collection begins. It is never inferred from
-whichever legs arrived.
-
-| Topology   | Meaning                                                                |
-|:---------- |:---------------------------------------------------------------------- |
-| `internal` | Both sides are modeled reservoirs within one control volume            |
-| `coupled`  | Both sides are modeled reservoirs, in different control volumes        |
-| `exterior` | One modeled side, and a counterparty the model does not carry as state |
-
-An `internal` or `coupled` row requires every declared leg, and its signed sum is
-tested for cancellation. An `exterior` row records its modeled leg alone: no
-numerical counter-leg is fabricated, no cancellation is tested, and the signed
-crossing is reported as a boundary source or sink. A row whose topology depends on
-the configuration names both cases, and the schema picks one.
-
-The reservoirs column lists modeled reservoirs only. An exterior counterparty is
-not a reservoir, has no state to integrate, and is named in its own column.
-
-Disposition columns describe the effect on the **atmosphere** unless the row's
-reservoir column says otherwise.
-
-**Event** — how a decomposition row is measured. A row with a `measured`
-disposition is bracketed in the tendency code by an applied-update event, and
-the registry carries the bracket's label in code (`CoverageRow.event`) rather
-than in a column: it is an implementation detail the tests check against the
-brackets, not part of the row's claim. A row whose every disposition is
-`zero` or `n/a` needs no bracket and is booked from this table, which is why
-its state is `collected` without a measurement of its own. The identity still
-checks it: a proven zero that the code does not honour appears in the
-channel's attribution residual.
+The **event** of a row is not a column. A row with a `measured` disposition is
+delimited in the tendency code by an applied-update event, and the registry
+holds its label in code (`CoverageRow.event`). A row whose every disposition is
+`zero` or `n/a` needs no event and is booked from this table, so its state is
+`collected` without a measurement of its own. The identity still checks it. A
+proven zero that the code does not honour appears in the channel's attribution
+residual.
 
 ## Channel envelopes
 
-The primary identity reconciles endpoint change against these envelopes plus the
-final maps. Each row here is the complete update one integrator channel applied,
-taken from the applied increment and never from endpoint subtraction.
-
-The final maps are **not** in this table. They are terms of the same identity but
-they are not channels: a map has no envelope for a decomposition to explain, so
-it produces no attribution result and demands none. Their rows are in the **Final
-accepted-state maps** section below, and the identity sums this table and that
-one, never an aggregate of either alongside its own rows.
+The primary identity reconciles the endpoint change against these envelopes
+plus the final maps. Each row is the complete update one integrator channel
+applied, taken from the applied increment and never from endpoint subtraction.
+The final maps are not channels. A map has no envelope for a decomposition to
+explain, so it produces no attribution result. Their rows are under **Final
+accepted-state maps** below. The identity sums this table and that one, never an
+aggregate of either alongside its own rows.
 
 | Event id               | Dispatch                         | Guard  | Channel  | Reservoirs                           | Parent fields                 | Disposition M·W·E              | Proof obligation                                                     | Level    | State     | Evidence required                                                     | Test                | Step |
 |:---------------------- |:-------------------------------- |:------ |:-------- |:------------------------------------ |:----------------------------- |:------------------------------ |:-------------------------------------------------------------------- |:-------- |:--------- |:--------------------------------------------------------------------- |:------------------- |:---- |
@@ -110,17 +90,14 @@ one, never an aggregate of either alongside its own rows.
 | `env.explicit_limited` | accepted increment from `Yₜ_lim` | always | `Yₜ_lim` | atmosphere, and slab when configured | `ρq_tot`, categories, tracers | measured · measured · measured | limited channel integrated through the limiter, separately from `Yₜ` | envelope | collected | accepted limited-channel increment                                    | `envelope_tests.jl` | 3    |
 | `env.implicit`         | accepted increment from `T_imp!` | always | `T_imp!` | atmosphere, and slab when configured | `ρ`, `ρq_tot`, `ρe_tot`       | measured · measured · measured | effective implicit increment as the pinned solver forms it           | envelope | collected | stage weights and hook-folding established against the pinned version | `envelope_tests.jl` | 3    |
 
-The algebraic solve defect is **not** a separate envelope. It is part of what the
-implicit channel applied, so it appears in `env.implicit` and shows up again as a
-term of that envelope's decomposition. An implicit attribution residual can only
-close with the defect included.
-
-Neither is the post-implicit correction. `ClimaTimeSteppers` applies
-`T_post_imp!` to the Newton-solved stage state and then forms the stored implicit
-stage tendency by differencing, so the correction is already inside
-`env.implicit`. Booking it as an envelope of its own would count it twice. It is
-a decomposition row of the implicit channel, `impl.post_implicit_correction`,
-below.
+The algebraic solve defect is not a separate envelope. It is part of what the
+implicit channel applied, so it is inside `env.implicit` and is a term of that
+envelope's decomposition. An implicit attribution residual closes only with it.
+The post-implicit correction is not an envelope either. `ClimaTimeSteppers`
+applies `T_post_imp!` to the Newton-solved stage state and then forms the stored
+implicit stage tendency by differencing, so the correction is inside
+`env.implicit`. Booking it as an envelope would count it twice. It is the
+decomposition row `impl.post_implicit_correction`.
 
 ## Explicit limited channel decomposition
 
@@ -173,18 +150,22 @@ below.
 | `impl.zero_velocity`            | `zero_velocity_tendency!`                                    | advection tests                                                            | `T_imp!` | atmosphere                           | momentum                                 | zero · zero · zero             | momentum only                                                                                                                                                         | decomposition | collected | field-write inventory                                                | `implicit_attribution_tests.jl` | 5    |
 | `impl.out_of_scope`             | `edmfx_*`, `sgs_*`, `pressure_work_tendency!`                | out-of-scope configurations                                                | `T_imp!` | —                                    | —                                        | n/a · n/a · n/a                | excluded by the contract's scope                                                                                                                                      | decomposition | none      | configuration refused at setup                                       | `registry_tests.jl`             | 3    |
 
-Every implicit row's **accepted weight** stays `open` until stack step 5 measures
-it. The pinned stepper's coefficients are known: it stores the implicit stage
-tendency as `(U − U_start)/dtγ` and the accepted update takes `dt · b_imp[i]` of
-it, so a change folded into stage `i` enters with weight `b_imp[i]/γ`, which for
-`ARS343` is 2.7726, −1.4784 and 1 at stages 2, 3 and 4. The disposition columns
-describe the tendency, not yet the accepted increment.
+A process row of the implicit channel is measured as a tendency and enters the
+accepted step with weight `dt · b_imp[i]`. The stepper stores the implicit stage
+tendency as `(U − U_start)/dtγ`, so a change folded into stage `i`
+(`impl.folded_dss`, `impl.folded_constraint`, `impl.solve_defect`) enters with
+weight `b_imp[i]/γ`. For `ARS343` that is 2.7726, −1.4784 and 1 at stages 2, 3
+and 4. The post-implicit correction enters with `dt · b_imp[i]`. The disposition
+columns describe the change, and the adapter applies the weight when it books
+the row. The two implicit rows at level `transfer` are not
+decomposition rows. Their legs are collected through the transfer rows
+`xfer.precipitation_1m` and `xfer.precipitation_0m`.
 
 ## Final accepted-state maps
 
-A final map contributes its raw before/after difference on the accepted state.
-The same dispatch running on an intermediate stage array is a stage observation
-instead and never enters the identity at its raw value.
+A final map contributes its raw before and after difference on the accepted
+state. The same dispatch on an intermediate stage array is a stage observation,
+and it never enters the identity at its raw value.
 
 | Event id                               | Dispatch                                                                   | Guard                          | Channel            | Reservoirs       | Parent fields                                         | Disposition M·W·E              | Proof obligation                                                                                                                             | Level     | State     | Evidence required                                                                              | Test                          | Step |
 |:-------------------------------------- |:-------------------------------------------------------------------------- |:------------------------------ |:------------------ |:---------------- |:----------------------------------------------------- |:------------------------------ |:-------------------------------------------------------------------------------------------------------------------------------------------- |:--------- |:--------- |:---------------------------------------------------------------------------------------------- |:----------------------------- |:---- |
@@ -204,19 +185,19 @@ instead and never enters the identity at its raw value.
 | `map.initial_state`                    | `Setups.initial_state`, `overwrite_initial_state!`, `overwrite_from_file!` | initialization                 | initialization     | atmosphere, slab | all                                                   | n/a · n/a · n/a                | sets `B⁰`, outside every transaction                                                                                                         | final map | none      | first endpoint recorded as the initial one                                                     | `restart_tests.jl`            | 7    |
 
 `update_constrain_state_every` decides how often the `constrain_state!` rows
-fire. At `"step"` there is one firing per transaction and it is a final map. At
+fire. At `"step"` there is one firing per transaction, and it is a final map. At
 `"stage"` and `"dss"` the same dispatch also fires on intermediate stage arrays,
 where it is a stage observation and enters the identity only with its accepted
 weight.
 
 ## Transfer events
 
-Each of these either moves a quantity between two modeled reservoirs or carries it
-out of the modeled system entirely, and the topology column says which. When both
-sides are modeled, every declared leg is collected **independently**, from its own
-quadrature, never by negating the other, and the signed sum is tested for
-cancellation. When the far side is not modeled, the modeled leg is collected, the
-counterparty is named, and no counter-leg is invented to make a sum vanish.
+Each of these moves a quantity between two modeled reservoirs or carries it out
+of the modeled system, and the topology column says which. When both sides are
+modeled, every declared leg is collected independently from its own quadrature,
+never by negating the other, and the signed sum is tested for cancellation. When
+the far side is not modeled, the modeled leg is collected, the counterparty is
+named and no counter-leg is invented.
 
 | Event id                      | Topology                                    | Modeled legs                                                                              | Exterior counterparty                               | Guard                                           | Reservoirs                           | Parent fields                                       | Disposition M·W·E              | Proof obligation                                                                       | Level    | State     | Evidence required                                            | Test                | Step |
 |:----------------------------- |:------------------------------------------- |:----------------------------------------------------------------------------------------- |:--------------------------------------------------- |:----------------------------------------------- |:------------------------------------ |:--------------------------------------------------- |:------------------------------ |:-------------------------------------------------------------------------------------- |:-------- |:--------- |:------------------------------------------------------------ |:------------------- |:---- |
@@ -227,14 +208,15 @@ counterparty is named, and no counter-leg is invented to make a sum vanish.
 | `xfer.precipitation_1m`       | `coupled` with a slab, `exterior` otherwise | `vertical_advection_of_water_tendency!`, and `surface_precipitation_tendency!` for a slab | unmodeled surface store, when no slab is configured | `NonEquilibriumMicrophysics1M`                  | atmosphere, and slab when configured | `ρq_tot`, `ρ`, `ρe_tot`, `sfc.water`, `sfc.T`       | measured · measured · measured | two quadratures of one physical flux, so the pair is measured and any mismatch kept    | transfer | collected | every declared leg measured separately                       | `transfer_tests.jl` | 6    |
 | `xfer.slab_qflux`             | `exterior`                                  | `surface_temp_tendency!` Q-flux term                                                      | prescribed ocean heat transport                     | `SlabOceanTemperature` with a Q-flux            | slab                                 | `sfc.T`                                             | n/a · n/a · measured           | prescribed exterior source into the slab                                               | transfer | collected | slab leg only, exterior counterparty declared                | `transfer_tests.jl` | 6    |
 
-A row that reads `coupled` with a slab and `exterior` otherwise is two different
-expectations, not one flexible one. The schema resolves it from the configuration,
-and the resolved topology decides whether a cancellation test applies at all.
+A row that reads `coupled` with a slab and `exterior` otherwise is two
+expectations, not one flexible one. The schema resolves it from the
+configuration, and the resolved topology decides whether a cancellation test
+applies.
 
 ## Non-authoritative paths
 
-Listed so that no future reader has to rediscover that they were considered.
-None of them writes a parent field, so none is ever booked.
+These paths were considered. None of them writes a parent field, so none is
+booked.
 
 | Event id                           | Dispatch                                                                   | Hook               | Why it is not booked                                                                         |
 |:---------------------------------- |:-------------------------------------------------------------------------- |:------------------ |:-------------------------------------------------------------------------------------------- |
@@ -246,99 +228,71 @@ None of them writes a parent field, so none is ever booked.
 | `cb.rrtmgp_solver`                 | `rrtmgp_solver_callback!`                                                  | discrete callback  | fills the radiation cache; the state effect arrives through `radiation_tendency!`            |
 | `cb.read_only`                     | `nan_checking_callback`, `checkpoint_callback`, `gc_callback`, diagnostics | discrete callbacks | read-only with respect to `Y`                                                                |
 
-A custom callback outside this list is unsupported unless it declares itself
-read-only or supplies its own accounting, and an undeclared one fails the
-configuration at setup.
+A custom callback outside this list is accepted only inside a `ReadOnlyCallback`
+declaration. An undeclared one fails the configuration at setup.
 
 ## Proof obligations that need more than a cell
 
-**Momentum-only rows.** Every `zero` in the energy column of a drag or sponge
-row is exact by construction: `ρe_tot` is prognostic, and a tendency that writes
-only `uₕ` or `u₃` leaves it untouched, so the total-energy contribution is
-exactly zero and the diagnosed kinetic-energy change is balanced by an equal and
-opposite diagnosed internal-energy change. That is a statement about the
-implemented equations. Where a scheme is meant to deposit frictional heat there
-is no implemented term doing it, and that belongs in the contract's limitations
-register, never in a numerical residual.
+**Momentum-only rows.** `ρe_tot` is prognostic. A tendency that writes only `uₕ`
+or `u₃` leaves it untouched, so its energy contribution is exactly zero. Where a
+scheme is meant to deposit frictional heat and no implemented term does it, the
+gap belongs in the contract's limitations register and never in a numerical
+residual.
 
-**Transfer legs.** A leg is measured on its own side, inside the
-applied-update event of the tendency that applies it. Where that event
-isolates the leg, the leg is the event's own total, what the reservoir's
-fields integrated: the atmosphere's side of `xfer.surface_turbulent_flux`
-and both sides of `xfer.precipitation_0m` and `xfer.precipitation_1m`. Where
-the event lumps several legs, the two radiation crossings inside the
-radiation tendency and the slab's turbulent, radiative and prescribed fluxes
-inside `surface_temp_tendency!`, each leg is read from the flux field the
-tendency reads, and the event's own total is kept beside their sum as a
-check. Zero-moment precipitation reaches a slab through the cached column
-integrals of the same sink the atmosphere applies, so with a slab it is a
-coupled transfer, and the slab is solved implicitly with it, which gives the
-slab a solve defect of its own.
+**Transfer legs.** A leg is measured on its own side, inside the applied-update
+event of the tendency that applies it. The event's own total is the leg for the
+atmosphere's side of `xfer.surface_turbulent_flux` and for both sides of
+`xfer.precipitation_0m` and `xfer.precipitation_1m`. The two radiation crossings
+and the slab's turbulent, radiative and prescribed fluxes are lumped in one
+event each. They are read from the flux field the tendency reads, and the
+event's total is kept beside their sum as a check. Zero-moment precipitation
+reaches a slab through the cached column integrals of the same sink the
+atmosphere applies. With a slab it is a coupled transfer, and the slab is solved
+implicitly with it, which gives the slab a solve defect of its own.
 
 **Forcing rows.** `expl.subsidence`, `expl.large_scale_advection` and
-`expl.external_forcing` write `ρq_tot` and `ρe_tot` and no `ρ` term, so their
-mass disposition is an invariant zero and the dry-air budget of a forced run is
-open by construction. A mass contribution is never manufactured from the water
-tendency.
+`expl.external_forcing` write `ρq_tot` and `ρe_tot` and no `ρ` term. Their mass
+disposition is an invariant zero, so the dry-air budget of a forced run is open.
+A mass contribution is never manufactured from the water tendency.
 
-**Interior diffusion against the surface flux.**
-`vertical_diffusion_boundary_layer_tendency!` is an **interior** operator:
-`ᶜdiffdivᵥ` sets zero flux at the top and bottom faces, so it carries no
-boundary condition. `surface_flux_tendency!` carries the surface boundary flux.
-The diffusion row is `measured` because the discrete interior integral is not
-exactly zero, not because anything crosses a boundary.
-
-**One-moment fallout against one-moment formation.** Formation
-(`microphysics_tendency!` in the 1M and non-equilibrium branches) only
-redistributes categories inside `ρq_tot` and applies no source to `ρq_tot`, `ρ`
-or `ρe_tot`, so it is invariant zero for all three parents. Fallout is a
-different path: `vertical_advection_of_water_tendency!` is called from
-`implicit_tendency!`, so it is always on the implicit channel and carries
-implicit accepted-stage weighting, and its lower boundary is open, which is where
-1M water leaves the atmosphere.
-
-**Zero-moment removal.** `microphysics_tendency!` in the 0M branch is a direct
-sink out of the column with no receiving reservoir. Which channel it is on
-follows `microphysics_tendency_timestepping`, which defaults to implicit, so the
-row appears under the implicit channel and the explicit variant is the
-configured alternative rather than a second event.
+**Interior diffusion, fallout and removal.** `ᶜdiffdivᵥ` sets zero flux at the top
+and bottom faces, so vertical diffusion carries no boundary condition and its
+row is `measured` only because the discrete interior integral is not exactly
+zero. `surface_flux_tendency!` carries the surface flux. One-moment formation
+only redistributes categories inside `ρq_tot`. One-moment fallout
+(`vertical_advection_of_water_tendency!`) is always on the implicit channel, and
+its lower boundary is open, which is where 1M water leaves the atmosphere.
+Zero-moment removal is a direct sink with no receiving reservoir. Its channel
+follows `microphysics_tendency_timestepping`, which `implicit_microphysics`
+sets and which is implicit by default.
 
 **Category-only constraints.** A constraint that writes only `ρq_lcl`, `ρq_icl`,
-`ρq_rai` and `ρq_sno` is invariant zero for `ρ`, `ρq_tot` and `ρe_tot`. The
-vapour it draws on is implicit in `q_tot` minus the categories, not a field it
-writes.
+`ρq_rai` and `ρq_sno` is an invariant zero for `ρ`, `ρq_tot` and `ρe_tot`.
 
-**The accepted aggregate is an envelope.** The rows under *Channel envelopes*
-are what the decomposition rows are reconciled against. They are never summed
-alongside their own decomposition, and an envelope may stand in for attribution
-that does not exist yet.
+**What the stored implicit tendency folds in.** In `ClimaTimeSteppers`' `step_u!` an implicit stage records
+`U_start` before `initialize_imp!`. It then runs `initialize_imp!`, a DSS, the
+`WithDSS` constraint firing, the Newton solve, `T_post_imp!`, a DSS and the
+`EndOfStage` constraint firing, and only then stores `T_imp[i] = (U − U_start)/dtγ`.
+Every one of those changes is inside the effective implicit increment, and none
+may be booked again on its own. The DSS and constraint that run on the assembled
+stage value before `U_start` is taken, and the stage-level `lim!`, are not inside
+it. They reach the endpoint only through the tableau and stay stage observations.
 
-**What the stored implicit tendency folds in.** For `ClimaTimeSteppers` 0.10.6 an
-implicit stage records `U_start` before `initialize_imp!`, then runs
-`initialize_imp!`, a DSS, the `WithDSS` constraint firing, the Newton solve,
-`T_post_imp!`, a DSS and the `EndOfStage` constraint firing, and only then stores
-`T_imp[i] = (U − U_start)/dtγ`. Every one of those changes is inside the
-effective implicit increment and none may be booked again on its own. The DSS
-and constraint that run on the assembled stage value before `U_start` is taken,
-and the stage-level `lim!`, are not inside it: they reach the endpoint only
-through the tableau and stay stage observations.
-
-**The velocity filter in the cache hooks.** `set_implicit_precomputed_quantities!`,
-which `set_precomputed_quantities!` also calls, rewrites `Y.f.u₃` at the bottom
-and top faces so that the contravariant vertical velocity vanishes there
-(`set_velocity_at_surface!`, `set_velocity_at_top!`). It runs at every `cache!`
-and `cache_imp!` call, including at initialization before `B⁰` is read and inside
-every implicit stage, where the stepper folds it into the effective implicit
-increment. It writes momentum and nothing else, so its mass, water and energy
-contributions are exactly zero by construction. It is listed here so that a
-future change which made it touch `ρ` is seen to need a row.
+**The velocity filter in the cache hooks.** `set_implicit_precomputed_quantities!`
+and `set_precomputed_quantities!` rewrite `Y.f.u₃` at the bottom and top faces
+so that the contravariant vertical velocity vanishes there. They run at every
+`cache!` and `cache_imp!` call, including inside every implicit stage, where the
+stepper folds the change into the effective implicit increment. They write
+momentum and nothing else, so their mass, water and energy contributions are
+exactly zero. A change that made them touch `ρ` would need a row.
 
 ## Open gaps and what they block
 
-| Gap                                                                | Blocks                                             | Cleared by   |
-|:------------------------------------------------------------------ |:-------------------------------------------------- |:------------ |
-| Coupled surface legs unmeasured                                    | claim level 4 in the coupled view                  | stack step 6 |
-| Energy leg of `map.tracer_nonneg_vapor` at `constrain_qtot = true` | energy closure wherever that variant is configured | stack step 7 |
+No row has an `open` disposition. Two limits remain.
 
-None of these may become `zero` by assumption. Each is turned into `measured` or
-`zero` by the stack step that owns it, with the evidence its row names.
+| Gap                                                              | Blocks                                 |
+|:---------------------------------------------------------------- |:-------------------------------------- |
+| Attribution and transfer legs are collected in `audit` mode only | claim levels 3 and 4 in `summary` mode |
+
+An open item never becomes `zero` by assumption. It becomes `measured` or `zero`
+with the evidence its row names.
