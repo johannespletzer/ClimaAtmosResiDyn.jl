@@ -858,11 +858,11 @@ end
 # ---------------------------------------------------------------------------
 
 """
-    sediment_water_tag_copies!(Yₜ, Y, p, j, ᶜqʲ, ᶜwʲ, ᶜa, ᶜρ⁰w⁰q⁰, α_lat, ᶜinv_ρ̂, ᶠJ)
+    sediment_water_tag_copies!(Yₜ, Y, p, j, ᶜqʲ, ᶜwʲ, ᶜa, ᶜρ⁰w⁰q⁰, ᶜinv_ρ̂, ᶠJ)
 
 Give the copies of updraft `j` one sedimenting species' updraft sedimentation.
 The model moves the species `qʲ` and `q_totʲ` by
-`ᶜinv_ρ̂ * updraft_sedimentation!(…, qʲ, …, ρ⁰w⁰q⁰, α_lat)`: the flux within the
+`ᶜinv_ρ̂ * updraft_sedimentation!(…, qʲ, …, ρ⁰w⁰q⁰)`: the flux within the
 updraft, and where the updraft narrows with height, the environment's falling
 water flowing in (`edmfx_sgs_vertical_advection_tendency!`). The falling updraft
 water carries the updraft's composition, and the inflow the environment's. So
@@ -872,7 +872,7 @@ sum to one, so the copies' terms sum to the parent's. A source tag's copy takes
 its own clamped share. Call it inside the species loop, after the species' own
 update, since it reuses that update's scratch. A no-op without copies.
 """
-sediment_water_tag_copies!(Yₜ, Y, p, j, ᶜqʲ, ᶜwʲ, ᶜa, ᶜρ⁰w⁰q⁰, α_lat, ᶜinv_ρ̂, ᶠJ) =
+sediment_water_tag_copies!(Yₜ, Y, p, j, ᶜqʲ, ᶜwʲ, ᶜa, ᶜρ⁰w⁰q⁰, ᶜinv_ρ̂, ᶠJ) =
     _sediment_water_tag_copies!(
         Yₜ,
         Y,
@@ -882,12 +882,11 @@ sediment_water_tag_copies!(Yₜ, Y, p, j, ᶜqʲ, ᶜwʲ, ᶜa, ᶜρ⁰w⁰q⁰
         ᶜwʲ,
         ᶜa,
         ᶜρ⁰w⁰q⁰,
-        α_lat,
         ᶜinv_ρ̂,
         ᶠJ,
         p.atmos.water_tagging_model,
     )
-_sediment_water_tag_copies!(Yₜ, Y, p, j, ᶜqʲ, ᶜwʲ, ᶜa, ᶜρ⁰w⁰q⁰, α_lat, ᶜinv_ρ̂, ᶠJ, model) =
+_sediment_water_tag_copies!(Yₜ, Y, p, j, ᶜqʲ, ᶜwʲ, ᶜa, ᶜρ⁰w⁰q⁰, ᶜinv_ρ̂, ᶠJ, model) =
     nothing
 function _sediment_water_tag_copies!(
     Yₜ,
@@ -898,7 +897,6 @@ function _sediment_water_tag_copies!(
     ᶜwʲ,
     ᶜa,
     ᶜρ⁰w⁰q⁰,
-    α_lat,
     ᶜinv_ρ̂,
     ᶠJ,
     model::WaterTaggingModel,
@@ -927,7 +925,6 @@ function _sediment_water_tag_copies!(
             ᶜwʲ,
             ᶜa,
             ᶜρ⁰w⁰q⁰,
-            α_lat,
             ᶜinv_ρ̂,
             ᶠJ,
             ᶜnormʲ,
@@ -963,7 +960,7 @@ _copy_share(χ, q, norm, ::Val{false}) = water_tag_source_sediment_share(χ, q)
 
 _sediment_water_tag_copies_each!(ᶜsgsʲₜ, Y, p, ᶜsgsʲ, args, ::Tuple{}) = nothing
 function _sediment_water_tag_copies_each!(ᶜsgsʲₜ, Y, p, ᶜsgsʲ, args, tags::Tuple)
-    (; ᶜρʲ, ᶜqʲ, ᶜwʲ, ᶜa, ᶜρ⁰w⁰q⁰, α_lat, ᶜinv_ρ̂, ᶠJ) = args
+    (; ᶜρʲ, ᶜqʲ, ᶜwʲ, ᶜa, ᶜρ⁰w⁰q⁰, ᶜinv_ρ̂, ᶠJ) = args
     (; ᶜnormʲ, ᶜnorm⁰, ᶜq_tot⁰, vtt) = args
     tag = first(tags)
     partition = Val(_is_partition_tag(tag))
@@ -981,7 +978,6 @@ function _sediment_water_tag_copies_each!(ᶜsgsʲₜ, Y, p, ᶜsgsʲ, args, tag
         ᶜfalling,
         ᶠJ,
         ᶜinflow,
-        α_lat,
     )
     @. ᶜχʲₜ += ᶜinv_ρ̂ * vtt
     return _sediment_water_tag_copies_each!(

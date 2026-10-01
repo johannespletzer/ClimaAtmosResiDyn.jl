@@ -1,17 +1,14 @@
 #####
 ##### Parent budget: packet layout and the one collective
 #####
-##### A global integral is a collective. ARS343 has four stages and the coverage
-##### registry lists dozens of paths, so a collective per quantity per leg would
-##### cost on the order of a hundred per timestep. The contract's answer is one
-##### packed collective per accepted step, and this file is what makes that
-##### possible: local values go into a fixed-layout buffer, the buffer is reduced
-##### once, and everything downstream reads the reduced buffer.
-#####
-##### The layout comes from the schema, so it exists before the first value does
-##### and is identical on every rank. Nothing here knows what a leg means. It
-##### works in plain group and quantity symbols, so the reduction mechanics stay
-##### out of the journal and the transaction logic stays out of MPI.
+##### A global integral is a collective. A collective per quantity per leg would
+##### cost on the order of a hundred per step. This file packs local values into
+##### a fixed-layout buffer, reduces the buffer once per accepted step, and
+##### leaves everything downstream to read the reduced buffer. The layout comes
+##### from the schema, so it exists before the first value and is identical on
+##### every rank. Nothing here knows what a leg means. It works in plain group
+##### and quantity symbols, which keeps the reduction out of the journal and MPI
+##### out of the transaction logic.
 
 # ============================================================================
 # Slot state
@@ -145,9 +142,9 @@ endpoint slots of every declared reservoir, followed by the envelope slots of
 each channel in `channels` in each reservoir that channel writes.
 
 `channels` is what the adapter collects, not what the schema expects. A
-declared channel the adapter does not collect has no slot here; its absence is
-a named blocker at reconciliation, which is the fail-closed answer, whereas a
-slot nobody writes would refuse the reduction on every rank.
+declared channel the adapter does not collect has no slot here. Its absence is
+a named blocker at reconciliation, which is the fail-closed answer. A slot
+nobody writes would refuse the reduction on every rank.
 """
 function budget_packet_layout(schema::BudgetSchema, channels)
     slots = Tuple{Symbol, Symbol}[]
@@ -394,8 +391,8 @@ end
 """
     packet_local_value(packet, group, quantity)
 
-Return the local value of one slot, before reduction. For tests and for
-assembling a packet; a global total comes from `packet_value`.
+Return the local value of one slot, before reduction. It is for tests and for
+assembling a packet. A global total comes from `packet_value`.
 """
 packet_local_value(packet::BudgetPacket, group::Symbol, quantity::Symbol) =
     @inbounds packet.values[packet_index(packet.layout, group, quantity)]
@@ -404,7 +401,7 @@ packet_local_value(packet::BudgetPacket, group::Symbol, quantity::Symbol) =
     packet_applicable(packet, group, quantity) -> Bool
 
 Return whether this slot holds a measurement. False for a slot the configuration
-declared not applicable, and false for one nothing has written; use
+declared not applicable, and false for one nothing has written. Use
 `slot_state` when the two have to be told apart.
 """
 packet_applicable(packet::BudgetPacket, group::Symbol, quantity::Symbol) =

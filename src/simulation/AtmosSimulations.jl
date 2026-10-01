@@ -298,14 +298,15 @@ entry point for simulations written as scripts; configuration-driven runs go thr
 
 ### Parent budget
 
-  - `parent_budget_mode = "off"`: The parent budget, `"off"`, `"summary"` or
-    `"audit"`. When on, the parent budget measures every accepted step's mass, water and
+  - `parent_budget_mode = "off"`: The parent budget, `"off"` (the default), `"summary"`
+    or `"audit"`. When on, it checks every accepted step's mass, water and
     energy against what the integrator applied, with one global collective per
-    step and no change to the trajectory. `"audit"` also attributes each channel
-    to the processes that wrote it. It refuses configurations outside the
-    contract's scope, and a custom callback unless it is declared read-only with
-    `Internals.ParentBudget.ReadOnlyCallback`. A restarted run checks the
-    restored state against the endpoints its checkpoint carried. See the
+    step. With it on, every model field that exists without it stays bit for bit as
+    in the same run with it off, under the default solver settings. `"audit"` also
+    attributes each channel to the processes that wrote it. It refuses configurations
+    outside the contract's scope, and a custom callback unless it is declared
+    read-only with `Internals.ParentBudget.ReadOnlyCallback`. A restarted run checks
+    the restored state against the endpoints its checkpoint carried. See the
     parent-budget pages of the documentation.
   - `parent_budget_attribution = "net"`: How the parent budget books a process row in
     `"audit"` mode: `"net"` books the signed integral of what the process applied,
