@@ -3450,13 +3450,14 @@ end
         @test bits_checksum(parent(dY3.c)) == PINNED_FOLLOWER_CHECKSUMS[FT]
 
         # Case 4: `δL` does not depend on the ledger's cumulative value (the
-        # owner's review of #137). Case 1 again, with a gain of 60·2⁻³², about
-        # 1.4e-8, which the ledger also takes. The ledger starts at 0, 1 or
-        # 1e6. In Float32 a difference of a ledger at 1 rounds that gain to
-        # zero, and the follower would take it from the partition again. The
-        # states, the tendencies and the kept rate are the same, so every
-        # correction is the same, bit for bit.
-        r = FT(2)^-32
+        # owner's review of #137). Case 1 again, with a gain the ledger also
+        # takes: 60·2⁻³², about 1.4e-8, in Float32 and 60·2⁻⁴⁰, about 5.5e-11,
+        # in Float64. The ledger starts at 0, 1 or 1e6. A difference of the
+        # ledger would round that gain to zero at 1 and 1e6 in Float32 and at
+        # 1e6 in Float64, and the follower would take it from the partition
+        # again. The states, the tendencies and the kept rate are the same, so
+        # every correction is the same, bit for bit.
+        r = FT(2)^(FT == Float32 ? -32 : -40)
         x4 = dtγ * r
         ᶜrate = set!(zero(ᶜbase), 3, r)
         corrections = map((0, 1, 1e6)) do offset
