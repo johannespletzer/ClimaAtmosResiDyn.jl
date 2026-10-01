@@ -1,0 +1,31 @@
+| point | N | ratio pass 1 | ratio rerun | ms/tag pass 1 | ms/tag rerun | spread all | spread 3-5 | median/min | ratio spread all | ratio spread 3-5 | same node as baseline | passes |
+|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|:--|:--|
+| energy_d4_edmf_copies_noprecip_ledgers_n8 | 8 | 3.085 | 2.440 | 2.142 | 1.067 | 15.5% | 0.1% | 0.1% | 37.8% | 0.7% | no | beyond |
+| energy_d4_edmf_copies_noprecip_none_n2 | 2 | 1.268 | 0.855 | 1.100 | -0.431 | 54.4% | 0.8% | 0.8% | 7.2% | 1.1% | no | within |
+| energy_d4_edmf_copies_noprecip_none_n4 | 4 | 1.453 | 1.013 | 0.932 | 0.020 | 58.8% | 0.4% | 0.4% | 12.9% | 1.0% | no | within |
+| energy_d4_edmf_copies_noprecip_none_n8 | 8 | 1.926 | 1.286 | 0.952 | 0.212 | 29.5% | 2.2% | 2.2% | 28.4% | 1.8% | no | beyond |
+| energy_d4_edmf_default_noprecip_ledgers_n8 | 8 | 2.945 | 3.318 | 1.998 | 1.717 | 26.5% | 0.9% | 0.9% | 29.4% | 1.6% | yes | within |
+| energy_d4_edmf_default_noprecip_none_n2 | 2 | 1.184 | 1.184 | 0.755 | 0.546 | 62.1% | 1.9% | 1.9% | 14.0% | 2.3% | yes | within |
+| energy_d4_edmf_default_noprecip_none_n4 | 4 | 1.446 | 1.310 | 0.916 | 0.459 | 32.7% | 2.4% | 2.4% | 22.9% | 2.0% | yes | within |
+| energy_d4_edmf_default_noprecip_none_n8 | 8 | 1.750 | 1.637 | 0.771 | 0.472 | 50.9% | 0.2% | 0.2% | 13.0% | 0.8% | yes | within |
+| energy_d4_edmf_default_noprecip_none_n32 | 32 | 6.214 | 7.534 | 1.339 | 1.210 | 8.3% | 0.3% | 0.3% | 39.0% | 1.1% | no | beyond |
+| energy_d4_edmf_default_noprecip_records_n8 | 8 | 1.697 | 1.619 | 0.716 | 0.459 | 45.8% | 0.9% | 0.9% | 12.7% | 1.6% | yes | within |
+| water_1m_column_default_noprecip_none_n2 | 2 | 1.242 | 1.256 | 0.537 | 0.505 | 22.0% | 0.2% | 0.2% | 2.1% | 0.0% | yes | within |
+| water_1m_column_default_noprecip_none_n4 | 4 | 1.513 | 1.450 | 0.568 | 0.443 | 20.1% | 0.1% | 0.1% | 0.7% | 0.2% | yes | within |
+| water_1m_column_default_noprecip_none_n8 | 8 | 2.224 | 1.851 | 0.678 | 0.419 | 16.4% | 0.2% | 0.2% | 3.0% | 0.3% | yes | beyond |
+| water_1m_column_default_noprecip_none_n32 | 32 | 12.747 | 12.558 | 1.627 | 1.424 | 5.5% | 2.4% | 2.4% | 18.4% | 2.5% | yes | within |
+| water_1m_column_default_precip_none_n2 | 2 | 1.843 | 1.642 | 1.867 | 1.266 | 35.2% | 0.3% | 0.3% | 13.1% | 0.1% | no | within |
+| water_1m_column_default_precip_none_n4 | 4 | 4.107 | 3.946 | 3.442 | 2.904 | 16.5% | 0.5% | 0.4% | 3.4% | 0.7% | no | within |
+| water_1m_column_default_precip_none_n8 | 8 | 9.810 | 9.927 | 4.879 | 4.399 | 0.2% | 0.0% | 0.0% | 19.6% | 0.2% | no | beyond |
+| water_1m_column_default_precip_none_n32 | 32 | 187.310 | 204.410 | 25.798 | 25.059 | 0.8% | 0.4% | 0.3% | 19.8% | 0.6% | no | beyond |
+| water_trmm0m_edmf_copies_noprecip_ledgers_n8 | 8 | 2.088 | 1.817 | 0.696 | 0.462 | 57.5% | 0.9% | 0.8% | 21.8% | 1.0% | no | within |
+| water_trmm0m_edmf_copies_noprecip_none_n2 | 2 | 1.306 | 1.247 | 0.782 | 0.559 | 77.8% | 0.1% | 0.1% | 4.9% | 0.8% | no | within |
+| water_trmm0m_edmf_copies_noprecip_none_n4 | 4 | 1.537 | 1.427 | 0.687 | 0.483 | 76.5% | 0.8% | 0.8% | 8.4% | 1.0% | no | within |
+| water_trmm0m_edmf_copies_noprecip_none_n8 | 8 | 1.982 | 1.784 | 0.628 | 0.444 | 36.4% | 0.6% | 0.5% | 37.0% | 0.7% | no | within |
+| water_trmm0m_edmf_default_noprecip_increment_n8 | 8 | 1.670 | 1.510 | 0.429 | 0.289 | 68.8% | 1.2% | 1.2% | 11.7% | 1.9% | yes | within |
+| water_trmm0m_edmf_default_noprecip_ledgers_n8 | 8 | 2.651 | 2.502 | 1.055 | 0.849 | 45.6% | 1.0% | 0.6% | 29.1% | 1.8% | yes | within |
+| water_trmm0m_edmf_default_noprecip_none_n2 | 2 | 1.226 | 1.180 | 0.578 | 0.408 | 50.4% | 0.2% | 0.2% | 24.1% | 0.5% | yes | within |
+| water_trmm0m_edmf_default_noprecip_none_n4 | 4 | 1.419 | 1.263 | 0.536 | 0.298 | 88.1% | 0.5% | 0.5% | 1.7% | 1.0% | yes | within |
+| water_trmm0m_edmf_default_noprecip_none_n8 | 8 | 1.638 | 1.494 | 0.408 | 0.280 | 43.7% | 1.6% | 1.6% | 31.6% | 1.6% | yes | within |
+| water_trmm0m_edmf_default_noprecip_none_n32 | 32 | 7.046 | 4.943 | 0.966 | 0.558 | 7.8% | 1.5% | 1.5% | 75.0% | 1.8% | no | beyond |
+| water_trmm0m_edmf_default_noprecip_tracer_n8 | 8 | 1.711 | 1.486 | 0.454 | 0.275 | 68.6% | 1.4% | 0.9% | 11.0% | 0.7% | yes | within |
