@@ -1753,7 +1753,11 @@ diagonal gains `dtγ min(Δ, 0) ∂φ/∂ρq_tag`, and the block to `ρq_tot` is
 `dtγ min(Δ, 0) ∂φ/∂ρq_tot` (`water_tag_fraction_derivative_tag` and
 `water_tag_fraction_derivative_parent`). Like the parent's own sink,
 which has no entry, the loss's dependence on `ρ` through `Δ` is left out. The
-gain `max(Δ, 0)` goes to the tags by their masks and has no entries.
+gain goes to the tags by their masks, as the target's gain: `max(Δ, 0)` where
+`ρq_tot` is not negative, and none where it is. It moves with `ρq_tot` only
+through that sign, so it has no entries. The ledger of the withheld gain,
+`q_tag_exp_negative`, keeps the `-I` row of a field no process writes a block
+for, as the other ledgers do.
 
 `update_diffusion_jacobian!` assigns each tag's diagonal when diffusion is
 implicit, so this adds to it. When diffusion is explicit nothing else writes

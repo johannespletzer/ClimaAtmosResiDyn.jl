@@ -1154,7 +1154,9 @@ end
 # factor in the broadcast, which keeps the weight's type fixed. The grid's
 # tags also take no gain where the grid's parent is below zero (the brackets'
 # `TargetGain`). The copies keep the gain, since their repair closes them onto
-# `max(q_totʲ, 0)` after the filter at every step.
+# `max(q_totʲ, 0)` after the filter at every step. The default mode's plume
+# starts with the same weight (`start_water_plume!`), as the copies' steady
+# state, so it does not read the grid parent's sign either.
 _surface_gain_weight(ᶜmasks, tag::WaterTag{name, Nothing}) where {name} = true
 _surface_gain_weight(ᶜmasks, tag::WaterTag) = tag_field(ᶜmasks, tag)
 
