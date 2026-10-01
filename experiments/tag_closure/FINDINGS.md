@@ -89,7 +89,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                                   | section                                             |
 |:----------------------------------------------------- |:--------------------------------------------------- |
-| W1–W48 (W46 reserved for PX7)                         | 1. Water tags                                       |
+| W1–W49 (W46 reserved for PX7)                         | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48, E85 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11                 | 3. The energy reference and the offset              |
 | E40, E53                                              | 4. EDMF and the updrafts                            |
@@ -1841,6 +1841,160 @@ job `13996777`), run tree `../ClimaAtmosResiDyn-ic-probe2-run` at `e09e0986`,
 `analysis/water/ic_miss_probe2.jl`, `configs/ic_miss_probe2_s23.yml`. Scored
 on 2026-09-29 with `analysis/water/ic_miss_score2.py` as amended at
 `6eae646f`, before the job started; `output/ic_miss_probe2/`.*
+
+**W49. Option C's revision, the 90-day validation, measuring `0eb329b2`.
+V1 (site 23), V3 (site 26), and V2, V2b, V4 and V4b at both sites pass, and the windows W0 to W2 and
+W5 pass, but V5's `led_fix` fails at site 23: `pbl` reaches 7.33% and `free`
+6.52% of their inventory at day 90 (budget 2%). V2's largest gross is 4.06e-4
+of the water at site 23 (budget 2e-3, day 56.0), against 2.24e-2 for the
+control on `main`; it never exceeds 0.2%. The window rises' least favourable
+share is +3.1e-4 of W48's rise (limit 0.1). The pre-registration states no
+consequence for a V5 failure, so the owner decides.** The validation of
+`design/NEGATIVE_PARENT_WATER.md` section 11.7, with its amendments of
+2026-09-30 and 2026-10-01 (made before any run): W42's column with the
+radiation's seed reset, 90 days, `pbl`, `free`, `evap` and `fcg` under the
+follower, at sites 23 and 26. W49 measured the model at `0eb329b2`, in the run
+tree `b6d452b5` (the record at `b9da8923` merged into it), and no later
+commit. The controls ran from `d2ceaa48` (`main` at `43b01ca1`, the same
+record). The revision's runs carry the explicit rule, Q3, Q4, the follower's
+amendment and the ledger `q_tag_exp_negative`. `q_tag_exp_negloss` is not
+built. So V2, V5 and W5 score that bundle. They bound the rule's part and do
+not isolate it.
+
+| rule                                                           | site 23                                                               | site 26                                      | verdict                             |
+|:-------------------------------------------------------------- |:--------------------------------------------------------------------- |:-------------------------------------------- |:----------------------------------- |
+| V1, reaches day 90                                             | last closure row at day 90.0 (361 rows)                               | —                                            | pass                                |
+| V2, largest gross against `∫max(ρq_tot, 0)`, at most 0.2%      | 4.056e-4 (day 56.0)                                                   | 5.688e-12 (day 85.25)                        | pass, both sites                    |
+| V2, first check above 0.2%                                     | none                                                                  | none                                         | —                                   |
+| V2, reported: the control on `main`, largest gross             | 2.243e-2 (day 74.5), first above 0.2% at day 29.25, 179 of 361 checks | 5.688e-12, none                              | —                                   |
+| V2b, the named remainder, at most 1e-12                        | 2.400e-16                                                             | 3.512e-16                                    | pass                                |
+| V3, site 26's tags against `cr_s26_main`                       | —                                                                     | bit for bit, all four, 91 outputs; `t*` none | pass (the fallback is not used)     |
+| V4, 10 model fields against the untagged twin                  | bit for bit                                                           | bit for bit                                  | pass                                |
+| V4b, 10 model fields against the same run on `main`            | bit for bit                                                           | bit for bit                                  | pass                                |
+| V5, the negative part's entry, per-step gross a day (reported) | 1.347e-2 of the water                                                 | 0                                            | —                                   |
+| V5, `q_tag_exp_negative`'s per-step gross a day (reported)     | 7.346e-4 of the water                                                 | 0                                            | —                                   |
+| V5, the repair's retained gross, at most 0.5% a day            | 3.779e-4                                                              | 5.315e-7                                     | pass                                |
+| V5, each tag's `led_fix`, at most 2% of its inventory          | `pbl` 7.330e-2, `free` 6.520e-2 (day 90); `evap`, `fcg` 0             | at most 2.126e-4 (`pbl`)                     | **fail** at site 23 (`pbl`, `free`) |
+
+The bit-for-bit rules have no least favourable number: no field of the ten
+differs at any output. For V5's `led_fix` the scored value is the day-90 row.
+Over all rows `free` is largest at day 82.25 (6.601e-2), and `pbl` at day 90.
+
+  - **The first check above 0.2% in each run:** `cr_s23` none, `cr_s26` none,
+    `cr_s26_main` none, `cr_s23_main` day 29.25. The untagged twins have no
+    closure table. At site 23 the revision's gross first exceeds 1e-4 at day
+    31.0 (24 of 361 checks), and its signed closure lies between −2.4e-6
+    and +3.0e-4 of the water. The largest values are positive: the tags hold
+    less than the target, the opposite sign to the control on `main` and to
+    W42. The largest gross is 55 times below the
+    control's.
+
+  - **The closure identity is not a provenance verdict.** V2 and V2b test
+    that the partition and the named remainder add up to the target and to
+    `q_tot`. They say nothing about which source each tag's water came from.
+    W49 scores no provenance verdict. The only scored measure here that bears on the
+    tags' content is V5's `led_fix`, the corrections applied to each tag, and
+    it fails at site 23. The passes of V2 and V2b do not offset that failure.
+
+  - **The run provenance is separate again.** The seven jobs finished with
+    exit status 0. Their manifests record clean trees (no status lines, no
+    untracked files, diff empty) at `b6d452b5` and `d2ceaa48`. `provenance.txt`
+    says `commit_dirty: unknown` because git was not on the job's `PATH`.
+    The two run trees are also clean now.
+
+  - **Against the control on `main`:** each tag's `led_fix` (day 30, day 60,
+    day 90, and the first row above 2%):
+
+    | run (site 23) | `pbl`                          | `free`                         |
+    |:------------- |:------------------------------ |:------------------------------ |
+    | `cr_s23`      | 1.46%, 4.59%, 7.33%; day 31.0  | 1.78%, 5.28%, 6.52%; day 31.0  |
+    | `cr_s23_main` | 0.43%, 2.05%, 2.73%; day 54.75 | 0.51%, 2.19%, 2.27%; day 56.25 |
+
+    So at day 90 the revision's `led_fix` is 2.7 times (`pbl`) and 2.9 times
+    (`free`) the control's. The control on `main` is also above 2% from
+    day 54.75 and 56.25. W42's values (2.03% and 1.6%) were on another tree
+    and are not directly comparable. At site 26 the two runs' values are the
+    same to every digit shown (V3). This measures how much the tags were
+    corrected. It does not show why the revision's value is higher, and no
+    path is traced here.
+
+  - **The contract's negative-water row** (as in W42). The closure table marks
+    324 of 361 rows of both site 23 runs `negative_water_void`, and 263 have
+    a negative-water share above 1e-4 (largest 10.8%). V2 was registered
+    without that exclusion and passes without it. Site 26 has none.
+
+  - **The source tags' negative inventory and overshoot** (V5's amended
+    items). The first two columns are `cr_validate.py`'s: the column integral
+    of `min(ρq, 0)` over that of `max(ρq, 0)`, daily, to day 90. The last two
+    are pointwise, from `cr_source_overshoot.py`, written after the runs were
+    read and not pre-registered. (The owner's decision 4 in 11.11.13 already
+    required the source-tag overshoot to be reported in V5. Only this metric
+    was defined after the runs.) Pointwise values are in units of M, the
+    column's largest `|q_tot|` at that output, and the table quotes the
+    6-hourly output where it is larger than the daily one. An overshoot is a
+    tag above its parent in a cell where `q_tot > 0`.
+
+    | tag, site  | negative water (integral), first below zero | most negative value, pointwise         | overshoot where `q_tot > 0`                            |
+    |:---------- |:------------------------------------------- |:-------------------------------------- |:------------------------------------------------------ |
+    | `evap`, 23 | −1.59e-7 (day 15); day 11                   | −4.6e-5 M (6-hourly, day 54.75, 584 m) | +8.1e-4 M (6-hourly, day 42.5, 435 m); daily +5.7e-4 M |
+    | `fcg`, 23  | −2.28e-2 (day 2); day 2                     | −1.8e-3 M (6-hourly, day 1.75, 979 m)  | none: at most −1.5e-7 M, below the parent              |
+    | `evap`, 26 | −2.61e-5 (day 28); day 28                   | −3.0e-5 M (day 28, 10.2 km)            | none                                                   |
+    | `fcg`, 26  | 0; never                                    | −3.0e-12 M (6-hourly, day 0.25)        | +3.8e-5 M (day 28, 10.2 km)                            |
+
+    At site 26 both source tags equal `main`'s bit for bit (V3), so these
+    numbers are `main`'s, not the revision's. At site 23 the largest "above
+    the parent" over all cells, 0.19 to 0.20 M at 369 m (days 30 and 30.75),
+    is the parent's own negative value there (−0.19 M), with the tag near
+    zero. It is not an overshoot, and the table does not use it. `fcg`'s
+    integral at site 23 is negative from day 2, as the check before the runs
+    found on W42's run (−2.3e-2, day 2).
+
+  - **The windows** (`cr_probe_s23`, the probe of 9.7 on the revision's code).
+    W0 holds: the model's twelve field files match W48's bit for bit (12 of
+    12). Reported: 40 of 54 water-tag files differ from W48's, as the tag
+    code changed. W1 holds at every step, 0 at 6,048 steps of the first
+    window and 7,776 of the second. W2's largest value is −9.8e-10 of
+    `R48` (rise 1) and its largest size 7.1e-6. All five rises go (W5):
+
+    | rise (days)          | `R` (of the water) | W48's `R48` | `R / R48` | W5 (limit 0.1) | W3: in N, P, X (of `R48`)   |
+    |:-------------------- |:------------------ |:----------- |:--------- |:-------------- |:--------------------------- |
+    | 30.50–30.75          | −1.52e-12          | +1.63e-3    | −9.3e-10  | pass           | +7.8e-18, −9.3e-10, 0       |
+    | 30.75–31.00, control | +5.87e-7           | +1.90e-3    | +3.09e-4  | pass           | +2.93e-4, +1.6e-5, −2.30e-4 |
+    | 52.50–52.75          | −1.15e-8           | +1.65e-3    | −7.0e-6   | pass           | +8.8e-10, −7.0e-6, 0        |
+    | 52.75–53.00          | −1.17e-8           | +1.95e-3    | −6.0e-6   | pass           | +5.5e-9, −6.0e-6, 0         |
+    | 53.00–53.25          | −1.13e-8           | +1.83e-3    | −6.2e-6   | pass           | +3.9e-8, −6.2e-6, 0         |
+
+    The least favourable is the control rise, +3.09e-4 of `R48`, about 320
+    times below the limit. Four rises have `R < 0`, so they go by the rule's own
+    clause. In the control rise the rest of `R` lies mostly in N (W3). W4
+    (the whole explicit tendency alone) is −9.8e-10 to −7.1e-6 of `R48`. In
+    the cells with an excess, `q_tag_exp_negative` changes by 0.91 to 1.00 of
+    `R48` per rise and `q_tag_inc_negative` by 0.006 to 45 (45 in the
+    control rise, whose `R` is near zero). These are reported ledgers and
+    show which ledgers move in the same cells. They do not show which one
+    removed the rises.
+
+  - **Not shown.** One realisation per site and 90 days. The runs differ
+    from the controls by the revision's commits (design 11.7), and W49
+    scores the bundle, so no run attributes the passes or the `led_fix`
+    rise to the explicit rule alone. V3's fallback was not exercised at site
+    26, since the parent is never below zero there. The windows cover days 30.3
+    to 31.0 and 52.4 to 53.3 only.
+
+  - **Consequence.** V5's `led_fix` fails as registered, and 11.7 gives no
+    rule for it (only for V2). It is not resolved here. The revision's merge
+    waits on the owner.
+
+*`hpda2_compute`, 2026-10-01, jobs `14015465` (`cr_s23`, 3 h 36 min),
+`14015466` (`cr_s23_untagged`, 1 h 7 min), `14015467` (`cr_s26`, 3 h 53
+min), `14015468` (`cr_s26_untagged`, 1 h 7 min), `14015471` (`cr_probe_s23`,
+3 h 4 min) from `../ClimaAtmosResiDyn-crev-run` at `b6d452b5` (model
+`0eb329b2`), and `14015469` (`cr_s23_main`, 3 h 48 min), `14015470`
+(`cr_s26_main`, 3 h 48 min) from `../ClimaAtmosResiDyn-crev-main-run` at
+`d2ceaa48` (`main` at `43b01ca1`); all exit 0. Scored with
+`analysis/water/cr_validate.py` and `cr_windows_score.py` as amended on
+2026-09-30, unchanged since, and `cr_source_overshoot.py` (after the runs);
+`output/w49/`.*
 
 ## 2. Energy source tags: closure by transport
 
