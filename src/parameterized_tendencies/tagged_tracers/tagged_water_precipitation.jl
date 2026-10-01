@@ -590,6 +590,7 @@ function BMT.bulk_microphysics_tendencies(
     tps,
     ρ,
     T,
+    w,
     q_tot,
     q_lcl,
     q_icl,
@@ -603,6 +604,7 @@ function BMT.bulk_microphysics_tendencies(
         tps,
         ρ,
         T,
+        w,
         q_tot,
         q_lcl,
         q_icl,
@@ -617,18 +619,18 @@ function BMT.bulk_microphysics_tendencies(
 end
 
 """
-    water_tag_1m_flows(mp, tps, ρ, T, q_tot, q_lcl, q_icl, q_rai, q_sno, Δt, nsub)
+    water_tag_1m_flows(mp, tps, ρ, T, w, q_tot, q_lcl, q_icl, q_rai, q_sno, Δt, nsub)
 
 The 1-moment microphysics over `Δt`, decomposed into the flows of water between
 the non-precipitating water `N` (vapour, cloud liquid, cloud ice), rain `R` and
 snow `S`. Returns the six flows of [`WATER_TAG_FLOW_NAMES`](@ref), each averaged
 over `Δt`, and the net tendencies of rain and snow, `dq_rai_dt` and
-`dq_sno_dt`.
+`dq_sno_dt`. `w` is the air's vertical velocity, which the rain
+autoconversion may depend on.
 
 It repeats `BMT.bulk_microphysics_tendencies(BMT.LinearizedAverage(), ...)` of
-CloudMicrophysics 0.39 and 0.40, substep for substep, with the same arithmetic.
-The two versions differ only in `_linearize`, and the flows call the one the
-model's version has (`_water_tag_linearize`). Each substep solves the
+CloudMicrophysics 0.43, substep for substep, with the same arithmetic. Each
+substep solves the
 linearized system `(q* - q)/Δt = M q* + e`. A sink is linear in its donor,
 `D q_donor*`, so each process's transfer over the substep is its
 coefficient times the solved donor. The transfers that cross between
@@ -647,6 +649,7 @@ composition ([`water_tag_microphysics_change`](@ref)).
     tps,
     ρ,
     T,
+    w,
     q_tot,
     q_lcl,
     q_icl,
@@ -670,6 +673,7 @@ composition ([`water_tag_microphysics_change`](@ref)).
             tps,
             ρ,
             T,
+            w,
             q_tot,
             q_lcl,
             q_icl,
@@ -706,20 +710,8 @@ composition ([`water_tag_microphysics_change`](@ref)).
     )
 end
 
-# CloudMicrophysics 0.40 passes the substep to `_linearize`, to integrate the
-# vapour relaxation over it. CloudMicrophysics 0.39 does not. The model's step
-# calls the method its version has, so the flows call the same one. The choice
-# is made once, when the package is compiled.
-@static if hasmethod(BMT._linearize, NTuple{7, Any})
-    @inline _water_tag_linearize(src, q_lcl, q_icl, q_rai, q_sno, q_min, Δt) =
-        BMT._linearize(src, q_lcl, q_icl, q_rai, q_sno, q_min, Δt)
-else
-    @inline _water_tag_linearize(src, q_lcl, q_icl, q_rai, q_sno, q_min, Δt) =
-        BMT._linearize(src, q_lcl, q_icl, q_rai, q_sno, q_min)
-end
-
-# One substep of `BMT._linearized_implicit_step`, CloudMicrophysics 0.39 and
-# 0.40, line for line, and the flows it implies. The rain row of the solved
+# One substep of `BMT._linearized_implicit_step`, CloudMicrophysics 0.43, line
+# for line, and the flows it implies. The rain row of the solved
 # system is `(q_rai* - q_rai)/Δt = M31 q_lcl* + M33 q_rai* + M34 q_sno*`, and
 # the snow row `M41 q_lcl* + M42 q_icl* + M43 q_rai* + M44 q_sno* + α e4`.
 # `M31` holds the transfers from cloud liquid into rain, `M41` and `M42` those
@@ -732,6 +724,7 @@ end
     tps,
     ρ,
     T,
+    w,
     q_tot,
     q_lcl,
     q_icl,
@@ -746,6 +739,7 @@ end
         tps,
         ρ,
         T,
+        w,
         q_tot,
         q_lcl,
         q_icl,
@@ -753,7 +747,7 @@ end
         q_sno,
     )
     q_min = BMT.TDI.TD.Parameters.q_min(tps)
-    lin = _water_tag_linearize(src, q_lcl, q_icl, q_rai, q_sno, q_min, Δt)
+    lin = BMT._linearize(src, q_lcl, q_icl, q_rai, q_sno, q_min, Δt)
 
     invΔt = one(FT) / Δt
 
@@ -814,7 +808,7 @@ end
 end
 
 """
-    water_tag_1m_flows_grid_mean(ρ, q_tot_nonneg, q_lcl, q_icl, q_rai, q_sno, T, cmp, thp, dt, nsubs)
+    water_tag_1m_flows_grid_mean(ρ, q_tot_nonneg, q_lcl, q_icl, q_rai, q_sno, T, w, cmp, thp, dt, nsubs)
 
 The flows of [`water_tag_1m_flows`](@ref) at the grid mean, with the arguments
 of `microphysics_tendencies_1m`'s grid-mean form, which the model calls without
@@ -828,6 +822,7 @@ SGS quadrature.
     q_rai,
     q_sno,
     T,
+    w,
     cmp,
     thp,
     dt,
@@ -839,6 +834,7 @@ SGS quadrature.
     thp,
     ρ,
     T,
+    w,
     q_tot_nonneg,
     q_lcl,
     q_icl,
@@ -879,7 +875,7 @@ function _set_water_tag_microphysics_flows!(
     has_water_tag_precipitation(model) || return nothing
     hasproperty(p, :tagging) || return nothing
     (; dt) = p
-    (; ᶜT, ᶜq_tot_nonneg) = p.precomputed
+    (; ᶜT, ᶜu, ᶜq_tot_nonneg) = p.precomputed
     ᶜflows = p.tagging.ᶜwater_mp_flows
     thp = CAP.thermodynamics_params(p.params)
     cmp = CAP.microphysics_1m_params(p.params)
@@ -889,19 +885,22 @@ function _set_water_tag_microphysics_flows!(
     ᶜq_rai = @. lazy(specific(Y.c.ρq_rai, Y.c.ρ))
     ᶜq_sno = @. lazy(specific(Y.c.ρq_sno, Y.c.ρ))
     sgs_quad = p.atmos.sgs_quadrature
+    ᶜw_air = @. lazy(w_component(WVec(ᶜu)))
     if not_quadrature(sgs_quad)
         @. ᶜflows = water_tag_1m_flows_grid_mean(
             Y.c.ρ, ᶜq_tot_nonneg, ᶜq_lcl, ᶜq_icl, ᶜq_rai, ᶜq_sno,
-            ᶜT, cmp, thp, dt, mp1m.n_substeps,
+            ᶜT, ᶜw_air, cmp, thp, dt, mp1m.n_substeps,
         )
     else
         (; ᶜT′T′, ᶜq′q′, ᶜsgs_moments) = p.precomputed
         corr_Tq = correlation_Tq(p.params)
         α = sgs_variance_fidelity(CAP.cloud_fraction_steepness_scale(p.params))
+        ξ_liq = CAP.sgs_liquid_uniform_fraction(p.params)
+        ξ_ice = CAP.sgs_ice_uniform_fraction(p.params)
         @. ᶜflows = microphysics_tendencies_1m(
-            WaterTagFlows1M(), sgs_quad, cmp, thp, Y.c.ρ, ᶜT,
+            WaterTagFlows1M(), sgs_quad, cmp, thp, Y.c.ρ, ᶜT, ᶜw_air,
             ᶜq_tot_nonneg, ᶜq_lcl, ᶜq_icl, ᶜq_rai, ᶜq_sno,
-            ᶜT′T′, ᶜq′q′, corr_Tq, ᶜsgs_moments.λ_lagrange, α,
+            ᶜT′T′, ᶜq′q′, corr_Tq, ᶜsgs_moments.λ_lagrange, α, ξ_liq, ξ_ice,
             dt, mp1m.n_substeps_quad,
         )
     end
