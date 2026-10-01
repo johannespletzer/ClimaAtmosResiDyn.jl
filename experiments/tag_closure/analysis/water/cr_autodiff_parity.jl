@@ -6,8 +6,8 @@ C's revision, 11.11.11 item 5: the autodiff Jacobians, tags on and off.
 Optional: `CREV_AD_CASES` (default `sparse,dense`) and `CREV_AD_STEPS` (default 6).
 
 It builds the integration column of `test/tagged_water_integration.jl` (the
-restart testset's `test_dict`: tags `upper`, `lower`, `evap`, the closure check)
-with
+restart testset's `test_dict`: tags `upper`, `lower`, `evap`, the closure check,
+and `water_tag_transport: increment`) with
 
   - `sparse`: `use_auto_jacobian: true`, `z_elem` 30, the band below zero is the
     bottom 5 cells;
@@ -31,7 +31,8 @@ same as the probe drivers' `sum` (weights are the cells' heights).
 `implicit_tendency!` runs on duals inside the Jacobian: a run that completes
 with the tags has evaluated the bracket on them. The exit status is 1 if any
 model field differs (signed zero included), any tag or ledger is not finite, or
-the rule never acted. Lines start with `CREV_AD`.
+the rule never acted, or the cache has no `n'` (the tags run `water_tag_transport:
+increment`, so the follower is exercised). Lines start with `CREV_AD`.
 =#
 using Printf
 import ClimaComms
@@ -59,6 +60,8 @@ base_config(tags; extra = Dict{String, Any}()) = merge(
         "FLOAT_TYPE" => "Float64",
         "output_default_diagnostics" => false,
         "water_tracers" => tags,
+        # The follower: it keeps `ᶜq_tag_negative_change` (n') in the cache.
+        "water_tag_transport" => "increment",
     ),
     extra,
 )
@@ -99,7 +102,10 @@ function dicts(case)
         case.jacobian,
     )
     tagged = base_config(tags(); extra)
-    plain = filter(e -> !(first(e) in ("water_tracers", "water_closure_check")), tagged)
+    plain = filter(
+        e -> !(first(e) in ("water_tracers", "water_closure_check", "water_tag_transport")),
+        tagged,
+    )
     return tagged, plain
 end
 
@@ -147,14 +153,17 @@ function run_case(label)
         water = parent(sim.integrator.u.c.ρq_tot)
         water[band] .= .-water[band] ./ 2
     end
-    ok = true
     # The tags' own fields: what the tagged run has and the plain one has not.
     tag_only = [name for name in propertynames(Y.c) if !hasproperty(Y_plain.c, name)]
     println("CREV_AD $label tag and ledger fields: ", join(tag_only, " "))
     @assert hasproperty(Y.c, :q_tag_exp_negative)
     @assert propertynames(Y.f) == propertynames(Y_plain.f)
     has_n = hasproperty(tagged.integrator.p.tagging, :ᶜq_tag_negative_change)
-    has_n || println("CREV_AD $label: the cache has no ᶜq_tag_negative_change; ∫n' dz not reported")
+    has_n || println(
+        "CREV_AD $label: FAIL, the cache has no ᶜq_tag_negative_change; ",
+        "the follower is not exercised",
+    )
+    ok = has_n
     L_before = 0.0
     acted_steps = Int[]
     n_at_acted = Float64[]
@@ -206,6 +215,8 @@ function run_case(label)
             L[1],
         )
         ok &= isempty(differing) && isempty(signed) && finite
+        # Where the rule acted, n' must have been computed and be finite.
+        ok &= !acted || isfinite(n_sum)
     end
     ok &= !isempty(acted_steps)
     println(
