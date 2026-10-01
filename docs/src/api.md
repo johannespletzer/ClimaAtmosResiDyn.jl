@@ -176,12 +176,14 @@ ClimaAtmos.NoGridScaleTendency
 ClimaAtmos.NoSubgridScaleTendency
 ```
 
-Closure parameters. The fields of this set, and the ClimaParams names they come
+Closure parameters. The fields of these sets, and the ClimaParams names they come
 from, are listed in [PROPHET: Closures](prophet_closures.md#Parameters):
 
 ```@docs
 ClimaAtmos.Parameters.AbstractTurbulenceConvectionParameters
 ClimaAtmos.Parameters.TurbulenceConvectionParameters
+ClimaAtmos.Parameters.AbstractSGSQuadratureParameters
+ClimaAtmos.Parameters.SGSQuadratureParameters
 ```
 
 ### Radiation
@@ -281,13 +283,14 @@ ClimaAtmos.AbstractGravityWave
 ClimaAtmos.NonOrographicGravityWave
 ClimaAtmos.OrographicGravityWave
 ClimaAtmos.FullOrographicGravityWave
-ClimaAtmos.LinearOrographicGravityWave
 ```
 
 ### Forcings
 
-Forcing terms for externally driven single-column cases are documented on the
-[Single Column Models](single_column.md) page.
+The forcing formulations are described in
+[Forcings and Idealized Cases](forcings.md); the terms for externally driven
+single-column cases are documented on the
+[Column Datasets](column_datasets_reference.md) page.
 
 ```@docs
 ClimaAtmos.AbstractForcing
@@ -309,6 +312,7 @@ ClimaAtmos.GasPhaseChem
 ### COSP and CloudSat
 
 ```@docs
+ClimaAtmos.COSPModel
 ClimaAtmos.COSP.COSPCloudSatOptics.cloudsat_gas_attenuation!
 ClimaAtmos.COSP.COSPCloudSatOptics.cloudsat_grid_mean_sizes!
 ClimaAtmos.COSP.COSPCloudSatOptics.cloudsat_optics_subcolumn!

@@ -60,6 +60,7 @@ A file under `src/parameterized_tendencies/` should not contain orchestration lo
 | Tagged tracers/water                | `tagging_*`         | `baroclinic_wave_tagged_*`               |
 | Microphysics / EDMF                 | `parameterizations` | `prognostic_edmfx_*`                     |
 | Restarts                            | `restarts`          | `restart_*`                              |
+| Initialization from file            | `restarts`          | `test_init_with_file.jl`                 |
 | Diagnostics                         | `diagnostics`       | any `--diagnostics` job                  |
 | Config semantics                    | `infrastructure`    | `config.jl`                              |
 | Parent budget                       | `parent_budget`     | none; GitHub Actions only                |
@@ -67,6 +68,7 @@ A file under `src/parameterized_tendencies/` should not contain orchestration lo
 The `parent_budget` group holds the parent-budget tests that drive real
 simulations, `test/parent_budget/envelope_tests.jl`,
 `test/parent_budget/implicit_attribution_tests.jl`,
+`test/parent_budget/implicit_smagorinsky_tests.jl`,
 `test/parent_budget/explicit_attribution_tests.jl`,
 `test/parent_budget/transfer_tests.jl`,
 `test/parent_budget/restart_tests.jl`,
@@ -267,7 +269,7 @@ When reviewing or writing changes, name the validation surface explicitly:
 
 ClimaAtmosResiDyn develops diagnostics on top of upstream [CliMA/ClimaAtmos.jl](https://github.com/CliMA/ClimaAtmos.jl): the stratospheric passive tracers, the tagged energy and water tracers, the energy source tags, the process records and the parent budget. It must not change the simulation. This is a boundary condition on every change in this repository.
 
-  - **Without a diagnostic.** A configuration that upstream can run gives bit-for-bit the same results here as at the upstream commit last merged into `main`. That commit is the second parent of the last "Merge upstream CliMA/ClimaAtmos.jl main" commit. Compare the prognostic state and every output field with `isequal` on the parent arrays, not with a tolerance. `==` accepts a signed-zero difference and rejects matching `NaN`s.
+  - **Without a diagnostic.** A configuration that upstream can run gives bit-for-bit the same results here as at the upstream commit last merged into `main`. That commit is the second parent of the last "Merge upstream CliMA/ClimaAtmos.jl main" commit (currently a9287b2d, release v0.42.12 plus 12 commits). Compare the prognostic state and every output field with `isequal` on the parent arrays, not with a tolerance. `==` accepts a signed-zero difference and rejects matching `NaN`s.
   - **With a diagnostic.** Every field upstream has stays bit for bit the same as in the same run without the diagnostic. Only the diagnostic's own prognostic fields (such as `ρe_tag_*`, `ρq_tag_*`, `ρe_src_*` and `prc_*`), its cache, callbacks and output may differ, and so may the run time. A diagnostic is off when its family key is at its default. The defaults of its sub-keys do not count. This clause is claimed for the default solver, a fixed number of Newton iterations with the direct block solver. With `use_krylov_method` or `use_newton_rtol` the residual norm spans the diagnostic's fields too, so a tagged run there is not expected to match, and that mismatch is not a defect of the diagnostic.
   - **What is compared.** Bit-for-bit holds within one machine, one Julia and `Manifest`, one float type and one process count. The same run on Levante and on terrabyte agrees only to rounding, so compare two runs from one machine.
 
@@ -283,7 +285,7 @@ What follows for a change:
 
 Known departures, to be removed as they are resolved:
 
-  - Two guards in `limiters_func!` read `:ρq_tot` where upstream has `@name(ρq_tot)` (`src/prognostic_equations/limited_tendencies.jl`). With an explicit `vertical_water_borrowing_species` list that names `ρq_tot`, the fork runs `enforce_mass_energy_consistency!`, which writes `ρ` and `ρe_tot`, where upstream skips it. No shipped config sets the list. It stays as a named exception, and no upstream fix is proposed from this fork.
+  - Two guards in `limiters_func!` read `:ρq_tot` where upstream has `@name(ρq_tot)` (`src/prognostic_equations/limited_tendencies.jl`). With an explicit `vertical_water_borrowing_species` list that names `ρq_tot`, the fork runs `enforce_mass_energy_consistency!`, which writes `ρ` and `ρe_tot`. Upstream skips it, also at a9287b2d. No shipped config sets the list. It stays as a named exception, and no upstream fix is proposed from this fork.
 
 A test runs the same column with a diagnostic off and on and compares every model field with `isequal`: for the parent budget in `test/parent_budget/envelope_tests.jl` ("The trajectory is bitwise unchanged with the parent budget on"), and for the tagged energy and water tracers, the energy source tags and the process records in their integration tests ("The model's fields do not depend on the tags", and "... on the records"). The stratospheric passive tracers have no such test yet. A new diagnostic gets one. These cover the default solver on one column each. No CI job compares the fork with upstream, so the fork-versus-upstream clause is checked by a run against the last merged upstream commit on one machine.
 
