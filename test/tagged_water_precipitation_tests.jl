@@ -31,6 +31,7 @@ What is tested here, without a simulation:
 using Test
 import Random
 import ClimaAtmos as CA
+import ClimaParams as CP
 import ClimaCore.MatrixFields: @name
 import CloudMicrophysics.BulkMicrophysicsTendencies as BMT
 
@@ -373,9 +374,12 @@ end
 end
 
 # Random states of the 1-moment scheme: warm and cold, sub- and
-# supersaturated, with and without rain and snow.
+# supersaturated, with and without rain and snow, in rising and sinking air.
 function microphysics_states(FT, n; seed = 1234)
     rng = Random.MersenneTwister(seed)
+    # The vertical velocity draws from a generator of its own, so it leaves
+    # the other variables' random sequence alone.
+    rng_w = Random.MersenneTwister(seed + 1)
     params = CA.ClimaAtmosParameters(FT)
     tps = CA.Parameters.thermodynamics_params(params)
     states = map(1:n) do _
@@ -388,28 +392,58 @@ function microphysics_states(FT, n; seed = 1234)
         q_sno = FT(rand(rng) < 0.6 ? 5e-4 * rand(rng) : 0)
         q_vap = q_sat * FT(0.8 + 0.25 * rand(rng))
         q_tot = q_vap + q_lcl + q_icl + q_rai + q_sno
-        (; ρ, T, q_tot, q_lcl, q_icl, q_rai, q_sno)
+        w = FT(-2 + 7 * rand(rng_w))
+        (; ρ, T, w, q_tot, q_lcl, q_icl, q_rai, q_sno)
     end
     return (params, states)
+end
+
+# A 1-moment parameter set in which `w` matters. ClimaParams 1.2 sets both
+# `*_stratiform_scale` keys to 1, so Kessler1M's timescale and threshold do
+# not depend on `w`. A ten times longer stratiform timescale makes the rain
+# formation depend on it, as in upstream's microphysics_wrappers.jl test.
+function w_active_1m_params(FT)
+    toml_dict = CP.create_toml_dict(
+        FT;
+        override_file = Dict(
+            "rain_autoconversion_timescale_stratiform_scale" =>
+                Dict("value" => 10.0, "type" => "float"),
+        ),
+    )
+    params = CA.ClimaAtmosParameters(toml_dict)
+    return CA.Parameters.microphysics_1m_params(params)
 end
 
 @testset "The microphysics by gross flows" begin
     for FT in (Float32, Float64)
         (params, states) = microphysics_states(FT, 400)
-        mp = CA.Parameters.microphysics_1m_params(params)
+        mp = w_active_1m_params(FT)
         tps = CA.Parameters.thermodynamics_params(params)
         dt = FT(60)
+        # `w` reaches the reference: at rest and in an updraft it forms rain
+        # at different rates. Else the replay below could drop `w` unseen.
+        w_dependent = count(states) do s
+            rain(w) =
+                BMT.bulk_microphysics_tendencies(
+                    BMT.LinearizedAverage(),
+                    BMT.Microphysics1Moment(),
+                    mp, tps, s.ρ, s.T, w, s.q_tot, s.q_lcl, s.q_icl, s.q_rai,
+                    s.q_sno, dt, 1,
+                ).dq_rai_dt
+            rain(FT(0)) != rain(FT(5))
+        end
+        @test w_dependent > 10
         two_way = 0
         for s in states, nsub in (1, 3)
             reference = BMT.bulk_microphysics_tendencies(
                 BMT.LinearizedAverage(),
                 BMT.Microphysics1Moment(),
-                mp, tps, s.ρ, s.T, s.q_tot, s.q_lcl, s.q_icl, s.q_rai, s.q_sno,
-                dt, nsub,
+                mp, tps, s.ρ, s.T, s.w, s.q_tot, s.q_lcl, s.q_icl, s.q_rai,
+                s.q_sno, dt, nsub,
             )
             flows = CA.water_tag_1m_flows(
-                mp, tps, s.ρ, s.T, s.q_tot, s.q_lcl, s.q_icl, s.q_rai, s.q_sno,
-                dt, nsub,
+                mp, tps, s.ρ, s.T, s.w, s.q_tot, s.q_lcl, s.q_icl, s.q_rai,
+                s.q_sno, dt, nsub,
             )
             # The substeps repeat CloudMicrophysics' arithmetic, so the net
             # tendencies are the model's. The compiler may fuse a `muladd`
@@ -445,9 +479,12 @@ end
         quad = CA.SGSQuadrature(FT; quadrature_order = 3)
         s = states[findfirst(s -> s.q_rai > 0 && s.q_lcl > 0, states)]
         corr_Tq = FT(0.6)
+        # Uniform fractions inside (0, 1), so both halves of the condensate
+        # reconstruction are used.
         args = (
-            quad, mp, tps, s.ρ, s.T, s.q_tot, s.q_lcl, s.q_icl, s.q_rai, s.q_sno,
-            FT(1), FT(1e-7), corr_Tq, s.q_lcl + s.q_icl, FT(1), dt, 2,
+            quad, mp, tps, s.ρ, s.T, s.w, s.q_tot, s.q_lcl, s.q_icl, s.q_rai,
+            s.q_sno, FT(1), FT(1e-7), corr_Tq, s.q_lcl + s.q_icl, FT(1),
+            FT(0.3), FT(0.6), dt, 2,
         )
         reference = CA.microphysics_tendencies_1m(BMT.Microphysics1Moment(), args...)
         flows = CA.microphysics_tendencies_1m(CA.WaterTagFlows1M(), args...)
@@ -1045,14 +1082,14 @@ function microphysics_substeps(mp, tps, state, parts, Δt, nsub)
     cp_d = BMT.TDI.TD.Parameters.cp_d(tps)
     Lv_over_cp = BMT.TDI.TD.Parameters.LH_v0(tps) / cp_d
     Ls_over_cp = BMT.TDI.TD.Parameters.LH_s0(tps) / cp_d
-    (; ρ, q_tot) = state
+    (; ρ, w, q_tot) = state
     (T, q_lcl, q_icl, q_rai, q_sno) =
         (state.T, state.q_lcl, state.q_icl, state.q_rai, state.q_sno)
     Δt_sub = Δt / FT(nsub)
     sums = ntuple(_ -> zero(FT), 6)
     for _ in 1:nsub
         (; rates, flows) = CA._water_tag_1m_substep(
-            mp, tps, ρ, T, q_tot, q_lcl, q_icl, q_rai, q_sno, Δt_sub,
+            mp, tps, ρ, T, w, q_tot, q_lcl, q_icl, q_rai, q_sno, Δt_sub,
         )
         F = (; flows..., dq_rai_dt = rates.dq_rai_dt, dq_sno_dt = rates.dq_sno_dt)
         compartments = (q_tot - q_rai - q_sno, q_rai, q_sno)
@@ -1239,8 +1276,8 @@ end
         for (i, nsub) in enumerate(nsubs), (j, Δt) in enumerate(steps)
             reference = microphysics_substeps(mp, tps, s, parts, Δt, nsub)
             F = CA.water_tag_1m_flows(
-                mp, tps, s.ρ, s.T, s.q_tot, s.q_lcl, s.q_icl, s.q_rai, s.q_sno,
-                Δt, nsub,
+                mp, tps, s.ρ, s.T, s.w, s.q_tot, s.q_lcl, s.q_icl, s.q_rai,
+                s.q_sno, Δt, nsub,
             )
             # The reference steps the state as `water_tag_1m_flows` does, with
             # the same arithmetic. The compiler may fuse a `muladd` in one and
