@@ -70,12 +70,13 @@ Tags split a variable, such as total water or moist total energy, into named
 tags. The keys are in [Configuring Tracers](tracer_configuration.md). The terms
 below are those of the tag families.
 
-  - **Applied-update event**: the pair of calls `open_applied_update!` and
-    `close_applied_update!` around one process in the tendency code. The
-    tendency before and after differ by what that process added, the process's
-    tendency. The tag families, the process records and the parent budget read
-    it. A process outside such an event is not attributed. Older text and some
-    identifiers call it a bracket.
+  - **Applied-update event**: the part of the tendency code that one process
+    adds to the tendencies. The difference of the tendency before and after it
+    is the process's tendency. The explicit path marks it with
+    `open_applied_update!` and `close_applied_update!`. The implicit path uses
+    separate parent-budget and attribution calls. Each tag family and the
+    process records take only the processes they support. Older text and some
+    identifiers call the event a bracket.
   - **Audit**: the audit table (`audit: true`, `<family>_tag_audit.csv`), the
     parent budget's `audit` mode, and the rain and snow tags' `aud` fields.
   - **Check level**: `tolerance`, `throughput_tolerance`, `void_above` or
@@ -134,9 +135,10 @@ below are those of the tag families.
     the range 0 to 1 and zero where the parent is not positive. Losses,
     sedimentation and the sub-grid flux are handed to the tags in proportion to
     it. So is the limiters' change of the parent, for water.
-  - **Signed process tag**: a tag with a `source` in `energy_tracers`. The
-    signed running total of what that process added, which goes negative under
-    net cooling.
+  - **Signed process tag**: a tag with a `source` in `energy_tracers`. A
+    transported field that holds the signed running total of what that process
+    added, so it goes negative under net cooling. It is not a process-change
+    record, which is never transported.
   - **Source tag**: a tag with a `source` in `water_tracers` or
     `energy_source_tags`. The amount of the parent present now that came from
     that process.

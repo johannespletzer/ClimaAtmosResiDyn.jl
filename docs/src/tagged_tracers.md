@@ -24,7 +24,7 @@ kinds of quantity.
     starts as the region's share of the energy present and receives every
     attributed process, weighted by its mask. The sum of a set of region tags
     can be checked against ``\rho e_\mathrm{tot}``.
-  - A **signed process tag** is a tag configured with `source`. It starts at
+  - A **[signed process tag](glossary.md)** is a tag configured with `source`. It starts at
     zero and accumulates the signed tendency that one labeled process adds to
     ``\rho e_\mathrm{tot}``. Heating adds and cooling subtracts, so the value
     can be negative.

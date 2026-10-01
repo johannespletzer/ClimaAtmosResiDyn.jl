@@ -1276,7 +1276,7 @@ tracer tendencies:
   - source tags receive `ᶜΔ` only when their `source` matches, weighted by their
     mask when they also have a region.
 
-The whole signed tendency is applied, so a signed source tag goes negative under
+The whole signed tendency is applied, so a signed process tag goes negative under
 net cooling. This is the one place the energy rule differs from the water rule
 in `tagged_water.jl`. The water rule splits the tendency and takes loss from
 every tag in proportion to what it holds.
@@ -1363,7 +1363,7 @@ Whether `name` refers to a tagged prognostic tracer of any of the three
 families. Used to exempt tags from the tracer limiters, for a different reason
 in each case:
 
-  - `ρe_tag_*` can hold a signed source tag, so it can be legitimately
+  - `ρe_tag_*` can hold a signed process tag, so it can be legitimately
     negative (accumulated cooling) and a non-negativity limiter would be wrong.
   - `ρq_tag_*` must not be limited independently of the other water tags,
     because a shape-preserving adjustment applied per tag has no reason to

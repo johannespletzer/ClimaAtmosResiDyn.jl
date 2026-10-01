@@ -2296,7 +2296,7 @@ names can be generated at compile time (GPU-compatible).
     empty for passive region tags. A single `Symbol` is also accepted
     (`:none` meaning "no sources").
 
-A tag with sources is a *signed source tag*. It starts at zero, accumulates
+A tag with sources is a *signed process tag*. It starts at zero, accumulates
 the signed change its processes have made, and goes negative under net cooling.
 It is not a share of the energy present. The `source` key is shared
 with [`WaterTag`](@ref), which applies a different rule to it.
@@ -2597,7 +2597,7 @@ and only while the tag itself is non-negative. That total is `ρe_tot`, or
 `ρe_tot + c·ρ` when `energy_source_tag_offset` is set. The results are an
 attribution defined by the configured rules and the offset, not a unique
 physical history. A `TracerTag` configured with `source` instead accumulates the
-whole signed change of its processes and is a signed source tag.
+whole signed change of its processes and is a signed process tag.
 
 `ρe_src_*` is **not guaranteed non-negative**. Three separate things can take
 it below zero, and none of them is a defect in the rule.

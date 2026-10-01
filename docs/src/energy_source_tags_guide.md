@@ -35,9 +35,8 @@ energy_source_tags:
     source: radiation
 # The offset c the tags add before they split. Required.
 energy_source_tag_offset: 110495.0
-# How the tags move. `tracer` is the default. `enthalpy_increment` is a
-# prototype and follows the parent's implicit diffusion under EDMF.
-energy_source_tag_transport: "enthalpy_increment"
+# How the tags move. `tracer` is the default transport.
+energy_source_tag_transport: "tracer"
 # Watch the closure once a day, and write the audit table.
 energy_source_closure_check:
   period: "1days"
@@ -90,9 +89,10 @@ you know where your own configuration settles.
 
 **Start with the closure table.** `gross_relative` is the partition's residual
 over the total it partitions, which the offset enters, and it covers the
-partition only, not the source tags. It is smallest under
-`enthalpy_increment`. Under `tracer` and `enthalpy` it is larger, since those
-transports do not follow the parent's own implicit fluxes. What matters is less
+partition only, not the source tags. Under `tracer` and `enthalpy` it
+grows, since those transports do not follow the parent's own implicit fluxes.
+`enthalpy_increment` follows the parent's implicit increment and has a smaller
+default tolerance, but its closure must be checked for each configuration. What matters is less
 its size than its trend. It should slow, and the rows since spin-up should not
 grow faster than the first ones.
 

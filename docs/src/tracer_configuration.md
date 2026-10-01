@@ -45,7 +45,7 @@ The [glossary](glossary.md) defines these terms. In short:
     attribute to that process. A repair puts a negative tag back, for the energy source tags
     under `energy_source_tag_repair` (on by default). Its fix ledger,
     `q_tag_fix_<name>` or `e_src_fix_<name>`, logs what it moved.
-  - **signed process tag**: an `energy_tracers` entry with a `source`. It starts
+  - **[signed process tag](glossary.md)**: an `energy_tracers` entry with a `source`. It starts
     at zero and holds the signed running total of what that process added. It
     goes negative under net cooling.
   - **process-change record**: the `prc_e_<process>` and `prc_q_<process>`
