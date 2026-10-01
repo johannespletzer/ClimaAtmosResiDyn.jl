@@ -68,6 +68,7 @@ A file under `src/parameterized_tendencies/` should not contain orchestration lo
 The `parent_budget` group holds the parent-budget tests that drive real
 simulations, `test/parent_budget/envelope_tests.jl`,
 `test/parent_budget/implicit_attribution_tests.jl`,
+`test/parent_budget/implicit_smagorinsky_tests.jl`,
 `test/parent_budget/explicit_attribution_tests.jl`,
 `test/parent_budget/transfer_tests.jl`,
 `test/parent_budget/restart_tests.jl` and

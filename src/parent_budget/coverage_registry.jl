@@ -1007,7 +1007,7 @@ const COVERAGE_ROWS = CoverageRow[
         :decomposition,
         :collected,
         "applied increment with accepted implicit weight",
-        "`implicit_attribution_tests.jl`",
+        "`implicit_smagorinsky_tests.jl`",
         5,
         implicit_smagorinsky,
         :smagorinsky_lilly,
