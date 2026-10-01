@@ -120,14 +120,13 @@ the cache is built, so a refused restart fails in seconds.
 
 What continues through a restart:
 
-  - The state ledgers: the ledgers per mechanism, the increment follower's
-    ledger, the leak correction's ledgers and each tag's own ledgers. They are
+  - The state ledgers: the ledgers per mechanism, the increment ledger, the leak correction's ledgers and each tag's own ledgers. They are
     fields of the state, so they continue from the checkpoint. A checkpoint
     without the configured ones is refused, in step 1. Under
     `water_tag_precipitation: true` the microphysics audit's fields are state
     fields too, and continue the same way.
-  - The cache accumulators: the repair ledgers `q_tag_fix_<name>` and
-    `q_tag_upfix_<name>`, their gross twins and counts, and each state
+  - The cache accumulators: the fix ledgers `q_tag_fix_<name>` and
+    `q_tag_upfix_<name>`, their grosses and counts, and each state
     ledger's per-step gross, column gross, events and attempted total. The
     checkpoint carries them beside the state, and
     `restore_tag_ledger_checkpoint!` reads them back after the cache is built,
@@ -296,11 +295,11 @@ function check_water_tag_checkpoint(restart_file, model, Y, context)
     return nothing
 end
 
-# A checkpoint written before the tags kept the ledger of the withheld gain
-# holds none of it. Its tags took a gain where the parent was below zero, and
-# the ledger would start at zero partway through the run, so it is refused with
-# its own message. The generic one would ask for the same `water_tracers`.
-# Otherwise the ledgers are in the file or are not, as for the other ledgers.
+# A checkpoint without the ledger of the withheld gain is refused with its own
+# message. Its tags took a gain where the parent was below zero, and the ledger
+# would start at zero partway through the run. The generic message would ask for
+# the same `water_tracers`. Otherwise the ledgers are in the file or are not, as
+# for the other ledgers.
 function check_water_tag_exp_ledgers(restart_file, Y, expected)
     if !isempty(expected) &&
        !any(is_water_tag_exp_ledger_name, propertynames(Y.c))

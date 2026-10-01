@@ -5,11 +5,10 @@
 ##### They move the parent only by the water that diffuses,
 ##### `q_tot_eff = q_tot - q_rai - q_sno` (`ᶜdiffusing_water`). The
 ##### hyperdiffusion also takes the parent as a perturbation from the reference
-##### profile `q_tot_r(p)`, and the tags not. And under option C a closed
-##### partition sums to `max(ρq_tot, 0)`, not to `ρq_tot`. So on each path the
-##### tags' sum drifts from the parent at a rate that the state alone decides
-##### (G3_PLAN 4.2). These functions compute that rate, to size each path
-##### before any correction is written. They only read the state and write
+##### profile `q_tot_r(p)`, and the tags not. And a closed partition sums to
+##### `max(ρq_tot, 0)`, not to `ρq_tot`. So on each path the tags' sum drifts
+##### from the parent at a rate that the state alone decides. These functions
+##### compute that rate, to size each path. They only read the state and write
 ##### scratch, so a run's fields do not change.
 
 """
@@ -22,8 +21,9 @@ The paths [`water_tag_leak!`](@ref) computes a leak for:
   - `hdiff`: the grid mean's horizontal EDMF diffusive flux, on the sphere;
   - `hyperdiff`: the grid mean's hyperdiffusion;
   - `sponge`: the viscous sponge;
-  - `diffusion_up`: the updrafts' mirror of the EDMF diffusive fluxes,
-    vertical and horizontal, on the water tags' updraft copies;
+  - `diffusion_up`: the EDMF diffusive fluxes, vertical and horizontal, on the
+    water tags' updraft copies. Each copy takes its grid-mean tag's diffusive
+    tendency;
   - `hyperdiff_up`: the updrafts' hyperdiffusion, on the copies.
 """
 const WATER_TAG_LEAK_PATHS =
@@ -35,8 +35,8 @@ const WATER_TAG_LEAK_PATHS =
 Write into `ᶜleak` the rate at which `path` moves the sum of a partition of
 water tags away from the parent, per unit mass of grid-mean air, in
 kg kg⁻¹ s⁻¹. It is the raw difference: the path's tendency of `Σᵢ ρq_tagᵢ`
-minus its tendency of `ρq_tot`, over `ρ`. It is taken at a partition closed to
-option C's target, so the tags sum to `max(ρq_tot, 0)`. It reads the tags only
+minus its tendency of `ρq_tot`, over `ρ`. It is taken at a closed partition, so
+the tags sum to the partition's target, `max(ρq_tot, 0)`. It reads the tags only
 for their shares, under `water_tag_precipitation: true`. A positive value
 means the tags gain water the parent does not.
 
@@ -84,7 +84,7 @@ end
 
 # Under `water_tag_precipitation: true`. The tags hyperdiffuse on
 # `∇²(N_tag/ρ - φ q_tot_r)` and the parent on `∇²(N/ρ - q_tot_r)`, with `φ` the
-# tag's share of `N`. A closed partition's parts sum to `max(N, 0)` (option C).
+# tag's share of `N`. A closed partition's parts sum to `max(N, 0)`.
 # So their difference is `∇²((1 - Σφ) q_tot_r - min(N, 0)/ρ)`, with `Σφ` summed
 # over the partition's tags. `Σφ` is one, to rounding, where the partition holds
 # water, and zero where it holds none.
@@ -135,7 +135,7 @@ _water_tag_parts_leak!(ᶜleak, Y, p, ::Val{:sponge}) =
     _add_sponge_leak!(ᶜleak, Y, p, _negative_nonprecipitating_water(Y))
 
 # The water the tags carry and the parent does not move on these paths: the
-# tags' sum at option C's target, `max(ρq_tot, 0)/ρ`, minus the diffusing
+# tags' sum at the partition's target, `max(ρq_tot, 0)/ρ`, minus the diffusing
 # water. Where `ρq_tot` is not negative the target is `ρq_tot` itself, bit for
 # bit, so this is the rain and snow there.
 function _leaking_water(Y, p)
@@ -284,7 +284,7 @@ end
 
 # Each copy takes its grid-mean tag's specific diffusive tendency, and `q_totʲ`
 # the parent's. So the copies' sum leaks as the grid mean's does, on the EDMF
-# paths the updrafts mirror, at the grid mean's target.
+# paths the copies take, at the grid mean's target.
 function _water_tag_leak!(ᶜleak, Y, p, ::Val{:diffusion_up})
     turbconv_model = p.atmos.turbconv_model
     _has_water_tag_copies(p, turbconv_model) || return nothing
@@ -328,17 +328,15 @@ _has_water_tag_copies(p, ::PrognosticEDMFX) =
 _has_water_tag_copies(p, turbconv_model) = false
 
 #####
-##### The correction of the EDMF vertical diffusion's leak (WP4c)
+##### The correction of the EDMF vertical diffusion's leak
 #####
-##### WP4c's gate retained two corrections (FINDINGS W40 on the record branch):
-##### the grid mean's `vdiff` and the updrafts' `diffusion_up`. Each gives the
-##### tags back the diffusion of the rain and snow, which the parent does not
-##### diffuse. Each tag takes back the diffusion of its own share of the rain
-##### and snow, the share the sedimentation takes it by. That share is a
-##### modeling assumption: the rain and snow take the cell's total-water
-##### composition. Without the correction the follower absorbs the leak and
-##### spreads it by the shares of the cells its flux leaves.
-##### design/WP4C_CORRECTIONS.md on the record branch.
+##### Two corrections cover the grid mean's `vdiff` and the updrafts'
+##### `diffusion_up`. Each gives the tags back the diffusion of the rain and
+##### snow, which the parent does not diffuse. Each tag takes back the diffusion
+##### of its own share of the rain and snow, the share the sedimentation takes it
+##### by. That share is a modeling assumption: the rain and snow take the cell's
+##### total-water composition. Without the correction, increment transport
+##### absorbs the leak and spreads it by the shares of the cells its flux leaves.
 
 """
     correct_water_tag_diffusion_leak!(Yₜ, Y, p, ᶠρK_h, apply_sgs_updraft)
@@ -350,34 +348,35 @@ and snow `q_p = q_tot - q_tot_eff`. The tags diffuse their whole value at
 So without the correction the partition gains `-∇·(ρK_h ∇q_p)` that the parent
 does not. Where the parent is never negative, that is the leak
 `q_tag_leak_vdiff`. Where it is negative, the leak also holds the diffusion of
-option C's negative part, which the correction does not take back.
+the parent's negative part, which the correction does not take back.
 
-`ψᵢ` is the share the sedimentation mirror takes a tag's rain and snow by: a
-partition tag's clamped share renormalized over the partition, a source tag's
-own clamped share. `ψᵢ q_p` is a modeling assumption. The tags partition total
-water and hold no phase, so the rain and snow are taken to have the cell's
-total-water composition. That is not demonstrated provenance. The partition's
-shares sum to one wherever it holds water, so the partition's corrections sum to
-`∇·(ρK_h ∇q_p)`, the rain and snow's part of the leak with the opposite sign,
-and its diffusion is the parent's. Where the partition holds no water, the
-shares are zero and the leak there is not corrected. The same holds where the
-parent's water is not positive, since the shares are taken against it. That leak
-lands in `q_tag_res`, or under the follower in `q_tag_inc_moved`, as before. A
-source tag's correction takes back its own share, so its diffusion moves only
-the water that the parent diffuses too.
+`ψᵢ` is the share the sedimentation flux takes a tag's rain and snow by. It is a
+region tag's clamped share renormalized over the region tags, and a source
+tag's own clamped share. `ψᵢ q_p` is a modeling assumption. The tags partition
+total water and hold no phase, so the rain and snow are taken to have the cell's
+total-water composition. That says nothing about where the rain and snow came
+from. The partition's shares sum to one wherever it holds water, so the
+partition's corrections sum to `∇·(ρK_h ∇q_p)`, the rain and snow's part of the
+leak with the opposite sign, and its diffusion is the parent's. Where the
+partition holds no water, the shares are zero and the leak there is not
+corrected. The same holds where the parent's water is not positive, since the
+shares are taken against it. That leak lands in `q_tag_res`, or under increment
+transport in `q_tag_inc_moved`. A source tag's correction takes back its own
+share, so its diffusion moves only the water that the parent diffuses too.
 
-With `apply_sgs_updraft`, the updrafts' mirror of the diffusion is on, and with
-updraft copies each copy takes its tag's correction per unit mass, `/ρ`, as it
-takes its tag's diffusion. So the copies' sum mirrors `q_totʲ`'s diffusion too,
-and their repair no longer takes out the `diffusion_up` leak.
+With `apply_sgs_updraft`, the copies take the EDMF diffusion (`diffusion_up`).
+With updraft copies each copy then takes its tag's correction per unit mass,
+`/ρ`, as it takes its tag's diffusion. So the copies' sum follows `q_totʲ`'s
+diffusion too, and their repair does not take out the `diffusion_up` leak.
 
 `ᶠρK_h` is the face field `ρK_h` the parent's water diffusion uses. Called from
 `edmfx_sgs_diffusive_flux_tendency!` after its tracer loop, so it is implicit
 where the diffusion is. It has no Jacobian block, so the Newton solve does not
 see it. Each iteration evaluates it again, at that iteration's state. With one
 iteration it is taken at the stage's first guess, and under
-`water_tag_transport: increment` the follower moves what differs. How much the
-results depend on `dt` and on the number of iterations is not measured.
+`water_tag_transport: increment` the correction after each solve moves what
+differs. How much the results depend on `dt` and on the number of iterations is
+not measured.
 
 Each correction is added to its ledgers: `q_tag_led_leaknet`, the partition's
 correction, and with copies `q_tag_led_upleaknet`, the copies' times `ρaʲ`; and

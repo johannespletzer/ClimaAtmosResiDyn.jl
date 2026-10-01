@@ -296,7 +296,7 @@ coupling, which `update_sedimentation_jacobian!` initializes (to `-I` and to
 zero, respectively) and which diffusion and SGS mass flux accumulate into.
 Returns `()` for `DryModel`.
 
-Tagged water tracers mirror the sedimentation flux (see
+Each tagged water tracer gets a sedimentation flux of its own (see
 [`sediment_water_tags!`](@ref)), so their diagonals are allocated here too and
 excluded from `diffusion_jacobian_blocks`, which would otherwise allocate them
 a second time as passive tracers. With `water_tag_cross_flag` set, so are their
@@ -304,9 +304,9 @@ cross blocks to each sedimenting mass, the tag's share of `ρq_tot`'s. Under
 `water_tag_precipitation: true` the cross blocks go to the cloud species only,
 and each rain and snow part has its own diagonal, the parent species' block.
 The same flag gives the energy source tags their cross blocks to each
-sedimenting mass, the tag's share of the offset total's (G4.16; see
+sedimenting mass, the tag's share of the offset total's (see
 `update_energy_source_sedimentation_jacobian!`). Their diagonals come from the
-diffusion blocks or the fallback identity, as before.
+diffusion blocks or the fallback identity.
 
 # Returns
 
@@ -349,7 +349,7 @@ function sedimentation_jacobian_blocks(Y, atmos, water_tag_cross_flag)
         )
     # The energy source tags fall with their shares of each species' energy
     # flux (`sediment_energy_source_tags!`), so their rows get the same one-way
-    # cross blocks, under the same flag (G4.16).
+    # cross blocks, under the same flag.
     energy_tag_names = unrolled_map(
         center_state_name,
         sedimenting_energy_source_tag_names(Y),
@@ -408,7 +408,7 @@ end
     uses_water_tag_rainout_jacobian(atmos, water_tag_cross_flag)
 
 Whether the water tags' rows get the derivatives of their implicit 0M
-rain-out (`water_tag_rainout_jacobian: true`, known issue 4). That needs the
+rain-out (`water_tag_rainout_jacobian: true`). That needs the
 key, 0M microphysics on the implicit path, the grid rule (not the split of
 prognostic EDMF, which the configuration refuses), and `water_tag_cross_flag`,
 since only the split solver back-substitutes the tags' blocks to `ρq_tot`.
@@ -437,12 +437,12 @@ Allocate the blocks for the water tags' implicit 0M rain-out, where
 `uses_water_tag_rainout_jacobian` holds: each tag's diagonal, and a
 diagonal block from its row to `ρq_tot`'s column.
 
-Under 0M each tag loses `min(Δ, 0) φ` in the `:microphysics` bracket, with
-`Δ` the rain-out of `ρq_tot` and `φ` the tag's share
+Under 0M each tag loses `min(Δ, 0) φ` in the `:microphysics` applied-update
+event, with `Δ` the rain-out of `ρq_tot` and `φ` the tag's share
 ([`water_tag_fraction`](@ref)). Its derivatives are `min(Δ, 0) ∂φ/∂ρq_tag` and
-`min(Δ, 0) ∂φ/∂ρq_tot`. In a scalar Newton model the pair was exact for a
-pure proportional sink, and better than no entry and than the diagonal alone
-where other processes moved the shares (known issue 4). No other row names a
+`min(Δ, 0) ∂φ/∂ρq_tot`. In a scalar Newton model the pair is exact for a pure
+proportional sink. It is better than no entry and than the diagonal alone where
+other processes move the shares. No other row names a
 tag, so the split solver still solves the tags apart, and the model's own
 solve does not change. With implicit diffusion the diagonal is also the
 passive tracer's, which `merge_jacobian_blocks` keeps once.
@@ -858,7 +858,7 @@ function jacobian_cache(
         Base.invokelatest(build_solver, matrix, Y, full_alg, uncoupled_names)
     # The tracers the diffusion update loops over. Julia 1.10 does not infer
     # `passive_gs_tracer_names(Y)`, so a call that takes them and the matrix
-    # is dynamic and boxes the matrix, and each update allocated (#130's CI).
+    # is dynamic and boxes the matrix, and each update allocates.
     # Taken here once, their types are known where the update uses them.
     tracer_names = (;
         passive = passive_gs_tracer_names(Y),
@@ -868,7 +868,7 @@ function jacobian_cache(
 end
 
 # Without uncoupled fields, the matrix and its solver are one
-# `FieldMatrixWithSolver`, as before the split existed.
+# `FieldMatrixWithSolver`.
 function build_unsplit_jacobian_solver(matrix, Y, full_alg, uncoupled_names)
     matrix_with_solver = MatrixFields.FieldMatrixWithSolver(matrix, Y, full_alg)
     return (matrix_with_solver, matrix_with_solver)
@@ -898,10 +898,9 @@ end
 # Whether a state variable is one the split may solve apart: a tag of any of the
 # three families, the water tags' rain and snow parts among them, a process
 # record, the increment ledger of the energy source tags or the water tags, a
-# ledger per mechanism of either family (WP6), a ledger of the
-# water tags' leak correction (WP4c), a ledger of the withheld gain, a tag's
-# own ledger (WP6, step 3), or a record of the water tags' microphysics audit
-# (WP4b). All live directly in `Y.c`.
+# ledger per mechanism of either family, a ledger of the water tags' leak
+# correction, a ledger of the withheld gain, a tag's own ledger, or a field of
+# the water tags' microphysics audit. All live directly in `Y.c`.
 function is_splittable_jacobian_field(name::MatrixFields.FieldName)
     chain = jacobian_name_chain(name)
     (length(chain) == 2 && chain[1] === :c && chain[2] isa Symbol) ||
@@ -1529,8 +1528,8 @@ end
 """
     update_energy_source_sedimentation_jacobian!(matrix, Y, p, cross_flag)
 
-The energy source tags' sedimentation cross blocks (G4.16), with `cross_flag`
-set, the flag the water tags' blocks use. A no-op without the flag, without
+The energy source tags' sedimentation cross blocks, with `cross_flag` set, the
+flag the water tags' blocks use. A no-op without the flag, without
 energy source tags, and where nothing sediments.
 
 A tag's sedimentation tendency (`sediment_energy_source_tags!`) is its share of
@@ -1641,8 +1640,9 @@ end
 """
     update_water_tag_sedimentation_jacobian!(matrix, Y, p, water_tag_cross_flag)
 
-Diagonal Jacobian blocks for the mirrored sedimentation of the tagged water
-tracers (see [`sediment_water_tags!`](@ref)). A no-op under 0-moment
+Diagonal Jacobian blocks for the sedimentation of the tagged water tracers, each
+tag's flux being built like the parent's and scaled by its share (see
+[`sediment_water_tags!`](@ref)). A no-op under 0-moment
 microphysics, where nothing sediments and the tags are ordinary passive tracers
 whose diagonals `update_diffusion_jacobian!` initializes instead.
 
@@ -1653,12 +1653,13 @@ initialized to `-I` and then accumulates a contribution from every species.
 `p.scratch.ᶜbidiagonal_adjoint_matrix_c3` by the caller.
 
 The diagonal is always carried. With `water_tag_cross_flag` set, so is the cross
-block to each sedimenting mass (see `_derivative_flags`). The cross block is the parent's `∂(ρq_tot)ₜ/∂ρqₚ` scaled by the tag's share
-`φ̂` ([`water_tag_sediment_share_field`](@ref)), so over a closed partition the
+block to each sedimenting mass (see `_derivative_flags`). The cross block is the
+parent's `∂(ρq_tot)ₜ/∂ρqₚ` scaled by the tag's share `φ̂`
+([`water_tag_sediment_share_field`](@ref)), so over a closed partition the
 tags' cross blocks sum to the parent's. Without it, one Newton iteration moves
 `ρq_tot` with the updated species and the tags with the old ones. That changes
-a column's total at the surface outflow, which the increment follower cannot
-move (FINDINGS W23 on the record branch). The tendency's dependence on
+a column's total at the surface outflow, which the correction after each solve
+cannot move. The tendency's dependence on
 `ρq_tot` and `ρ` through the share is still dropped, in the same spirit as the
 EDMFX subdomain corrections above: a convergence-rate approximation, not a
 change to what is being solved.
@@ -1742,10 +1743,10 @@ end
 """
     update_water_tag_rainout_jacobian!(matrix, Y, p, dtγ, diffusion_flag, water_tag_cross_flag)
 
-The water tags' entries for their implicit 0M rain-out (known issue 4), where
+The water tags' entries for their implicit 0M rain-out, where
 `uses_water_tag_rainout_jacobian` holds. A no-op elsewhere.
 
-Each tag loses `min(Δ, 0) φ` in the `:microphysics` bracket, where
+Each tag loses `min(Δ, 0) φ` in the `:microphysics` applied-update event, where
 `Δ = ρ dq_tot_dt` is the rain-out that `microphysics_tendency!` adds to
 `ρq_tot` and `φ` is the tag's clamped share. `dq_tot_dt` is frozen during the
 solve, so the loss moves with the tag and with `ρq_tot` only through `φ`. The
@@ -2039,8 +2040,8 @@ function update_diffusion_jacobian!(
     # `ᶜdiffusion_h_matrix` above. Their diagonals receive no other
     # implicit contributions, so they are initialized here. Except
     # for tagged water tracers under 1-moment microphysics, whose diagonals
-    # `update_sedimentation_jacobian!` has already initialized with the
-    # mirrored sedimentation flux, and which are accumulated into instead.
+    # `update_sedimentation_jacobian!` has already initialized with the tags'
+    # sedimentation flux, and which are accumulated into instead.
     update_passive_diffusion_blocks!(
         matrix,
         tracer_names.passive,
@@ -2148,8 +2149,8 @@ end
 # The passive tracers' diagonals, set one tracer at a time by recursion over
 # their names, in the order of the names. The names come from
 # `jacobian_cache`, so their types are known. With names Julia 1.10 cannot
-# infer, the call boxed the matrix, every block of it: 448 B per update on the
-# 0M column, and 496 B with the water tags' rain-out blocks (#130's CI).
+# infer, the call boxed the matrix, every block of it, and each update
+# allocated.
 update_passive_diffusion_blocks!(
     matrix,
     ::Tuple{},
@@ -2333,7 +2334,7 @@ function update_sgs_advection_jacobian!(matrix, Y, p, dtγ)
                 # renormalization's and the clamp's are. The model's blocks
                 # above are written, so the operator's scratch is reused. The
                 # copies' cross blocks to the species follow, as the grid
-                # tags' do (WP5b).
+                # tags' do.
                 copy_names =
                     water_tag_copy_sgs_names(p.atmos.water_tagging_model)
                 if !isempty(copy_names)

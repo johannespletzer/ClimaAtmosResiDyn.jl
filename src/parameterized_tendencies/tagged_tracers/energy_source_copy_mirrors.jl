@@ -1,10 +1,11 @@
 #####
-##### The energy source tags' updraft copies: the mirrors of `mseʲ`
+##### The energy source tags' updraft copies: the copies' share of `mseʲ` changes
 #####
 ##### Under `energy_source_tag_updraft_copy: true` each tag has a copy
 ##### `e_src_<name>`, a specific value, in every updraft. The updraft machinery
 ##### moves it as any updraft tracer. Four processes change the updraft's energy
-##### `Aʲ = mseʲ + Kʲ - p/ρʲ + c` but not a tracer, so each is mirrored here:
+##### `Aʲ = mseʲ + Kʲ - p/ρʲ + c` but not a tracer. The copies get the same
+##### change as the updraft in each of them:
 #####
 #####   1. the surface enthalpy flux, `energy_source_copies_surface_flux_tendency!`;
 #####   2. the relaxation toward the buoyant surface value,
@@ -12,16 +13,17 @@
 #####   3. RRTMGP radiation, `energy_source_copies_radiation_tendency!`;
 #####   4. the 0M rain-out, `energy_source_copies_microphysics_tendency!`.
 #####
-##### The buoyancy term and the pressure work get no mirror, because no tag is
+##### The buoyancy term and the pressure work are not copied, because no tag is
 ##### labelled with either. What they leave shows in `e_src_copy_res`.
 
 """
     energy_source_copy_share(χ, S)
 
-A copy's share of a loss of the updraft's energy: its value over `S`, the sum
-of the partition's copies' positive parts, clamped to `[0, 1]`. Zero where `S`
-is not positive. Over the partition the shares of non-negative copies add up to
-one, so the partition loses exactly what `mseʲ` loses.
+Return a copy's share of a loss of the updraft's energy. It is the copy's value
+over `S`, the sum of the region tags' copies' positive parts, clamped to
+`[0, 1]`, and zero where `S` is not positive. Over the region tags the shares of
+non-negative copies add up to one, so their copies lose exactly what `mseʲ`
+loses.
 """
 @inline energy_source_copy_share(χ, S) =
     S > zero(S) ? min(max(χ / S, zero(χ)), one(χ)) : zero(χ)
@@ -29,7 +31,7 @@ one, so the partition loses exactly what `mseʲ` loses.
 """
     energy_source_copy_sum!(ᶜS, ᶜsgsʲ, tags)
 
-Write into `ᶜS` the sum of the positive parts of the partition's copies in one
+Write into `ᶜS` the sum of the positive parts of the region tags' copies in one
 updraft, `Σᵢ∈P max(χᵢʲ, 0)`, the denominator of `energy_source_copy_share`.
 """
 function energy_source_copy_sum!(ᶜS, ᶜsgsʲ, tags)
@@ -58,15 +60,14 @@ _energy_source_copy_gain_weight(ᶜmasks, tag::EnergySourceTag) =
 """
     mirror_on_energy_source_copies!(ᶜsgsʲₜ, ᶜsgsʲ, ᶜmasks, ᶜΔʲ, ᶜS, source, tags)
 
-Give the updraft's specific increment of `mseʲ` from one process, `Δʲ`, to the
-copies of that updraft, by the grid mean's bracket rule
+Give the updraft's specific change of `mseʲ` from one process, `Δʲ`, to the
+copies of that updraft, by the grid mean's attribution rule
 (`attribute_energy_source_tags!`). A tag that receives the label `source` gains
-its mask times `max(Δʲ, 0)`; a pure region tag receives every label. Every copy
-loses its share of `min(Δʲ, 0)`, `energy_source_copy_share(χᵢʲ, S)` with `ᶜS`
-from `energy_source_copy_sum!`. Where the region tags' masks partition the
-domain and the copies are not negative, the partition's copies change by
-exactly `Δʲ`. The offset does not enter: an increment of a specific energy
-carries none.
+its mask times `max(Δʲ, 0)`. A region tag receives every label. Every copy loses
+its share of `min(Δʲ, 0)`, `energy_source_copy_share(χᵢʲ, S)` with `ᶜS` from
+`energy_source_copy_sum!`. Where the region tags' masks partition the domain and
+the copies are not negative, the region tags' copies change by exactly `Δʲ`. The
+offset does not enter, because a change of a specific energy carries none.
 """
 mirror_on_energy_source_copies!(ᶜsgsʲₜ, ᶜsgsʲ, ᶜmasks, ᶜΔʲ, ᶜS, source, ::Tuple{}) =
     nothing
@@ -100,12 +101,12 @@ function mirror_on_energy_source_copies!(
     )
 end
 
-# The model with copies, or `nothing`, so that each mirror is a no-op without.
+# The model with copies, or `nothing`, so that each update is a no-op without.
 _energy_source_copies_model(p) =
     has_energy_source_updraft_copies(p.atmos.energy_source_tagging_model) ?
     p.atmos.energy_source_tagging_model : nothing
 
-# One updraft's mirror of an increment `ᶜΔʲ` under the label `source`.
+# One updraft's copies take a change `ᶜΔʲ` under the label `source`.
 function _mirror_on_updraft!(Yₜ, Y, p, model, j, ᶜΔʲ, source)
     ᶜS = p.tagging.ᶜenergy_source_copy_sum
     energy_source_copy_sum!(ᶜS, Y.c.sgsʲs.:($j), model.tags)
@@ -128,10 +129,10 @@ end
 """
     energy_source_copies_surface_flux_tendency!(Yₜ, Y, p, turbconv_model)
 
-Mirror the updraft's share of the surface enthalpy flux on the copies.
-`surface_flux_tendency!` adds the grid mean's boundary tendency of `h_tot`,
+Give the copies the same change as the updraft gets from the surface enthalpy
+flux. `surface_flux_tendency!` adds the grid mean's boundary tendency of `h_tot`,
 over the updraft's density, to `mseʲ` in the lowest cell, and gives no updraft
-tracer anything. The copies take that increment by the grid mean's rule for the
+tracer anything. The copies take that change by the grid mean's rule for the
 label `surface_flux` (`mirror_on_energy_source_copies!`). The model's own term
 assumes one updraft, and so does this one. A no-op without copies.
 """
@@ -145,7 +146,7 @@ function energy_source_copies_surface_flux_tendency!(
     model = _energy_source_copies_model(p)
     isnothing(model) && return nothing
     p.atmos.disable_surface_flux_tendency && return nothing
-    # The model's own increment of `mseʲ`, from the same flux and operator.
+    # The model's own change of `mseʲ`, from the same flux and operator.
     (; ᶜh_tot, sfc_conditions, ᶜρʲs) = p.precomputed
     btt = boundary_tendency_scalar(ᶜh_tot, sfc_conditions.ρ_flux_h_tot)
     ᶜΔʲ = @. lazy(-specific(btt, ᶜρʲs.:(1)))
@@ -160,17 +161,20 @@ end
 """
     energy_source_copies_boundary_condition_tendency!(Yₜ, Y, p, turbconv_model)
 
-Mirror the updraft's relaxation at the lowest level on the copies. The model
-relaxes `mseʲ` toward the buoyant surface value `mse_b = mse̅ + C√σ²` at the
-rate `mass_flux_source / max(ρa, ρʲ a_min)` (`edmfx_boundary_condition_tendency!`),
-with `mse̅ = h_tot - K` the grid mean's; a tracer gets nothing. Each copy relaxes
-at the same rate toward its tag's grid-mean value plus its grid-mean share of
-the buoyant excess, `ρe_srcᵢ / ρ + φ̄ᵢ (mse_b - mse̅)`. `φ̄ᵢ` is the share the
-sedimentation takes, the partition's renormalized, a source tag's its own. So
-the partition's targets add up to `(ρe_tot + c ρ)/ρ + (mse_b - mse̅)`, and no
-copy takes the excess as its own: the surface-flux tag gets only its share, as
-the water copies' relaxation decides (`water_tag_copies_boundary_condition_tendency!`).
-The copies' Jacobian diagonals take the rate. A no-op without copies.
+Give the copies the same relaxation as the updraft at the lowest level. The
+model relaxes `mseʲ` toward the buoyant surface value `mse_b = mse̅ + C√σ²` at
+the rate `mass_flux_source / max(ρa, ρʲ a_min)`
+(`edmfx_boundary_condition_tendency!`), with `mse̅ = h_tot - K` the grid mean's.
+A tracer gets nothing.
+
+Each copy relaxes at the same rate toward its tag's grid-mean value plus its
+grid-mean share of the buoyant excess, `ρe_srcᵢ / ρ + φ̄ᵢ (mse_b - mse̅)`. `φ̄ᵢ`
+is the share that sedimentation takes. For the region tags that is their
+renormalized share, and for a source tag its own. So the region tags' targets add
+up to `(ρe_tot + c ρ)/ρ + (mse_b - mse̅)`, and no copy takes the excess as its
+own. The surface-flux tag gets only its share, as in the water copies'
+relaxation (`water_tag_copies_boundary_condition_tendency!`). The copies'
+Jacobian diagonals take the rate. A no-op without copies.
 """
 energy_source_copies_boundary_condition_tendency!(Yₜ, Y, p, turbconv_model) =
     nothing
@@ -271,11 +275,11 @@ end
 """
     energy_source_copies_radiation_tendency!(Yₜ, Y, p, radiation_mode)
 
-Mirror the radiation that `radiation_tendency!` gives each updraft's `mseʲ`
-under RRTMGP, the grid mean's heating over the updraft's density, on the
-copies, by the grid mean's rule for the label `radiation`. The model gives
-`mseʲ` no radiation under the other modes, and neither does this. A no-op
-without copies.
+Give the copies the radiation that `radiation_tendency!` gives each updraft's
+`mseʲ` under RRTMGP. That is the grid mean's heating over the updraft's density,
+and the copies take it by the grid mean's rule for the label `radiation`. The
+model gives `mseʲ` no radiation under the other modes, and neither does this. A
+no-op without copies.
 """
 function energy_source_copies_radiation_tendency!(Yₜ, Y, p, radiation_mode)
     radiation_mode isa RRTMGPI.AbstractRRTMGPMode || return nothing
@@ -299,13 +303,14 @@ end
 """
     energy_source_copies_microphysics_tendency!(Yₜ, Y, p, microphysics_model, turbconv_model)
 
-Mirror what the 0M updraft microphysics gives `mseʲ`, `dq_totʲ (e_hlpr - e_int(Tʲ))`, the energy the rain takes out with it relative to the updraft's,
-on the copies, by the grid mean's rule for the label `microphysics`. Call it
-right after `microphysics_tendency!`, on the implicit or the explicit path,
-wherever that runs, as `water_tag_copies_microphysics_tendency!`. It has no
-Jacobian entry, as the rain-out of `mseʲ` has none. A no-op without copies and
-other than under 0M with prognostic EDMF, where the updraft's microphysics
-never changes `mseʲ`.
+Give the copies what the 0M updraft microphysics gives `mseʲ`. That is
+`dq_totʲ (e_hlpr - e_int(Tʲ))`, the energy the rain takes out relative to the
+updraft's. The copies take it by the grid mean's rule for the label
+`microphysics`. Call it right after `microphysics_tendency!`, on the implicit or
+the explicit path, as `water_tag_copies_microphysics_tendency!` is called. It has
+no Jacobian entry, as the rain-out of `mseʲ` has none. A no-op without copies and
+other than under 0M with prognostic EDMF, where the updraft's microphysics never
+changes `mseʲ`.
 """
 energy_source_copies_microphysics_tendency!(
     Yₜ,
@@ -366,14 +371,14 @@ _energy_source_copy_sgs_names(::Val{true}, tags) =
 """
     energy_source_copy_residual!(ᶜout, Y, p)
 
-Write into `ᶜout` the first updraft's energy minus the partition's copies,
+Write into `ᶜout` the first updraft's energy minus the region tags' copies,
 `ρaʲ (Aʲ - Σᵢ∈P χᵢʲ) / ρ`, with `Aʲ = mseʲ + Kʲ - p/ρʲ + c`, per unit mass of
-grid-mean air. The mirrors keep the partition's copies changing with `Aʲ` where
-`mseʲ` changes and a tracer would not. What they do not cover shows here: the
-two advection schemes, the diffusion and hyperdiffusion mirrors, whose
-operators differ for the tags and for `mseʲ`, the filter's clamp, and the
+grid-mean air. The copies' updates keep the region tags' copies changing with
+`Aʲ` where `mseʲ` changes and a tracer would not. What they do not cover shows
+here. That is the two advection schemes, the diffusion and hyperdiffusion, whose
+operators differ for the copies and for `mseʲ`, the filter's clamp, and the
 exchange between `mseʲ` and `Kʲ`. The copies start from the grid mean's values,
-so it starts at the updraft's departure from the grid mean.
+so the residual starts at the updraft's departure from the grid mean.
 """
 function energy_source_copy_residual!(ᶜout, Y, p)
     model = p.atmos.energy_source_tagging_model
@@ -387,7 +392,7 @@ function energy_source_copy_residual!(ᶜout, Y, p)
         ᶜsgsʲ.ρa * (ᶜsgsʲ.mse + ᶜKʲs.:(1) - ᶜp / ᶜρʲs.:(1) + c - ᶜS) / Y.c.ρ
     return ᶜout
 end
-# The partition's copies, summed as they are (the residual's sum, not the
+# The region tags' copies, summed as they are (the residual's sum, not the
 # shares' denominator).
 _accumulate_energy_source_copy_values!(ᶜS, ᶜsgsʲ, ::Tuple{}) = nothing
 function _accumulate_energy_source_copy_values!(ᶜS, ᶜsgsʲ, tags::Tuple)
