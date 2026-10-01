@@ -23,6 +23,14 @@ import sys
 from pathlib import Path
 
 
+# ClimaCore's type names run past csv's default field limit.
+csv.field_size_limit(sys.maxsize)
+
+
+def short(name, n=90):
+    return name if len(name) <= n else name[:n] + "…"
+
+
 def read(path):
     with open(path) as f:
         return list(csv.DictReader(f))
@@ -42,7 +50,7 @@ def growth_rows(lo, hi, unit_fmt, limit=10, cover=0.8):
             break
         acc += d
         share = f"{100 * d / total:.1f}%" if total > 0 else "n/a"
-        out.append(f"| `{k}` | {unit_fmt(lo.get(k, 0.0))} | {unit_fmt(hi.get(k, 0.0))} | {unit_fmt(d)} | {share} |")
+        out.append(f"| `{short(k)}` | {unit_fmt(lo.get(k, 0.0))} | {unit_fmt(hi.get(k, 0.0))} | {unit_fmt(d)} | {share} |")
     return total, acc, out
 
 
