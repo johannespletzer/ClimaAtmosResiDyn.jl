@@ -1603,6 +1603,14 @@ fact spreads `N` over every cell whose mismatch has its sign.
     Float32 and Float64. The old subtraction fails it in Float32 at 1 and
     1e6, and in Float64 at 1e6 (mutant job 14016367, 30 failures). The dense
     autodiff check with the follower passes at the new code (14016259).
+    *For the 90-day runs (0eb329b2):* the old and the new `δL` differ only at
+    a stage where the implicit bracket withholds a gain. Elsewhere both are
+    exactly zero. Site 23's configuration, run to day 16 at 0eb329b2 and at
+    0eb329b2 with the new `δL` (jobs 14016543 and 14016544, the run trees'
+    `.buildkite` environment), is bit for bit in every field at every one of
+    138,240 steps. The ledger acts from day 11.3, through the explicit
+    brackets. The kept rate was zero after every step. This bounds the first
+    16 days at site 23 only. Later days and site 26 are not measured.
   - Two texts are false already wherever `N ≠ 0`, and would stay false: that
     the factors lie in `[-1, 1]` (`tagged_water_increment.jl:464-467`), and
     that no cell leaves out or moves more than its own mismatch (`:276-277`). The
