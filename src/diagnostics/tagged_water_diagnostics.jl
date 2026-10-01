@@ -180,7 +180,7 @@ function compute_q_tag_fix!(out, state, cache, time, ρq_tag_name)
     end
 end
 
-# A gross twin per unit mass, or a count as it is, in the model's float type.
+# A tag's gross per unit mass, or a count as it is, in the model's float type.
 # The cache holds both in Float64 (`tag_throughput.jl`).
 function compute_tag_throughput!(out, state, fields, name, per_mass::Bool)
     ᶜfield = getproperty(fields, name)
@@ -221,7 +221,7 @@ during simulation setup rather than at package load time:
     over `q_tot - q_rai - q_sno`;
 
   - `q_tag_res`: closure residual `(max(ρq_tot, 0) - Σᵢ ρq_tag_i) / ρ`, where
-    the sum runs over the pure region tags (only registered when at least one
+    the sum runs over the region tags (only registered when at least one
     exists), and under `water_tag_precipitation: true` over their three parts.
     The tags partition the parent's non-negative water. Under the key that is
     the sum of the three compartments' non-negative parts;
@@ -250,14 +250,15 @@ during simulation setup rather than at package load time:
     grosses are registered with the other state ledgers
     (`register_tag_ledger_diagnostics!`).
 
-  - `q_tag_fix_<name>`: water that the limiters and state constraints have moved
-    into or out of each tag, cumulative since the start of the simulation
-    segment. It separates "the numerics moved water" from "the transport
-    operators disagree", which `q_tag_res` alone would conflate.
+  - `q_tag_fix_<name>`: the fix ledger. It holds the water that the limiters, the
+    state constraints and the partition repair have moved into or out of each
+    tag, cumulative since the start of the run. The checkpoint carries it
+    through a restart. It separates "the numerics moved water" from "the
+    transport operators disagree", which `q_tag_res` alone would conflate.
 
     Two mechanisms write to it. `repair_water_tag_partition!` runs every step
     from `constrain_state!` and contributes whenever transport has driven a
-    partition tag negative, so this is generally nonzero even under stock
+    region tag negative, so this is generally nonzero even under stock
     settings. `rescale_water_tags!` contributes only when a limiter or state
     constraint actually corrects `ρq_tot`, which requires one of
     `apply_sem_quasimonotone_limiter: true`,
@@ -525,8 +526,8 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
             )
         end
 
-        # The gross twin and the count of `q_tag_fix_<name>`, keyed by the tag
-        # name alone, as the ledger is.
+        # The gross and the count of `q_tag_fix_<name>`, keyed by the tag name
+        # alone, as the ledger is.
         for (short_name, what, per_mass, units) in (
             (
                 "q_tag_fixgross_$name",
@@ -590,7 +591,7 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
                     compute_q_tag_upfix!(out, u, p, t, ρq_tag_name),
             )
         end
-        # Its gross twin and count, under the same conditions.
+        # Its gross and count, under the same conditions.
         for (short_name, per_mass, units) in (
             ("q_tag_upfixgross_$name", true, "kg kg^-1"),
             ("q_tag_upfixcount_$name", false, "1"),

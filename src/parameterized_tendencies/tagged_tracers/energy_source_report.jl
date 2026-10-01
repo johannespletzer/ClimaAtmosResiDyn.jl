@@ -3,10 +3,12 @@
 #####
 ##### Beside the closure check's integrals, the report says where the residual
 ##### sits, how fast the loss rule flushes it and the level it would settle at,
-##### how far the partitioned total is from zero, and whether the overlays
-##### leave their bounds. It describes the residual; it is not a verdict.
-##### Every function here reads the state and the tags' caches and writes only
-##### scratch fields. Each reduction is collective, so every process calls it.
+##### how far the partitioned total is from zero, and whether the overlays leave
+##### their bounds. An overlay is a source tag, which overlays the region tags
+##### and is not part of their sum. The report describes the residual and is not
+##### a verdict. Every function here reads the state and the tags' caches and
+##### writes only scratch fields. Each reduction is collective, so every process
+##### calls it.
 
 # The largest and smallest value of a field over the whole domain, reduced
 # across processes. `Base.maximum` on a `Field` does not reduce across them.
@@ -27,7 +29,7 @@ function _height_of!(ᶜvalue, target, Y)
     return isfinite(z) ? z : FT(NaN)
 end
 
-# The residual `R = E - Σ partition tags` per cell, into `ᶜR`.
+# The residual `R = E - Σ region tags` per cell, into `ᶜR`.
 function _fill_energy_source_residual!(ᶜR, Y, model)
     ᶜparent = _energy_source_parent_field(Y, model.offset)
     @. ᶜR = ᶜparent
@@ -66,19 +68,18 @@ end
 The energy source tags' own columns of their closure table: the headroom
 ([`energy_source_headroom`](@ref)), and, where each tag keeps its ledgers:
 
-  - `source_partition_valid`: 1 where the pure region tags' masks are a
-    verified partition ([`energy_source_partition_verified`](@ref)), 0
-    elsewhere;
+  - `source_partition_valid`: 1 where the region tags' masks are a verified
+    partition ([`energy_source_partition_verified`](@ref)), 0 elsewhere;
   - `source_throughput`: the gross source throughput since the start of the
     run, in J ([`energy_source_throughput`](@ref));
   - `gross_over_throughput`: the row's gross residual over it.
 
 Only a verified partition counts each unit of source energy once. Elsewhere
-the throughput and the ratio are `NaN`, and so is the ratio where the
-throughput is zero. The ratio's scale is set by the sources, not by the energy
-reference as `gross_relative`'s is; the residual itself still grows with the
-offset. `throughput_tolerance` warns on it. A window's throughput is the
-difference of two rows. Collective.
+the source throughput and the ratio are `NaN`, and so is the ratio where the
+source throughput is zero. The ratio's scale is set by the sources, not by the
+energy reference as `gross_relative`'s is. The residual itself still grows with
+the offset. `throughput_tolerance` warns on it. A window's source throughput is
+the difference of two rows. Collective.
 """
 function energy_source_closure_columns(Y, p, model::EnergySourceTaggingModel, closure)
     headroom = energy_source_headroom(Y, p, model)
@@ -95,8 +96,8 @@ end
 """
     check_energy_source_throughput_partition(tagging, check)
 
-Refuse `throughput_tolerance` where the pure region tags' masks are not a
-verified partition ([`energy_source_partition_verified`](@ref)). The level is
+Refuse `throughput_tolerance` where the region tags' masks are not a verified
+partition ([`energy_source_partition_verified`](@ref)). The level is
 compared with `gross_over_throughput`, which is `NaN` there, so it could never
 warn. `tagging` is the cache, `p.tagging`, and `check` the energy source
 closure check, or `nothing`. The masks are known only once the cache is built,
@@ -132,7 +133,7 @@ once the cache is built. It finds the energy source closure check among the
 callbacks' keyword arguments, `callback_kwargs`, as
 `callback_kwargs_from_config` gives them, and passes it with the cache
 `tagging` to [`check_energy_source_throughput_partition`](@ref). So it refuses
-the level where the pure region tags are not a verified partition. A no-op
+the level where the region tags are not a verified partition. A no-op
 without energy source tags, without the check or without the level.
 """
 check_energy_source_throughput_setup(tagging, callback_kwargs) =
@@ -147,59 +148,53 @@ check_energy_source_throughput_setup(tagging, callback_kwargs) =
 Return the residual report of the energy source tags, as more columns of their
 audit table.
 
-`R = E - Σ partition tags` per cell, and `G` is `closure`'s `gross_residual`.
-Collective.
+`R = E - Σ region tags` per cell, and `G` is `closure`'s `gross_residual`. The
+columns are:
 
-Where the residual sits:
+  - `residual_max`, the largest `|R|/ρ` in J/kg, and `residual_max_z`, its
+    height.
+  - `residual_peak_level`, the level whose layer holds the largest part of `G`
+    counted from the surface, `residual_peak_fraction`, that part over the sum
+    of the layers, and `residual_peak_z`, the level's volume-mean height.
+  - `overlay_negative_mass_fraction`, the air mass where any source tag is
+    negative over the domain's air mass.
+  - `overlay_excess`, the integral of `Σ max(tag - Σ region tags, 0)` over the
+    source tags in J, and `overlay_excess_mass_fraction`, the air mass where any
+    source tag holds more than the region tags' sum.
 
-  - `residual_max`: the largest `|R|/ρ`, in J/kg; `residual_max_z`, its height;
-  - `residual_peak_level`: the level whose layer holds the largest part of the
-    gross, counted from the surface; `residual_peak_fraction`, that part over
-    the sum of the layers; `residual_peak_z`, the level's volume-mean height.
+Where `R` is zero everywhere there is no peak and no maximum to place, so
+`residual_peak_level`, `residual_peak_fraction`, `residual_peak_z` and
+`residual_max_z` are `NaN`.
 
-Where the residual is zero everywhere there is no peak and no maximum to
-place, so `residual_peak_level`, `residual_peak_fraction`, `residual_peak_z`
-and `residual_max_z` are `NaN`.
+Each source tag is compared with the region tags' sum on its own. That bound
+holds for every valid configuration, duplicate tags included, because a source
+tag holds part of the energy the region tags hold. The sum of the source tags has
+no such bound. Two tags of the same source hold the same energy, so together they
+can hold more than the region tags. The configuration does not declare which
+source tags are disjoint, so the sum is not checked.
 
-The overlays are the tags that carry sources. They are compared with the
-partition they overlay:
+The flush and settling columns need the tags' ledgers per tag, and so the
+residual's source ledger `e_src_led_src_res`. Without them they are absent. That
+ledger is the loss rule's flush only where the region tags' masks are a verified
+partition ([`energy_source_partition_verified`](@ref)). Elsewhere every column
+below is `NaN`:
 
-  - `overlay_negative_mass_fraction`: the air mass where any overlay is
-    negative, over the domain's air mass;
-  - `overlay_excess`: the integral of `Σ_overlays max(tag - Σ partition, 0)`,
-    in J, where an overlay holds more than the partition's sum;
-  - `overlay_excess_mass_fraction`: the air mass where any overlay does.
-
-Each overlay is compared with the partition's sum on its own. That bound holds
-for every valid configuration, duplicate tags included: an overlay holds part
-of the energy the partition holds. The sum of the overlays has no such bound.
-Two tags of the same source hold the same energy, so together they can hold
-more than the partition. Only disjoint overlays would bound the sum, and the
-configuration does not declare which are, so the sum is not checked.
-
-The flush and the settling level need the tags' ledgers per tag, and so the
-residual's source ledger `e_src_led_src_res`. Without them these columns are
-absent. That ledger is the net residual source attribution. It is the loss
-rule's flush only where the pure region tags' masks are a verified partition
-([`energy_source_partition_verified`](@ref)). Elsewhere every column below is
-`NaN`:
-
-  - `flush_gross`: `F`, the per-step gross of that ledger since the start of
-    the run, in J: what the loss rule flushed from the residual;
-  - `flush_rate`: `λ = ΔF / (Ḡ Δt)`, per day, over the interval since the
-    previous check, `Ḡ` the mean of the two checks' `G`;
-  - `production_rate`: `P = (ΔG + ΔF) / Δt`, in J per day, what everything
-    else added to the residual;
-  - `settling_level`: `G* = P/λ`, the gross at which the two would balance,
-    and `settling_ratio`, `G*/G`;
+  - `flush_gross`: `F`, the per-step gross of that ledger since the start of the
+    run, in J. It is what the loss rule flushed from the residual.
+  - `flush_rate`: `λ = ΔF / (Ḡ Δt)` per day, over the interval since the previous
+    check, with `Ḡ` the mean of the two checks' `G`.
+  - `production_rate`: `P = (ΔG + ΔF) / Δt` in J per day, what everything else
+    added to the residual.
+  - `settling_level`: `G* = P/λ`, the gross at which the two would balance, and
+    `settling_ratio`, `G*/G`.
   - `forecast_defined`: 1 where `settling_level` is a number, 0 elsewhere.
 
-`previous` is a `Ref` that holds the last check's `(t, G, F)`, or `nothing`.
-The first check, and the first after a restart, have no interval, and write
-`NaN` for the rates. A balance needs `P > 0`: where the rest of the run did
-not add to the residual, it only decays, and `settling_level` is `NaN`
-([`energy_source_forecast`](@ref)). `λ` is not constant, so `G*` is an order
-of magnitude, not a prediction.
+`previous` is a `Ref` that holds the last check's `(t, G, F)`, or `nothing`. The
+first check, and the first after a restart, have no interval and write `NaN` for
+the rates. A balance needs `P > 0`. Where the rest of the run did not add to the
+residual, it only decays and `settling_level` is `NaN`
+([`energy_source_forecast`](@ref)). `λ` is not constant, so `G*` is an order of
+magnitude and not a prediction. Collective.
 """
 function energy_source_residual_report(
     Y,
@@ -242,7 +237,7 @@ function energy_source_residual_report(
         residual_peak_z = Float64(sum(Fields.level(ᶜtmp, peak)) / volume)
     end
 
-    # The overlays against the partition's sum, `E - R`.
+    # The source tags against the region tags' sum, `E - R`.
     overlay_names = Tuple(
         Symbol(:ρe_src_, tag_name(tag)) for
         tag in model.tags if !isempty(tag.sources)
@@ -344,8 +339,8 @@ function _energy_source_forecast(p, closure, t, previous)
         settling_ratio = NaN,
         forecast_defined = 0,
     )
-    # Without a verified partition the ledger is the net residual source
-    # attribution, not the flush, so no rate is read from it.
+    # Without a verified partition the ledger is what the sources did to the
+    # residual and not the flush, so no rate is read from it.
     energy_source_partition_verified(p.tagging) ||
         return (; flush_gross = NaN, no_rates...)
     rates =

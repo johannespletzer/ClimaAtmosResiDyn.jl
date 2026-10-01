@@ -137,7 +137,7 @@ Initial value of a tagged field at a single point, where `ρχ` is the parent
 quantity being partitioned (`ρe_tot` for a [`TracerTag`](@ref), `ρq_tot` for a
 [`WaterTag`](@ref)):
 
-  - For pure region tags (`tag.region isa AbstractTagRegion` and
+  - For region tags (`tag.region isa AbstractTagRegion` and
     no sources), the masked share of the initial parent, `ρχ * M(coord)`. If the
     configured regions partition unity (e.g. a band and its complement), the
     region tags sum to `ρχ` at `t = 0`.
@@ -186,7 +186,7 @@ _tag_variables(ρe_tot, coord, tags::Tuple) = merge(
     KNOWN_TAG_SOURCES
 
 `Tuple` of the process labels that can be attributed to a tagged tracer. Each
-label corresponds to one attribution bracket in `additional_tendency!` (see
+label corresponds to one applied-update event in `additional_tendency!` (see
 `prognostic_equations/remaining_tendency.jl`):
 
   - `:radiation`: all radiation modes (`radiation_tendency!`)
@@ -194,16 +194,16 @@ label corresponds to one attribution bracket in `additional_tendency!` (see
   - `:microphysics`: microphysics energy sources (`microphysics_tendency!`,
     only when microphysics is stepped explicitly, for this family). The energy
     source tags and the process records, which share these labels, also
-    bracket the implicit microphysics sink.
+    attribute the implicit microphysics sink.
   - `:held_suarez`: Held–Suarez relaxation forcing
   - `:large_scale_advection`: prescribed large-scale advective forcing
   - `:subsidence`: prescribed large-scale subsidence
   - `:external_forcing`: externally prescribed (e.g. GCM-driven) forcing
   - `:precipitation`: energy carried out of a level by sedimenting
     precipitation (`vertical_advection_of_water_tendency!`). For this family
-    it is the one attributed process on the **implicit** path; it is bracketed inside
-    `implicit_tendency!`, which is safe because that function zeroes `Yₜ` on
-    every evaluation. With 1-moment and 2-moment microphysics this is where
+    it is the one attributed process on the **implicit** path. Its event is
+    inside `implicit_tendency!`, which is safe because that function zeroes `Yₜ`
+    on every evaluation. With 1-moment and 2-moment microphysics this is where
     the moist energy sink lives, since those schemes change only the water
     species and leave `ρe_tot` to the sedimentation flux.
 
@@ -213,8 +213,8 @@ term — advection, hyperdiffusion, sponges, interior vertical diffusion, LES
 SGS diffusion — because each tag is transported in its own right, so masked
 attribution of the `ρe_tot` version would count it twice. It also excludes
 most tendencies applied by the implicit solver (implicit vertical transport,
-implicit diffusion) and EDMFX SGS mass fluxes, which have no bracket; those
-land in the closure residual `ρe_tot - Σᵢ ρe_tag_i`. Precipitation
+implicit diffusion) and EDMFX SGS mass fluxes, which have no applied-update
+event. Those land in the closure residual `ρe_tot - Σᵢ ρe_tag_i`. Precipitation
 sedimentation is the one implicit process that *is* attributed, because it
 is a genuine energy sink that the tags never receive.
 
@@ -327,7 +327,7 @@ end
 Scratch fields needed by tagged-tracer source attribution, merged into
 `p.scratch`; empty when tagging is disabled. `ᶜtagging_snapshot` holds
 `Yₜ.c.ρe_tot` from the last [`snapshot_tagged_ρe_tot!`](@ref); no other code
-touches it, so a bracketed process cannot clobber it. `ᶜtagging_q_snapshot` is
+touches it, so an attributed process cannot clobber it. `ᶜtagging_q_snapshot` is
 its water counterpart, and `ᶜtagging_q_share_norm` holds the partition-share
 denominator of [`water_tag_share_norm!`](@ref). Under 0M,
 `ᶜtagging_q_rainouts` holds every tag's part of the rain-out and
@@ -393,8 +393,8 @@ tagging_scratch(Y, atmos::AtmosModel) = (;
 """
     region_tag_state_names(tagging_model::TaggingModel)
 
-`Tuple` of the state-field `Symbol`s (`:ρe_tag_<name>`) of the pure region
-tags: tags with a region and no sources. These are the tags whose sum
+`Tuple` of the state-field `Symbol`s (`:ρe_tag_<name>`) of the region tags,
+the tags with a region and no sources. These are the tags whose sum
 is expected to track `ρe_tot` (tags that also carry a `source` only
 accumulate that source, so they would double-count region content).
 """
@@ -442,7 +442,7 @@ Compute the global closure of one tag family: how much of the parent field its
 tags account for, right now.
 
 `total_name` is `:ρe_tot` or `:ρq_tot`, or a function for a parent the model
-does not carry (see `closure_parent`). `tag_state_names` are the pure region
+does not carry (see `closure_parent`). `tag_state_names` are the region
 tags of the family. Returns
 
     (; total, tagged, residual, relative, gross_residual, gross_relative,
@@ -539,15 +539,15 @@ tag_closure_path(output_dir, family) =
 Append one row to the closure table of `family`, creating it with a header if
 it does not exist yet. Called on the root process only.
 
-A check with a spin-up reference passes `reference`, a `Ref` that holds the
-residual at the spin-up once it is taken, and `nothing` before. The row then
+A check with a reference at spin-up passes `reference`, a `Ref` that holds the
+residual at spin-up once it is taken, and `nothing` before. The row then
 carries three more columns: that residual, the residual since, and the residual
 since relative to the scale. Before the reference is taken, they are `NaN`.
 
 `extra` is a `NamedTuple` of a family's own columns, such as the energy source
-tags' headroom and throughput ([`energy_source_closure_columns`](@ref)), or
-`nothing`. They go after the spin-up columns and before `closure_void`, so the spin-up
-columns keep their positions and `closure_void` stays last.
+tags' headroom and source throughput ([`energy_source_closure_columns`](@ref)),
+or `nothing`. They go after the spin-up columns and before `closure_void`, so
+the spin-up columns keep their positions and `closure_void` stays last.
 
 A check with a void level passes `closure_void`, a `Bool`: whether its residual
 has passed that level at this row or before, in this run or before the
@@ -635,7 +635,7 @@ responses. This separates them.
     than the field they partition. That state is not physical, and it is the
     direction a runaway takes, so it is worth watching by itself.
   - `orphaned` is the mass in cells whose parent still holds water while every
-    partition tag is empty. That is water whose origin has been erased rather
+    region tag is empty. That is water whose origin has been erased rather
     than tags that have drifted, and it does not come back: nothing re-tags a
     cell. It counts total loss only, so it is a lower bound. A cell left holding
     a sliver of one tag is not orphaned by this test and appears in `untagged`
@@ -814,8 +814,7 @@ warning in [`tag_closure_callback!`](@ref).
 What a non-positive parent costs depends on the rule the family applies, so
 this says which case applies rather than asserting the energy-source one for
 all three. `energy_source_tags` and `water_tracers` both divide by the parent to
-get a donor share they then depend on; `energy_tracers` never divides by it at
-all.
+get a share they then depend on. `energy_tracers` never divides by it at all.
 """
 function nonpositive_parent_note(family)
     family == "energy_source" && return "Donor shares are undefined there, so \
@@ -868,8 +867,8 @@ The callback runs every `period` of the check. It writes
 A diagnostic never ends a run that the model would complete, so only an
 `abort_above` the user sets stops it. See
 [`DEFAULT_CLOSURE_VOID_LEVELS`](@ref) and
-[`DEFAULT_CLOSURE_ABORT_LEVELS`](@ref). None of the levels is an acceptance
-threshold.
+[`DEFAULT_CLOSURE_ABORT_LEVELS`](@ref). None of the levels is a criterion for
+accepting a run.
 
 `closure_void = 0` says only that the residual has not passed `void_above`. The
 parent can be non-positive long before that. `nonpositive_fraction`, in the same
@@ -887,7 +886,7 @@ Past `void_above` the check warns once and marks this row and every later row
 accepted step, so an excursion between two rows marks the next row. See
 [`negative_water_rows`](@ref) for the columns.
 
-`reference` is the check's spin-up reference, a `Ref`, or `nothing` (see
+`reference` is the check's reference at spin-up, a `Ref`, or `nothing` (see
 [`write_tag_closure!`](@ref)). `extra_audit(Y, p, closure, t)` gives a family's
 own audit columns when `audit` is on, such as [`energy_source_audit`](@ref) and
 [`energy_source_residual_report`](@ref). `extra_closure(Y, p, closure)` gives a
@@ -1156,7 +1155,7 @@ end
 
 
 # The closure diagnostic `<residual_name> = (parent - Σᵢ tagᵢ) / ρ` measures
-# attribution leakage when the pure region masks form a partition of unity.
+# unattributed processes when the region masks form a partition of unity.
 # Overlapping or incomplete regions are allowed, and are sometimes what the user
 # wants, but then the overlap or deficit dominates the residual. Say so once at
 # initialization so the number is read correctly.
@@ -1185,7 +1184,7 @@ end
     rebuild_tags_from_state!(Y, atmos)
 
 Set every tag field in `Y` from the state `Y` now holds, by the same rule that
-built it: a pure region tag takes its masked share of the parent, and every
+built it: a region tag takes its masked share of the parent, and every
 other tag zero (`tag_initial_value`).
 
 `initial_state` calls this after a setup has overwritten the state from a file.
@@ -1249,12 +1248,11 @@ _tag_mask_entry(ᶜcoord, tag::TracerTag) =
     snapshot_tagged_ρe_tot!(p, Yₜ)
 
 Record the current value of `Yₜ.c.ρe_tot` in the tagging cache, opening an
-attribution bracket. A no-op when tagging is disabled.
+applied-update event. A no-op when tagging is disabled.
 
-Together with [`attribute_tagged_ρe_tot!`](@ref) this brackets a block of
-explicit tendency calls: whatever the block adds to `Yₜ.c.ρe_tot` is
-attributed to the tagged tracers without modifying the process itself.
-Brackets must not be nested.
+Together with [`attribute_tagged_ρe_tot!`](@ref) this wraps a block of explicit
+tendency calls: whatever the block adds to `Yₜ.c.ρe_tot` is attributed to the
+tagged tracers without modifying the process itself. Events must not be nested.
 """
 snapshot_tagged_ρe_tot!(p, Yₜ) =
     _snapshot_tagged_ρe_tot!(p, Yₜ, p.atmos.tagging_model)
@@ -1267,21 +1265,21 @@ end
 """
     attribute_tagged_ρe_tot!(Yₜ, p, source::Symbol)
 
-Close an attribution bracket opened by [`snapshot_tagged_ρe_tot!`](@ref):
-compute the increment `ᶜΔ = Yₜ.c.ρe_tot - snapshot` produced by the bracketed
-process (labeled `source`, one of [`KNOWN_TAG_SOURCES`](@ref)) and add it to
-the tagged tracer tendencies:
+Close the applied-update event opened by [`snapshot_tagged_ρe_tot!`](@ref).
+Compute the process's tendency `ᶜΔ = Yₜ.c.ρe_tot - snapshot` for the process
+labeled `source`, one of [`KNOWN_TAG_SOURCES`](@ref), and add it to the tagged
+tracer tendencies:
 
-  - pure region tags (no sources) receive `M * ᶜΔ`, where `M` is the
-    tag's precomputed mask — every attributed process counts, so that the sum
-    of a partition-of-unity set of region tags tracks `ρe_tot`;
-  - process tags receive `ᶜΔ` only when their `source` matches, weighted by
-    their mask when they also have a region.
+  - region tags (no sources) receive `M * ᶜΔ`, where `M` is the tag's
+    precomputed mask. Every attributed process counts, so that the sum of a
+    partition-of-unity set of region tags tracks `ρe_tot`.
+  - source tags receive `ᶜΔ` only when their `source` matches, weighted by their
+    mask when they also have a region.
 
-The whole signed increment is applied, so a signed process tag goes negative
-under net cooling. This is the one place the energy rule differs from the water
-rule in `tagged_water.jl`, which splits the increment and takes loss
-donor-proportionally instead.
+The whole signed tendency is applied, so a signed source tag goes negative under
+net cooling. This is the one place the energy rule differs from the water rule
+in `tagged_water.jl`. The water rule splits the tendency and takes loss from
+every tag in proportion to what it holds.
 
 A no-op when tagging is disabled.
 """
@@ -1365,7 +1363,7 @@ Whether `name` refers to a tagged prognostic tracer of any of the three
 families. Used to exempt tags from the tracer limiters, for a different reason
 in each case:
 
-  - `ρe_tag_*` holds a signed process tag, so it can be legitimately
+  - `ρe_tag_*` can hold a signed source tag, so it can be legitimately
     negative (accumulated cooling) and a non-negativity limiter would be wrong.
   - `ρq_tag_*` must not be limited independently of the other water tags,
     because a shape-preserving adjustment applied per tag has no reason to

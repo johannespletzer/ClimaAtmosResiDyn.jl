@@ -15,15 +15,15 @@ means.
 
 ## Which one do I want?
 
-| I want to know…                          | Use                                                  | Adds                                 | Details                                                                                             |
-|:---------------------------------------- |:---------------------------------------------------- |:------------------------------------ |:--------------------------------------------------------------------------------------------------- |
-| how long air stays in the stratosphere   | [`passive_tracers`](@ref passive_tracers)            | one inert tracer per release region  | [Passive Tracers](passive_tracers.md)                                                               |
-| where the water at a point came from     | [`water_tracers`](@ref water_tracers)                | one field `ρq_tag_<name>` per tag    | [Tagged Water Tracers](tagged_water.md)                                                             |
-| how much of that water is rain or snow   | `water_tag_precipitation: true` (Experimental)       | a rain and a snow part per water tag | [Rain and Snow Tags](tagged_water_precipitation.md)                                                 |
-| where the energy at a point came from    | [`energy_source_tags`](@ref energy_source_tags_conf) | one field `ρe_src_<name>` per tag    | [Energy Source Tags: a user guide](energy_source_tags_guide.md), [reference](energy_source_tags.md) |
-| what heated or cooled the air at a point | [`energy_tracers`](@ref energy_tracers)              | one field `ρe_tag_<name>` per tag    | [Tagged Energy Tracers](tagged_tracers.md)                                                          |
-| what each process did to the energy      | `energy_process_record`                              | one field `prc_e_<process>` each     | [Process-Change Records](process_record.md)                                                         |
-| what each process did to the water       | `water_process_record`                               | one field `prc_q_<process>` each     | [Process-Change Records](process_record.md)                                                         |
+| I want to know…                          | Use                                                  | Adds                                 | What `source:` means                                         | Details                                                                                             |
+|:---------------------------------------- |:---------------------------------------------------- |:------------------------------------ |:------------------------------------------------------------ |:--------------------------------------------------------------------------------------------------- |
+| how long air stays in the stratosphere   | [`passive_tracers`](@ref passive_tracers)            | one inert tracer per release region  | no `source:` key                                             | [Passive Tracers](passive_tracers.md)                                                               |
+| where the water at a point came from     | [`water_tracers`](@ref water_tracers)                | one field `ρq_tag_<name>` per tag    | the process whose new water the tag takes in                 | [Tagged Water Tracers](tagged_water.md)                                                             |
+| how much of that water is rain or snow   | `water_tag_precipitation: true` (Experimental)       | a rain and a snow part per water tag | as for the water tags                                        | [Rain and Snow Tags](tagged_water_precipitation.md)                                                 |
+| where the energy at a point came from    | [`energy_source_tags`](@ref energy_source_tags_conf) | one field `ρe_src_<name>` per tag    | the process whose energy the tag takes in, losses shared out | [Energy Source Tags: a user guide](energy_source_tags_guide.md), [reference](energy_source_tags.md) |
+| what heated or cooled the air at a point | [`energy_tracers`](@ref energy_tracers)              | one field `ρe_tag_<name>` per tag    | the process whose signed running total the tag holds         | [Tagged Energy Tracers](tagged_tracers.md)                                                          |
+| what each process did to the energy      | `energy_process_record`                              | one field `prc_e_<process>` each     | no `source:` key. The list names the processes               | [Process-Change Records](process_record.md)                                                         |
+| what each process did to the water       | `water_process_record`                               | one field `prc_q_<process>` each     | no `source:` key. The list names the processes               | [Process-Change Records](process_record.md)                                                         |
 
 The families are independent. Switch on any one of them, or all of them, in the
 same run.
@@ -43,18 +43,19 @@ The [glossary](glossary.md) defines these terms. In short:
   - **source tag**: an entry of `water_tracers` or `energy_source_tags` with a
     `source`. The amount of the parent that is present now and that the rules
     attribute to that process. A repair puts a negative tag back, for the energy source tags
-    under `energy_source_tag_repair` (on by default). Its repair ledger,
+    under `energy_source_tag_repair` (on by default). Its fix ledger,
     `q_tag_fix_<name>` or `e_src_fix_<name>`, logs what it moved.
   - **signed process tag**: an `energy_tracers` entry with a `source`. It starts
     at zero and holds the signed running total of what that process added. It
     goes negative under net cooling.
   - **process-change record**: the `prc_e_<process>` and `prc_q_<process>`
     fields. One per process, not per tag, and never transported.
-  - **closure**: whether the tags still add up to the variable they split.
+  - **tag closure**: whether the tags still add up to the variable they split.
+    It is not a turbulence closure.
 
 `water_tracers` and `energy_source_tags` share out production by mask and take
 loss from each tag in proportion to what it holds. `energy_tracers` applies the
-whole signed increment by mask. The rule differs between the families, not the
+whole signed tendency by mask. The rule differs between the families, not the
 key. See [Attribution](tagged_water.md#Attribution) and
 [What a tag means](tagged_tracers.md#What-a-tag-means).
 
@@ -305,7 +306,7 @@ A tag's name becomes part of its diagnostics' names, so some names are reserved:
     `q_tag_res`, `e_tag_res` or `e_src_res`.
   - A `water_tracers` name may not begin with `fix_`, `upfix_`, `inc_`, `rtag_`,
     `stag_`, `fixgross_`, `fixcount_`, `upfixgross_`, `upfixcount_`, `led_` or
-    `aud_`, and may not begin with `negative`. `fix_` begins the repair ledger
+    `aud_`, and may not begin with `negative`. `fix_` begins the fix ledger
     `q_tag_fix_<name>`, `negative` the diagnostic `q_tag_negative`, and `aud_`
     the microphysics audit fields `q_rtag_aud_<name>` and `q_stag_aud_<name>`.
     The others begin other ledgers or are held.
@@ -387,9 +388,9 @@ names the key:
 
 * * *
 
-## Checking closure while a run goes
+## Checking tag closure while a run goes
 
-Closure means that the tags still add up to the field they split. The
+Tag closure means that the tags still add up to the field they split. The
 `q_tag_res`, `e_tag_res` and `e_src_res` diagnostics give it as a 3-D field to
 look at afterwards. A closure check reduces it to a few numbers and writes them
 to a table every `period`, so you can see drift while the run goes. The check
@@ -415,6 +416,9 @@ optional. `water_closure_check` and `energy_closure_check` are off by default.
 region tag without a `source`, and `false` switches it off. A check without its
 tracer family is refused at startup, and so is a family whose entries all carry
 a `source`, because there is nothing to close against.
+
+The check levels are `tolerance`, `throughput_tolerance`, `void_above` and
+`abort_above`. A check level is a limit on the residual, not a model level.
 
 | Key                         | Meaning                                                                                                                                                                      | Water   | `energy_tracers` | Energy source tags                                                     |
 |:--------------------------- |:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:------- |:---------------- |:---------------------------------------------------------------------- |
@@ -485,9 +489,9 @@ only, so a cell that goes negative and back between two checks does not show.
 
 ### Levels
 
-Each level is separate from the others.
+Each check level is separate from the others.
 
-| Level                  | What passing it does                                    |
+| Check level            | What passing it does                                    |
 |:---------------------- |:------------------------------------------------------- |
 | `tolerance`            | warns, every time                                       |
 | `throughput_tolerance` | warns, every time. Energy source tags only              |
@@ -520,7 +524,7 @@ on `time`. It costs a handful of extra global reductions per check.
 |:--------------------------------------------------------------------------------------------- |:---------------------------------------------------------------------------------------- |
 | `untagged`                                                                                    | `∫max(parent - Σ tags, 0)`: parent the tags do not account for                           |
 | `overclaimed`                                                                                 | `∫max(Σ tags - parent, 0)`: parent the tags claim that is not there                      |
-| `orphaned`                                                                                    | mass in cells whose parent is positive while every partition tag is empty                |
+| `orphaned`                                                                                    | mass in cells whose parent is positive while every region tag is empty                   |
 | `orphaned_volume_fraction`                                                                    | volume fraction of those cells                                                           |
 | `nonpositive_mass`                                                                            | mass where the parent is not positive                                                    |
 | `untagged_relative`, `overclaimed_relative`, `orphaned_relative`, `nonpositive_mass_fraction` | the four above over the closure table's `scale`                                          |
@@ -533,7 +537,7 @@ on `time`. It costs a handful of extra global reductions per check.
 `untagged + overclaimed` is `gross_residual` to reduction round-off. The two
 mean opposite things. Untagged water has an origin that nothing claims to know.
 Overclaimed water is the tags asserting water that does not exist, which is the
-direction a runaway takes. `orphaned` shows whether provenance is gone rather
+direction a runaway takes. `orphaned` shows whether origin is gone rather
 than drifting: nothing re-tags an emptied cell, so its water stays anonymous. It
 counts total loss only, so it is a lower bound. For water, `nonpositive_mass` is
 `∫abs(min(ρq_tot, 0)) dV` of the raw `ρq_tot`. The energy source tags add

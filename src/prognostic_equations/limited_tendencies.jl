@@ -146,7 +146,7 @@ NVTX.@annotate function limiters_func!(Y, p, t, ref_Y)
                 ρχ .= ᶜχ .* Y.c.ρ
             end
         end
-        # Must match the `Symbol` test used to open this bracket above.
+        # Must match the `Symbol` test of the snapshot above.
         if _should_apply_limiter_to_tracer(
             :ρq_tot,
             vertical_water_borrowing_species,

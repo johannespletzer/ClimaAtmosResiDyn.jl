@@ -46,7 +46,7 @@ Always read the ClimaAtmos-specific guide before working in this repository:
 - For package tests, prefer `Pkg.test()` over manually `include`ing `test/runtests.jl` because test-only deps are loaded through the package test path.
 - Keep edits inside the owning subtree when possible; use [src/ClimaAtmos.jl](src/ClimaAtmos.jl) to trace where a feature is wired.
 - Match existing style: explicit names, narrow imports, comments that explain why.
-- Write comments in simple sentences. Prefer a few short sentences over one long one strung together with colons, dashes and parentheses.
+- Write comments in simple sentences. Prefer a few short sentences over one long one strung together with colons, dashes and parentheses. Use few semicolons. Two clauses become two sentences.
 - Follow the software design patterns in [docs/dev-guides/architecture/software_design_patterns.md](docs/dev-guides/architecture/software_design_patterns.md) for new code and refactor toward them when touching existing code.
 - Format code before committing. CI checks formatting via the `prek` hook in [.github/workflows/run-prek.yml](.github/workflows/run-prek.yml), which runs JuliaFormatter from the version-pinned [.dev/format/Project.toml](.dev/format/Project.toml) environment (currently `=2.10.1`). Match CI with either `prek run julia-formatter --all-files` or the pinned env directly: `julia --startup-file=no --project=.dev/format -e 'using Pkg; Pkg.instantiate(io=devnull); using JuliaFormatter; format(ARGS)' .`. Avoid `julia -e 'using JuliaFormatter; format(\".\")'` from your global environment — `Pkg.add("JuliaFormatter")` installs v2 by default and a mismatched version produces a different diff.
 - Optional but recommended: install the pre-commit hooks in [.pre-commit-config.yaml](.pre-commit-config.yaml) (`uv tool install prek && prek install`) to auto-format and trim trailing whitespace on commit. See [docs/src/contributor_guide.md](docs/src/contributor_guide.md) ("Pre-commit hooks").
@@ -55,8 +55,9 @@ Always read the ClimaAtmos-specific guide before working in this repository:
   limit. A budget in the physical sense (energy, water, TKE) keeps the word,
   and so does the stratospheric tracers' tracer budget, a separate feature.
   The code follows the rule: the parent budget's names include
-  `BudgetJournal` (held in `adapter.journal`) and `TimestepperPin`. See
-  [the glossary](docs/src/glossary.md).
+  `BudgetJournal` (held in `adapter.journal`) and `TimestepperPin`. Say
+  applied-update event, attributed process and the process's tendency, not
+  bracket. See [the glossary](docs/src/glossary.md).
 - Docs and comments on `main` describe the current code in the present tense.
   Plan and finding IDs, PR numbers, dates and decisions go in commit messages,
   NEWS.md and the record branch, not in docs or comments.

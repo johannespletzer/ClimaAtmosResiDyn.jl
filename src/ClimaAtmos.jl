@@ -97,7 +97,7 @@ include(
 
 # Tagged prognostic energy tracers (masks, state builders, config parsing)
 include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_tracers.jl"))
-# The gross twins and counts of the tags' cache ledgers, and their state ledgers
+# The grosses and counts of the tags' cache ledgers, and their state ledgers
 # per mechanism with the gross per step.
 include(joinpath("parameterized_tendencies", "tagged_tracers", "tag_throughput.jl"))
 # Tagged prognostic water tracers (reuses the regions and masks defined above)
@@ -110,13 +110,13 @@ include(
         "tagged_water_precipitation.jl",
     ),
 )
-# Energy source tags (ρe_src_*, the donor-proportional counterpart of the water tags)
+# Energy source tags (ρe_src_*, the energy counterpart of the water tags)
 include(joinpath("parameterized_tendencies", "tagged_tracers", "energy_source_tags.jl"))
 # The residual report of the energy source tags' closure check.
 include(joinpath("parameterized_tendencies", "tagged_tracers", "energy_source_report.jl"))
 # After the energy source tags, whose weight-free exchange helpers it uses.
 include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_water_edmf.jl"))
-# The energy copies' mirrors of what `mseʲ` gets and an updraft tracer does not.
+# The terms the energy copies get as `mseʲ` does and an updraft tracer does not.
 include(
     joinpath("parameterized_tendencies", "tagged_tracers", "energy_source_copy_mirrors.jl"),
 )
@@ -124,11 +124,12 @@ include(
 include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_water_leaks.jl"))
 # The 0M rain-out split by subdomain, after the exchange's helpers it reuses.
 include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_water_rainout.jl"))
-# The increment follower, after the default mode's flux helper it reuses.
+# Increment transport of the water tags, after the default mode's flux helper it
+# reuses.
 include(
     joinpath("parameterized_tendencies", "tagged_tracers", "tagged_water_increment.jl"),
 )
-# Process-change records (signed per-process increments, prognostic but not transported)
+# Process-change records (the signed change of each process, prognostic but not transported)
 include(joinpath("parameterized_tendencies", "tagged_tracers", "process_record.jl"))
 include(
     joinpath("parameterized_tendencies", "tagged_tracers", "energy_source_checkpoint.jl"),
@@ -140,8 +141,9 @@ include(
 include(
     joinpath("parameterized_tendencies", "tagged_tracers", "tag_closure_checkpoint.jl"),
 )
-# The applied-update event the tendency code brackets every parent-writing
-# process with; feeds the tags, the process records and the parent budget.
+# The applied-update event. The tendency code opens and closes one around every
+# parent-writing process. It feeds the tags, the process records and the parent
+# budget.
 include(joinpath("prognostic_equations", "applied_update.jl"))
 
 include(joinpath("surface_conditions", "SurfaceConditions.jl"))

@@ -1,19 +1,18 @@
 #####
-##### The water tags follow the parent's implicit increment
+##### Increment transport of the water tags
 #####
 ##### Under `water_tag_transport: increment` the tags take the parent's own
 ##### increment of `ρq_tot` in each implicit stage. The parent's Jacobian has
-##### more blocks than the tags' own, so with one Newton iteration the tags lag
-##### the parent's solve. After each solve the lag is moved to the partition as
-##### a vertical flux, as `correct_energy_source_increment!` does for the energy
-##### source tags. The tags' explicit vertical advection is skipped, because the
-##### parent's increment carries it.
+##### more blocks than the tags', so with one Newton iteration the tags lag the
+##### parent's solve. The correction after each solve moves the lag to the region
+##### tags as a vertical flux, as `correct_energy_source_increment!` does for the
+##### energy source tags. The tags' explicit vertical advection is skipped,
+##### because the parent's increment carries it.
 #####
-##### Under `water_tag_precipitation: true` the `ρq_tag_<name>` fields follow
-##### the increment of `ρq_tot - ρq_rai - ρq_sno`. The rain and snow parts keep
-##### their explicit advection and hand it back to the non-precipitating part
-##### (`water_tag_precip_advection!`). They follow their own implicit terms,
-##### which are their species' by construction.
+##### Under `water_tag_precipitation: true` the `ρq_tag_<name>` fields take the
+##### increment of `ρq_tot - ρq_rai - ρq_sno`. The rain and snow parts keep their
+##### explicit advection and hand it back to the non-precipitating part
+##### (`water_tag_precip_advection!`). They take their own implicit terms.
 
 # The names of the increment ledger, in the state's order.
 const WATER_TAG_LEDGER_NAMES =
@@ -35,15 +34,14 @@ and `(;)` otherwise:
     profile does not show where the lag arose.
   - `q_tag_inc_moved`: the water the correction has moved between levels, in
     kg/m³, since the start of the run. It is the part of the mismatch that sums
-    to zero in each column: mostly the parent's vertical advection, which the
-    tags do not take explicitly, and the column-neutral part of their lag
+    to zero in each column. It is mostly the parent's vertical advection, which
+    the tags do not take explicitly, and the column-neutral part of their lag
     behind the parent's other implicit terms.
   - `q_tag_inc_negative`: the water the correction has given the tags, or
     taken from them, because the parent's negative part changed, in kg/m³,
     since the start of the run. The tags partition the parent's non-negative
-    water, `max(ρq_tot, 0)`. Where a solve takes a
-    cell below zero, that part grows by the negative water, and the column's
-    total with it. That change is not a lag, so the tags take it, where the
+    water, `max(ρq_tot, 0)`. Where a solve takes a cell below zero, that part
+    grows by the negative water, and the column's total with it. That change is not a lag, so the tags take it, where the
     mismatch has its sign, by the cells' composition. Zero wherever the
     parent stays non-negative. Under `water_tag_precipitation: true` it is
     the same for the non-precipitating water, `ρq_tot - ρq_rai - ρq_sno`.
@@ -52,7 +50,7 @@ and `(;)` otherwise:
 
 All three are prognostic, so the stepper weights each stage's entry as it weights
 the tags. They record what the correction intends. A face whose donor cell holds
-no partition water moves no tag, so there a cell's actual change differs, and
+no region-tag water moves no tag, so there a cell's actual change differs, and
 the difference lands in `q_tag_res` but in neither field.
 
 Their names carry no `ρ` prefix, so `gs_tracer_names` and `is_tracer_var` skip
@@ -136,12 +134,13 @@ _water_tag_increment_cache(Y, model) =
 """
     water_increment_partition_tolerance(FT)
 
-How far the region masks' sum may stray from 1 under `water_tag_transport: increment`: 100 rounding units of `FT`, 2.2e-14 in Float64 and 1.2e-5 in
-Float32. A region and its complement (`above: false`, `inside: false`) sum to
-1 within a few units, so they pass. A gap or overlap the size of the closure
-tolerance does not: a mask sum of 0.995 would leave the partition 0.5% short
-of `ρq_tot` before the run starts, 2.5 times the 0.2% tolerance, and the follower
-tracks increments only, so it never closes that gap.
+How far the region masks' sum may stray from 1 under
+`water_tag_transport: increment`: 100 rounding units of `FT`, 2.2e-14 in Float64
+and 1.2e-5 in Float32. A region and its complement (`above: false`,
+`inside: false`) sum to 1 within a few units, so they pass. A gap or overlap of
+a fraction of a percent does not. A mask sum of 0.995 would leave the partition
+0.5% short of `ρq_tot` before the run starts, and increment transport tracks
+increments only, so it never closes that gap.
 """
 water_increment_partition_tolerance(::Type{FT}) where {FT} = 100 * eps(FT)
 
@@ -170,7 +169,7 @@ function _check_water_increment_partition(ᶜmasks, names, model)
     return nothing
 end
 
-# The sum of the partition tags of `ᶜY`, plus `dtγ` times that of `ᶜdY`.
+# The sum of the region tags of `ᶜY`, plus `dtγ` times that of `ᶜdY`.
 function _water_partition_sum!(ᶜsum, ᶜY, ᶜdY, dtγ, tags)
     ᶜsum .= zero(eltype(ᶜsum))
     return _add_water_partition!(ᶜsum, ᶜY, ᶜdY, dtγ, tags)
@@ -217,7 +216,8 @@ end
     keep_water_tag_exp_rate!(p, Yₜ)
 
 Keep the implicit tendency of the ledger `q_tag_exp_negative`, the gain the
-brackets withheld at this evaluation, in `p.scratch.ᶜtagging_q_exp_rate`, for
+applied-update events withheld at this evaluation, in
+`p.scratch.ᶜtagging_q_exp_rate`, for
 [`correct_water_tag_increment!`](@ref). Called last in `implicit_tendency!`.
 A Newton solve evaluates the tendency last at the iterate its last step starts
 from, so after the solve this is the rate at which the solve moved the ledger.
@@ -275,8 +275,11 @@ out in a cell is `M` times its weight over the column's. That total is at least
 """
     correct_water_tag_increment!(dY, U, p)
 
-Make the partition tags take the parent's increment of `ρq_tot` after the
-Newton solve of an implicit stage.
+Move the region tags by the parent's increment of `ρq_tot` after the Newton solve
+of an implicit stage. This is the correction after each solve of increment
+transport. It records what it left out in `q_tag_inc_left`, what it gave for the
+parent's negative water in `q_tag_inc_negative` and what it moved in
+`q_tag_inc_moved`.
 
 `U` is the solved stage value. `dY` already holds the parent's own post-solve
 correction, which the stepper adds as `dtγ·dY`. This is
@@ -372,7 +375,7 @@ function correct_water_tag_increment!(dY, U, p)
     ᶜn = ᶜq_tag_negative_change
     # The partition after the stage, with the parent's post-solve correction,
     # which moves no tag. That correction zeroes `dY` and writes only `ρe_tot`
-    # and `ρq_tot`, so the `dY` terms of the partition are zero; they are kept
+    # and `ρq_tot`, so the `dY` terms of the partition are zero. They are kept
     # so the mismatch stays right if it ever writes more.
     _water_partition_sum!(ᶜm, U.c, dY.c, dtγ, model.tags)
     # The water the tags' `ρq_tag_<name>` fields partition after the stage:
@@ -402,7 +405,7 @@ function correct_water_tag_increment!(dY, U, p)
     # start, and no more than the target's rise, is a crossing's positive part,
     # `g`. The partition takes `g` in its own cell, by mask, and the rest of
     # `δL` goes where `N` goes. Where the rule did not act, `δL` is zero and
-    # every number is the old one, bit for bit.
+    # every number is unchanged, bit for bit.
     ᶜδL = p.tagging.ᶜq_tag_exp_change
     ᶜg = p.tagging.ᶜq_tag_crossing
     @. ᶜδL =
@@ -553,8 +556,8 @@ function correct_water_tag_increment!(dY, U, p)
             ᶜparent,
         )
     end
-    # A crossing's positive part, in its own cell, by mask, as a bracket
-    # gives a gain. Only the partition takes it.
+    # A crossing's positive part, in its own cell, by mask, as an
+    # applied-update event gives a gain. Only the partition takes it.
     _give_crossing_by_mask!(
         dY.c,
         p.tagging.ᶜwater_masks,
@@ -604,9 +607,9 @@ function correct_water_tag_increment!(dY, U, p)
     return nothing
 end
 
-# Give each partition tag its mask's part of `ᶜg`, a crossing's positive part,
+# Give each region tag its mask's part of `ᶜg`, a crossing's positive part,
 # as a tendency over `dtγ`. Only where the rule acted in the stage, `δL ≠ 0`,
-# so elsewhere the tendency is the old one, signed zeros included.
+# so elsewhere the tendency is unchanged, signed zeros included.
 _give_crossing_by_mask!(ᶜYₜ, ᶜmasks, ᶜg, ᶜδL, dtγ, ::Tuple{}) = nothing
 function _give_crossing_by_mask!(ᶜYₜ, ᶜmasks, ᶜg, ᶜδL, dtγ, tags::Tuple)
     tag = first(tags)
@@ -629,8 +632,8 @@ _water_tag_parent_after(ᶜU, ᶜdY, dtγ, model) =
         (ᶜU.ρq_sno + dtγ * ᶜdY.ρq_sno),
     )) : (@. lazy(ᶜU.ρq_tot + dtγ * ᶜdY.ρq_tot))
 
-# The share a cell's tag moves by in the follower. `ᶜparent` is the water the
-# tags' `ρq_tag_<name>` fields partition, `ρq_tot` or under
+# The share a cell's tag moves by in the correction after each solve. `ᶜparent`
+# is the water the tags' `ρq_tag_<name>` fields partition, `ρq_tot` or under
 # `water_tag_precipitation: true` its non-precipitating part
 # (`water_tag_parent`). Where it is not negative, the share is the flux's
 # (`_water_tag_share_field`), so nothing changes there, bit for bit. Where it
@@ -646,8 +649,8 @@ function _water_tag_follower_share_field(ᶜY, ᶜnorm, ᶜpos, tag, ᶜparent)
     )
 end
 
-# The follower's flux, as `_sgs_water_tag_fluxes!` moves the default mode's,
-# with the follower's shares.
+# The correction's flux, as `_sgs_water_tag_fluxes!` moves the default mode's,
+# with the shares of `_water_tag_follower_share_field`.
 _follower_water_tag_fluxes!(ᶜYₜ, ᶜY, ᶜnorm, ᶜpos, ᶠflux, ::Tuple{}, ᶜparent) = nothing
 function _follower_water_tag_fluxes!(ᶜYₜ, ᶜY, ᶜnorm, ᶜpos, ᶠflux, tags::Tuple, ᶜparent)
     tag = first(tags)
@@ -672,9 +675,9 @@ function _follower_water_tag_fluxes!(ᶜYₜ, ᶜY, ᶜnorm, ᶜpos, ᶠflux, ta
 end
 
 # Give each tag its share of `ᶜgive`, the water a cell's partition takes for
-# the parent's negative part, as a tendency over `dtγ`, by the follower's
-# shares. Only where the column's total `N` is not zero, so a run whose parent
-# stays non-negative is unchanged bit for bit.
+# the parent's negative part, as a tendency over `dtγ`, by the shares of
+# `_water_tag_follower_share_field`. Only where the column's total `N` is not
+# zero, so a run whose parent stays non-negative is unchanged bit for bit.
 _give_water_tags!(ᶜYₜ, ᶜY, ᶜnorm, ᶜpos, ᶜgive, N, dtγ, ::Tuple{}, ᶜparent) = nothing
 function _give_water_tags!(ᶜYₜ, ᶜY, ᶜnorm, ᶜpos, ᶜgive, N, dtγ, tags::Tuple, ᶜparent)
     tag = first(tags)
@@ -700,25 +703,30 @@ end
 
 The water family's own columns of `water_tag_audit.csv`: those of
 [`water_tag_edmf_audit`](@ref) under prognostic EDMF, and under
-`water_tag_transport: increment` the integrals of the increment's ledger since
-the start of the run, over the domain as `scale` is: `increment_left`, what it
-left out of the tags, which is signed and lands in the closure residual;
-`increment_left_net_abs`, the sum over the cells of the absolute value of each
-cell's ledger; and `increment_moved_net_abs`, the same for what it moved
-between levels. Both are net over time in each cell: a cell whose ledger went
-up and down again counts only what is left. They are not a throughput, and
-understate how much the correction redistributed; the per-step throughput is
-the diagnostics `q_tag_inc_left_gross` and `q_tag_inc_moved_gross`
-(`tag_throughput.jl`). The energy source tags' columns of the same kind have
-the same names. Each also over `scale`.
-
-Always, the gross throughput of the cache ledgers since the start of the run
-(`tag_throughput.jl`), carried through a restart from a checkpoint that holds
-it: `fix_gross` and `fix_events`, for the limiters' and the constraints'
-corrections of the tags, and with copies `copy_repair_events`, the copies'
-repair's count, beside the EDMF audit's `copy_repair`. The gross is an amount
-over the domain, a transfer counting once out and once in, and also over
+`water_tag_transport: increment` the integrals of the increment ledger since
+the start of the run, over the domain as `scale` is. Each is also given over
 `scale`.
+
+  - `increment_left`: what the correction left out of the tags. It is signed and
+    lands in the closure residual.
+  - `increment_left_net_abs`: the sum over the cells of the absolute value of
+    each cell's ledger.
+  - `increment_moved_net_abs`: the same for what it moved between levels.
+
+The last two are net over time in each cell, so a cell whose ledger went up and
+down again counts only what is left. They are not a gross, and understate how
+much the correction redistributed. The gross of each step's amounts is in the
+diagnostics `q_tag_inc_left_gross` and `q_tag_inc_moved_gross`
+(`tag_throughput.jl`). The energy source tags' columns of the same kind have the
+same names.
+
+Always, the gross of the fix ledger since the start of the run
+(`tag_throughput.jl`). A checkpoint that holds it carries it through a restart.
+The columns are `fix_gross` and `fix_events`, for the corrections of the fix
+ledger (limiters, constraints and partition repair), and with copies
+`copy_repair_events`, the count of the copies' repair, beside the EDMF audit's
+`copy_repair`. The gross is an amount over the domain, a transfer counting once
+out and once in, and also over `scale`.
 
 And, per state ledger of the water tags, what the accepted steps retained, what
 its writers attempted, and the events, with each tag's own ledgers against the
@@ -784,8 +792,7 @@ end
 """
     WaterTagIncrementCorrection(post)
 
-The post-solve hook when the water tags follow the parent's implicit increment.
-It runs `post`, which sets every field of `dY`, and then
+The post-solve hook of increment transport for the water tags. It runs `post`, which sets every field of `dY`, and then
 [`correct_water_tag_increment!`](@ref). `post` is the parent's own post-solve
 correction, or that wrapped in the energy source tags' correction
 (`EnergySourceIncrementCorrection`), so one hook serves both families. It is
