@@ -82,6 +82,11 @@ import ...close_parent_budget_event!
 # The slab's prescribed Q-flux, read for its leg through the same function the
 # slab tendency applies it with.
 import ...slab_q_flux
+# The audit's extra implicit evaluation keeps the water tags' ledger rate, which
+# the post-solve hook reads at the solve's last evaluation. The adapter saves
+# and restores it around that evaluation.
+import ...save_water_tag_exp_rate!
+import ...restore_water_tag_exp_rate!
 
 include("integrals.jl")
 include("schema.jl")

@@ -244,6 +244,12 @@ during simulation setup rather than at package load time:
     cumulative since the start of the run. See
     `water_tag_increment_ledger_variables`.
 
+  - `q_tag_exp_negative`, and under `water_tag_precipitation: true`
+    `q_tag_exp_negative_precip`: the gain withheld from the tags where the
+    parent is below zero, per unit mass, cumulative. They and their per-step
+    grosses are registered with the other state ledgers
+    (`register_tag_ledger_diagnostics!`).
+
   - `q_tag_fix_<name>`: water that the limiters and state constraints have moved
     into or out of each tag, cumulative since the start of the simulation
     segment. It separates "the numerics moved water" from "the transport
@@ -445,7 +451,9 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
                 "net-flow rule would give, less the change the gross flows " *
                 "gave, per unit mass of moist air, cumulative since the " *
                 "start of the run. The non-precipitating part's difference " *
-                "is minus the sum of this and `q_stag_aud_$name`.",
+                "is minus the sum of this and `q_stag_aud_$name` only if " *
+                "no compartment of the cell has been negative since the " *
+                "start of the run.",
                 Symbol(:q_rtag_aud_, name),
             ),
             (
@@ -713,7 +721,9 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
             "gave the tags, or took from them, because the parent's negative " *
             "part changed: the tags partition max(ρq_tot, 0), whose column " *
             "total grows by the negative water a solve creates. Zero where " *
-            "the parent stays non-negative (known issue 7, option C)." *
+            "the parent stays non-negative (known issue 7, option C). It " *
+            "also holds the positive part of a crossing whose gain the rule " *
+            "withheld inside the solve, which the tags take in that cell." *
             (
                 precipitation ?
                 " Under water_tag_precipitation: true the same holds for the " *

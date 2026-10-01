@@ -985,7 +985,7 @@ start shares.
 end
 
 """
-    water_tag_net_flow_change(ΔN, ΔR, ΔS, φN, φR, φS)
+    water_tag_net_flow_change(ΔN, ΔR, ΔS, φN, φR, φS, negN = false, negR = false, negS = false)
 
 The net-flow rule for one tag. The parent's
 compartments change by `ΔN`, `ΔR` and `ΔS`, which sum to zero. A compartment
@@ -996,8 +996,23 @@ sum to zero.
 The guards: a losing compartment the tags hold none of (a zero share) gives
 the tag nothing, so its water stays untagged. Without any loss nothing moves. A
 source tag's shares are not normalized, as elsewhere.
+
+A compartment flagged negative (`negN`, `negR`, `negS`) takes no gain: its
+target stays zero, and the gain fills its negative part. The tag's sum then
+falls short of zero by that gain. Where no flag is set, the result is the old
+one, bit for bit.
 """
-@inline function water_tag_net_flow_change(ΔN, ΔR, ΔS, φN, φR, φS)
+@inline function water_tag_net_flow_change(
+    ΔN,
+    ΔR,
+    ΔS,
+    φN,
+    φR,
+    φS,
+    negN = false,
+    negR = false,
+    negS = false,
+)
     lossN = max(-ΔN, zero(ΔN))
     lossR = max(-ΔR, zero(ΔR))
     lossS = max(-ΔS, zero(ΔS))
@@ -1005,15 +1020,18 @@ source tag's shares are not normalized, as elsewhere.
     mix =
         loss > zero(loss) ? (lossN * φN + lossR * φR + lossS * φS) / loss :
         zero(loss)
+    cN = min(ΔN, zero(ΔN)) * φN + max(ΔN, zero(ΔN)) * mix
+    cR = min(ΔR, zero(ΔR)) * φR + max(ΔR, zero(ΔR)) * mix
+    cS = min(ΔS, zero(ΔS)) * φS + max(ΔS, zero(ΔS)) * mix
     return (
-        min(ΔN, zero(ΔN)) * φN + max(ΔN, zero(ΔN)) * mix,
-        min(ΔR, zero(ΔR)) * φR + max(ΔR, zero(ΔR)) * mix,
-        min(ΔS, zero(ΔS)) * φS + max(ΔS, zero(ΔS)) * mix,
+        ifelse(negN, min(ΔN, zero(ΔN)) * φN, cN),
+        ifelse(negR, min(ΔR, zero(ΔR)) * φR, cR),
+        ifelse(negS, min(ΔS, zero(ΔS)) * φS, cS),
     )
 end
 
 """
-    water_tag_microphysics_change(F, dq_rai_dt, dq_sno_dt, qN, qR, qS, Δt, φN, φR, φS)
+    water_tag_microphysics_change(F, dq_rai_dt, dq_sno_dt, qN, qR, qS, Δt, φN, φR, φS, negN = false, negR = false, negS = false)
 
 The change of one tag's parts by the microphysics, per unit mass and time: the
 gross flows `F` over the step `Δt`, each with its donor's composition over the
@@ -1024,6 +1042,16 @@ That remainder is rounding where the flows are available, so the gross flows
 set the attribution. Where they are not, `F` is zero, and the net-flow rule is
 the fallback. `qN`, `qR` and `qS` are the compartments' water per unit mass,
 and `φN`, `φR`, `φS` the tag's shares of them. Returns `(ΔN, ΔR, ΔS)`.
+
+In a cell where a compartment is flagged negative (`negN`, `negR`, `negS`, the
+parent's sign at the stage), the transfers into it take the target's
+treatment. A flow that touches a negative compartment is read in its actual
+direction. A negative compartment's parts do not change. Its pool starts
+empty, so it passes on only what came in, with that water's composition: what
+it keeps fills its negative part, and what it gives beyond its inflow carries
+no tag's water and lands in `q_tag_res`. See
+[`water_tag_microphysics_withheld`](@ref) for the ledger. Where no flag is
+set, every number is the old one, bit for bit.
 """
 @inline function water_tag_microphysics_change(
     F,
@@ -1036,23 +1064,195 @@ and `φN`, `φR`, `φS` the tag's shares of them. Returns `(ΔN, ΔR, ΔS)`.
     φN,
     φR,
     φS,
+    negN = false,
+    negR = false,
+    negS = false,
 )
     (ψN, ψR, ψS) = water_tag_pool_shares(F, qN, qR, qS, Δt, φN, φR, φS)
     (gN, gR, gS) = water_tag_gross_flow_change(F, ψN, ψR, ψS)
     δR = dq_rai_dt - ((F.NR + F.SR) - (F.RN + F.RS))
     δS = dq_sno_dt - ((F.NS + F.RS) - (F.SN + F.SR))
     (nN, nR, nS) = water_tag_net_flow_change(-(δR + δS), δR, δS, φN, φR, φS)
-    return (gN + nN, gR + nR, gS + nS)
+    old = (gN + nN, gR + nR, gS + nS)
+    # The same with the gates, where a compartment is negative. `ifelse`
+    # keeps the old numbers elsewhere, since reordering alone would change the
+    # rounding.
+    (hN, hR, hS) = _water_tag_negative_gross_change(
+        F,
+        qN,
+        qR,
+        qS,
+        Δt,
+        φN,
+        φR,
+        φS,
+        negN,
+        negR,
+        negS,
+    )
+    (mN, mR, mS) = water_tag_net_flow_change(
+        -(δR + δS),
+        δR,
+        δS,
+        φN,
+        φR,
+        φS,
+        negN,
+        negR,
+        negS,
+    )
+    new = (hN + mN, hR + mR, hS + mS)
+    return ifelse(negN | negR | negS, new, old)
 end
 
 """
-    water_tag_microphysics_audit(F, dq_rai_dt, dq_sno_dt, qN, qR, qS, Δt, φN, φR, φS)
+    water_tag_oriented_flows(F, negN, negR, negS)
+
+The six flows `F` ([`WATER_TAG_FLOW_NAMES`](@ref)), read in their actual
+direction where they touch a negative compartment: a negative flow moves water
+from its nominal receiver to its nominal donor. The 1-moment flows are linear
+in their solved donors, so a negative content reverses its outflows. A pair of
+compartments neither of which is negative keeps its two flows as they are.
+Each pair's net flow is unchanged.
+"""
+@inline function water_tag_oriented_flows(F, negN, negR, negS)
+    (NR, RN) = _oriented_pair(F.NR, F.RN, negN | negR)
+    (NS, SN) = _oriented_pair(F.NS, F.SN, negN | negS)
+    (RS, SR) = _oriented_pair(F.RS, F.SR, negR | negS)
+    return (; NR, NS, RN, RS, SR, SN)
+end
+@inline _oriented_pair(xy, yx, touches) = (
+    ifelse(touches, max(xy, zero(xy)) + max(-yx, zero(yx)), xy),
+    ifelse(touches, max(yx, zero(yx)) + max(-xy, zero(xy)), yx),
+)
+
+# The share of a compartment's pool that its outflows carry: all of it where
+# it is not negative, and where it is, only what came in, `in / out` of it
+# where it gives more than it takes.
+@inline _water_tag_pass_on(neg, in, out) =
+    ifelse(neg & (out > in), in / out, one(in))
+
+# The gross flows' change of one tag's parts where a compartment is negative
+# (`water_tag_microphysics_change`). The pools are those of
+# `water_tag_pool_shares`, over the flows in their actual direction, and a
+# donor's composition enters a receiver's pool times what the donor passes on.
+@inline function _water_tag_negative_gross_change(
+    F,
+    qN,
+    qR,
+    qS,
+    Δt,
+    φN,
+    φR,
+    φS,
+    negN,
+    negR,
+    negS,
+)
+    FT = typeof(qN)
+    (; NR, NS, RN, RS, SR, SN) = water_tag_oriented_flows(F, negN, negR, negS)
+    (inN, inR, inS) = (RN + SN, NR + SR, NS + RS)
+    (outN, outR, outS) = (NR + NS, RN + RS, SN + SR)
+    cN = _water_tag_pass_on(negN, inN, outN)
+    cR = _water_tag_pass_on(negR, inR, outR)
+    cS = _water_tag_pass_on(negS, inS, outS)
+    fullN = qN + Δt * inN > zero(FT)
+    fullR = qR + Δt * inR > zero(FT)
+    fullS = qS + Δt * inS > zero(FT)
+    a11 = fullN ? qN + Δt * inN : one(FT)
+    a12 = fullN ? -Δt * RN * cR : zero(FT)
+    a13 = fullN ? -Δt * SN * cS : zero(FT)
+    a21 = fullR ? -Δt * NR * cN : zero(FT)
+    a22 = fullR ? qR + Δt * inR : one(FT)
+    a23 = fullR ? -Δt * SR * cS : zero(FT)
+    a31 = fullS ? -Δt * NS * cN : zero(FT)
+    a32 = fullS ? -Δt * RS * cR : zero(FT)
+    a33 = fullS ? qS + Δt * inS : one(FT)
+    b1 = fullN ? qN * φN : φN
+    b2 = fullR ? qR * φR : φR
+    b3 = fullS ? qS * φS : φS
+    m1 = a22 * a33 - a23 * a32
+    m2 = a21 * a33 - a23 * a31
+    m3 = a21 * a32 - a22 * a31
+    det = a11 * m1 - a12 * m2 + a13 * m3
+    ok = det > zero(det)
+    ψN = ifelse(
+        ok,
+        (b1 * m1 - a12 * (b2 * a33 - a23 * b3) + a13 * (b2 * a32 - a22 * b3)) /
+        det,
+        φN,
+    )
+    ψR = ifelse(
+        ok,
+        (a11 * (b2 * a33 - a23 * b3) - b1 * m2 + a13 * (a21 * b3 - b2 * a31)) /
+        det,
+        φR,
+    )
+    ψS = ifelse(
+        ok,
+        (a11 * (a22 * b3 - b2 * a32) - a12 * (a21 * b3 - b2 * a31) + b1 * m3) /
+        det,
+        φS,
+    )
+    # What each outflow carries of the tag. A negative compartment's own
+    # parts do not change.
+    (eN, eR, eS) = (ψN * cN, ψR * cR, ψS * cS)
+    gN = RN * eR + SN * eS - (NR + NS) * eN
+    gR = NR * eN + SR * eS - (RN + RS) * eR
+    gS = NS * eN + RS * eR - (SN + SR) * eS
+    return (
+        ifelse(negN, zero(gN), gN),
+        ifelse(negR, zero(gR), gR),
+        ifelse(negS, zero(gS), gS),
+    )
+end
+
+"""
+    water_tag_microphysics_withheld(F, dq_rai_dt, dq_sno_dt, negN, negR, negS)
+
+What the microphysics gives a negative compartment and no tag takes, per unit
+mass and time, parent-side: for each compartment flagged negative, its net
+inflow over the flows in their actual direction
+(`water_tag_oriented_flows`), and its gain in the net-flow rule on
+what the flows' net misses. Returns `(wN, wP)`: the non-precipitating water's,
+which the ledger `q_tag_exp_negative` takes, and the sum of rain's and snow's,
+which `q_tag_exp_negative_precip` takes. Zero where no flag is set. It does not
+read the tags.
+"""
+@inline function water_tag_microphysics_withheld(
+    F,
+    dq_rai_dt,
+    dq_sno_dt,
+    negN,
+    negR,
+    negS,
+)
+    (; NR, NS, RN, RS, SR, SN) = water_tag_oriented_flows(F, negN, negR, negS)
+    δR = dq_rai_dt - ((F.NR + F.SR) - (F.RN + F.RS))
+    δS = dq_sno_dt - ((F.NS + F.RS) - (F.SN + F.SR))
+    δN = -(δR + δS)
+    wN = _water_tag_kept(negN, RN + SN, NR + NS, δN)
+    wR = _water_tag_kept(negR, NR + SR, RN + RS, δR)
+    wS = _water_tag_kept(negS, NS + RS, SN + SR, δS)
+    return (wN, wR + wS)
+end
+# What a negative compartment keeps of its inflow, and its gain in the net-flow
+# rule. Zero for a compartment that is not negative.
+@inline _water_tag_kept(neg, in, out, δ) =
+    ifelse(neg, max(in - out, zero(in)) + max(δ, zero(δ)), zero(in))
+
+"""
+    water_tag_microphysics_audit(F, dq_rai_dt, dq_sno_dt, qN, qR, qS, Δt, φN, φR, φS, negN = false, negR = false, negS = false)
 
 The audit for one tag: the net-flow rule's
 change of the tag's rain and snow parts, minus the change the model applies
-([`water_tag_microphysics_change`](@ref)). Returns `(ΔR, ΔS)`. Both rules keep
-each tag's total, so the non-precipitating part's difference is minus their
-sum.
+([`water_tag_microphysics_change`](@ref)). Returns `(ΔR, ΔS)`. Both terms take
+the same gates for a negative compartment, so each record still compares the
+two rules for its own compartment. Where no compartment is negative, both rules
+keep each tag's total, and the non-precipitating part's difference is minus the
+sum of the two. Where one is, a gated part does not change, so the rules need
+not keep the total. The non-precipitating part's difference is then not minus
+their sum, and no record holds it.
 """
 @inline function water_tag_microphysics_audit(
     F,
@@ -1065,6 +1265,9 @@ sum.
     φN,
     φR,
     φS,
+    negN = false,
+    negR = false,
+    negS = false,
 )
     (_, aR, aS) = water_tag_net_flow_change(
         -(dq_rai_dt + dq_sno_dt),
@@ -1073,6 +1276,9 @@ sum.
         φN,
         φR,
         φS,
+        negN,
+        negR,
+        negS,
     )
     (_, cR, cS) = water_tag_microphysics_change(
         F,
@@ -1085,6 +1291,9 @@ sum.
         φN,
         φR,
         φS,
+        negN,
+        negR,
+        negS,
     )
     return (aR - cR, aS - cS)
 end
@@ -1095,6 +1304,8 @@ end
 @inline _mp_change_s(args...) = water_tag_microphysics_change(args...)[3]
 @inline _mp_audit_r(args...) = water_tag_microphysics_audit(args...)[1]
 @inline _mp_audit_s(args...) = water_tag_microphysics_audit(args...)[2]
+@inline _mp_withheld_n(args...) = water_tag_microphysics_withheld(args...)[1]
+@inline _mp_withheld_p(args...) = water_tag_microphysics_withheld(args...)[2]
 
 """
     water_tag_precipitation_microphysics_tendency!(Yₜ, Y, p)
@@ -1105,7 +1316,9 @@ donor's composition over the step ([`water_tag_microphysics_change`](@ref)). The
 frozen in `p.tagging.ᶜwater_mp_flows` with the model's own tendencies, and the
 shares are taken from `Y`. It also adds the audit's difference to the audit
 fields `q_rtag_aud_<name>` and `q_stag_aud_<name>`
-([`water_tag_microphysics_audit`](@ref)).
+([`water_tag_microphysics_audit`](@ref)). Where a compartment of `Y` is
+negative, the transfers into it take the target's treatment, and the ledgers
+`q_tag_exp_negative` and `q_tag_exp_negative_precip` take what it keeps.
 
 Called beside `microphysics_tendency!`, on the implicit path or the explicit
 one, whichever the model uses. The microphysics keeps `ρq_tot`, so the
@@ -1135,18 +1348,47 @@ function _water_tag_precipitation_microphysics_tendency!(
     ᶜqR = @. lazy(max(specific(Y.c.ρq_rai, Y.c.ρ), 0))
     ᶜqS = @. lazy(max(specific(Y.c.ρq_sno, Y.c.ρ), 0))
     ᶜpools = (; N = ᶜqN, R = ᶜqR, S = ᶜqS)
+    # Which compartments are negative at this state, `±0` not.
+    ᶜnegative = water_tag_negative_compartments(Y.c)
+    ᶜF = p.tagging.ᶜwater_mp_flows
+    ᶜmp = p.precomputed.ᶜmp_tendency
+    # The ledgers take what a negative compartment keeps, once per cell.
+    (ᶜnegN, ᶜnegR, ᶜnegS) = ᶜnegative
+    ᶜwithheldₜ = Yₜ.c.q_tag_exp_negative
+    ᶜwithheld_precipₜ = Yₜ.c.q_tag_exp_negative_precip
+    @. ᶜwithheldₜ +=
+        Y.c.ρ * _mp_withheld_n(
+            ᶜF, ᶜmp.dq_rai_dt, ᶜmp.dq_sno_dt, ᶜnegN, ᶜnegR, ᶜnegS,
+        )
+    @. ᶜwithheld_precipₜ +=
+        Y.c.ρ * _mp_withheld_p(
+            ᶜF, ᶜmp.dq_rai_dt, ᶜmp.dq_sno_dt, ᶜnegN, ᶜnegR, ᶜnegS,
+        )
     _microphysics_of_water_tag_parts!(
         Yₜ.c,
         Y.c,
         p.scratch,
-        p.tagging.ᶜwater_mp_flows,
-        p.precomputed.ᶜmp_tendency,
+        ᶜF,
+        ᶜmp,
         ᶜpools,
+        ᶜnegative,
         eltype(Y.c.ρ)(float(p.dt)),
         model.tags,
     )
     return nothing
 end
+
+"""
+    water_tag_negative_compartments(ᶜY)
+
+Whether each compartment of the parent is below zero, lazily: the
+non-precipitating water, rain and snow. `+0.0` and `-0.0` are not.
+"""
+water_tag_negative_compartments(ᶜY) = (
+    (@. lazy(ᶜY.ρq_tot - ᶜY.ρq_rai - ᶜY.ρq_sno < 0)),
+    (@. lazy(ᶜY.ρq_rai < 0)),
+    (@. lazy(ᶜY.ρq_sno < 0)),
+)
 
 _microphysics_of_water_tag_parts!(
     ᶜYₜ,
@@ -1155,6 +1397,7 @@ _microphysics_of_water_tag_parts!(
     ᶜF,
     ᶜmp,
     ᶜpools,
+    ᶜnegative,
     Δt,
     ::Tuple{},
 ) = nothing
@@ -1165,10 +1408,12 @@ function _microphysics_of_water_tag_parts!(
     ᶜF,
     ᶜmp,
     ᶜpools,
+    ᶜnegative,
     Δt,
     tags::Tuple,
 )
     tag = first(tags)
+    (ᶜnegN, ᶜnegR, ᶜnegS) = ᶜnegative
     ᶜφN = water_tag_part_share(ᶜY, scratch, tag, NonPrecipitatingPart())
     ᶜφR = water_tag_part_share(ᶜY, scratch, tag, RainPart())
     ᶜφS = water_tag_part_share(ᶜY, scratch, tag, SnowPart())
@@ -1181,24 +1426,29 @@ function _microphysics_of_water_tag_parts!(
     @. ᶜNₜ +=
         ᶜY.ρ * _mp_change_n(
             ᶜF, ᶜdq_rai_dt, ᶜdq_sno_dt, ᶜqN, ᶜqR, ᶜqS, Δt, ᶜφN, ᶜφR, ᶜφS,
+            ᶜnegN, ᶜnegR, ᶜnegS,
         )
     @. ᶜRₜ +=
         ᶜY.ρ * _mp_change_r(
             ᶜF, ᶜdq_rai_dt, ᶜdq_sno_dt, ᶜqN, ᶜqR, ᶜqS, Δt, ᶜφN, ᶜφR, ᶜφS,
+            ᶜnegN, ᶜnegR, ᶜnegS,
         )
     @. ᶜSₜ +=
         ᶜY.ρ * _mp_change_s(
             ᶜF, ᶜdq_rai_dt, ᶜdq_sno_dt, ᶜqN, ᶜqR, ᶜqS, Δt, ᶜφN, ᶜφR, ᶜφS,
+            ᶜnegN, ᶜnegR, ᶜnegS,
         )
     ᶜrain_auditₜ = rain_audit_field(ᶜYₜ, tag)
     ᶜsnow_auditₜ = snow_audit_field(ᶜYₜ, tag)
     @. ᶜrain_auditₜ +=
         ᶜY.ρ * _mp_audit_r(
             ᶜF, ᶜdq_rai_dt, ᶜdq_sno_dt, ᶜqN, ᶜqR, ᶜqS, Δt, ᶜφN, ᶜφR, ᶜφS,
+            ᶜnegN, ᶜnegR, ᶜnegS,
         )
     @. ᶜsnow_auditₜ +=
         ᶜY.ρ * _mp_audit_s(
             ᶜF, ᶜdq_rai_dt, ᶜdq_sno_dt, ᶜqN, ᶜqR, ᶜqS, Δt, ᶜφN, ᶜφR, ᶜφS,
+            ᶜnegN, ᶜnegR, ᶜnegS,
         )
     return _microphysics_of_water_tag_parts!(
         ᶜYₜ,
@@ -1207,6 +1457,7 @@ function _microphysics_of_water_tag_parts!(
         ᶜF,
         ᶜmp,
         ᶜpools,
+        ᶜnegative,
         Δt,
         Base.tail(tags),
     )
@@ -1225,7 +1476,10 @@ condensate at the expense of vapour and keeps `ρq_tot`. The rain and snow it
 adds or removes move between each tag's rain or snow part and its
 non-precipitating part by the net-flow rule
 ([`water_tag_net_flow_change`](@ref)): what a compartment gains takes the
-non-precipitating composition. A no-op without the key.
+non-precipitating composition. A compartment that is negative takes no gain,
+and the ledgers `q_tag_exp_negative` and `q_tag_exp_negative_precip` take it.
+The tendency lifts exactly the negative condensate, so where rain or snow is
+negative its parts take nothing. A no-op without the key.
 """
 snapshot_water_tag_precipitation_tendency!(p, Yₜ) =
     has_water_tag_precipitation(p.atmos.water_tagging_model) ?
@@ -1242,35 +1496,63 @@ function attribute_water_tag_precipitation_tendency!(Yₜ, Y, p)
     water_tag_share_norm!(p, Y)
     ᶜΔR = @. lazy(Yₜ.c.ρq_rai - p.scratch.ᶜtagging_q_rai_snapshot)
     ᶜΔS = @. lazy(Yₜ.c.ρq_sno - p.scratch.ᶜtagging_q_sno_snapshot)
-    _net_flow_of_water_tag_parts!(Yₜ.c, Y.c, p.scratch, ᶜΔR, ᶜΔS, model.tags)
+    ᶜnegative = water_tag_negative_compartments(Y.c)
+    (ᶜnegN, ᶜnegR, ᶜnegS) = ᶜnegative
+    # A negative compartment's gain, parent-side, once per cell.
+    ᶜwithheldₜ = Yₜ.c.q_tag_exp_negative
+    ᶜwithheld_precipₜ = Yₜ.c.q_tag_exp_negative_precip
+    @. ᶜwithheldₜ += _water_tag_kept(ᶜnegN, -(ᶜΔR + ᶜΔS), zero(ᶜΔR), zero(ᶜΔR))
+    @. ᶜwithheld_precipₜ +=
+        _water_tag_kept(ᶜnegR, ᶜΔR, zero(ᶜΔR), zero(ᶜΔR)) +
+        _water_tag_kept(ᶜnegS, ᶜΔS, zero(ᶜΔS), zero(ᶜΔS))
+    _net_flow_of_water_tag_parts!(
+        Yₜ.c,
+        Y.c,
+        p.scratch,
+        ᶜΔR,
+        ᶜΔS,
+        ᶜnegative,
+        model.tags,
+    )
     return nothing
 end
 
-@inline _net_change_n(ΔR, ΔS, φN, φR, φS) =
-    water_tag_net_flow_change(-(ΔR + ΔS), ΔR, ΔS, φN, φR, φS)[1]
-@inline _net_change_r(ΔR, ΔS, φN, φR, φS) =
-    water_tag_net_flow_change(-(ΔR + ΔS), ΔR, ΔS, φN, φR, φS)[2]
-@inline _net_change_s(ΔR, ΔS, φN, φR, φS) =
-    water_tag_net_flow_change(-(ΔR + ΔS), ΔR, ΔS, φN, φR, φS)[3]
+@inline _net_change_n(ΔR, ΔS, φN, φR, φS, flags...) =
+    water_tag_net_flow_change(-(ΔR + ΔS), ΔR, ΔS, φN, φR, φS, flags...)[1]
+@inline _net_change_r(ΔR, ΔS, φN, φR, φS, flags...) =
+    water_tag_net_flow_change(-(ΔR + ΔS), ΔR, ΔS, φN, φR, φS, flags...)[2]
+@inline _net_change_s(ΔR, ΔS, φN, φR, φS, flags...) =
+    water_tag_net_flow_change(-(ΔR + ΔS), ΔR, ΔS, φN, φR, φS, flags...)[3]
 
-_net_flow_of_water_tag_parts!(ᶜYₜ, ᶜY, scratch, ᶜΔR, ᶜΔS, ::Tuple{}) = nothing
-function _net_flow_of_water_tag_parts!(ᶜYₜ, ᶜY, scratch, ᶜΔR, ᶜΔS, tags::Tuple)
+_net_flow_of_water_tag_parts!(ᶜYₜ, ᶜY, scratch, ᶜΔR, ᶜΔS, ᶜnegative, ::Tuple{}) =
+    nothing
+function _net_flow_of_water_tag_parts!(
+    ᶜYₜ,
+    ᶜY,
+    scratch,
+    ᶜΔR,
+    ᶜΔS,
+    ᶜnegative,
+    tags::Tuple,
+)
     tag = first(tags)
+    (ᶜnegN, ᶜnegR, ᶜnegS) = ᶜnegative
     ᶜφN = water_tag_part_share(ᶜY, scratch, tag, NonPrecipitatingPart())
     ᶜφR = water_tag_part_share(ᶜY, scratch, tag, RainPart())
     ᶜφS = water_tag_part_share(ᶜY, scratch, tag, SnowPart())
     ᶜNₜ = tag_field(ᶜYₜ, tag)
     ᶜRₜ = rain_tag_field(ᶜYₜ, tag)
     ᶜSₜ = snow_tag_field(ᶜYₜ, tag)
-    @. ᶜNₜ += _net_change_n(ᶜΔR, ᶜΔS, ᶜφN, ᶜφR, ᶜφS)
-    @. ᶜRₜ += _net_change_r(ᶜΔR, ᶜΔS, ᶜφN, ᶜφR, ᶜφS)
-    @. ᶜSₜ += _net_change_s(ᶜΔR, ᶜΔS, ᶜφN, ᶜφR, ᶜφS)
+    @. ᶜNₜ += _net_change_n(ᶜΔR, ᶜΔS, ᶜφN, ᶜφR, ᶜφS, ᶜnegN, ᶜnegR, ᶜnegS)
+    @. ᶜRₜ += _net_change_r(ᶜΔR, ᶜΔS, ᶜφN, ᶜφR, ᶜφS, ᶜnegN, ᶜnegR, ᶜnegS)
+    @. ᶜSₜ += _net_change_s(ᶜΔR, ᶜΔS, ᶜφN, ᶜφR, ᶜφS, ᶜnegN, ᶜnegR, ᶜnegS)
     return _net_flow_of_water_tag_parts!(
         ᶜYₜ,
         ᶜY,
         scratch,
         ᶜΔR,
         ᶜΔS,
+        ᶜnegative,
         Base.tail(tags),
     )
 end

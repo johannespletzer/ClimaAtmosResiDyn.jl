@@ -12,6 +12,7 @@ const _ALL_TAG_STATE_LEDGER_NAMES = (
     :q_tag_inc_left,
     :q_tag_inc_moved,
     :q_tag_inc_negative,
+    WATER_TAG_EXP_LEDGER_NAMES...,
     ENERGY_SOURCE_MECHANISM_NAMES...,
     :e_src_inc_left,
     :e_src_inc_moved,
@@ -44,6 +45,16 @@ const _TAG_MECHANISM_TEXT = (;
     q_tag_led_upleaknet = "the water the diffusion leak's correction gave " *
                           "the partition's copies, times ρaʲ, the net of " *
                           "their changes (correct_water_tag_diffusion_leak!)",
+    q_tag_exp_negative = "the gain the brackets withheld from the tags " *
+                         "where the partition's parent was below zero, " *
+                         "whatever the tags held: it filled the parent's " *
+                         "negative part (known issue 7). Under " *
+                         "water_tag_precipitation: true also the net inflow " *
+                         "into the non-precipitating water while negative",
+    q_tag_exp_negative_precip = "the net inflow the microphysics and the " *
+                                "vapour bracket gave rain and snow while " *
+                                "negative, which no tag's part took " *
+                                "(known issue 7)",
     e_src_led_repair = "the energy the partition repair moved between the " *
                        "tags, half the sum of the tags' changes less their " *
                        "net (repair_energy_source_tags!)",
@@ -129,8 +140,9 @@ end
 Register the tags' state ledgers per mechanism and the per-step gross of every
 state ledger:
 
-  - `<L>` for each ledger per mechanism, `q_tag_led_*` and `e_src_led_*`: what
-    the steps retained, per unit mass, cumulative since the start of the run;
+  - `<L>` for each ledger per mechanism, `q_tag_led_*` and `e_src_led_*`, and
+    each ledger of the withheld gain, `q_tag_exp_*`: what the steps retained,
+    per unit mass, cumulative since the start of the run;
   - `<L>_gross`: the sum over the steps of `|ΔL|` per cell, per unit mass, for
     these and for the increment corrections' ledgers;
   - `<L>_colgross`: the sum over the steps of `|∫ΔL dz|` per column.
@@ -153,6 +165,7 @@ function register_tag_ledger_diagnostics!(model::AtmosModel)
     for name in _ALL_TAG_STATE_LEDGER_NAMES
         name in WATER_TAG_ALL_MECHANISM_NAMES ||
             name in WATER_TAG_LEAK_MECHANISM_NAMES ||
+            name in WATER_TAG_EXP_LEDGER_NAMES ||
             name in WATER_TAG_COPY_LEAK_MECHANISM_NAMES ||
             name in ENERGY_SOURCE_MECHANISM_NAMES ||
             continue
@@ -264,7 +277,9 @@ function register_tag_ledger_diagnostics!(model::AtmosModel)
             add_diagnostic_variable!(;
                 short_name = string(name),
                 units,
-                long_name = "$what Retained by a Tag Correction",
+                long_name = name in WATER_TAG_EXP_LEDGER_NAMES ?
+                            "Water Withheld from the Tags" :
+                            "$what Retained by a Tag Correction",
                 comments = "$(getproperty(_TAG_MECHANISM_TEXT, name)), as " *
                            "the steps retained it: the stepper weights this " *
                            "state field as it weights the tags. Per unit " *

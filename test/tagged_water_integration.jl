@@ -190,6 +190,56 @@ base_config(tags; extra = Dict{String, Any}()) = merge(
             parent(getproperty(simulation.integrator.p.tagging.ᶜwater_fix, name)),
         )
     end
+
+    # C's revision, extended (the owner, 2026-09-30; the design note,
+    # 11.11.2): the implicit microphysics bracket gives the target's gain too.
+    # This column steps the microphysics implicitly. In one cell, the parent
+    # is made negative and the cached 0M rain-out a gain. The implicit
+    # tendency is taken with and without that gain. No tag takes any of it,
+    # and the ledger of the withheld gain takes all of it. Under the parent's
+    # rule the partition tags would take it, by mask.
+    @testset "The implicit microphysics bracket gives the target's gain" begin
+        integrator = simulation.integrator
+        p = integrator.p
+        @test p.atmos.microphysics_tendency_timestepping == CA.Implicit()
+        @test CA.microphysics_gain_rule(p.atmos) === CA.TargetGain()
+        Y_negative = copy(integrator.u)
+        k = 20
+        parent(Y_negative.c.ρq_tot)[k] = -1e-6
+        ᶜdq_tot_dt = p.precomputed.ᶜmp_tendency.dq_tot_dt
+        function implicit_tendency_with(gain)
+            saved = parent(ᶜdq_tot_dt)[k]
+            parent(ᶜdq_tot_dt)[k] = gain
+            Yₜ = zero(Y_negative)
+            CA.implicit_tendency!(Yₜ, Y_negative, p, integrator.t)
+            parent(ᶜdq_tot_dt)[k] = saved
+            return Yₜ
+        end
+        with_gain = implicit_tendency_with(1e-6)
+        without = implicit_tendency_with(0.0)
+        at(ᶜx) = parent(ᶜx)[k]
+        Δ = at(with_gain.c.ρq_tot) - at(without.c.ρq_tot)
+        @test Δ > 0
+        # The tags' tendencies at `k` do not change, the partition's and the
+        # source tags'.
+        for name in tag_names
+            @test at(getproperty(with_gain.c, name)) ==
+                  at(getproperty(without.c, name))
+        end
+        # The ledger's tendency at `k` changes by the gain, to rounding, and
+        # nowhere else.
+        @test at(with_gain.c.q_tag_exp_negative) -
+              at(without.c.q_tag_exp_negative) ≈ Δ rtol = 1e-8
+        @test all(iszero, parent(without.c.q_tag_exp_negative))
+        # Every other cell's tag tendencies are the same, bit for bit.
+        others = setdiff(1:length(parent(Y_negative.c.ρq_tot)), k)
+        for name in (tag_names..., :q_tag_exp_negative)
+            @test isequal(
+                parent(getproperty(with_gain.c, name))[others],
+                parent(getproperty(without.c, name))[others],
+            )
+        end
+    end
 end
 
 # The column above trips no limiter, so `rescale_water_tags!` and its three call
@@ -352,6 +402,8 @@ end
         "void_above" => 1.0e-30,
         "audit" => true,
     )
+    # The default config. Every run below uses it, except the restart
+    # comparison: the first run, its restarts and the straight run.
     test_dict = base_config(
         tags;
         extra = Dict{String, Any}(
@@ -361,9 +413,22 @@ end
             "water_closure_check" => closure_check,
         ),
     )
+    # This column restarts bit for bit only under two keys. The model's own
+    # cache carries two things from one evaluation to the next, and a
+    # checkpoint carries neither. The cloud fraction's Picard iteration starts
+    # from the value it last took, unless `reproducible_restart` is set. The
+    # SGS saturation adjustment reads the covariances the last evaluation
+    # left, unless `sgs_distribution` is `mean`. Without both, a restarted run
+    # does not continue the straight run bit for bit, with or without tags.
+    # So the first run, its restart and the straight run take both keys.
+    restart_keys = Dict{String, Any}(
+        "reproducible_restart" => true,
+        "sgs_distribution" => "mean",
+    )
+    restart_base_dict = merge(test_dict, restart_keys)
 
     simulation = CA.get_simulation(
-        CA.AtmosConfig(test_dict; job_id = "tagged_water_restart"),
+        CA.AtmosConfig(restart_base_dict; job_id = "tagged_water_restart"),
     )
     result = CA.solve_atmos!(simulation)
     @test result.ret_code == :success
@@ -373,7 +438,16 @@ end
     # them is a new model type, so this costs a compile, and every other field
     # must come out bit for bit. `isequal` tells signed zeros apart, which `==`
     # does not. See "Fork parity with upstream" in `docs/clima_atmos_specific.md`.
+    # Both runs use the default config, not the restart's two keys.
     @testset "The model's fields do not depend on the tags" begin
+        local tagged = CA.get_simulation(
+            CA.AtmosConfig(
+                merge(test_dict, Dict{String, Any}("output_dir" => mktempdir(pwd())));
+                job_id = "tagged_water_parity",
+            ),
+        )
+        @test CA.solve_atmos!(tagged).ret_code == :success
+        local Y = tagged.integrator.u
         local plain_dict = merge(
             filter(
                 entry -> !(first(entry) in ("water_tracers", "water_closure_check")),
@@ -391,7 +465,8 @@ end
             name ->
                 hasproperty(Y_plain.c, name) ||
                 CA.is_tagged_tracer_name(name) ||
-                CA.is_tag_mechanism_ledger_name(name),
+                CA.is_tag_mechanism_ledger_name(name) ||
+                CA.is_water_tag_exp_ledger_name(name),
             propertynames(Y.c),
         )
         @test propertynames(Y.f) == propertynames(Y_plain.f)
@@ -434,7 +509,7 @@ end
     # The restart sets water's default level, 1.0, which its own residual does
     # not reach. So its rows are void only through the flag in the checkpoint.
     restart_dict = merge(
-        test_dict,
+        restart_base_dict,
         Dict{String, Any}(
             "restart_file" => restart_file,
             "t_end" => "40secs",
@@ -456,6 +531,25 @@ end
         @test parent(getproperty(Y_restart.c, name)) ==
               parent(getproperty(Y.c, name))
     end
+    # So do the ledger of the withheld gain and its accumulators (the owner,
+    # 2026-09-30): the per-step gross, the column gross and the events.
+    @test hasproperty(Y.c, :q_tag_exp_negative)
+    @test isequal(
+        parent(Y_restart.c.q_tag_exp_negative),
+        parent(Y.c.q_tag_exp_negative),
+    )
+    CA.InputOutput.HDF5Reader(restart_file, context) do reader
+        for kind in ("gross", "colgross", "events")
+            @test haskey(reader.file, "fields/tag_ledger.$kind.q_tag_exp_negative")
+        end
+    end
+    exp_ledger(sim) = sim.integrator.p.tagging.tag_ledger_steps.ledgers.q_tag_exp_negative
+    for field in (:ᶜgross, :colgross, :ᶜevents)
+        @test isequal(
+            parent(getproperty(exp_ledger(restarted), field)),
+            parent(getproperty(exp_ledger(simulation), field)),
+        )
+    end
     for name in (:ρq_tag_upper, :ρq_tag_lower)
         @test parent(
             getproperty(restarted.integrator.p.tagging.ᶜwater_masks, name),
@@ -467,6 +561,29 @@ end
     # The first row, written when the restarted run starts, and every later
     # row of both tables stay void (the owner's review of #112).
     @test CA.solve_atmos!(restarted).ret_code == :success
+    # The restarted run continues the straight run bit for bit, the tags, the
+    # ledger of the withheld gain and its accumulators included.
+    straight = CA.get_simulation(
+        CA.AtmosConfig(
+            merge(
+                restart_base_dict,
+                Dict{String, Any}(
+                    "t_end" => "40secs",
+                    "output_dir" => mktempdir(pwd()),
+                ),
+            );
+            job_id = "tagged_water_restart_straight",
+        ),
+    )
+    @test CA.solve_atmos!(straight).ret_code == :success
+    @test isequal(parent(restarted.integrator.u.c), parent(straight.integrator.u.c))
+    @test isequal(parent(restarted.integrator.u.f), parent(straight.integrator.u.f))
+    for field in (:ᶜgross, :colgross, :ᶜevents)
+        @test isequal(
+            parent(getproperty(exp_ledger(restarted), field)),
+            parent(getproperty(exp_ledger(straight), field)),
+        )
+    end
     @test table_column(closure_table(restarted), "time") ==
           ["20.0", "30.0", "40.0"]
     @test all(
@@ -766,6 +883,56 @@ end
     @test isequal(parent(accumulator(shortened).ᶜamount), expected)
     # Weighted by the base step instead, it would not be.
     @test !isequal(parent(accumulator(shortened).ᶜamount), with_base_step)
+
+    # Parity where the rule acts (the review of 11.11, test 17). In the other
+    # parity checks the parent never goes below zero, so the rule never acts
+    # there. Here the water of the bottom five cells is made negative before
+    # the first step, in a run with the tags and in one without. The surface
+    # flux, for one, then brings water into the bottom cell, whose parent is
+    # below zero. The rule withholds that gain from the tags, and the ledger
+    # takes it. Every field the model has must still be bit for bit the same.
+    @testset "The model's fields do not depend on the tags where the rule acts" begin
+        band = 1:5
+        function band_run(dict, job_id)
+            local sim = CA.get_simulation(
+                CA.AtmosConfig(
+                    merge(dict, Dict{String, Any}("output_dir" => mktempdir(pwd())));
+                    job_id,
+                ),
+            )
+            local water = parent(sim.integrator.u.c.ρq_tot)
+            water[band] .= .-water[band] ./ 2
+            return sim
+        end
+        band_plain_dict = filter(
+            entry -> !(first(entry) in ("water_tracers", "water_closure_check")),
+            test_dict,
+        )
+        band_tagged = band_run(test_dict, "tagged_water_band")
+        band_plain = band_run(band_plain_dict, "tagged_water_band_plain")
+        @test CA.solve_atmos!(band_tagged).ret_code == :success
+        @test CA.solve_atmos!(band_plain).ret_code == :success
+        Y_band = band_tagged.integrator.u
+        Y_band_plain = band_plain.integrator.u
+        # The band stays below zero to the end, and the ledger holds the gain
+        # the rule withheld there. The surface flux's is in the bottom cell.
+        @test all(<(0), parent(Y_band_plain.c.ρq_tot)[band])
+        @test parent(Y_band.c.q_tag_exp_negative)[1] > 0
+        # Every field of the run without the tags, bit for bit.
+        for name in propertynames(Y_band_plain.c)
+            @test isequal(
+                parent(getproperty(Y_band.c, name)),
+                parent(getproperty(Y_band_plain.c, name)),
+            )
+        end
+        @test propertynames(Y_band.f) == propertynames(Y_band_plain.f)
+        for name in propertynames(Y_band_plain.f)
+            @test isequal(
+                parent(getproperty(Y_band.f, name)),
+                parent(getproperty(Y_band_plain.f, name)),
+            )
+        end
+    end
 end
 
 @testset "Tagged water rejects unsupported microphysics" begin

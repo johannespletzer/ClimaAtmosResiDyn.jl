@@ -147,6 +147,16 @@ follower takes the increment of the non-precipitating water's target, and
 `q_tag_inc_negative` holds what it gives the tags for that water's negative
 part. Where no compartment is negative, nothing changes, bit for bit.
 
+A transfer into a negative compartment takes the target's treatment. In a cell
+where a compartment is below zero, a flow that touches it is read in its actual
+direction, and its parts take no microphysics change. Its pool starts empty, so
+it passes on only what came in, with that water's composition. What it keeps
+fills its negative part, and what it gives beyond its inflow carries no tag's
+water and lands in `q_tag_res`. The net-flow rule gives a negative compartment
+no gain. The ledgers `q_tag_exp_negative` and `q_tag_exp_negative_precip`
+record what the negative non-precipitating water and the negative rain and
+snow keep.
+
 ## Limits and cost
 
   - Without EDMF only. Updraft copies are refused.
@@ -184,6 +194,9 @@ ClimaAtmos.water_tag_gross_flow_change
 ClimaAtmos.water_tag_pool_shares
 ClimaAtmos.water_tag_net_flow_change
 ClimaAtmos.water_tag_microphysics_change
+ClimaAtmos.water_tag_oriented_flows
+ClimaAtmos.water_tag_microphysics_withheld
+ClimaAtmos.water_tag_negative_compartments
 ClimaAtmos.water_tag_microphysics_audit
 ClimaAtmos.water_tag_precipitation_microphysics_tendency!
 ClimaAtmos.snapshot_water_tag_precipitation_tendency!
