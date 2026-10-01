@@ -413,6 +413,10 @@ end
         "fixcount_a",
         "upfixgross_a",
         "upfixcount_a",
+        # The ledgers of the withheld gain, `q_tag_exp_negative` and
+        # `q_tag_exp_negative_precip` (the owner, 2026-09-30).
+        "exp_negative",
+        "exp_x",
     )
         @test_throws "`$name` is refused" CA.water_tracer_tuple(
             [Dict("name" => name, "source" => "surface_flux")],
@@ -427,7 +431,7 @@ end
         )
     end
     # A reserved prefix counts only as a prefix, with its underscore.
-    for name in ("evap_fix", "fixed", "income", "stagnant", "rtagged")
+    for name in ("evap_fix", "fixed", "income", "stagnant", "rtagged", "expanse")
         @test CA.water_tracer_tuple(
             [Dict("name" => name, "source" => "surface_flux")],
             FT,

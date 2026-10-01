@@ -47,6 +47,8 @@ and `(;)` otherwise:
     mismatch has its sign, by the cells' composition. Zero wherever the
     parent stays non-negative. Under `water_tag_precipitation: true` it is
     the same for the non-precipitating water, `ρq_tot - ρq_rai - ρq_sno`.
+    It also holds the positive part of a crossing that the rule withheld
+    inside the solve, which the tags take in the crossing's own cell.
 
 All three are prognostic, so the stepper weights each stage's entry as it weights
 the tags. They record what the correction intends. A face whose donor cell holds
@@ -122,6 +124,10 @@ _water_tag_increment_cache(Y, model) =
         Fields.Field(eltype(Y.c.ρ), axes(Y.f)),
         q_tag_negative_total = zeros(axes(Fields.level(Y.f, half))),
         q_tag_negative_weight_total = zeros(axes(Fields.level(Y.f, half))),
+        # The gain withheld in the solve, `δL`, and the crossing's positive
+        # part.
+        ᶜq_tag_exp_change = similar(Y.c.ρ),
+        ᶜq_tag_crossing = similar(Y.c.ρ),
         ᶠq_tag_increment_flux = Fields.Field(CT3{eltype(Y.c.ρ)}, axes(Y.f)),
         ᶠq_tag_area_ratio = _energy_source_face_area_ratio(Y.f),
         q_tag_dtγ = Ref(zero(eltype(Y.c.ρ))),
@@ -185,6 +191,8 @@ end
 
 At the start of an implicit stage, keep `ρq_tot`, the sum of the partition
 tags and the stage's weight `dtγ`, for [`correct_water_tag_increment!`](@ref).
+It also zeroes the kept rate of the ledger `q_tag_exp_negative`
+([`keep_water_tag_exp_rate!`](@ref)), which the solve's evaluations then set.
 Called first thing in `initialize_implicit_stage_problem!`, where `Y` is still
 the stage value before the solve. A no-op unless the tags follow the parent's
 implicit increment.
@@ -200,7 +208,55 @@ function _snapshot_water_tag_increment!(Y, p, dtγ, model)
     # non-precipitating part under `water_tag_precipitation: true`.
     @. ᶜq_tag_ρq_tot_snapshot = $(water_tag_parent(Y.c, model))
     _water_partition_sum!(ᶜq_tag_partition_snapshot, Y.c, Y.c, false, model.tags)
+    @. p.scratch.ᶜtagging_q_exp_rate = 0
     q_tag_dtγ[] = dtγ
+    return nothing
+end
+
+"""
+    keep_water_tag_exp_rate!(p, Yₜ)
+
+Keep the implicit tendency of the ledger `q_tag_exp_negative`, the gain the
+brackets withheld at this evaluation, in `p.scratch.ᶜtagging_q_exp_rate`, for
+[`correct_water_tag_increment!`](@ref). Called last in `implicit_tendency!`.
+A Newton solve evaluates the tendency last at the iterate its last step starts
+from, so after the solve this is the rate at which the solve moved the ledger.
+An autodiff Jacobian's evaluations write the dual copy of the scratch. A no-op
+unless the tags follow the parent's implicit increment.
+"""
+keep_water_tag_exp_rate!(p, Yₜ) =
+    follows_water_increment(p.atmos.water_tagging_model) ?
+    _keep_water_tag_exp_rate!(p, Yₜ) : nothing
+function _keep_water_tag_exp_rate!(p, Yₜ)
+    @. p.scratch.ᶜtagging_q_exp_rate = Yₜ.c.q_tag_exp_negative
+    return nothing
+end
+
+"""
+    save_water_tag_exp_rate!(p)
+    restore_water_tag_exp_rate!(p)
+
+Save the kept rate of the ledger `q_tag_exp_negative`
+([`keep_water_tag_exp_rate!`](@ref)), and put it back. The parent budget's
+audit evaluates the implicit tendency once more after the solve, at the solved
+stage, before the post-solve hook runs. That evaluation would overwrite the
+rate at the solve's last evaluation, which
+[`correct_water_tag_increment!`](@ref) reads. So the audit saves the rate
+before it and restores it after. The hook then sees the rate it sees without
+the audit. No-ops unless the tags follow the parent's implicit increment.
+"""
+save_water_tag_exp_rate!(p) =
+    follows_water_increment(p.atmos.water_tagging_model) ?
+    _save_water_tag_exp_rate!(p) : nothing
+function _save_water_tag_exp_rate!(p)
+    @. p.scratch.ᶜtagging_q_exp_rate_saved = p.scratch.ᶜtagging_q_exp_rate
+    return nothing
+end
+restore_water_tag_exp_rate!(p) =
+    follows_water_increment(p.atmos.water_tagging_model) ?
+    _restore_water_tag_exp_rate!(p) : nothing
+function _restore_water_tag_exp_rate!(p)
+    @. p.scratch.ᶜtagging_q_exp_rate = p.scratch.ᶜtagging_q_exp_rate_saved
     return nothing
 end
 
@@ -249,6 +305,20 @@ recorded in `q_tag_inc_negative`. Where no cell can take it, it is left out
 with the rest. Where the parent stays non-negative, `N` is zero and every
 number here is unchanged, bit for bit.
 
+A gain the rule withheld inside the solve, `δL`, reached the parent and not the
+partition. So `N` takes it too, less `g`, its part beyond the cell's deficit at
+the stage's start and up to the target's rise. The partition takes `g` in that
+cell, by mask. `δL` is `dtγ` times the implicit tendency of the ledger
+`q_tag_exp_negative` at the solve's last evaluation
+([`keep_water_tag_exp_rate!`](@ref)) and the ledger's post-solve `dY`. It is
+taken from the stage alone. A difference of the cumulative ledger would round a
+small gain away against a large ledger, in Float32 to zero. Under the manual and
+the sparse autodiff Jacobians the ledger's row is `-I`, so `δL` is the ledger's
+change in the solve. Under the dense autodiff Jacobian the row also holds the
+gain's derivatives, and under a Jacobian-free Krylov solve the last evaluation
+is a perturbed one. There the ledger's change can differ from `δL`, as the
+parent's response to the gain can.
+
 Under `water_tag_precipitation: true` the `ρq_tag_<name>` fields partition the
 non-precipitating water, `ρq_tot - ρq_rai - ρq_sno`
 ([`water_tag_parent`](@ref)). The target is that water's non-negative part, and
@@ -268,8 +338,8 @@ What it cannot do:
     dominated by the parent's vertical advection, which the tags do not take
     explicitly. So the part left out lands where the advection is strong, not
     necessarily where the lag arose. The column totals of `q_tag_inc_left` are
-    exact. Its profile is not a map of the lag. No cell leaves out or moves more
-    than its own mismatch.
+    exact. Its profile is not a map of the lag. Where `N` is zero, no cell
+    leaves out or moves more than its own mismatch.
   - **Move water a partition does not hold.** The shares are normalized, so a
     donor cell sends the parent's whole flux whatever its partition holds. A
     residual pinned in a cell stays there. A draining cell's partition can go
@@ -323,6 +393,34 @@ function correct_water_tag_increment!(dY, U, p)
     @. ᶜn =
         water_tag_negative_part(ᶜq_tag_ρq_tot_snapshot) -
         water_tag_negative_part(ᶜparent_new)
+    # The gain the rule withheld inside the solve, `δL`: `dtγ` times the
+    # ledger's implicit tendency at the solve's last evaluation, with its
+    # post-solve `dY`. It does not read the ledger itself, whose cumulative
+    # value would round a small gain away. The parent took it and the
+    # partition did not, so without it `n` would take it from the partition a
+    # second time. The part of it beyond the cell's deficit at the stage's
+    # start, and no more than the target's rise, is a crossing's positive part,
+    # `g`. The partition takes `g` in its own cell, by mask, and the rest of
+    # `δL` goes where `N` goes. Where the rule did not act, `δL` is zero and
+    # every number is the old one, bit for bit.
+    ᶜδL = p.tagging.ᶜq_tag_exp_change
+    ᶜg = p.tagging.ᶜq_tag_crossing
+    @. ᶜδL =
+        dtγ * (p.scratch.ᶜtagging_q_exp_rate + dY.c.q_tag_exp_negative)
+    @. ᶜg = ifelse(
+        ᶜδL == 0,
+        zero(ᶜδL),
+        max(
+            min(
+                ᶜδL + water_tag_negative_part(ᶜq_tag_ρq_tot_snapshot),
+                water_tag_partition_target(ᶜparent_new) -
+                water_tag_partition_target(ᶜq_tag_ρq_tot_snapshot),
+            ),
+            zero(ᶜδL),
+        ),
+    )
+    @. ᶜn = ifelse(ᶜδL == 0, ᶜn, ᶜn + ᶜδL - ᶜg)
+    @. ᶜm = ifelse(ᶜδL == 0, ᶜm, ᶜm - ᶜg)
     Operators.column_integral_indefinite!(ᶠq_tag_mismatch_integral, ᶜm)
     Operators.column_integral_definite!(q_tag_mismatch_total, ᶜm)
     Operators.column_integral_definite!(q_tag_negative_total, ᶜn)
@@ -455,30 +553,70 @@ function correct_water_tag_increment!(dY, U, p)
             ᶜparent,
         )
     end
+    # A crossing's positive part, in its own cell, by mask, as a bracket
+    # gives a gain. Only the partition takes it.
+    _give_crossing_by_mask!(
+        dY.c,
+        p.tagging.ᶜwater_masks,
+        ᶜg,
+        ᶜδL,
+        dtγ,
+        model.tags,
+    )
+    isnothing(ledger_view) || _give_crossing_by_mask!(
+        ledger_view,
+        p.tagging.ᶜwater_masks,
+        ᶜg,
+        ᶜδL,
+        dtγ,
+        model.tags,
+    )
     add_attempted_per_tag!(p, dY, dtγ, ledger_view, model.tags)
     # The ledger. What is left out stays out of the tags, what they take for
     # the negative part is its own entry, and the rest is what the flux
     # moved. The stepper adds `dtγ·dY`, as it does for the tags. The weights'
-    # totals are at least `|M − N|` and `|N|`, so the factors lie in [-1, 1].
+    # totals are at least `|M − N|` and `|N|`, so the factors lie in [-1, 1]
+    # where `N` is zero. Where it is not, a factor can pass 1.
     @. ᶜq_tag_left_weight *= ifelse(
         q_tag_left_weight_total > 0,
         q_tag_mismatch_total / q_tag_left_weight_total,
         FT(0),
     )
     @. dY.c.q_tag_inc_left += ᶜq_tag_left_weight / dtγ
-    @. dY.c.q_tag_inc_negative += ᶜq_tag_negative_weight / dtγ
     @. dY.c.q_tag_inc_moved +=
         (ᶜm - ᶜq_tag_left_weight - ᶜq_tag_negative_weight) / dtγ
-    # What this stage left out, gave and moved, in absolute value, whether or
-    # not the step keeps it.
-    add_attempted!(p, Val(:q_tag_inc_left), ᶜq_tag_left_weight)
-    add_attempted!(p, Val(:q_tag_inc_negative), ᶜq_tag_negative_weight)
     add_attempted!(
         p,
         Val(:q_tag_inc_moved),
         @. lazy(ᶜm - ᶜq_tag_left_weight - ᶜq_tag_negative_weight)
     )
+    # The negative part's entry holds the crossing's positive part too.
+    @. ᶜq_tag_negative_weight = ifelse(
+        ᶜδL == 0,
+        ᶜq_tag_negative_weight,
+        ᶜq_tag_negative_weight + ᶜg,
+    )
+    @. dY.c.q_tag_inc_negative += ᶜq_tag_negative_weight / dtγ
+    # What this stage left out, gave and moved, in absolute value, whether or
+    # not the step keeps it.
+    add_attempted!(p, Val(:q_tag_inc_left), ᶜq_tag_left_weight)
+    add_attempted!(p, Val(:q_tag_inc_negative), ᶜq_tag_negative_weight)
     return nothing
+end
+
+# Give each partition tag its mask's part of `ᶜg`, a crossing's positive part,
+# as a tendency over `dtγ`. Only where the rule acted in the stage, `δL ≠ 0`,
+# so elsewhere the tendency is the old one, signed zeros included.
+_give_crossing_by_mask!(ᶜYₜ, ᶜmasks, ᶜg, ᶜδL, dtγ, ::Tuple{}) = nothing
+function _give_crossing_by_mask!(ᶜYₜ, ᶜmasks, ᶜg, ᶜδL, dtγ, tags::Tuple)
+    tag = first(tags)
+    if _is_partition_tag(tag)
+        ᶜρq_tagₜ = tag_field(ᶜYₜ, tag)
+        ᶜmask = tag_field(ᶜmasks, tag)
+        @. ᶜρq_tagₜ =
+            ifelse(ᶜδL == 0, ᶜρq_tagₜ, ᶜρq_tagₜ + ᶜmask * ᶜg / dtγ)
+    end
+    return _give_crossing_by_mask!(ᶜYₜ, ᶜmasks, ᶜg, ᶜδL, dtγ, Base.tail(tags))
 end
 
 # The water the tags' `ρq_tag_<name>` fields partition after the stage, with the

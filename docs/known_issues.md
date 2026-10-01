@@ -308,7 +308,7 @@ not re-derive them.
   - **Julia 1.9 compatibility.** Upstream still declares `julia = "1.9"` while
     testing only 1.10 and 1.11. This fork raised its own floor to 1.10.
 
-## 7. Tagged water ends a run where the parent's water goes negative (option C built; its validation fails one rule at site 23)
+## 7. Tagged water ends a run where the parent's water goes negative (option C built; its revision built, not yet validated)
 
 **Status:** option C is on `main` since #116 and unit-tested (below). Option A
 keeps the check from ending the run; it is on `main` since #112. Whether C keeps the tags on their target over the long runs
@@ -317,7 +317,8 @@ was the record branch's pre-registered validation
 record's FINDINGS W42). Site 23 now runs 90 days, the model fields match the
 untagged twin bit for bit, and site 26's tags are unchanged bit for bit. But
 at site 23 the region tags overshoot the target by up to 2.2% of the water,
-against a tolerance of 0.2%. What follows is the owner's decision.
+against a tolerance of 0.2%. The owner revised C on 2026-09-29 (below);
+its validation is registered and has not run.
 
 A diagnostic must never end a run that upstream completes. This one did,
 until option A below.
@@ -379,6 +380,51 @@ part is a named remainder, `q_tag_negative`.
     the parts of each tag partition the non-negative parts of the
     non-precipitating water, of rain and of snow, and `q_tag_negative` is the
     sum of the three negative parts (docs/src/tagged_water_precipitation.md).
+
+**C's revision, built** (the owner's choice of 2026-09-29, on
+`claude/option-c-revision`). The record's probes (FINDINGS W47 and W48) found
+where C's miss grows: the explicit brackets gave each region tag its mask
+times the parent's gain, whatever the parent's sign. Where the external
+forcing's subsidence adds water to a cell whose parent stays below zero, the
+region tags gained water, but the target stayed zero.
+
+  - The explicit brackets now give the partition tags only the target's gain:
+    none where `ρq_tot < 0`, where the gain fills the negative part. The loss
+    half already followed the target. So on a closed partition a bracket's
+    tendency is the target's.
+  - A step that crosses zero is split by the stages, since the rule is read
+    at each stage's state.
+  - Under `water_tag_precipitation: true` it reads the non-precipitating
+    water's sign.
+  - The split 0M rain-out in copies mode, stepped explicitly, withholds the
+    partition's gain from the updraft's part where the grid parent is below
+    zero, and keeps its loss. In the default mode the split already gives
+    the partition nothing there.
+  - Extended on 2026-09-30 (the owner; the record's design note, 11.11). The
+    implicit microphysics bracket takes the rule too, read at each Newton
+    iterate. So do source tags and region tags that list sources: a source
+    tag is a part of the target. Under `water_tag_precipitation: true` a
+    transfer into a negative compartment takes the target's treatment: flows
+    are read in their actual direction, a negative compartment's parts do not
+    change, and it passes on only what came in. What it gives beyond its
+    inflow carries no tag's water and lands in `q_tag_res`.
+  - A new ledger, `q_tag_exp_negative`, records the withheld gain, whatever
+    the tags hold. Under the key `q_tag_exp_negative_precip` records rain's
+    and snow's. The follower reads the ledger: a gain withheld inside the
+    solve is not taken from the partition a second time, and a crossing's
+    positive part goes to the partition in its own cell, by mask. A
+    checkpoint without the ledger is refused.
+  - Unchanged: the copies' own terms, the default split's gain at a parent
+    of exactly zero, and the energy source tags.
+  - Registered, not fixed: a loss the partition does not share in a negative
+    cell still enters the follower's `N`, which gives it to the partition
+    elsewhere in the column. It predates the revision.
+  - A source tag that holds nothing can end a crossing step below zero, or
+    above the parent, since the tableau's weights include negative ones.
+    Nothing removes that value. The validation reports it.
+  - No model field changes. The tags change only once the parent has gone
+    below zero somewhere. The validation is registered in the record's
+    `design/NEGATIVE_PARENT_WATER.md`, section 11.
 
 **The parent's negative water, flagged** (the owner's choice of 2026-09-25,
 on `claude/water-tags-negative-water-flag`, stacked on option C). Under C the

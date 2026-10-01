@@ -363,6 +363,127 @@ check and `q_tag_res` compare the partition with it
     ifelse(ρq_tot < zero(ρq_tot), ρq_tot, zero(ρq_tot))
 
 """
+    water_tag_target_gain(Δ, ρq_tot)
+
+The rate at which a process with tendency `Δ` of the parent raises the
+partition's target, `max(ρq_tot, 0)`, at the state `ρq_tot`: `max(Δ, 0)` where
+`ρq_tot` is not negative, and zero where it is. Where the parent is below
+zero, a gain fills its negative part and the target stays at zero. At zero a
+gain lifts the parent into the positive range, so the target takes all of it.
+`-0.0` is not below zero, so a parent that is never negative gives
+`max(Δ, 0)`, the same operation on the same numbers as the rule before, bit
+for bit.
+
+`ρq_tot` here is the partition's parent. Under `water_tag_precipitation: true`
+that is the non-precipitating water, `ρq_tot - ρq_rai - ρq_sno`
+(`water_tag_parent`), whose sign decides, not that of `ρq_tot`.
+
+Every bracket gives every tag that receives its label this gain, by mask. The
+loss half already follows the target: a tag's share is zero where the parent
+is not positive. So on a closed partition a bracket's tendency is the
+target's. A source tag is a part of the target too.
+
+The rule is read at the state of each stage. The tableau's explicit weights
+include negative ones, so in a step whose parent crosses zero the partition's
+gain over the step can be negative, and a tag that holds nothing can end the
+step below zero.
+"""
+@inline water_tag_target_gain(Δ, ρq_tot) =
+    ifelse(ρq_tot < zero(ρq_tot), zero(Δ), max(Δ, 0))
+
+"""
+    TargetGain()
+    ParentGain()
+
+How a bracket gives a process's gain to the tags.
+
+  - `TargetGain()`, every bracket, explicit and implicit: the gain of the
+    partition's target, `water_tag_target_gain`, for every tag that receives
+    the label, a tag that lists sources too. The split 0M rain-out in copies
+    mode applies it to the updraft's part (`water_tag_split_change`). What it
+    withholds goes to the ledger `q_tag_exp_negative`.
+  - `ParentGain()`: `max(Δ, 0)` wherever the parent is. No bracket of the
+    model uses it. The tests compare with it.
+"""
+abstract type WaterTagGainRule end
+struct TargetGain <: WaterTagGainRule end
+struct ParentGain <: WaterTagGainRule end
+Base.broadcastable(rule::WaterTagGainRule) = tuple(rule)
+
+# A tag's gain under `rule`.
+@inline water_tag_gain(::TargetGain, Δ, ρq_tot) =
+    water_tag_target_gain(Δ, ρq_tot)
+@inline water_tag_gain(::ParentGain, Δ, ρq_tot) = max(Δ, 0)
+# Every tag that receives a label takes the bracket's rule. A source tag is a
+# part of the target, which is zero where the parent is below zero.
+_tag_gain_rule(rule, tag) = rule
+
+"""
+    water_tag_withheld_gain(rule, Δ, ρq_tot)
+
+The part of a bracket's tendency `Δ` that fills the parent's negative part
+instead of reaching the tags: `max(Δ, 0)` where the parent `ρq_tot` is below
+zero under `TargetGain()`, and zero elsewhere and under `ParentGain()`. It does
+not read the tags. The ledger `q_tag_exp_negative` takes it at every bracket.
+"""
+@inline water_tag_withheld_gain(::TargetGain, Δ, ρq_tot) =
+    ifelse(ρq_tot < zero(ρq_tot), max(Δ, zero(Δ)), zero(Δ))
+@inline water_tag_withheld_gain(::ParentGain, Δ, ρq_tot) = zero(Δ)
+
+"""
+    WATER_TAG_EXP_LEDGER_NAMES
+
+The ledgers of the gain the rule withholds, state fields in kg m⁻³:
+
+  - `q_tag_exp_negative`: with water tags, the gain every bracket withholds
+    where the partition's parent is below zero
+    (`water_tag_withheld_gain`). Under `water_tag_precipitation: true`
+    also the net inflow the microphysics and the vapour bracket give the
+    non-precipitating water while it is below zero;
+  - `q_tag_exp_negative_precip`: under the key only, the same for rain and
+    snow while negative.
+
+They read the parent, not the tags. The stepper weights them as it weights the
+tags. Their names carry no `ρ` prefix, so no transport or limiter reaches them.
+The tag names `exp_*` are reserved.
+"""
+const WATER_TAG_EXP_LEDGER_NAMES = (:q_tag_exp_negative, :q_tag_exp_negative_precip)
+
+# The ledgers a model has, in state order, and their zeros.
+water_tag_exp_ledger_names(::Nothing) = ()
+water_tag_exp_ledger_names(model::WaterTaggingModel) =
+    has_water_tag_precipitation(model) ? WATER_TAG_EXP_LEDGER_NAMES :
+    (:q_tag_exp_negative,)
+water_tag_exp_ledger_variables(value, model) =
+    _mechanism_zeros(value, Val(water_tag_exp_ledger_names(model)))
+is_water_tag_exp_ledger_name(name::Symbol) = name in WATER_TAG_EXP_LEDGER_NAMES
+
+# A tag's part of the updraft's 0M rain-out in copies mode, `x = Δʲ·φʲ`. It
+# is signed: `Δʲ = ρaʲ·dq_tot_dtʲ` is a gain where the updraft's area is
+# negative. Under `TargetGain` the gain is withheld where the grid parent is
+# below zero, as the brackets withhold theirs, and a loss is kept. A partition
+# tag's part of the environment's rain-out is zero there already, since its
+# share is scaled by the grid shares' sum `S`, which is zero where the parent
+# is not positive. A source tag's environment part is not changed. Where the
+# parent is not negative this is `x`, bit for bit.
+@inline water_tag_split_change(::ParentGain, x, ρq_tot) = x
+@inline water_tag_split_change(::TargetGain, x, ρq_tot) =
+    ifelse(ρq_tot < zero(ρq_tot), min(x, zero(x)), x)
+
+"""
+    microphysics_gain_rule(atmos)
+
+The gain rule of the `:microphysics` bracket: `TargetGain()`, on the implicit
+path and on the explicit one. On the implicit path the sign is read at each
+Newton iterate. The diagnostics' rain-out follows the bracket by this
+function, so the two agree.
+"""
+microphysics_gain_rule(atmos) =
+    _microphysics_gain_rule(atmos.microphysics_tendency_timestepping)
+_microphysics_gain_rule(::Implicit) = TargetGain()
+_microphysics_gain_rule(timestepping) = TargetGain()
+
+"""
     water_closure_total(model)
 
 What the water closure check compares the partition with, in the form
@@ -476,31 +597,44 @@ function _snapshot_tagged_ρq_tot!(p, Yₜ, ::WaterTaggingModel)
 end
 
 """
-    attribute_tagged_ρq_tot!(Yₜ, Y, p, source::Symbol)
+    attribute_tagged_ρq_tot!(Yₜ, Y, p, source::Symbol, rule = TargetGain())
 
-Close a bracket opened by [`snapshot_tagged_ρq_tot!`](@ref): compute the
-increment `Δ = Yₜ.c.ρq_tot - snapshot` produced by the bracketed process
-(labeled `source`) and add `M_k·Δ⁺ - φ_k·Δ⁻` to each tag's tendency, where `M_k`
-is the tag's mask and `φ_k` its donor share of the local water.
+Close a bracket opened by [`snapshot_tagged_ρq_tot!`](@ref): add `M_k·G - φ_k·Δ⁻`
+to each tag's tendency for the process `source`'s increment
+`Δ = Yₜ.c.ρq_tot - snapshot`. `M_k` is the tag's mask, and `φ_k` its share of
+the partition's parent `N`, `ρq_tot` or under `water_tag_precipitation` the
+non-precipitating water. `G = Δ⁺`, and under `rule = TargetGain()`, every
+bracket's, zero where `N < 0`. That withheld gain goes to the ledger
+`q_tag_exp_negative`.
 
-Production reaches a tag only when it lists `source` (pure region tags list none
-and so receive every source); loss reaches *every* tag. A no-op when water
-tagging is disabled, or when `source` is not a water process.
-
-`Y` is needed in addition to `Yₜ` because the donor share is a property of the
-current state.
+Production reaches a tag only if it lists `source`, or has a region and no
+source; loss reaches every tag. A no-op without water tags or water process.
 """
-attribute_tagged_ρq_tot!(Yₜ, Y, p, source::Symbol) =
-    _attribute_tagged_ρq_tot!(Yₜ, Y, p, source, p.atmos.water_tagging_model)
-_attribute_tagged_ρq_tot!(Yₜ, Y, p, source, ::Nothing) = nothing
-function _attribute_tagged_ρq_tot!(Yₜ, Y, p, source, model::WaterTaggingModel)
+attribute_tagged_ρq_tot!(Yₜ, Y, p, source::Symbol, rule = TargetGain()) =
+    _attribute_tagged_ρq_tot!(Yₜ, Y, p, source, p.atmos.water_tagging_model, rule)
+_attribute_tagged_ρq_tot!(Yₜ, Y, p, source, ::Nothing, rule) = nothing
+function _attribute_tagged_ρq_tot!(
+    Yₜ,
+    Y,
+    p,
+    source,
+    model::WaterTaggingModel,
+    rule,
+)
     source in KNOWN_WATER_TAG_SOURCES || return nothing
-    # Under 0M and prognostic EDMF the rain-out goes to the tags by each
-    # subdomain's composition (`tagged_water_rainout.jl`).
-    splits_rainout(p, source) && return add_split_rainout!(Yₜ.c, Y, p, model)
-    (; ᶜwater_masks) = p.tagging
     ᶜρq_tot_snapshot = p.scratch.ᶜtagging_q_snapshot
     ᶜΔρq_tot = @. lazy(Yₜ.c.ρq_tot - ᶜρq_tot_snapshot)
+    ᶜparent = water_tag_parent(Y.c, model)
+    # The ledger takes the withheld gain once per bracket, whatever the tags
+    # hold. It comes before the split's return, so that the grid kernel and
+    # both split modes write it.
+    ᶜwithheldₜ = Yₜ.c.q_tag_exp_negative
+    @. ᶜwithheldₜ += water_tag_withheld_gain(rule, ᶜΔρq_tot, ᶜparent)
+    # Under 0M and prognostic EDMF the rain-out goes to the tags by each
+    # subdomain's composition (`tagged_water_rainout.jl`).
+    splits_rainout(p, source) &&
+        return add_split_rainout!(Yₜ.c, Y, p, model, nothing, rule)
+    (; ᶜwater_masks) = p.tagging
     _accumulate_water_tags!(
         Yₜ.c,
         Y.c,
@@ -508,7 +642,8 @@ function _attribute_tagged_ρq_tot!(Yₜ, Y, p, source, model::WaterTaggingModel
         ᶜΔρq_tot,
         source,
         model.tags,
-        water_tag_parent(Y.c, model),
+        ᶜparent,
+        rule,
     )
     return nothing
 end
@@ -522,10 +657,25 @@ end
 # `ᶜparent` is the water the tags partition, which the loss's donor share
 # divides by: `ρq_tot`, or under `water_tag_precipitation: true` the water that
 # is neither rain nor snow (`water_tag_parent`). A bracketed process moves only
-# `ρq_tot`, so under the key its change is the non-precipitating water's.
+# `ρq_tot`, so under the key its change is the non-precipitating water's. The
+# tags' gain reads the sign of the same water, so under the key the target is
+# that compartment's, as option C has it.
+#
+# `rule` is the gain rule, `TargetGain()` for every bracket and by default.
 _accumulate_water_tags!(ᶜYₜ, ᶜY, ᶜmasks, ᶜΔ, source, tags::Tuple) =
     _accumulate_water_tags!(ᶜYₜ, ᶜY, ᶜmasks, ᶜΔ, source, tags, ᶜY.ρq_tot)
-_accumulate_water_tags!(ᶜYₜ, ᶜY, ᶜmasks, ᶜΔ, source, ::Tuple{}, ᶜparent) =
+_accumulate_water_tags!(ᶜYₜ, ᶜY, ᶜmasks, ᶜΔ, source, tags::Tuple, ᶜparent) =
+    _accumulate_water_tags!(
+        ᶜYₜ,
+        ᶜY,
+        ᶜmasks,
+        ᶜΔ,
+        source,
+        tags,
+        ᶜparent,
+        TargetGain(),
+    )
+_accumulate_water_tags!(ᶜYₜ, ᶜY, ᶜmasks, ᶜΔ, source, ::Tuple{}, ᶜparent, rule) =
     nothing
 function _accumulate_water_tags!(
     ᶜYₜ,
@@ -535,8 +685,19 @@ function _accumulate_water_tags!(
     source,
     tags::Tuple,
     ᶜparent,
+    rule,
 )
-    _accumulate_water_tag!(ᶜYₜ, ᶜY, ᶜmasks, ᶜΔ, source, first(tags), ᶜparent)
+    tag = first(tags)
+    _accumulate_water_tag!(
+        ᶜYₜ,
+        ᶜY,
+        ᶜmasks,
+        ᶜΔ,
+        source,
+        tag,
+        ᶜparent,
+        _tag_gain_rule(rule, tag),
+    )
     return _accumulate_water_tags!(
         ᶜYₜ,
         ᶜY,
@@ -545,10 +706,14 @@ function _accumulate_water_tags!(
         source,
         Base.tail(tags),
         ᶜparent,
+        rule,
     )
 end
 
 # Region-less tag: production weight is 1 wherever the tag receives this source.
+# Such a tag is a source tag, a part of the target, so its gain follows `rule`
+# as a partition tag's does: under `TargetGain()` none where the parent is
+# below zero.
 function _accumulate_water_tag!(
     ᶜYₜ,
     ᶜY,
@@ -557,12 +722,14 @@ function _accumulate_water_tag!(
     source,
     tag::WaterTag{name, Nothing},
     ᶜparent,
+    rule,
 ) where {name}
     ᶜρq_tagₜ = tag_field(ᶜYₜ, tag)
     ᶜρq_tag = tag_field(ᶜY, tag)
     if tag_receives_source(tag, source)
         @. ᶜρq_tagₜ +=
-            max(ᶜΔ, 0) + min(ᶜΔ, 0) * water_tag_fraction(ᶜρq_tag, ᶜparent)
+            water_tag_gain(rule, ᶜΔ, ᶜparent) +
+            min(ᶜΔ, 0) * water_tag_fraction(ᶜρq_tag, ᶜparent)
     else
         @. ᶜρq_tagₜ += min(ᶜΔ, 0) * water_tag_fraction(ᶜρq_tag, ᶜparent)
     end
@@ -570,7 +737,9 @@ function _accumulate_water_tag!(
 end
 
 # Tag with a region: production is masked. Loss stays donor-proportional, so
-# water leaves from wherever the tag is holding it.
+# water leaves from wherever the tag is holding it. The gain follows `rule`
+# (`_tag_gain_rule`): under `TargetGain()` it is the target's, zero where the
+# parent is below zero, for a region tag that lists sources too.
 function _accumulate_water_tag!(
     ᶜYₜ,
     ᶜY,
@@ -579,13 +748,14 @@ function _accumulate_water_tag!(
     source,
     tag::WaterTag,
     ᶜparent,
+    rule,
 )
     ᶜρq_tagₜ = tag_field(ᶜYₜ, tag)
     ᶜρq_tag = tag_field(ᶜY, tag)
     ᶜmask = tag_field(ᶜmasks, tag)
     if tag_receives_source(tag, source)
         @. ᶜρq_tagₜ +=
-            ᶜmask * max(ᶜΔ, 0) +
+            ᶜmask * water_tag_gain(rule, ᶜΔ, ᶜparent) +
             min(ᶜΔ, 0) * water_tag_fraction(ᶜρq_tag, ᶜparent)
     else
         @. ᶜρq_tagₜ += min(ᶜΔ, 0) * water_tag_fraction(ᶜρq_tag, ᶜparent)

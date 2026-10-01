@@ -12,6 +12,11 @@ ClimaAtmos.KNOWN_WATER_TAG_SOURCES
 ClimaAtmos.WATER_TAG_SOURCE_GROUPS
 ClimaAtmos.water_tag_fraction
 ClimaAtmos.water_tag_partition_target
+ClimaAtmos.water_tag_target_gain
+ClimaAtmos.WaterTagGainRule
+ClimaAtmos.water_tag_withheld_gain
+ClimaAtmos.microphysics_gain_rule
+ClimaAtmos.WATER_TAG_EXP_LEDGER_NAMES
 ClimaAtmos.water_closure_total
 ClimaAtmos.water_tag_share_norm!
 ClimaAtmos.water_tag_sediment_share
@@ -60,6 +65,8 @@ ClimaAtmos.TracerWaterTagTransport
 ClimaAtmos.follows_water_increment
 ClimaAtmos.snapshot_water_tag_increment!
 ClimaAtmos.correct_water_tag_increment!
+ClimaAtmos.keep_water_tag_exp_rate!
+ClimaAtmos.save_water_tag_exp_rate!
 ClimaAtmos.WaterTagIncrementCorrection
 ClimaAtmos.tag_post_implicit
 ClimaAtmos.water_tag_post_implicit

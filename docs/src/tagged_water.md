@@ -73,7 +73,10 @@ two halves are attributed by **different rules**:
 
   - **Production is mask-weighted.** ``M_k`` is the tag's region mask (1 for a
     region-less source tag, 0 if the tag does not list this process). New water
-    carries the label of where it entered.
+    carries the label of where it entered. No partition tag gains where
+    ``\rho q_\mathrm{tot} < 0``, since the target does not rise there. In
+    copies mode, a source tag's environment part of the split 0M rain-out is
+    the exception: it keeps its share of the environment's change.
   - **Loss is donor-proportional.** Water leaves in proportion to what is
     actually present, and **every** tag is depleted — including source tags,
     whatever processes they list. This is what makes ``\rho q_{\mathrm{tag},k}``
@@ -84,7 +87,7 @@ tags, which attribute the whole increment by mask. A mask-weighted *loss* would
 remove water a tag does not own and can drive tags negative. The rule here is
 the tendency form of the relative scaling ``\chi \mathrel{*}= (1 + \dot q\, \Delta t / q)`` used by the MESSy `H2OEMIS` submodel.
 
-Two consequences worth stating:
+Two consequences:
 
   - **Closure.** With ``\sum_k M_k = 1`` and ``\sum_k \rho q_{\mathrm{tag},k} = \rho q_\mathrm{tot}`` we have ``\sum_k \varphi_k = 1``, so
     ``\sum_k \Delta_k = \Delta^{+} - \Delta^{-} = \Delta`` exactly, per process.
@@ -95,9 +98,8 @@ Two consequences worth stating:
   - **Positivity.** A tag update is
     ``\rho q_{\mathrm{tag},k}\,(1 - \Delta^{-}\Delta t / \rho q_\mathrm{tot})``,
     so a tag stays non-negative for as long as the step is short enough that
-    ``\Delta^{-}\Delta t`` does not exceed ``\rho q_\mathrm{tot}`` — the same
-    restriction that keeps ``\rho q_\mathrm{tot}`` itself non-negative under the
-    0-moment sink. But nothing in the model enforces that restriction.
+    ``\Delta^{-}\Delta t`` does not exceed ``\rho q_\mathrm{tot}``, as the
+    parent itself needs under the 0-moment sink. Nothing enforces that.
     `tracer_nonnegativity_method` is off unless configured, transport can drive a
     cell negative on its own, and a run on a sphere routinely has
     ``\rho q_\mathrm{tot} \le 0`` over part of its volume. Where it does, the
@@ -118,9 +120,11 @@ Two consequences worth stating:
     the parent is never negative, nothing changes, bit for bit.
 
     That allocation is a numerical closure convention, not a physical path
-    of water. It keeps the partition on its target, but it can move
-    provenance between cells that no water moved between. It does not yet
-    keep the tags within the 0.2% tolerance at site 23 (known issue 7).
+    of water, and can move provenance between cells no water moved between.
+    Every bracket gives the tags the target's gain: where the parent is
+    below zero, a gain fills the negative part, and the ledger
+    `q_tag_exp_negative` records it. The follower reads the gain withheld in
+    each solve, so it does not take it from the partition again.
 
     The closure can pass while the parent is negative. So the water closure
     check also reads the parent's own negative water, from the raw

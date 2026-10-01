@@ -1094,13 +1094,13 @@ end
 Mirror the updraft's share of the surface moisture flux on the copies.
 `surface_flux_tendency!` adds the flux to `q_totʲ` in the lowest cell, as the
 grid mean's boundary tendency over the updraft's density. It gives every other
-updraft tracer a zero flux, the copies included. Each copy takes that
-increment `Δʲ` by the grid-scale tags' rule for the label `surface_flux`
-(`attribute_tagged_ρq_tot!`). A tag that receives the surface flux gains its
-mask times `max(Δʲ, 0)`. Every copy loses its share `φʲᵢ = clamp(χᵢʲ / q_totʲ)`
-of `min(Δʲ, 0)`, the dew. The partition's masks sum to one, so its copies take
-the whole gain, and their shares the whole loss. The model's own term assumes
-one updraft, and so does this one. A no-op without copies.
+updraft tracer a zero flux, the copies included. A copy whose tag receives
+the surface flux gains its mask times `max(Δʲ, 0)`, whatever the sign of
+`q_totʲ`, and the copies' repair closes it onto `max(q_totʲ, 0)`. Every copy
+loses its share `φʲᵢ = clamp(χᵢʲ / q_totʲ)` of `min(Δʲ, 0)`, the dew. The
+partition's masks sum to one, so its copies take the whole gain, and their
+shares the whole loss. The model's own term assumes one updraft, and so does
+this one. A no-op without copies.
 """
 water_tag_copies_surface_flux_tendency!(Yₜ, Y, p, turbconv_model) = nothing
 function water_tag_copies_surface_flux_tendency!(
@@ -1151,7 +1151,12 @@ end
 # The weight of a gain for a tag that receives the surface flux, as
 # `_accumulate_water_tag!` gives it: one without a region, the region's mask
 # with one. Whether it receives the flux is known only at run time, so it is a
-# factor in the broadcast, which keeps the weight's type fixed.
+# factor in the broadcast, which keeps the weight's type fixed. The grid's
+# tags also take no gain where the grid's parent is below zero (the brackets'
+# `TargetGain`). The copies keep the gain, since their repair closes them onto
+# `max(q_totʲ, 0)` after the filter at every step. The default mode's plume
+# starts with the same weight (`start_water_plume!`), as the copies' steady
+# state, so it does not read the grid parent's sign either.
 _surface_gain_weight(ᶜmasks, tag::WaterTag{name, Nothing}) where {name} = true
 _surface_gain_weight(ᶜmasks, tag::WaterTag) = tag_field(ᶜmasks, tag)
 

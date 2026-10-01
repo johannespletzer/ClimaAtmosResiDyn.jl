@@ -481,7 +481,8 @@ fixed, and stay refused. `fixgross_`, `fixcount_`, `upfixgross_` and
 ledgers per mechanism, `q_tag_led_rescale` and the others. `aud_` starts the
 microphysics audit's records `q_rtag_aud_<name>` and `q_stag_aud_<name>`,
 which a rain part `q_rtag_<name>` of a tag named `aud_<name>` would collide
-with.
+with. `exp_` is held for the ledgers of the withheld gain,
+`q_tag_exp_negative` and `q_tag_exp_negative_precip`.
 """
 const RESERVED_WATER_TAG_PREFIXES = (
     "fix_",
@@ -496,6 +497,7 @@ const RESERVED_WATER_TAG_PREFIXES = (
     "upfixcount_",
     "led_",
     "aud_",
+    "exp_",
 )
 
 """

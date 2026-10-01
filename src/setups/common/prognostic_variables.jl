@@ -125,6 +125,12 @@ function grid_scale_center_variables(physical_state, local_geometry, params, atm
             ρ * q_tot,
             atmos_model.water_tagging_model,
         )...,
+        # The ledgers of the gain the rule withholds where the parent is below
+        # zero, with every water tag. No `ρ` prefix either.
+        water_tag_exp_ledger_variables(
+            ρ * q_tot,
+            atmos_model.water_tagging_model,
+        )...,
         water_tag_mechanism_variables(
             ρ * q_tot,
             atmos_model.water_tagging_model,
