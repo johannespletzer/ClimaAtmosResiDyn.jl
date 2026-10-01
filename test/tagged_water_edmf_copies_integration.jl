@@ -252,7 +252,11 @@ end
         # The gross per step is at least what the ledger holds, per cell and
         # per column, since each ledger starts at zero.
         (; ledgers) = p.tagging.tag_ledger_steps
-        @test propertynames(ledgers) == CA.water_tag_mechanism_names(model)
+        # The ledger of the withheld gain (C's revision) follows the mechanisms.
+        @test propertynames(ledgers) == (
+            CA.water_tag_mechanism_names(model)...,
+            CA.water_tag_exp_ledger_names(model)...,
+        )
         for name in propertynames(ledgers)
             ᶜL = getproperty(Y.c, name)
             (; ᶜgross, colgross) = getproperty(ledgers, name)
@@ -528,7 +532,10 @@ end
         integrator = copies.integrator
         (; ledgers) = integrator.p.tagging.tag_ledger_steps
         names = keys(ledgers)
-        @test names == CA.water_tag_mechanism_names(model)
+        @test names == (
+            CA.water_tag_mechanism_names(model)...,
+            CA.water_tag_exp_ledger_names(model)...,
+        )
         L_before = map(n -> Float64.(parent(getproperty(integrator.u.c, n))), names)
         G_before = map(n -> copy(parent(getproperty(ledgers, n).ᶜgross)), names)
         CA.CTS.step!(integrator)

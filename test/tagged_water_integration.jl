@@ -402,8 +402,8 @@ end
         "void_above" => 1.0e-30,
         "audit" => true,
     )
-    # The default config. Every run below uses it, except the three the
-    # restart is compared with.
+    # The default config. Every run below uses it, except the restart
+    # comparison: the first run, its restarts and the straight run.
     test_dict = base_config(
         tags;
         extra = Dict{String, Any}(
