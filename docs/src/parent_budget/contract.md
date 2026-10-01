@@ -165,8 +165,11 @@ Every local, column or component-energy budget is out of scope.
 **Custom callbacks.** `AtmosSimulation` appends the `callbacks` it is given, so a
 caller can install a callback that writes `Y`. With the parent budget on, every
 custom callback must be wrapped in `ReadOnlyCallback`, which declares it read-only
-with respect to `Y`. Setup fails otherwise. `audit` mode checks the declaration
-and `summary` mode trusts it. A callback that writes the state and supplies its own
+with respect to `Y`. Setup fails otherwise. `audit` mode reads the local parent
+integrals before and after the callback's `affect!` and rejects a change to them.
+That does not prove that every state field is unchanged, and the callback's
+`condition`, `initialize` and `finalize` are not checked. `summary` mode trusts
+the declaration. A callback that writes the state and supplies its own
 accounting is not supported.
 
 **Timestepping methods supported.** Every `CTS.IMEXAlgorithm` built with the
@@ -396,12 +399,15 @@ amount, as for the envelope of a conservative operator or the solve defect.
 Rounding error scales with what was added and not with what was left. Every
 measured component carries its magnitude.
 
-The algebraic solve defect is not inside this tolerance. It is a leading-order
-accounting term and is reported separately. The default `NewtonsMethod(; max_iters = 1)` against `ManualSparseJacobian(approximate_solve_iters = 1)` does not converge the
-implicit stage, so the defect is first order in the accepted update and not a
-rounding effect. A test sweeps `max_iters` and `approximate_solve_iters` and
-requires the defect to shrink with the measured stage residual while the parent
-residual stays at arithmetic level.
+The algebraic solve defect is not inside this tolerance. It is accounted for
+separately, because it can be large where the stage solve is not converged, as
+with the default `NewtonsMethod(; max_iters = 1)`. The tests in
+`implicit_attribution_tests.jl` show both cases. On a moist column with implicit
+microphysics the defect at one Newton iteration is far above rounding, and it
+falls by more than a factor of ten at three. On a dry column the approximate
+solve is exact, the defect is at rounding level, and a second approximate
+iteration changes it by rounding only. In both cases the parent identity holds
+at the arithmetic level.
 
 ### Calibrating `κ`
 

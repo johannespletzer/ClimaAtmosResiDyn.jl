@@ -7,7 +7,7 @@
 ##### compares it against them exactly before it opens. A difference is a
 ##### change nobody accounted for. A custom callback runs between two
 ##### transactions on the accepted state. It is accepted only when it declares
-##### itself read-only, and audit mode enforces the declaration.
+##### itself read-only. Audit mode checks the parent integrals around it.
 
 """
     CheckpointEndpoints
@@ -186,9 +186,10 @@ end
 A user callback declared not to write the state. With the parent budget on, a custom
 callback is accepted only inside this declaration, because a callback that
 writes `Y` between two transactions is a change nothing accounts for. In
-`AuditMode` the declaration is enforced. The parent integrals of the state are
-read before and after every firing, locally, and a firing that changed them
-is an error. `SummaryMode` trusts the declaration.
+`AuditMode` the parent integrals of the state are read before and after every
+`affect!`, locally, and a firing that changed them is an error. That does not
+prove that every state field is unchanged, and `condition`, `initialize` and
+`finalize` are not checked. `SummaryMode` trusts the declaration.
 """
 struct ReadOnlyCallback{C}
     callback::C

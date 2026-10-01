@@ -187,10 +187,11 @@ the history as unverified. The code is `checkpoint.jl`.
 A discrete callback that writes `Y` between two transactions is also a change
 nothing accounts for. With the parent budget on, a custom callback is accepted
 only inside a `ReadOnlyCallback` declaration. `audit` mode reads the parent
-integrals of the state before and after every firing, locally and without a
-collective, and a firing that moved them is an error. `summary` mode trusts the
-declaration, and a callback that breaks it fails the next step's parent
-identity. A callback that supplies its own accounting is refused. The
+integrals of the state before and after every `affect!`, locally and without a
+collective, and a firing that moved them is an error. It does not see a change
+that leaves those integrals unchanged, such as one to momentum, and it does not
+wrap the callback's other functions. `summary` mode trusts the declaration. A
+callback that supplies its own accounting is refused. The
 [contract](contract.md) states the rule.
 
 ## The timestepper adapter
