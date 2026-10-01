@@ -208,7 +208,8 @@ start. Nothing below is built yet.
       + Point 5: A5's "its group's sum" is the partition's sum
         (`design/RESIDUAL_REPORT.md`). Its tests and docs follow.
       + Point 7: document C4's size, 0.55% of a day's Θx on D4 (E87), as a
-        limitation. It is not shared as transport.
+        limitation. The owner chose this over the other option, sharing it
+        as transport.
       + Point 4's form: a per-transport default for water's warning. The
         level is not set here.
   - [ ] **The levels for points 2, 3, 4 and 6, at G4's start.** Set them from

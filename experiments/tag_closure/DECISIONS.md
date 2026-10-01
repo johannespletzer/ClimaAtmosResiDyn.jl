@@ -70,9 +70,9 @@ record; the answered and superseded entries are in the next section.
 
   - ~~**G4.3 to G4.6's seven points**~~ *Answered 2026-10-02: the
     definitions are decided; the levels of points 2, 3, 4 and 6 are set from
-    post-#139 runs at G4's start* (below). Raised 2026-09-25 with #120 and E86;
-    the proposals are in `review/od4_restatement.md` and the design notes it
-    names):
+    post-#139 runs at G4's start* (below). Raised 2026-09-25 with #120 and E86.
+    The proposals are in `review/od4_restatement.md` and the design notes it
+    names:
 
       + whether the register's interim rule should now say that values on the
         process records are estimates, not bounds (E84);
@@ -108,6 +108,17 @@ record; the answered and superseded entries are in the next section.
         only).
 
     [G3T](G3_TODO.md)
+
+  - **OD9 to OD11, the provenance labels.** Added 2026-10-02: they stay
+    proposed until a gated result exists (below).
+    [PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), section 9.
+
+  - **OD15, WP4b's acceptance for precipitation provenance.** Added
+    2026-10-02: it is answered at PX25's pre-registration (below).
+    [PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), section 9.
+
+  - **G4.3 to G4.6: the levels of points 2, 3, 4 and 6.** Added 2026-10-02:
+    they are set from post-#139 runs at G4's start (below). [G4T](G4_TODO.md)
 
 *Update 2026-10-02:* the owner accepted **OD12, OD13 and OD14**, and gated
 runs use post-#139 `main` (below). OD9 to OD11 stay proposed. OD15 is answered
@@ -375,6 +386,8 @@ option on all five. The brief was
       + **OD7 stays deferred** until C is fixed and site 23's long runs are
         scored. **In force.**
       + **OD9 to OD15:** walk through them later, one at a time. **Waiting.**
+        *Update 2026-10-02:* walked through (2026-10-02, above). OD9 to OD11
+        and OD15 are still waiting.
       + **WP4a, known issue 4's Jacobian: build the pair,** the diagonal and
         the cross term with the split solver's back-substitution, behind a
         switch. WP4a-J's experiment measures it. **In force.**
@@ -389,7 +402,9 @@ option on all five. The brief was
         beside them. **Done.**
       + **G4.3 to G4.6's seven points and WP4b stage 1's five points:**
         walk through them later, one at a time. WP4b's points go with OD15
-        when WP4b moves toward validation. **Waiting.**
+        when WP4b moves toward validation. **Waiting.** *Update 2026-10-02:*
+        walked through (2026-10-02, above). G4's levels for points 2, 3, 4
+        and 6 are still waiting.
 
   - **#125's review: #118's negative-water total is the parent's, not a
     tag's.** #125 was to rename it when it took #118. The two merged 13 s

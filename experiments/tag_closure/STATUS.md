@@ -92,10 +92,12 @@ not checked, it says so.
           * correctness fixes (#4842);
           * the empirical `l_TKE` (#4853);
           * an ice-formation option (#4859);
-          * CloudMicrophysics 0.41 to 0.43. The 1M replay passes `w`.
+          * CloudMicrophysics from 0.40 to 0.43 (#4847 and #4866; the fork's
+            compat was 0.39 and 0.40). The 1M replay passes `w`.
       + **Compat:** ClimaParams 1.2 sets `sgs_variance_horizontal_scale_factor`
-        to 3.0, where 1.1.15 had 0. This ends #128's 1.1.15 cap and the drift
-        it held off. CloudMicrophysics is 0.43.
+        to 3.0, as 1.1.16 first did. ClimaParams 1.1.15 does not define it,
+        so the fork's own default of 0 applied. This ends #128's 1.1.15 cap
+        and the drift it held off. CloudMicrophysics is 0.43.
       + **Parity:** the fork matched `a9287b2d` bit for bit on 7 configs (PR
         #139's body).
       + **The rule:** gated runs use post-#139 `main` (DECISIONS, 2026-10-02).
@@ -292,7 +294,7 @@ not checked, it says so.
           * W21: model the surface flux;
           * WP6 confirmed;
           * OD9 to OD15, G4.3 to G4.6 and WP4b's points walked through
-            later.
+            later. *Done 2026-10-02:* see the walk-through update above.
       + *W48, 2026-09-29:* the extended probe on `main` (section 9.7). By
         leave-one-out, subsidence carries every rise (84% to 95% of the
         forcing's growth goes without it), and the vertical fluctuation
