@@ -12,7 +12,9 @@ once with it, and asserts:
  3. the split solver gives the model's fields the same increments, and each
     tag solves its own row, the block to `ρq_tot` included;
  4. the entries add no allocation to the update or the solve;
- 5. a checkpoint written without the key restarts with it.
+ 5. a checkpoint written without the key restarts with it;
+ 6. the sparse autodiff Jacobian (`use_auto_jacobian`) of the same model
+    solves with its own matrix.
 
 The unit tests of the entries are in `tagged_water_rainout_jacobian_tests.jl`.
 
@@ -220,5 +222,29 @@ simulation(extra, job_id) =
             restarted.integrator.p.atmos.water_tagging_model,
         )
         @test CA.solve_atmos!(restarted).ret_code == :success
+    end
+
+    # `use_auto_jacobian` once crashed in its first linear solve. The solve
+    # forwarded to the manual Jacobian's, which reads a `solver` field that
+    # only the manual cache has. The check builds the autodiff Jacobian of the
+    # run's model, with its tags, and solves with it. It checks the solve's
+    # path, not the increment. On this column the autodiff Jacobian does not
+    # write the entries of the blocks to `u₃`, at upstream's code too. They
+    # keep leftover memory, so the increment is not always finite, and the
+    # column takes no finite step.
+    @testset "The sparse autodiff Jacobian solves" begin
+        auto_alg = CA.AutoSparseJacobian()
+        p_off = off.integrator.p
+        auto_cache = CA.jacobian_cache(auto_alg, Y_off, p_off.atmos; verbose = false)
+        @test auto_cache.matrix isa MF.FieldMatrixWithSolver
+        CA.update_jacobian!(auto_alg, auto_cache, Y_off, p_off, dtγ, t)
+        ΔY_auto = zero(Y_off)
+        CA.invert_jacobian!(auto_alg, auto_cache, ΔY_auto, Y_off)
+        @test any(!iszero, parent(ΔY_auto.c))
+        # The solve is upstream's: the matrix with its own solver.
+        ΔY_direct = zero(Y_off)
+        CA.LinearAlgebra.ldiv!(ΔY_direct, auto_cache.matrix, Y_off)
+        @test isequal(parent(ΔY_auto.c), parent(ΔY_direct.c))
+        @test isequal(parent(ΔY_auto.f), parent(ΔY_direct.f))
     end
 end
