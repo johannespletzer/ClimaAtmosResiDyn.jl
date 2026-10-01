@@ -394,10 +394,13 @@ if TEST_GROUP in ("parameterizations", "all")
 end
 
 # ============================================================================
-# Restarts: Initialization from file. restart.jl and
-# unit_reproducibility_infra.jl run as Buildkite steps.
+# Restarts: Restart and reproducibility tests. Upstream runs restart.jl and
+# unit_reproducibility_infra.jl as Buildkite steps. The fork has no Buildkite,
+# so they run here. With no arguments, restart.jl runs its basic set.
 # ============================================================================
 if TEST_GROUP in ("restarts", "all")
+    @safetestset "Restarts" begin @time include("restart.jl") end
+    @safetestset "Reproducibility infra" begin @time include("unit_reproducibility_infra.jl") end
     @safetestset "Init with file" begin @time include("test_init_with_file.jl") end
 end
 #! format: on
