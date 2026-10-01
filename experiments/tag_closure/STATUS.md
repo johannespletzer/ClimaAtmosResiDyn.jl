@@ -558,9 +558,14 @@ to #126 were read from GitHub on 2026-09-28.
     reviews 11.11 next (its 11.11.13).
   - **2026-10-01, `crev`, the 90-day validation (W49):** all seven jobs
     (`14015465` to `14015471`) completed. V1, V2 (4.056e-4), V2b, V3, V4,
-    V4b and W0 to W5 pass. V5 fails at site 23: `led_fix` of `pbl` 7.33e-2
-    and of `free` 6.52e-2 at day 90, limit 2e-2 (`main`: 2.73e-2, 2.27e-2).
-    It measured `0eb329b2`, not #137's head. The owner decides.
+    V4b and W0 to W5 pass. W42's V2 failure is gone. V5 fails at site 23:
+    `led_fix` of `pbl` 7.33e-2 and of `free` 6.520e-2 (largest 6.601e-2, day
+    82.25) at day 90, limit 2e-2 (`main`: 2.73e-2, 2.27e-2). That is larger
+    than W42's (`pbl` 2.03%). It measured `0eb329b2` (approved by the owner
+    on 2026-10-01 through the coordinating session), not #137's head. #137's
+    head adds `main`'s #129 to #136, the `a491b3c7` meter fix, the audit
+    docstring and the stage-local `δL`, so the tag-side numbers need not carry
+    over. The owner decides.
 
 ## The housekeeping, H0 to H7: done
 

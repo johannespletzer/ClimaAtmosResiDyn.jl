@@ -1,0 +1,106 @@
+--- V2 cr_s23
+  table: 361 checks, days 0 to 90
+  table: max gross_relative 4.0560e-04 at day 56.00; first above 0.2%: None; checks above: 0
+  top face rebuilt: 40000.000000 m
+  table total / field scale: 1 to 1
+  fields: 361 outputs; max gross 4.0560e-04 at day 56.00; first above 0.2%: None
+  fields: max over-claim part (tags above target) 5.2034e-05; max via q_tag_res 4.0560e-04
+  fields vs table: max |diff| 8.009e-17
+--- V2 cr_s26
+  table: 361 checks, days 0 to 90
+  table: max gross_relative 5.6876e-12 at day 85.25; first above 0.2%: None; checks above: 0
+  top face rebuilt: 40000.000000 m
+  table total / field scale: 1 to 1
+  fields: 361 outputs; max gross 5.6876e-12 at day 85.25; first above 0.2%: None
+  fields: max over-claim part (tags above target) 3.8002e-12; max via q_tag_res 5.6876e-12
+  fields vs table: max |diff| 7.581e-17
+--- V2 cr_s23_main
+  table: 361 checks, days 0 to 90
+  table: max gross_relative 2.2428e-02 at day 74.50; first above 0.2%: 29.25; checks above: 179
+  top face rebuilt: 40000.000000 m
+  table total / field scale: 1 to 1
+  fields: 361 outputs; max gross 2.2428e-02 at day 74.50; first above 0.2%: 29.25
+  fields: max over-claim part (tags above target) 2.2395e-02; max via q_tag_res 2.2428e-02
+  fields vs table: max |diff| 7.416e-17
+--- V2 cr_s26_main
+  table: 361 checks, days 0 to 90
+  table: max gross_relative 5.6876e-12 at day 85.25; first above 0.2%: None; checks above: 0
+  top face rebuilt: 40000.000000 m
+  table total / field scale: 1 to 1
+  fields: 361 outputs; max gross 5.6876e-12 at day 85.25; first above 0.2%: None
+  fields: max over-claim part (tags above target) 3.8002e-12; max via q_tag_res 5.6876e-12
+  fields vs table: max |diff| 7.581e-17
+--- V4 site 23: cr_s23 vs cr_s23_untagged, files ['arup_1d_inst.nc', 'cli_1d_inst.nc', 'clw_1d_inst.nc', 'hus_1d_inst.nc', 'husup_1d_inst.nc', 'lwp_1d_inst.nc', 'pr_1d_inst.nc', 'rhoa_1d_inst.nc', 'ta_1d_inst.nc', 'wa_1d_inst.nc']
+  arup_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  cli_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  clw_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  hus_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  husup_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  lwp_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  pr_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  rhoa_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  ta_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  wa_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  V4 site 23: PASS
+--- V4b site 23: cr_s23 vs cr_s23_main, 12 files
+  arup_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  cli_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  clw_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  hus_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  husup_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  lwp_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  pr_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  rhoa_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  ta_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  wa_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  hus_6h_inst.nc: 361 vs 361 times, last day 90; bit for bit
+  rhoa_6h_inst.nc: 361 vs 361 times, last day 90; bit for bit
+  V4b site 23: PASS
+--- context site 23: cr_s23_main vs cr_s23_untagged
+  arup_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  cli_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  clw_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  hus_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  husup_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  lwp_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  pr_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  rhoa_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  ta_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  wa_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+--- V4 site 26: cr_s26 vs cr_s26_untagged, files ['arup_1d_inst.nc', 'cli_1d_inst.nc', 'clw_1d_inst.nc', 'hus_1d_inst.nc', 'husup_1d_inst.nc', 'lwp_1d_inst.nc', 'pr_1d_inst.nc', 'rhoa_1d_inst.nc', 'ta_1d_inst.nc', 'wa_1d_inst.nc']
+  arup_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  cli_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  clw_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  hus_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  husup_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  lwp_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  pr_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  rhoa_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  ta_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  wa_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  V4 site 26: PASS
+--- V4b site 26: cr_s26 vs cr_s26_main, 12 files
+  arup_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  cli_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  clw_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  hus_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  husup_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  lwp_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  pr_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  rhoa_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  ta_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  wa_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  hus_6h_inst.nc: 361 vs 361 times, last day 90; bit for bit
+  rhoa_6h_inst.nc: 361 vs 361 times, last day 90; bit for bit
+  V4b site 26: PASS
+--- context site 26: cr_s26_main vs cr_s26_untagged
+  arup_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  cli_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  clw_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  hus_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  husup_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  lwp_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  pr_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  rhoa_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  ta_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
+  wa_1d_inst.nc: 91 vs 91 times, last day 90; bit for bit
