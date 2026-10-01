@@ -1128,6 +1128,35 @@ verdict record of the pathway's section 2. If a prerequisite fails, it says
     PP-SRCOFF. *Scope added (provenance pathway, 2026-09-27, from the
     owner's review of #121):* also PX25, WP4b's refinement matrix.
 
+## Reruns on the new physics (2026-10-02)
+
+*Scope added 2026-10-02:* main is `b34bbd8b` and the physics is upstream
+`a9287b2d` (STATUS.md, "Update, 2026-10-02: physics baseline"). These reruns
+replace old-physics numbers that G3_PLAN.md, section 10, lists as prior
+evidence. The tasks are in `agent-progress/goals-2026-10-02.md` (outside the
+repository). Task 7's design decides which of the task 7 items fit its 12
+jobs.
+
+  - [ ] **WP9's cost on `b34bbd8b`** (task 5). The P2 and P3 profile table, a
+    design amendment before any job, exclusive rerun jobs that pass the
+    spread rule, then W52 for water with a budget proposal for the owner.
+    Replaces the first pass at `43b01ca1` and W34's allocation figures.
+  - [ ] **W50's C** (task 7). The 60-level D4-W copies day and its twin, two
+    jobs, scored by PX5's rule. Replaces W50's R5 and first-hour numbers. PX12
+    (W50's B) waits for this result.
+  - [ ] **The D4-W day and the copies day** (task 7). Closure, the copies'
+    repair and the per-tag budgets. Replaces W21, W24, W28, W38 and R5.
+  - [ ] **The D4-W ladder rungs** (task 7), only those its design takes.
+    Replaces W25 and W41's Newton error.
+  - [ ] **TRMM 0M, 6 h** (task 7), if its design keeps criterion 7's run.
+    Replaces W26 and W28's TRMM figures.
+  - [ ] **The design subsection** (task 7), pushed before any job. It names
+    the baseline set, the old finding each run replaces, the score script and
+    the pass reading. Over 12 jobs or 24 hours, it goes to the owner first.
+  - [ ] **The drafts** (task 7). Each result is a new W finding that names
+    the old one it updates and quotes the least favourable number. An Opus
+    review checks them before they are recorded.
+
 ## Qualification runs
 
   - [ ] **V-W6**, held out, default and copies each: RICO 1M, BOMEX

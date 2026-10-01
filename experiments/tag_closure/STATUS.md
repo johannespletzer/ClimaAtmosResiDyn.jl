@@ -76,6 +76,46 @@ not checked, it says so.
 
 ## Where things stand
 
+  - **Update, 2026-10-02: physics baseline.** Main is `b34bbd8b` (2026-10-02).
+    Its model physics is upstream `a9287b2d`. Nothing was run for this entry.
+    The record was changed only.
+
+      + **The merges:** #139 (`24c1aaa0`, upstream `a9287b2d`, on the previous
+        upstream base `d331fe30`), then #140 (`5e67d344`, the parent-budget
+        docs) and #141 (`b34bbd8b`, the vapour-constraint registry row is
+        zero, zero, zero).
+      + **What changed for the tag runs (#139's upstream physics):**
+          * the Ri weight on the SGS variance (#4837);
+          * uniform SGS-quadrature fractions (#4850);
+          * the SGS parameters out of the provisional set (#4856);
+          * implicit vertical Smagorinsky (#4824);
+          * correctness fixes (#4842);
+          * the empirical `l_TKE` (#4853);
+          * an ice-formation option (#4859);
+          * CloudMicrophysics 0.41 to 0.43. The 1M replay passes `w`.
+      + **Compat:** ClimaParams 1.2 sets `sgs_variance_horizontal_scale_factor`
+        to 3.0, where 1.1.15 had 0. This ends #128's 1.1.15 cap and the drift
+        it held off. CloudMicrophysics is 0.43.
+      + **Parity:** the fork matched `a9287b2d` bit for bit on 7 configs (PR
+        #139's body).
+      + **The rule:** gated runs use post-#139 `main` (DECISIONS, 2026-10-02).
+        Old-physics numbers keep their commit label and are prior evidence
+        only. They are listed in [G3_PLAN.md](G3_PLAN.md), section 10, each
+        with the rerun that will replace it, or "none planned".
+      + **The run base:** a clean detached run tree at `b34bbd8b` or later,
+        with `.buildkite/LocalPreferences.toml` copied in. The CI-version test
+        envs are `$SCRATCH/claude_work/main_{ci111,ci110,docs}_env`. Slurm is
+        `-A pn49go-c -p hpda2_compute`. A smoke run at `b34bbd8b` (the BOMEX
+        EDMF column, 10 steps, job 14095717) passed.
+      + **The reruns:** tasks 5 and 7 of `agent-progress/goals-2026-10-02.md`
+        (outside the repository). Task 5 is WP9's cost, which gives W52 and
+        E88. Task 7 is the G3 baselines, including W50's C. Their items are in
+        [G3_TODO.md](G3_TODO.md) and [G4_TODO.md](G4_TODO.md), under "Reruns
+        on the new physics". Nothing is ticked.
+      + **Not planned:** the energy findings E84, E86 and E87, the sites 23 and
+        26 runs, the sphere and the rest of the "none planned" rows. G4's
+        levels come from post-#139 runs at G4's start.
+
   - **Update, 2026-10-02: the owner's walk-through.** The owner chose the
     recommended option on all five items (DECISIONS.md, 2026-10-02). Nothing
     was run. The record was changed only.

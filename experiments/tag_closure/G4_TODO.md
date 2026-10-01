@@ -597,6 +597,23 @@ parent's sedimentation on the explicit path as the water tags did (W23).
     jobs are green. Water tags refuse 2M and P3 already (G3_TODO,
     Decisions).
 
+## Reruns on the new physics (2026-10-02)
+
+*Scope added 2026-10-02:* main is `b34bbd8b` and the physics is upstream
+`a9287b2d` (STATUS.md, "Update, 2026-10-02: physics baseline"). G3_PLAN.md,
+section 10, lists the energy findings as prior evidence. The tasks are in
+`agent-progress/goals-2026-10-02.md` (outside the repository).
+
+  - [ ] **WP9's energy cost on `b34bbd8b`** (task 5). The energy arms and one
+    combined arm with 8 water and 8 energy tags, each against an untagged
+    baseline on the same node. Result: E88, and a budget proposal for the
+    owner. Replaces the first pass at `43b01ca1`.
+  - [ ] **The energy baselines** (E84, E86, E87, with E73, E76 and E89).
+    Neither task 5 nor task 7 reruns them as written. G4.3 to G4.6's levels
+    are set from post-#139 runs at G4's start, so these stay prior evidence
+    until then. Task 7's design may add an energy row. If it does, it points
+    here.
+
 ## Energy items within M1 to M5 that no G4.n takes up yet
 
 ROADMAP.md lists these as "later" within their milestones. They need a new

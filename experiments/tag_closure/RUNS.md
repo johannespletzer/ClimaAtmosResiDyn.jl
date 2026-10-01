@@ -86,6 +86,22 @@ files.
     `g2_v2_sphere_mix_oom_13538434` ran `configs/g2_v2_sphere_mix.yml`; the
     register names a file that does not exist.
 
+## The base commit from 2026-10-02
+
+Runs from 2026-10-02 use `main` at `b34bbd8b` or later. Main holds #139
+(upstream `a9287b2d`, ClimaParams 1.2, CloudMicrophysics 0.43), #140 and #141.
+The physics differs from every run in the tables below, so their numbers are
+prior evidence only. They keep their commit labels. G3_PLAN.md, section 10,
+lists the findings and thresholds they support and the rerun that will
+replace each.
+
+**The run-tree rule.** A run starts from a clean detached tree at `b34bbd8b`
+or later, with `.buildkite/LocalPreferences.toml` copied in. The Commit column
+then reads that commit. The CI-version test envs are
+`$SCRATCH/claude_work/main_{ci111,ci110,docs}_env`. Slurm is
+`-A pn49go-c -p hpda2_compute`. A smoke run at `b34bbd8b` (job 14095717)
+passed. Runs that are compared set `radiation_reset_rng_seed: true`.
+
 ## The runs
 
 ### Phase A: the water tags
