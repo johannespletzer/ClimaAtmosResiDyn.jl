@@ -87,21 +87,21 @@ changes, which [RUNS.md](RUNS.md) records.
 
 ## Index
 
-| IDs                                                           | section                                             |
-|:------------------------------------------------------------- |:--------------------------------------------------- |
-| W1–W48, W50, W51 (W46 reserved for PX7, W49 for C's revision) | 1. Water tags                                       |
-| E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48, E85         | 2. Energy source tags: closure by transport         |
-| E1–E6, E9b, E9c, E10–E19, E71, R1–R11                         | 3. The energy reference and the offset              |
-| E40, E53                                                      | 4. EDMF and the updrafts                            |
-| E39, E39b, E43, E59, E61, E62, E64–E67, E79, E80, E82         | 5. The implicit channel and the increment prototype |
-| E45, E47, E51, E54, E55, E57, E58                             | 6. Parity, Float32, MPI and restarts                |
-| E7–E9, E20–E24, E26, E28, E30, E38, E49, E63, E87             | 7. The process records and the per-process checks   |
-| E50, E60, E69, E70, E74, E75, E81                             | 8. The sphere and long runs                         |
-| E68, E72, E73, E76, E83, E84, E86, E89                        | 9. Mixing: V3 and the updraft gap                   |
-| T1–T10, E44, E44b–E44e, E52, E56, E77, E78                    | 10. Cost                                            |
-| M1–M8                                                         | 11. Method                                          |
-| old claims, errata, conflicts                                 | 12. Superseded and falsified claims                 |
-| FQ-1 to FQ-24                                                 | 13. What is not established                         |
+| IDs                                                   | section                                             |
+|:----------------------------------------------------- |:--------------------------------------------------- |
+| W1–W51 (W46 reserved for PX7)                         | 1. Water tags                                       |
+| E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48, E85 | 2. Energy source tags: closure by transport         |
+| E1–E6, E9b, E9c, E10–E19, E71, R1–R11                 | 3. The energy reference and the offset              |
+| E40, E53                                              | 4. EDMF and the updrafts                            |
+| E39, E39b, E43, E59, E61, E62, E64–E67, E79, E80, E82 | 5. The implicit channel and the increment prototype |
+| E45, E47, E51, E54, E55, E57, E58                     | 6. Parity, Float32, MPI and restarts                |
+| E7–E9, E20–E24, E26, E28, E30, E38, E49, E63, E87     | 7. The process records and the per-process checks   |
+| E50, E60, E69, E70, E74, E75, E81                     | 8. The sphere and long runs                         |
+| E68, E72, E73, E76, E83, E84, E86, E89                | 9. Mixing: V3 and the updraft gap                   |
+| T1–T10, E44, E44b–E44e, E52, E56, E77, E78            | 10. Cost                                            |
+| M1–M8                                                 | 11. Method                                          |
+| old claims, errata, conflicts                         | 12. Superseded and falsified claims                 |
+| FQ-1 to FQ-24                                         | 13. What is not established                         |
 
 ## 1. Water tags
 
@@ -1841,6 +1841,233 @@ job `13996777`), run tree `../ClimaAtmosResiDyn-ic-probe2-run` at `e09e0986`,
 `analysis/water/ic_miss_probe2.jl`, `configs/ic_miss_probe2_s23.yml`. Scored
 on 2026-09-29 with `analysis/water/ic_miss_score2.py` as amended at
 `6eae646f`, before the job started; `output/ic_miss_probe2/`.*
+
+**W49. Option C's revision, the 90-day validation. W42's V2 failure is gone.
+Its V5 failure remains and is larger (`pbl` 7.3% against W42's 2.03%). Site
+23's partition stays within 0.2% of its target at every 6-hourly check
+(largest 4.1e-4, mostly tags below the target). The ten written model fields
+(twelve files with `hus` and `rhoa` 6-hourly) are bit for bit the run on
+`main` and the untagged twin at both sites, site 26's tags equal `main`'s, and
+all five rises of the excess go (W5, the least favourable is 3.1e-4 of `R48`
+against 0.1). But V5 fails at site 23: the repair's corrections reach 7.3% of
+`pbl`'s inventory and 6.520e-2 of `free`'s (largest 6.601e-2, day 82.25) at
+day 90, against 2%. `main`'s own are 2.7% and 2.3%, so the revision's are 2.7
+and 2.9 times `main`'s. The pre-registration (11.7) states no consequence of
+a V5 failure, so the owner decides.** The validation of `design/NEGATIVE_PARENT_WATER.md` section 11.7
+with its dated amendments of 2026-09-30: W42's configuration, 90 days, the
+tags `pbl`, `free`, `evap` and `fcg` under the follower, on the revision and
+on `main`, and the probe of section 9.7 on the revision's code (windows W0
+to W5).
+
+**What was measured.** The revision's run tree is `b6d452b5`: the model is
+`0eb329b2`, whose source is `c7c77faf`, the state before the merge. The owner
+approved `0eb329b2` for the 90-day runs on 2026-10-01, through the
+coordinating session (11.11.11, item 10). It is not #137's head. Four things
+separate it from #137's head:
+
+  - `main`'s #129 to #136, merged in (about 30 `src` files);
+  - the `a491b3c7` meter fix, which saves and restores the follower's ledger
+    rate;
+  - the audit docstring;
+  - the stage-local `δL` in the follower.
+
+W49's tag-side numbers (V2, V3, V5, W1 to W5) need not carry over to #137's
+head. V4b's control is `main` at `43b01ca1` (run tree `d2ceaa48`), not the
+current `main`. All seven jobs completed with exit 0, and no `.err` file holds
+an error or an exception (`output/w49/job_exit_check.sh`).
+
+Site 23, the revision (`cr_s23`) and the control on `main` (`cr_s23_main`):
+
+| rule                                                           | `cr_s23`                                                                    | `cr_s23_main` (reported)                                                                 | pass                                  |
+|:-------------------------------------------------------------- |:--------------------------------------------------------------------------- |:---------------------------------------------------------------------------------------- |:------------------------------------- |
+| V1, reaches day 90                                             | yes                                                                         | —                                                                                        | pass                                  |
+| V2, largest gross against `∫max(ρq_tot, 0)`, at most 0.2%      | 4.056e-4 (day 56.0), 0 of 361 checks above 2e-3                             | 2.243e-2 (day 74.5), first above day 29.25; 179 of 361 checks above 2e-3 (re-derivation) | pass                                  |
+| V2b, the named remainder closes, to 1e-12                      | 2.400e-16                                                                   | —                                                                                        | pass                                  |
+| V4, 10 model fields against the untagged twin, bit for bit     | yes, 91 of 91 outputs                                                       | —                                                                                        | pass                                  |
+| V4b, 10 model fields against `main`, bit for bit               | yes, 91 of 91 outputs                                                       | —                                                                                        | pass                                  |
+| V5, the negative part's entry, per-step gross a day (reported) | 1.347e-2 of the water                                                       | —                                                                                        | —                                     |
+| V5, `q_tag_exp_negative`, per-step gross a day (reported)      | 7.346e-4 of the water                                                       | —                                                                                        | —                                     |
+| V5, the repair's retained gross, at most 0.5% a day            | 3.779e-4                                                                    | —                                                                                        | pass                                  |
+| V5, `led_fix` of `pbl`, at most 2% of its inventory            | 7.330e-2 at day 90 (its largest); 223 of 357 audit rows from day 1 above 2% | 2.728e-2 at day 90; first above 2% at day 54.75                                          | **fail** (first above 2% at day 31.0) |
+| V5, `led_fix` of `free`, at most 2%                            | 6.520e-2 (largest 6.601e-2, day 82.25) at day 90; 237 of 357 rows above 2%  | 2.274e-2 at day 90; first above day 56.25                                                | **fail** (first above 2% at day 31.0) |
+| V5, `led_fix` of `evap`, of `fcg`                              | 0, 0                                                                        | 0, 0                                                                                     | pass                                  |
+| V5, source tag `evap`, negative water over positive (reported) | −1.590e-7 at most (day 15), first below zero day 11                         | —                                                                                        | —                                     |
+| V5, source tag `fcg`, the same (reported)                      | −2.278e-2 at most (day 2), first below zero day 2                           | —                                                                                        | —                                     |
+
+Site 26, the revision (`cr_s26`) and `main` (`cr_s26_main`):
+
+| rule                                                           | `cr_s26`                                                                                             | pass |
+|:-------------------------------------------------------------- |:---------------------------------------------------------------------------------------------------- |:---- |
+| V2, largest gross, at most 0.2%                                | 5.688e-12 (day 85.25); `main`'s is the same                                                          | pass |
+| V2b, the named remainder, to 1e-12                             | 3.512e-16                                                                                            | pass |
+| V3, the four water tags against `main`, bit for bit            | all four, 91 outputs; `t*` is none                                                                   | pass |
+| V4, 10 model fields against the untagged twin, bit for bit     | yes, 91 of 91 outputs                                                                                | pass |
+| V4b, 10 model fields against `main`, bit for bit               | yes, 91 of 91 outputs                                                                                | pass |
+| V5, the negative part's entry; `q_tag_exp_negative` (reported) | 0; 0                                                                                                 | —    |
+| V5, the repair's retained gross, at most 0.5% a day            | 5.315e-7                                                                                             | pass |
+| V5, `led_fix` of `pbl`, `free`, `evap`, `fcg`, at most 2%      | 2.126e-4, 6.083e-5, 0, 0 at day 90 (largest `pbl` 2.29e-4 at day 85.25, `free` 6.36e-5 at day 81.25) | pass |
+| V5, source tag `evap`, negative water (reported)               | −2.610e-5 at most (day 28), first below zero day 28                                                  | —    |
+| V5, source tag `fcg`, negative water (reported)                | never below zero                                                                                     | —    |
+
+V3's `t*` is none: no `hus` below zero, no audit event, and no
+`exp_negative_retained`. The field `exp_negloss_retained` is not built.
+
+The windows, `cr_probe_s23`, each rise divided by W48's `R48` (the rise in
+`ic_miss_probe2_s23`):
+
+| rise (days)          | `R` of the water | W48's `R48` of the water | W2: forcing's bracket alone / `R48` | W5: `R / R48`, at most 0.1 | N, P, X shares of `R48` (W3, reported) | pass |
+|:-------------------- |:---------------- |:------------------------ |:----------------------------------- |:-------------------------- |:-------------------------------------- |:---- |
+| 30.50–30.75          | −1.524e-12       | +1.630e-3                | −9.769e-10                          | −9.348e-10                 | +7.8e-18, −9.3e-10, 0                  | pass |
+| 30.75–31.00, control | +5.866e-7        | +1.898e-3                | −1.625e-6                           | **+3.091e-4**              | +2.9e-4, +1.6e-5, −2.3e-4              | pass |
+| 52.50–52.75          | −1.150e-8        | +1.648e-3                | −7.072e-6                           | −6.981e-6                  | +8.8e-10, −7.0e-6, 0                   | pass |
+| 52.75–53.00          | −1.166e-8        | +1.953e-3                | −6.018e-6                           | −5.969e-6                  | +5.5e-9, −6.0e-6, 0                    | pass |
+| 53.00–53.25          | −1.127e-8        | +1.829e-3                | −6.244e-6                           | −6.162e-6                  | +3.9e-8, −6.2e-6, 0                    | pass |
+
+  - **W0 passes:** 12 of 12 model field files equal W48's, none missing. Not
+    scored: 40 of 54 water tag files differ from W48's. **W1 passes:** the
+    forcing's bracket has no nonzero growth in the mechanism's cells at any of
+    6048 steps (days 30.3 to 31.0) or 7776 steps (days 52.4 to 53.3). The
+    step counts of each rise equal W48's (2160).
+
+  - **W3, reported:** every probe's growth is between −1.6e-4 and +2.3e-14 of
+    `R48` (`cr_windows_score.txt`). The largest in size is −1.6e-4
+    (`forcing_without_subsidence`, rise 1).
+
+  - **W4, reported:** the whole explicit tendency alone grows the excess by
+    −9.767e-10, −1.625e-6, −7.072e-6, −6.018e-6 and −6.244e-6 of `R48`.
+
+  - **The withheld gain's ledger.** In the cells with an excess,
+    `q_tag_exp_negative` changes per step by 0.91, 0.96, 1.0, 1.0 and 1.0 of
+    `R48` in the five rises. That is consistent with the rule withholding
+    the gain that W48 found in these cells. It is a ledger size in the same
+    cells and interval. It does not show cause.
+
+  - **The control rise's other ledgers are large against a near-zero rise.**
+    In rise 2 the per-step changes over `R48` are 45 for `q_tag_inc_negative`,
+    42.1 for `q_tag_inc_moved`, 85.7 for `q_tag_led_inc_pbl` and 1.47 for
+    `q_tag_led_repair`. `R` there is 3.1e-4 of `R48`, so these ratios say
+    little about the rise. In the other four rises no ledger but
+    `q_tag_exp_negative` reaches 0.5 of `R48` (the next largest is 0.486,
+    `q_tag_inc_moved` in rise 1).
+
+  - **V2 holds, and it is bounded.** It reads the 6-hourly closure checks, 361
+    rows to day 90. The gross between checks is not seen. 324 of the 361 rows
+    carry `negative_water_void`, from day 9.25, and so does the control's.
+    The contract's negative-water row leaves site 23's water results unscored
+    above 1e-4. V2 is registered without that exclusion (11.7) and is scored
+    that way. The pass is 0.20 of the limit. A recomputation from the
+    6-hourly fields, a second path outside the pre-registered scripts,
+    gives the same 4.056e-4 at day 56.0 and agrees with the table to 8e-17 at
+    every check. By it the part where the tags sit above the target is at
+    most 5.2e-5. So most of the largest gross is tags below the target, not
+    above it as in W42.
+
+  - **The algebraic identity and the provenance are two claims.** V2b closes
+    to 2.4e-16 and 3.5e-16 because `q_tag_res` is the remainder (11.11.7,
+    I1). It holds by that construction and says nothing about which tag
+    holds the water. V2 compares the partition's total with the target. Neither
+    tests a tag's provenance. At site 26, V3 shows the tags unchanged where
+    the parent is never negative. At site 23, V5's retained gross and `led_fix` measure how much the
+    repair moves the tags. The gross passes and `led_fix` fails.
+
+  - **V5's failure, what the runs show.** The corrections of `pbl` and `free`
+    pass 2% at day 31.0. At day 30.75 they are 1.514e-2 and 1.824e-2, and at
+    day 31.0 2.406e-2 and 2.440e-2. `free` stays above 2% from day 31.0, and
+    `pbl` from day 34.75. `pbl`'s day-31.0 value is partly a 16% dip in its
+    inventory (the retained gain divided by the fraction goes 6.826, 5.738,
+    7.025 at days 30.75, 31.0, 31.25, while `led_fix_pbl_retained` rises 34%,
+    from 0.1033 to 0.1381). `free`'s inventory is flat (5.651 to 5.645), so
+    its step is the numerator alone. On `main` over the same rows `pbl` goes
+    from 4.5e-3 to 6.9e-3 to 5.7e-3, the same shape. The step lies in the
+    control rise's interval (30.75 to 31.00), and in that rise
+    `q_tag_led_fix_pbl` and `_free` change by 1.47 of `R48` in the cells with
+    an excess. The probe equals `cr_s23` bit for bit to day 53.25 (its
+    NetCDF files, closure rows and audit rows), which is why its ledger
+    speaks to `cr_s23`'s audit. About 0.91 of the day-31 step in each tag's
+    `led_fix` lies in the cells with an excess in the control rise. This
+    locates the step. It does not show its cause. The corrections reach 7.3%
+    and 6.5% at day 90. `main` fails V5 too (`pbl` 2.7%, `free` 2.3% at day
+    90). The earlier C of W42 had `pbl` 2.03% and `free` 1.6%. The three runs
+    are different code, so the sizes bound and do not isolate the revision's
+    part.
+
+  - **The least favourable numbers.** V2: 4.056e-4. W5: +3.091e-4 of `R48`
+    (the control, `R = +5.866e-7` of the water). W2: −9.769e-10. V5: `pbl`
+    7.330e-2 and `free` 6.601e-2 at their largest, against 2e-2.
+
+  - **The source tags.** `evap` holds a small negative inventory, at most
+    1.59e-7 of its positive water at site 23 (from day 11) and 2.61e-5 at
+    site 26 (from day 28). `fcg` holds 2.28e-2 at site 23 from day 2 and none
+    at site 26. W42's runs gave 3.9e-7 and 2.3e-2, first below zero on days
+    11 and 2 (the check on W42's runs, 11.7). The pre-registered report is
+    this negative water. No pre-registered script printed an overshoot
+    figure for the source tags. A crossing step's overshoot is accepted and
+    reported here (11.11.4), so this is the report.
+
+  - **The source tags pointwise, after the runs (not pre-registered).**
+    `analysis/water/cr_source_overshoot.py` was written after the runs were
+    read (`output/w49/cr_source_overshoot.txt`). Its values are in units of
+    M, the column's largest `|q_tot|` at that output. The table quotes the
+    6-hourly output where it is larger than the daily one. An overshoot is a
+    tag above its parent in a cell where `q_tot > 0`.
+
+    | tag, site  | most negative value, pointwise         | overshoot where `q_tot > 0`                            |
+    |:---------- |:-------------------------------------- |:------------------------------------------------------ |
+    | `evap`, 23 | −4.6e-5 M (6-hourly, day 54.75, 584 m) | +8.1e-4 M (6-hourly, day 42.5, 435 m); daily +5.7e-4 M |
+    | `fcg`, 23  | −1.8e-3 M (6-hourly, day 1.75, 979 m)  | none: at most −1.5e-7 M, below the parent              |
+    | `evap`, 26 | −3.0e-5 M (day 28, 10.2 km)            | none                                                   |
+    | `fcg`, 26  | −3.0e-12 M (6-hourly, day 0.25)        | +3.8e-5 M (day 28, 10.2 km)                            |
+
+    At site 26 both source tags equal `main`'s bit for bit (V3), so these
+    numbers are `main`'s, not the revision's. At site 23 the largest "above
+    the parent" over all cells, 0.19 to 0.20 M at 369 m (days 30 and 30.75),
+    is the parent's own negative value there (−0.19 M), with the tag near
+    zero. It is not an overshoot, and the table does not use it.
+
+  - **Not in the pre-registration.** A refinement of the timestep through the
+    crossing episodes was not registered, and none was run. So the V2 and W5
+    results hold at `dt` 10 s and the 6-hourly checks, and say nothing of a
+    finer step.
+
+  - **What is bundled.** V2 and W5 score the whole of the revision: the
+    explicit rule, Q3, Q4, the follower's amendment (11.7). They bound the
+    rule's part and do not isolate it. `q_tag_exp_negloss` is not built, and
+    the path named before the runs (`q_tag_inc_negative` read first if V2 or
+    W5 fails) was not needed, since neither failed.
+
+  - **The parent is unchanged, as far as it was written.** V4 and V4b hold
+    the ten written model fields bit for bit. A re-derivation from the files
+    (`output/w49/rederive.py`) adds `hus` and `rhoa` 6-hourly to V4b, 361 of
+    361 outputs, and reads data, time and `z` arrays, not attributes. The
+    other prognostic variables (`ρe_tot`, TKE, the other updraft variables)
+    were not output, so their parity is not shown.
+
+  - **What it means.** The revision removes W42's V2 miss at site 23 (the
+    gross from 2.2% to 0.04%, and all five rises) without moving the ten
+    written model fields (twelve files with `hus` and `rhoa` 6-hourly). It
+    does not keep the repair small there, and V5 fails by more than W42's did.
+    The pre-registration states no consequence of a V5 failure. The owner
+    decides on V5 and on 2%.
+
+  - **The owner's decision (2026-10-01).** V2 counts as C's validation, V5
+    stays an open failure and a probe traces the rise: see
+    `design/NEGATIVE_PARENT_WATER.md` 11.10 item 10 and `DECISIONS.md`.
+
+*`hpda2_compute`, 2026-10-01, jobs `14015465` (`cr_s23`), `14015466`
+(`cr_s23_untagged`), `14015467` (`cr_s26`), `14015468` (`cr_s26_untagged`)
+and `14015471` (`cr_probe_s23`) from `../ClimaAtmosResiDyn-crev-run` at
+`b6d452b5`, and `14015469` (`cr_s23_main`), `14015470` (`cr_s26_main`) from
+`../ClimaAtmosResiDyn-crev-main-run` at `d2ceaa48`; exits 0 in 1 h 07 min to
+3 h 53 min. Scored on 2026-10-01 with
+`analysis/water/cr_validate.py` and `cr_windows_score.py`. The first-exceedance
+days, the largest `led_fix` values and the day-31 step come from
+`output/w49/w49_supplement.py`, which is not one of the pre-registered
+scripts. The "179 of 361", the 5.2e-5 part of the gross above the target, the
+8e-17 agreement and the twelve-file V4b come from `output/w49/rederive.py`
+(`rederive.log`). The source tags' pointwise values come from
+`analysis/water/cr_source_overshoot.py`, written after the runs.
+`output/w49/` (its README says what is kept and what stays on
+`$SCRATCH`).*
 
 **W50. W21's surface rule on D4-W: the tagged runs are bit for bit the untagged
 ones in the 40 written hourly diagnostics and the partition closes in both

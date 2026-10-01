@@ -218,6 +218,45 @@ The list as it stood before this classification, kept as written:
 >     and the copies under first-order upwinding (W25). **Waiting.**
 >     [FINDINGS W25](FINDINGS.md)
 
+## 2026-10-01
+
+  - **C's revision: the owner's decision on W49's verdicts**
+    (`design/NEGATIVE_PARENT_WATER.md`, 11.10 item 10; FINDINGS W49).
+      + **W49's V2 counts as C's validation.** At site 23, V2 is 4.1e-4
+        against 2e-3. The control on `main` is at 2.2e-2. **In force.**
+      + **V5 `led_fix` fails at site 23, and stays an open failure.** `pbl` is
+        at 7.33% and `free` at 6.52%, against 2%. The control is at 2.73% and
+        2.27%, a rise of about 2.7 to 2.9 times. The cause is not traced.
+        **In force.**
+      + **#137 merges once its CI is green.** It merged on 2026-10-01 as
+        `b4ebfca5`. **Done.**
+      + **A follow-up probe traces the rise of `led_fix`.** **In force.** The
+        probe is not run yet.
+
+## 2026-09-30
+
+  - **C's revision: the owner's answers to section 11's questions**
+    (`design/NEGATIVE_PARENT_WATER.md`, 11.10). How the extension is built is
+    11.11, and the amendments to the pre-registration are in 11.7.
+      + **Q2: the stages split a crossing step,** as built. Accepted. **In
+        force.**
+      + **Q3: the rule reaches the implicit microphysics bracket,** now. **In
+        force.**
+      + **Q4: the rule reaches the source tags and the region tags that list
+        sources,** now. This needs a new design of a source tag's target where
+        the parent is at or below zero (11.11.4). **In force.**
+      + **Q5: a transfer into a negative compartment under
+        `water_tag_precipitation: true` takes the target's treatment,** now,
+        in this PR. **In force.**
+      + **Q6: build the ledger of the withheld gain, `q_tag_exp_negative`,**
+        a state field under water tags, carried through restarts. **In
+        force.**
+      + **Q7: the windows' rule is set before the runs:** the rise goes if
+        `R ≤ 0.1 R48` (W5). **In force.**
+      + **Q9: V3's fallback clause compares by column and time,** from the
+        first time the parent is negative anywhere in the column. Amended
+        before any run. **In force.**
+
 ## 2026-09-29/30
 
   - **Option C's 90-day trees, as pre-registered, without W21.** **In force.**
@@ -237,6 +276,12 @@ The list as it stood before this classification, kept as written:
 
 ## 2026-09-29
 
+  - **C's revision, questions 1 and 8 of section 11.10**
+    (`design/NEGATIVE_PARENT_WATER.md`): a parent of exactly zero counts as
+    positive, so the tags take the whole gain there (**in force**); the
+    parity check reruns to about 30 days, and passes if every model field
+    and the day-30 state are bit for bit and a region tag differs from
+    `main`'s at the end (**done**, 11.8).
   - **Option C's revision: the explicit brackets give the region tags the
     target's gain, for every explicit process** (option 1 of
     `design/NEGATIVE_PARENT_WATER.md` section 10, recommended). Production

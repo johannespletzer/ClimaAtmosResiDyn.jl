@@ -1,0 +1,34 @@
+V1 site 23 reaches day 90: last closure row at 90.0 days: pass
+V2 site 23: largest gross 4.056e-04 of max(ρq_tot, 0), first above 0.2% at None days: pass; rows marked negative_water_void
+    reported: the control on main, largest gross 2.243e-02, first above 0.2% at 29.25 days
+V2b site 23: largest relative gap 2.400e-16: pass
+V4 site 23: 10 model fields against cr_s23_untagged: pass
+V4b site 23: 10 model fields against cr_s23_main: pass
+V5 site 23: negative part's per-step gross 1.347e-02 of the water a day (reported); repair's retained gross 3.779e-04 a day: pass
+    led_fix pbl: 7.330e-02 of its inventory: FAIL
+    led_fix free: 6.520e-02 of its inventory: FAIL
+    led_fix evap: 0.000e+00 of its inventory: pass
+    led_fix fcg: 0.000e+00 of its inventory: pass
+    reported: q_tag_exp_negative's per-step gross 7.346e-04 of the water a day
+    reported: source tag evap's negative water: largest -1.590e-07 of its positive water (at 15 days), first below zero: 11 days
+    reported: source tag fcg's negative water: largest -2.278e-02 of its positive water (at 2 days), first below zero: 2 days
+V2 site 26: largest gross 5.688e-12 of max(ρq_tot, 0), first above 0.2% at None days: pass
+    reported: the control on main, largest gross 5.688e-12, first above 0.2% at None days
+V2b site 26: largest relative gap 3.512e-16: pass
+V4 site 26: 10 model fields against cr_s26_untagged: pass
+V4b site 26: 10 model fields against cr_s26_main: pass
+V5 site 26: negative part's per-step gross 0.000e+00 of the water a day (reported); repair's retained gross 5.315e-07 a day: pass
+    led_fix pbl: 2.126e-04 of its inventory: pass
+    led_fix free: 6.083e-05 of its inventory: pass
+    led_fix evap: 0.000e+00 of its inventory: pass
+    led_fix fcg: 0.000e+00 of its inventory: pass
+    reported: q_tag_exp_negative's per-step gross 0.000e+00 of the water a day
+    reported: source tag evap's negative water: largest -2.610e-05 of its positive water (at 28 days), first below zero: 28 days
+    reported: source tag fcg's negative water: largest 0.000e+00 of its positive water (at 0 days), first below zero: never
+V3 site 26: t* (first time the parent is below zero in a column): none; per source: hus daily none, hus 6-hourly none, untagged hus daily none, audit negative_water_interval_events none, audit exp_negative_retained none
+    audit exp_negloss_retained: no such field, not built
+V3 site 26 q_tag_pbl: bit for bit at 91 outputs: pass
+V3 site 26 q_tag_free: bit for bit at 91 outputs: pass
+V3 site 26 q_tag_evap: bit for bit at 91 outputs: pass
+V3 site 26 q_tag_fcg: bit for bit at 91 outputs: pass
+RESULT failed: ['V5 led_fix pbl s23', 'V5 led_fix free s23']

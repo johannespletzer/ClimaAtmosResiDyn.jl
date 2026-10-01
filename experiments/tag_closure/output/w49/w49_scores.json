@@ -1,0 +1,256 @@
+{
+ "note": "The two scripts print text only. This JSON is each printed line, parsed by line, with the scripts' exit codes (cr_validate.py 1, cr_windows_score.py 0).",
+ "cr_validate": {
+  "exit": 1,
+  "lines": [
+   "V1 site 23 reaches day 90: last closure row at 90.0 days: pass",
+   "V2 site 23: largest gross 4.056e-04 of max(ρq_tot, 0), first above 0.2% at None days: pass; rows marked negative_water_void",
+   "    reported: the control on main, largest gross 2.243e-02, first above 0.2% at 29.25 days",
+   "V2b site 23: largest relative gap 2.400e-16: pass",
+   "V4 site 23: 10 model fields against cr_s23_untagged: pass",
+   "V4b site 23: 10 model fields against cr_s23_main: pass",
+   "V5 site 23: negative part's per-step gross 1.347e-02 of the water a day (reported); repair's retained gross 3.779e-04 a day: pass",
+   "    led_fix pbl: 7.330e-02 of its inventory: FAIL",
+   "    led_fix free: 6.520e-02 of its inventory: FAIL",
+   "    led_fix evap: 0.000e+00 of its inventory: pass",
+   "    led_fix fcg: 0.000e+00 of its inventory: pass",
+   "    reported: q_tag_exp_negative's per-step gross 7.346e-04 of the water a day",
+   "    reported: source tag evap's negative water: largest -1.590e-07 of its positive water (at 15 days), first below zero: 11 days",
+   "    reported: source tag fcg's negative water: largest -2.278e-02 of its positive water (at 2 days), first below zero: 2 days",
+   "V2 site 26: largest gross 5.688e-12 of max(ρq_tot, 0), first above 0.2% at None days: pass",
+   "    reported: the control on main, largest gross 5.688e-12, first above 0.2% at None days",
+   "V2b site 26: largest relative gap 3.512e-16: pass",
+   "V4 site 26: 10 model fields against cr_s26_untagged: pass",
+   "V4b site 26: 10 model fields against cr_s26_main: pass",
+   "V5 site 26: negative part's per-step gross 0.000e+00 of the water a day (reported); repair's retained gross 5.315e-07 a day: pass",
+   "    led_fix pbl: 2.126e-04 of its inventory: pass",
+   "    led_fix free: 6.083e-05 of its inventory: pass",
+   "    led_fix evap: 0.000e+00 of its inventory: pass",
+   "    led_fix fcg: 0.000e+00 of its inventory: pass",
+   "    reported: q_tag_exp_negative's per-step gross 0.000e+00 of the water a day",
+   "    reported: source tag evap's negative water: largest -2.610e-05 of its positive water (at 28 days), first below zero: 28 days",
+   "    reported: source tag fcg's negative water: largest 0.000e+00 of its positive water (at 0 days), first below zero: never",
+   "V3 site 26: t* (first time the parent is below zero in a column): none; per source: hus daily none, hus 6-hourly none, untagged hus daily none, audit negative_water_interval_events none, audit exp_negative_retained none",
+   "    audit exp_negloss_retained: no such field, not built",
+   "V3 site 26 q_tag_pbl: bit for bit at 91 outputs: pass",
+   "V3 site 26 q_tag_free: bit for bit at 91 outputs: pass",
+   "V3 site 26 q_tag_evap: bit for bit at 91 outputs: pass",
+   "V3 site 26 q_tag_fcg: bit for bit at 91 outputs: pass",
+   "RESULT failed: ['V5 led_fix pbl s23', 'V5 led_fix free s23']"
+  ]
+ },
+ "cr_windows_score": {
+  "exit": 0,
+  "lines": [
+   "W0, the model's fields are W48's: 12 of 12 files compared, missing: none, differing: none: pass",
+   "    reported: 40 of 54 water tag files differ from W48's",
+   "W1, window 30.3-31.0 days: 6048 steps, the forcing's mechanism part not 0 at 0: pass",
+   "W1, window 52.4-53.3 days: 7776 steps, the forcing's mechanism part not 0 at 0: pass",
+   "",
+   "== rise 30.50-30.75 days (no ledger), 2160 steps (W48: 2160)",
+   "  W2: the forcing's bracket alone grows the excess by -9.769e-10 of W48's rise: pass",
+   "  W5: R/R48 -9.348e-10, the rise goes if R <= 0.1 R48: pass",
+   "  W3 (reported): rise -1.524e-12 of the water, W48 +1.630e-03; R/R48 -9.348e-10",
+   "    of R48: in N +7.839e-18, in P -9.348e-10, in X +0.000e+00; the mechanism's cells in the reference's step +1.304e-17",
+   "    probes' growth of the excess over R48: forcing -9.77e-10, forcing_horizontaladvection -0.000149, forcing_nudging_ta_hus -7.36e-12, forcing_nudging_ua_va +0, forcing_subsidence -2.41e-09, forcing_verticalfluctuation -1.07e-05, forcing_without_horizontaladvection -2.85e-09, forcing_without_nudging_ta_hus -9.89e-10, forcing_without_nudging_ua_va -9.77e-10, forcing_without_subsidence -0.00016, forcing_without_verticalfluctuation -9.12e-10, surface_flux +2.3e-14",
+   "  W4 (reported): the whole explicit tendency alone -9.767e-10 of R48",
+   "    ledgers, per-step change in the cells with an excess, over R48: q_tag_inc_negative 0.0127, q_tag_inc_moved 0.486, q_tag_inc_left 5.62e-11, q_tag_exp_negative 0.908, q_tag_led_repair 0.035, q_tag_led_rescale 0, q_tag_led_empty 0, q_tag_led_fix_pbl 0.035, q_tag_led_fix_free 0.035, q_tag_led_inc_pbl 0.476, q_tag_led_inc_free 0.157",
+   "",
+   "== rise 30.75-31.00 days (the control: follower ledgers), 2160 steps (W48: 2160)",
+   "  W2: the forcing's bracket alone grows the excess by -1.625e-06 of W48's rise: pass",
+   "  W5: R/R48 +3.091e-04, the rise goes if R <= 0.1 R48: pass",
+   "  W3 (reported): rise +5.866e-07 of the water, W48 +1.898e-03; R/R48 +3.091e-04",
+   "    of R48: in N +2.929e-04, in P +1.614e-05, in X -2.299e-04; the mechanism's cells in the reference's step +5.228e-04",
+   "    probes' growth of the excess over R48: forcing -1.62e-06, forcing_horizontaladvection -0.000102, forcing_nudging_ta_hus -6.56e-12, forcing_nudging_ua_va +0, forcing_subsidence -2.73e-07, forcing_verticalfluctuation -6.59e-06, forcing_without_horizontaladvection -2.31e-07, forcing_without_nudging_ta_hus -1.63e-06, forcing_without_nudging_ua_va -1.62e-06, forcing_without_subsidence -0.000108, forcing_without_verticalfluctuation -1.53e-06, surface_flux -8.62e-14",
+   "  W4 (reported): the whole explicit tendency alone -1.625e-06 of R48",
+   "    ledgers, per-step change in the cells with an excess, over R48: q_tag_inc_negative 45, q_tag_inc_moved 42.1, q_tag_inc_left 0.000543, q_tag_exp_negative 0.96, q_tag_led_repair 1.47, q_tag_led_rescale 0, q_tag_led_empty 0, q_tag_led_fix_pbl 1.47, q_tag_led_fix_free 1.47, q_tag_led_inc_pbl 85.7, q_tag_led_inc_free 5.33",
+   "",
+   "== rise 52.50-52.75 days (no ledger), 2160 steps (W48: 2160)",
+   "  W2: the forcing's bracket alone grows the excess by -7.072e-06 of W48's rise: pass",
+   "  W5: R/R48 -6.981e-06, the rise goes if R <= 0.1 R48: pass",
+   "  W3 (reported): rise -1.150e-08 of the water, W48 +1.648e-03; R/R48 -6.981e-06",
+   "    of R48: in N +8.771e-10, in P -6.982e-06, in X +0.000e+00; the mechanism's cells in the reference's step +8.771e-10",
+   "    probes' growth of the excess over R48: forcing -7.07e-06, forcing_horizontaladvection -8.06e-06, forcing_nudging_ta_hus -2.62e-07, forcing_nudging_ua_va +0, forcing_subsidence -4.75e-06, forcing_verticalfluctuation -1.5e-06, forcing_without_horizontaladvection -6e-06, forcing_without_nudging_ta_hus -7.34e-06, forcing_without_nudging_ua_va -7.07e-06, forcing_without_subsidence -8.21e-06, forcing_without_verticalfluctuation -6.99e-06, surface_flux -6.74e-14",
+   "  W4 (reported): the whole explicit tendency alone -7.072e-06 of R48",
+   "    ledgers, per-step change in the cells with an excess, over R48: q_tag_inc_negative 0.0062, q_tag_inc_moved 0.172, q_tag_inc_left 9.16e-08, q_tag_exp_negative 1, q_tag_led_repair 0.0179, q_tag_led_rescale 0, q_tag_led_empty 0, q_tag_led_fix_pbl 0.0179, q_tag_led_fix_free 0.0179, q_tag_led_inc_pbl 0.16, q_tag_led_inc_free 0.061",
+   "",
+   "== rise 52.75-53.00 days (no ledger, no candidate in W47), 2160 steps (W48: 2160)",
+   "  W2: the forcing's bracket alone grows the excess by -6.018e-06 of W48's rise: pass",
+   "  W5: R/R48 -5.969e-06, the rise goes if R <= 0.1 R48: pass",
+   "  W3 (reported): rise -1.166e-08 of the water, W48 +1.953e-03; R/R48 -5.969e-06",
+   "    of R48: in N +5.542e-09, in P -5.974e-06, in X +0.000e+00; the mechanism's cells in the reference's step +5.542e-09",
+   "    probes' growth of the excess over R48: forcing -6.02e-06, forcing_horizontaladvection -6.58e-06, forcing_nudging_ta_hus -2.2e-07, forcing_nudging_ua_va +0, forcing_subsidence -3.96e-06, forcing_verticalfluctuation -1.25e-06, forcing_without_horizontaladvection -5e-06, forcing_without_nudging_ta_hus -6.24e-06, forcing_without_nudging_ua_va -6.02e-06, forcing_without_subsidence -6.7e-06, forcing_without_verticalfluctuation -5.95e-06, surface_flux +1.05e-14",
+   "  W4 (reported): the whole explicit tendency alone -6.018e-06 of R48",
+   "    ledgers, per-step change in the cells with an excess, over R48: q_tag_inc_negative 0.00984, q_tag_inc_moved 0.0945, q_tag_inc_left 4.95e-08, q_tag_exp_negative 0.998, q_tag_led_repair 0.021, q_tag_led_rescale 0, q_tag_led_empty 0, q_tag_led_fix_pbl 0.021, q_tag_led_fix_free 0.021, q_tag_led_inc_pbl 0.0983, q_tag_led_inc_free 0.0551",
+   "",
+   "== rise 53.00-53.25 days (no ledger), 2160 steps (W48: 2160)",
+   "  W2: the forcing's bracket alone grows the excess by -6.244e-06 of W48's rise: pass",
+   "  W5: R/R48 -6.162e-06, the rise goes if R <= 0.1 R48: pass",
+   "  W3 (reported): rise -1.127e-08 of the water, W48 +1.829e-03; R/R48 -6.162e-06",
+   "    of R48: in N +3.936e-08, in P -6.202e-06, in X +0.000e+00; the mechanism's cells in the reference's step +3.936e-08",
+   "    probes' growth of the excess over R48: forcing -6.24e-06, forcing_horizontaladvection -6.87e-06, forcing_nudging_ta_hus -2.34e-07, forcing_nudging_ua_va +0, forcing_subsidence -4.2e-06, forcing_verticalfluctuation -1.32e-06, forcing_without_horizontaladvection -5.3e-06, forcing_without_nudging_ta_hus -6.48e-06, forcing_without_nudging_ua_va -6.24e-06, forcing_without_subsidence -6.99e-06, forcing_without_verticalfluctuation -6.17e-06, surface_flux +1.34e-13",
+   "  W4 (reported): the whole explicit tendency alone -6.244e-06 of R48",
+   "    ledgers, per-step change in the cells with an excess, over R48: q_tag_inc_negative 0.0383, q_tag_inc_moved 0.0629, q_tag_inc_left 8.15e-08, q_tag_exp_negative 1, q_tag_led_repair 0.00979, q_tag_led_rescale 0, q_tag_led_empty 0, q_tag_led_fix_pbl 0.00979, q_tag_led_fix_free 0.00979, q_tag_led_inc_pbl 0.0637, q_tag_led_inc_free 0.0589",
+   "",
+   "RESULT W0 to W2 and W5 pass"
+  ]
+ },
+ "supplement": {
+  "cr_s23": {
+   "largest_gross": 0.00040559739366781726,
+   "largest_gross_day": 56.0,
+   "closure_rows": 361,
+   "void_rows": 324,
+   "first_void_day": 9.25,
+   "led_fix_pbl": {
+    "first_above_2pct_day": 31.0,
+    "max": 0.07330019709505958,
+    "max_day": 90.0,
+    "day90": 0.07330019709505958,
+    "outputs_above": 223,
+    "outputs": 357
+   },
+   "led_fix_free": {
+    "first_above_2pct_day": 31.0,
+    "max": 0.06600666734604768,
+    "max_day": 82.25,
+    "day90": 0.06519629282974873,
+    "outputs_above": 237,
+    "outputs": 357
+   },
+   "led_fix_evap": {
+    "first_above_2pct_day": null,
+    "max": 0.0,
+    "max_day": 1.0,
+    "day90": 0.0,
+    "outputs_above": 0,
+    "outputs": 357
+   },
+   "led_fix_fcg": {
+    "first_above_2pct_day": null,
+    "max": 0.0,
+    "max_day": 1.0,
+    "day90": 0.0,
+    "outputs_above": 0,
+    "outputs": 357
+   }
+  },
+  "cr_s26": {
+   "largest_gross": 5.687618071683217e-12,
+   "largest_gross_day": 85.25,
+   "closure_rows": 361,
+   "void_rows": 0,
+   "first_void_day": null,
+   "led_fix_pbl": {
+    "first_above_2pct_day": null,
+    "max": 0.00022908125718120402,
+    "max_day": 85.25,
+    "day90": 0.0002126322170898034,
+    "outputs_above": 0,
+    "outputs": 357
+   },
+   "led_fix_free": {
+    "first_above_2pct_day": null,
+    "max": 6.356943036488339e-05,
+    "max_day": 81.25,
+    "day90": 6.08330946168195e-05,
+    "outputs_above": 0,
+    "outputs": 357
+   },
+   "led_fix_evap": {
+    "first_above_2pct_day": null,
+    "max": 0.0,
+    "max_day": 1.0,
+    "day90": 0.0,
+    "outputs_above": 0,
+    "outputs": 357
+   },
+   "led_fix_fcg": {
+    "first_above_2pct_day": null,
+    "max": 0.0,
+    "max_day": 1.0,
+    "day90": 0.0,
+    "outputs_above": 0,
+    "outputs": 357
+   }
+  },
+  "cr_s23_main": {
+   "largest_gross": 0.022428443851586956,
+   "largest_gross_day": 74.5,
+   "closure_rows": 361,
+   "void_rows": 324,
+   "first_void_day": 9.25,
+   "led_fix_pbl": {
+    "first_above_2pct_day": 54.75,
+    "max": 0.027282794881862533,
+    "max_day": 90.0,
+    "day90": 0.027282794881862533,
+    "outputs_above": 119,
+    "outputs": 357
+   },
+   "led_fix_free": {
+    "first_above_2pct_day": 56.25,
+    "max": 0.023888525410555566,
+    "max_day": 82.5,
+    "day90": 0.022735665617129735,
+    "outputs_above": 136,
+    "outputs": 357
+   },
+   "led_fix_evap": {
+    "first_above_2pct_day": null,
+    "max": 0.0,
+    "max_day": 1.0,
+    "day90": 0.0,
+    "outputs_above": 0,
+    "outputs": 357
+   },
+   "led_fix_fcg": {
+    "first_above_2pct_day": null,
+    "max": 0.0,
+    "max_day": 1.0,
+    "day90": 0.0,
+    "outputs_above": 0,
+    "outputs": 357
+   }
+  },
+  "cr_s26_main": {
+   "largest_gross": 5.687618071683217e-12,
+   "largest_gross_day": 85.25,
+   "closure_rows": 361,
+   "void_rows": 0,
+   "first_void_day": null,
+   "led_fix_pbl": {
+    "first_above_2pct_day": null,
+    "max": 0.00022908125718120402,
+    "max_day": 85.25,
+    "day90": 0.0002126322170898034,
+    "outputs_above": 0,
+    "outputs": 357
+   },
+   "led_fix_free": {
+    "first_above_2pct_day": null,
+    "max": 6.356943036488339e-05,
+    "max_day": 81.25,
+    "day90": 6.08330946168195e-05,
+    "outputs_above": 0,
+    "outputs": 357
+   },
+   "led_fix_evap": {
+    "first_above_2pct_day": null,
+    "max": 0.0,
+    "max_day": 1.0,
+    "day90": 0.0,
+    "outputs_above": 0,
+    "outputs": 357
+   },
+   "led_fix_fcg": {
+    "first_above_2pct_day": null,
+    "max": 0.0,
+    "max_day": 1.0,
+    "day90": 0.0,
+    "outputs_above": 0,
+    "outputs": 357
+   }
+  }
+ }
+}

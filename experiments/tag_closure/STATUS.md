@@ -656,15 +656,34 @@ not read from GitHub here. Not yet in a PR: `claude/w21-surface-flux`
   - **2026-09-30, `crev`, after the review's fixes** (`a4b492ec`): the unit
     tests, the mutants and eight of nine `tagging_water*` files pass, and the
     30-day parity passes Q8 again (`14010408` to `14010411`; the tags equal
-    the first 30-day run's bit for bit). **One check fails:**
-    `tagged_water_edmf_0m_explicit_integration.jl` fails the new coupling-1
-    test (job `14010383`), not diagnosed (design 11.8). *Superseded 2026-09-30: it is a
-    test bug in the coupling-1 test, being fixed.*
+    the first 30-day run's bit for bit). One check failed, a test defect
+    (index type); fixed at `210eeece`, the file passes and its mutant fails
+    as intended (`14012892`, `14012893`; design 11.8).
   - **2026-09-30, from the coordinating session's report (not queried with
     Slurm here):** WP9's exclusive-node rerun, jobs `14005213` to `14005221`,
     is pending, with an estimated start of 2026-10-01. The w21s coverage and
     parity reruns are running. The test for #135 is running. The coupling-1
     test failure of job `14010383` is a test bug, being fixed.
+  - **2026-09-30, `crev`, the owner's answers to 11.10:** Q2 accepted; Q3,
+    Q4 and Q5 extend the rule now; Q6 builds the ledger `q_tag_exp_negative`;
+    Q7 sets W5 (`R ≤ 0.1 R48`); Q9 amends V3's fallback. The extension's
+    design is section 11.11, revised after an agent's review. 11.7 carries the
+    dated amendments, made before any run. Nothing is built or run. The owner
+    reviews 11.11 next (its 11.11.13).
+  - **2026-10-01, `crev`, the 90-day validation (W49, model `0eb329b2`):**
+    all seven jobs (`14015465` to `14015471`) completed with exit 0. V1, V2,
+    V2b, V3, V4, V4b, W0 to W2 and W5 pass (W3 and W4 are reported). V2's
+    largest gross is 4.056e-4 at site 23 (budget 2e-3; the control on `main`
+    2.24e-2), and no check exceeds 0.2%. W42's V2 failure is gone. V5 fails
+    at site 23: `led_fix` of `pbl` 7.33e-2 and of `free` 6.520e-2 (largest
+    6.601e-2, day 82.25) at day 90, limit 2e-2 (`main`: 2.73e-2, 2.27e-2).
+    That is larger than W42's (`pbl` 2.03%). It measured `0eb329b2`
+    (approved by the owner on 2026-10-01 through the coordinating session),
+    not #137's head. #137's head adds `main`'s #129 to #136, the `a491b3c7`
+    meter fix, the audit docstring and the stage-local `δL`, so the tag-side
+    numbers need not carry over. The score is of the bundle and bounds the
+    rule's part. 11.7 states no consequence for a V5 failure, so the owner
+    decides (FINDINGS W49, `output/w49/`).
 
 ## The housekeeping, H0 to H7: done
 

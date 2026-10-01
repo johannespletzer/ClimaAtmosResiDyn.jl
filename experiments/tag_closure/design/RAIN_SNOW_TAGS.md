@@ -375,7 +375,18 @@ Where the build departs from or fills in the note:
     closure under `increment` is the evidence.
  4. **The audit (section 12)** keeps two state records per tag, rain and snow.
     The non-precipitating part's difference is minus their sum, since both
-    rules keep each tag's total. It is always on with the key.
+    rules keep each tag's total. It is always on with the key. *Amended
+    2026-10-01 (the owner's review of #137):* that is guaranteed only while
+    no compartment is negative. Under C's gates (NEGATIVE_PARENT_WATER.md,
+    11.11.5) a gated part does not change, so the rules need not keep the
+    total. The review's counterexample, `Δt = 1`, compartments
+    `(2, -2, 1)`, pools `(2, 0, 1)`, shares `(1, 0, 0)`, flows `NR = 2`,
+    `RS = 1`, `SN = 1`: the gross rule gives `(-6/5, 0, 2/5)`, the net rule
+    `(-1, 0, 0)`, `N`'s difference is 1/5 and minus the records' sum 2/5.
+    With rain negative but no flow touching it, the identity still holds
+    (case (a) of the Opus review that followed, in unit test (i)). The two
+    records stay rain's and snow's comparisons. No record holds `N`'s
+    difference.
  5. **The restart guard (section 11)** goes to version 2. A version 1
     checkpoint reads as written without the key, rather than refused.
  6. **The hyperdiffusion correction (section 3)** takes `φᵢ` as the tag's

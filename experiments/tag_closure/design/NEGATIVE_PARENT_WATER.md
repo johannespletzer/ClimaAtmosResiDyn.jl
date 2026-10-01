@@ -665,6 +665,11 @@ negative part. This section says how it is built, and registers its
 validation before any run. Nothing in 11.7 to 11.9 changes after the runs.
 The code is on `claude/option-c-revision`, from `main` at `43b01ca1`.
 
+*Added 2026-09-30:* the owner extended the rule to the implicit bracket, the
+source tags and the transfers under `water_tag_precipitation: true`, and asked
+for a ledger of the withheld gain (11.10, questions 3 to 6). 11.11 says how.
+11.7 carries the dated amendments, made before any run.
+
 ### 11.1 The rule, per bracket
 
 Each explicit process that writes `ρq_tot` sits in a bracket
@@ -708,20 +713,21 @@ parent's gain fills its negative part, which `q_tag_negative` reports.
     and a run whose parent is never negative is unchanged.
   - The rule applies to the partition tags only: those with a region and no
     source. A source tag, or a region tag that lists sources, keeps
-    `max(Δ, 0)` (11.6).
+    `max(Δ, 0)` (11.6). *Extended 2026-09-30 (question 4):* every tag that
+    receives the label takes the rule (11.11.4).
 
 Per bracket:
 
-| bracket's label                | where                                          | what changes                                                               |
-|:------------------------------ |:---------------------------------------------- |:-------------------------------------------------------------------------- |
-| `subsidence`                   | `remaining_tendency!`                          | the rule                                                                   |
-| `large_scale_advection`        | `remaining_tendency!`                          | the rule                                                                   |
-| `external_forcing`             | `remaining_tendency!`                          | the rule, on the forcing's net `Δ`: all its terms, its subsidence included |
-| `surface_flux`                 | `remaining_tendency!`                          | the rule                                                                   |
-| `microphysics`, explicit       | `remaining_tendency!`                          | the rule. Under 0M the increment is a sink, so nothing changes in practice |
-| `microphysics`, implicit       | `implicit_tendency!`                           | nothing: the parent's gain, as before (11.6)                               |
-| `microphysics`, split rain-out | `add_split_rainout!` (0M, prognostic EDMF)     | explicit, in copies mode: the rule on the updraft's part (amended, below)  |
-| every other label              | radiation, Held–Suarez, the diffusion closures | nothing: they move no water, or are transport, which is never attributed   |
+| bracket's label                | where                                          | what changes                                                                             |
+|:------------------------------ |:---------------------------------------------- |:---------------------------------------------------------------------------------------- |
+| `subsidence`                   | `remaining_tendency!`                          | the rule                                                                                 |
+| `large_scale_advection`        | `remaining_tendency!`                          | the rule                                                                                 |
+| `external_forcing`             | `remaining_tendency!`                          | the rule, on the forcing's net `Δ`: all its terms, its subsidence included               |
+| `surface_flux`                 | `remaining_tendency!`                          | the rule                                                                                 |
+| `microphysics`, explicit       | `remaining_tendency!`                          | the rule. Under 0M the increment is a sink, so nothing changes in practice               |
+| `microphysics`, implicit       | `implicit_tendency!`                           | ~~nothing: the parent's gain, as before (11.6)~~ the rule, extended 2026-09-30 (11.11.2) |
+| `microphysics`, split rain-out | `add_split_rainout!` (0M, prognostic EDMF)     | explicit, in copies mode: the rule on the updraft's part (amended, below)                |
+| every other label              | radiation, Held–Suarez, the diffusion closures | nothing: they move no water, or are transport, which is never attributed                 |
 
 The label `microphysics` runs on the explicit path only with
 `implicit_microphysics: false`. The validation's runs step it implicitly and
@@ -824,7 +830,8 @@ and the limiters' follow. They move water between compartments at fixed
 snow compartment that is negative, the receiving parts still gain. Whether
 these moves should also take the target's treatment is a question for the
 owner (11.10). The key is refused under EDMF, so the validation's runs do not
-use it.
+use it. *Extended 2026-09-30 (question 5):* a transfer into a negative
+compartment takes the target's treatment (11.11.5).
 
 ### 11.4 The follower, the ledgers and `q_tag_negative`
 
@@ -833,7 +840,8 @@ use it.
     parts before the solve's snapshot, so the follower does not see them, as
     before. With the rule the explicit parts follow the target's tendency and
     the follower the implicit part. So both parts of a step now aim at the
-    target.
+    target. *Amended 2026-09-30:* the follower reads the new ledger, and
+    gives a crossing's positive part in its own cell (11.11.3).
   - **The ledgers.** The rule writes no ledger. It is not a correction: it
     changes what a bracket attributes, as the loss half's zero share already
     does where the parent is at or below zero. The intervention row counts
@@ -844,7 +852,9 @@ use it.
     `q_tag_exp_negative` would do it, weighted by the stepper as
     `q_tag_inc_negative` is. It is proposed, not built (11.10). The
     validation measures the rule's effect in the probe's windows instead
-    (11.7).
+    (11.7). *Amended 2026-09-30 (question 6):* the rule writes
+    `q_tag_exp_negative`, and `q_tag_inc_negative` records the follower's
+    `N'` (11.11.6).
   - **`q_tag_negative`** is unchanged: `min(ρq_tot, 0)`, per unit mass, the
     parent's own. The withheld gain raises it toward zero with the parent.
     `q_tag_res`, the target less the region tags, no longer takes the
@@ -874,13 +884,18 @@ use it.
     prognostic state at day 10 and every model output field are compared
     with `isequal`.
 
+*Amended 2026-09-30:* the extension adds state and cache fields and touches
+the implicit bracket and the rain-out split. 11.11.8 gives the argument for
+it, in place of the third and fourth points above.
+
 ### 11.6 Not changed, and why
 
   - **Source tags** (`evap`, `fcg`) and region tags that list sources. They
     are outside the partition and its target, so the approved rule does not
     reach them. They keep the parent's gain. In a cell whose parent is below
     zero such a tag gains a process's water and, since its share there is
-    zero, loses none. Question for the owner (11.10).
+    zero, loses none. Question for the owner (11.10). *Extended 2026-09-30
+    (question 4, 11.11.4).*
   - **The implicit microphysics bracket** keeps the parent's gain. The
     approved rule covers the explicit processes. Under 0M its increment is a
     sink, except where a subdomain's area is negative outside the rain-out
@@ -888,7 +903,8 @@ use it.
     solve's increment against the target anyway. The diagnostics' rain-out
     (`add_rainout_increments!`, for `pr_tag`) takes the rule of the
     `microphysics` bracket as the run steps it: the parent's gain when the
-    microphysics is implicit, the target's when explicit.
+    microphysics is implicit, the target's when explicit. *Extended
+    2026-09-30 (question 3, 11.11.2).*
   - **The 0M rain-out split under EDMF** (`add_split_rainout!`) is a signed
     attribution by subdomain and does not use the kernel. ~~Unchanged.~~
     *Amended 2026-09-30:* stepped explicitly in copies mode, it withholds a
@@ -904,7 +920,8 @@ use it.
     is unchanged. The copies' repair closes them onto `max(q_totʲ, 0)` after
     the filter at every step (8.1).
   - **The moves between a tag's parts** under `water_tag_precipitation: true`
-    (11.3).
+    (11.3). *Extended 2026-09-30 to the transfers into a negative compartment
+    (question 5, 11.11.5).*
 
 ### 11.7 The validation, pre-registered before any run
 
@@ -935,20 +952,21 @@ ClimaParams and the same Manifest.
 **The controls.** The untagged twins test the parity with the tags on (V4).
 The runs on `main` are the same configuration without the revision. They
 test that the revision moves no model field (V4b), and at site 26 that it
-moves no tag where the parent is never negative (V3). W48's probe is the
+moves no tag ~~where the parent is never negative~~ before the parent is
+first below zero in the column (V3, amended 2026-09-30). W48's probe is the
 windows' control.
 
 **The pass rules.** Section 8.3's, with its thresholds, and V4b:
 
-| #   | what                                                                           | pass                                                                                                                                                                            |
-|:--- |:------------------------------------------------------------------------------ |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| V1  | `cr_s23` completes                                                             | it reaches day 90                                                                                                                                                               |
-| V2  | the partition against the target, at every closure check to day 90, both sites | gross relative to `∫max(ρq_tot, 0)` at most 0.2% (OD3's water closure row)                                                                                                      |
-| V2b | the named remainder                                                            | `q_tag_res + q_tag_negative + Σ region tags = q_tot` at every daily output, to 1e-12 of the column's largest `|q_tot|` at that output                                           |
-| V3  | site 26's water tags, `cr_s26` against `cr_s26_main`                           | bit for bit at every daily output; or different only in cells and after times where the untagged twin's parent was ever negative (expected: nowhere)                            |
-| V4  | every model field of each revision run against its untagged twin               | bit for bit at every daily output                                                                                                                                               |
-| V4b | every model field of each revision run against the same run on `main`          | bit for bit at every daily output                                                                                                                                               |
-| V5  | intervention, both sites, from the ledgers                                     | reported: `q_tag_inc_negative`'s per-step gross a day; the partition repair's retained gross at most 0.5% a day; each tag's `led_fix` at most 2% of its inventory, days 1 to 90 |
+| #   | what                                                                           | pass                                                                                                                                                                                                                                                                                                                                                        |
+|:--- |:------------------------------------------------------------------------------ |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| V1  | `cr_s23` completes                                                             | it reaches day 90                                                                                                                                                                                                                                                                                                                                           |
+| V2  | the partition against the target, at every closure check to day 90, both sites | gross relative to `∫max(ρq_tot, 0)` at most 0.2% (OD3's water closure row)                                                                                                                                                                                                                                                                                  |
+| V2b | the named remainder                                                            | `q_tag_res + q_tag_negative + Σ region tags = q_tot` at every daily output, to 1e-12 of the column's largest `|q_tot|` at that output                                                                                                                                                                                                                       |
+| V3  | site 26's water tags, `cr_s26` against `cr_s26_main`                           | bit for bit at every daily output; or ~~different only in cells and after times where the untagged twin's parent was ever negative (expected: nowhere)~~ *(amended 2026-09-30, question 9)* every differing value lies at an output time at or after `t*`, the first time the parent is below zero anywhere in its column (expected: never, so bit for bit) |
+| V4  | every model field of each revision run against its untagged twin               | bit for bit at every daily output                                                                                                                                                                                                                                                                                                                           |
+| V4b | every model field of each revision run against the same run on `main`          | bit for bit at every daily output                                                                                                                                                                                                                                                                                                                           |
+| V5  | intervention, both sites, from the ledgers                                     | reported: `q_tag_inc_negative`'s per-step gross a day; the partition repair's retained gross at most 0.5% a day; each tag's `led_fix` at most 2% of its inventory, days 1 to 90; *added 2026-09-30, reported:* `q_tag_exp_negative`'s per-step gross a day, and each source tag's negative water                                                            |
 
 Reported beside V2: `cr_s23_main`'s largest gross, C as it is on `main`, and
 the first check above 0.2% in each run. As in W42, the contract's
@@ -964,31 +982,211 @@ the same driver, `analysis/water/ic_miss_probe2.jl`, the same windows (days
 rise `R48` in that interval, from `ic_miss_probe2_s23`. The revision should
 remove the rises, and a share of a rise near zero has no meaning.
 
-| #  | what                                                                   | rule                                                                                                                                     |
-|:-- |:---------------------------------------------------------------------- |:---------------------------------------------------------------------------------------------------------------------------------------- |
-| W0 | the parent is W48's                                                    | the model's twelve field files match `ic_miss_probe2_s23`'s bit for bit at every common output time, all there in both runs (9.7.3, P0a) |
-| W1 | the forcing's bracket alone, in the mechanism's cells (9.7.2, point 3) | its growth of the excess is 0 at every step of both windows                                                                              |
-| W2 | the forcing's bracket alone, per rise                                  | its growth of the excess is below 0.1 of `R48`: it neither attributes nor contributes, by 9.4's levels                                   |
-| W3 | the reference's rise, per rise                                         | reported: `R` over the water beside W48's, its split in N, P and X, each probe's growth over `R48`                                       |
-| W4 | the whole explicit tendency alone, per rise                            | reported: its growth of the excess over `R48`                                                                                            |
+| #  | what                                                                                | rule                                                                                                                                     |
+|:-- |:----------------------------------------------------------------------------------- |:---------------------------------------------------------------------------------------------------------------------------------------- |
+| W0 | the parent is W48's                                                                 | the model's twelve field files match `ic_miss_probe2_s23`'s bit for bit at every common output time, all there in both runs (9.7.3, P0a) |
+| W1 | the forcing's bracket alone, in the mechanism's cells (9.7.2, point 3)              | its growth of the excess is 0 at every step of both windows                                                                              |
+| W2 | the forcing's bracket alone, per rise                                               | its growth of the excess is below 0.1 of `R48`: it neither attributes nor contributes, by 9.4's levels                                   |
+| W3 | the reference's rise, per rise                                                      | reported: `R` over the water beside W48's, its split in N, P and X, each probe's growth over `R48`                                       |
+| W4 | the whole explicit tendency alone, per rise                                         | reported: its growth of the excess over `R48`                                                                                            |
+| W5 | the reference's rise, per rise, the control included (added 2026-09-30, question 7) | the rise goes: `R ≤ 0.1 R48`                                                                                                             |
 
 W1 holds by construction, if the rule is built as 11.1 says: a region tag's
 tendency from the forcing's bracket is zero in a cell whose parent is below
 zero, and a cell at zero whose parent stays at or below zero after the step
 had no gain. So W1 tests the build in the run.
 
-*Proposed, waiting for the owner:* "the rise goes" if `R ≤ 0.1 R48`, 9.4's
+~~*Proposed, waiting for the owner:* "the rise goes" if `R ≤ 0.1 R48`, 9.4's
 level for a share that does not contribute. It is printed, not scored, until
-the owner sets it or another value.
+the owner sets it or another value.~~ *Set by the owner on 2026-09-30
+(question 7), before any run:* W5 above, scored (the amendments below).
 
-**The budgets.** Every threshold above is section 8.3's, OD3's or 9.4's. None
-is new, apart from the proposal just above.
+**The budgets.** Every threshold above is section 8.3's, OD3's or 9.4's.
+~~None is new, apart from the proposal just above.~~ None is new: W5's level
+is 9.4's (amended 2026-09-30).
 
 **Scoring.** `analysis/water/cr_validate.py` scores V1 to V5 and V4b.
-`analysis/water/cr_windows_score.py` scores W0 to W4. Both were run before
+`analysis/water/cr_windows_score.py` scores W0 to W5. Both were run before
 any run on W42's and W48's outputs in place of the new ones. `cr_validate.py`
 reproduces W42's numbers (2.243e-2 at site 23, `pbl`'s `led_fix` 2.033e-2).
-`cr_windows_score.py` fails W1 and W2 on W48's own probe, as it should.
+`cr_windows_score.py` fails W1, W2 and W5 on W48's own probe, as it should.
+The amended scripts' checks, made on 2026-09-30 before any run, are in the
+last item of the list below.
+
+**Amendments of 2026-09-30, made before any run.** The owner decided
+questions 6, 7 and 9 of 11.10 on 2026-09-30, and the extension of 11.11
+changes what the runs carry. No run of 11.9 has been read. The 30-day parity
+of 11.8 has been, at site 23, with its closure at day 30: the region tags
+above the target by 4.7e-7 of it on the revision, and by 4.9e-3 on `main`.
+That is 0.3 days before window 1 opens. The level `0.1 R48` was proposed on
+2026-09-29 (`d719fa86`), before that result, and is unchanged. *(After the
+review of 11.11's draft, which had said that nothing of any run had been
+read.)*
+
+  - **W5, question 7.** The rise goes if `R ≤ 0.1 R48`. `R` is the rise in
+    `cr_probe_s23`, the sum of its per-step `ref_total` over the rise's
+    interval. `R48` is the same sum in `ic_miss_probe2_s23`. 0.1 is 9.4's
+    level below which a share does not contribute. W5 scores each of the five
+    rises, the control included. A rise with `R ≤ 0` goes. A rise whose `R48`
+    is not above zero cannot be scored, and W5 then fails for missing data.
+    Expected, not shown: all five go. W48 found each rise's growth, the
+    control's too, wholly in cells whose parent stays at or below zero while
+    it rises and the region tags gain water (the mechanism holds 1.00 to 1.06
+    of each rise). The rule withholds that gain. If a rise does not go, W3's
+    split into N, P and X, W4 and the ledgers, `q_tag_exp_negative` among
+    them, show where the rest lies, and the owner decides. W3 stays reported.
+
+  - **V3, question 9.** Its fallback clause read "different only in cells and
+    after times where the untagged twin's parent was ever negative". The tags
+    are transported. A gain withheld in one cell changes the tags in the
+    other cells of its column, whose parent was never negative. So that
+    clause could fail with correct code. It now compares by column and time.
+    For each column, `t*` is the first time the parent is below zero anywhere
+    in it. Before `t*` the revision's water tags must be `main`'s bit for bit.
+    From `t*` on, any value in that column may differ. `t*` is the earliest
+    of these times:
+
+      + the first output of `hus` with a value below zero in the column:
+        `cr_s26`'s, daily and 6-hourly, and `cr_s26_untagged`'s, daily;
+      + the time of the first row of `cr_s26`'s `water_tag_audit.csv` whose
+        `negative_water_interval_events` is above zero. It counts the accepted
+        steps' end states since the row before;
+      + the time of the first row of the same table whose
+        `exp_negative_retained` is above zero. Then `q_tag_exp_negative` has
+        changed, so the rule withheld a gain at some stage. The rule reads the
+        parent at each stage, which neither the outputs nor the steps' end
+        states show;
+      + if `q_tag_exp_negloss` is built (11.11.13), the first row whose
+        `exp_negloss_retained` is above zero, for the same reason.
+
+    All of them see the same parent, since V4 and V4b hold it bit for bit.
+    The table's rows fall every 6 hours, on the grid of the outputs, so a
+    row's time bounds the first output that can differ. The audit's times are
+    global, and site 26 is one column, so they are its column's. Without a
+    `t*`, V3 is bit for bit, as before. *A bound, after the review:* from `t*`
+    on the fallback accepts every difference. So it cannot tell a change the
+    rule makes from, say, a defect of the follower that starts after `t*`.
+    The primary rule, bit for bit, is unchanged.
+
+  - **V5, two reported items (questions 4 and 6).** `q_tag_exp_negative`'s
+    per-step gross a day, from the audit's `exp_negative_retained`. And each
+    source tag's negative water: the daily column integral of
+    `min(ρq_src, 0)` over that of `max(ρq_src, 0)`, and the first daily output
+    where it is below zero (11.11.4). No threshold. Missing data are printed,
+    not failed.
+
+  - **What V2 and W5 score (after the review).** The revision's runs carry
+    the explicit rule, Q3, Q4, the follower's amendment, and
+    `q_tag_exp_negloss` if built. V2 and W5 score that bundle. They bound the
+    rule's part, and do not isolate it.
+
+  - **A path named before the runs (after the review).** The follower gives
+    an unshared loss in a cell below zero to the partition elsewhere in the
+    column (11.11.3). That can lift the partition above its target in
+    positive cells, which V2 and the windows measure. If
+    `q_tag_exp_negloss` is not built and V2 or W5 fails, `q_tag_inc_negative`
+    in the rise's cells is read first.
+
+  - **The configs and the probe driver (question 6).** `cr_s23.yml`,
+    `cr_s26.yml` and `cr_probe_s23.yml` add `q_tag_exp_negative` and
+    `q_tag_exp_negative_gross` to their 6-hourly and daily diagnostics. The
+    probe driver adds `:q_tag_exp_negative` to `LEDGERS`, a reported column
+    (11.11.6). So the configs are W42's and W48's with the job id and these
+    diagnostics changed.
+
+**The score scripts' changes for these amendments.** They are made, and
+checked, before any run (11.11.11, recheck 8). Items 1 to 7 are made, in the
+commit that carries this text. Item 8 is run and its result is at the end of
+the list. The scripts add two behaviours that the list does not state. First,
+a rise with `R48 ≤ 0` also fails W2, since its share divides by `R48` and has
+no meaning (the old script would divide by zero, or pass a negative share).
+Second, the thickness in V5's source-tag item is rebuilt by faces half way
+between the cell centres, with the end cells mirrored. On site 23 it gives
+`∫ρ max(q_tot, 0) dz` within 0.4% of the closure table's `total`.
+
+ 1. `cr_windows_score.py`, its docstring: W5 is scored, with the owner's
+    date, and the text "proposed … waits for the owner" goes.
+    `PROPOSED_RISE_GOES` becomes `RISE_GOES = 0.1`, with the comment "Set by
+    the owner on 2026-09-30 (question 7), before any run".
+
+ 2. `cr_windows_score.py`, `score_rise`: after W2,
+    `goes = R48 > 0 and R <= RISE_GOES * R48`, printed as "W5: R/R48 …, the
+    rise goes if R <= 0.1 R48" through `verdict(f"W5 {a}-{b}", goes)`. W3's
+    line drops the proposed rule. The branch for steps that do not match
+    W48's fails W5 for that rise too. The exit clause becomes "It exits 1 if
+    W0, W1, W2 or W5 fails or the data are missing", and the result line "W0
+    to W2 and W5 pass".
+
+ 3. `cr_validate.py`, V3: `t*` per column in place of `ever_negative` per
+    cell. `hus` comes from `cr_s26`, daily and 6-hourly, and from
+    `cr_s26_untagged`, daily. The vertical axis is found by the NetCDF
+    dimension name `z`, and every other index but time is a column (site 26
+    has one). From `cr_s26`'s `water_tag_audit.csv` it takes the first row
+    with `negative_water_interval_events > 0`, the first with
+    `exp_negative_retained > 0`, and the first with
+    `exp_negloss_retained > 0` if that field exists. A field missing from the
+    table is printed and skipped, not failed. `t*` is the earliest time
+    found, or none. A tag passes if it is bit for bit, or if every differing
+    value in a column lies at an output time of at least `t* − 1e-6 s`. It
+    fails if a value differs and there is no `t*`, or before it. The script
+    prints `t*` and its source. The docstring's V3 line follows.
+
+ 4. `cr_validate.py`, V5: the two reported items above.
+    `exp_negative_retained` a day, as `per_day` computes the others. The
+    source tags' negative water from the daily `q_tag_evap`, `q_tag_fcg` and
+    `rhoa`, with the cells' thickness rebuilt from the cell centres. Missing
+    data are printed, not failed. The docstring's V5 list follows.
+
+ 5. `ic_miss_probe2.jl` (`:55-66`): `:q_tag_exp_negative` joins `LEDGERS`.
+    That gives the reported column `ledger_q_tag_exp_negative_in_excess`,
+    which `cr_windows_score.py` already prints with the other ledgers. No
+    scored rule changes. The driver skips a ledger that the state lacks
+    (`:332`).
+
+ 6. The three configs: the diagnostics above. The `_main` and `_untagged`
+    configs stay: `main` has no such field, and the untagged runs have no
+    tags.
+
+ 7. New synthetic checks, committed beside the scripts as
+    `ic_miss_score2_synthetic.py` was. `cr_windows_score_synthetic.py`:
+    `R = 0.05 R48` and `R = 0.1 R48` pass, `R = 0.15 R48` fails, and
+    `R48 ≤ 0` fails. `cr_validate_v3_synthetic.py`: bit for bit passes; a
+    difference before `t*` fails; a difference at or after `t*`, in cells
+    never negative, passes; a difference with no `t*` fails; a `t*` that only
+    the ledger sets, with no negative `hus` and no event, lets a later
+    difference pass.
+
+ 8. Before any run, both scripts run on W42's and W48's outputs in place of
+    the new ones. Expected: `cr_validate.py` reproduces W42's numbers, and
+    reports the audit's `exp_negative_retained` missing, without failing.
+    `cr_windows_score.py` fails W1, W2 and W5 for every rise. The result goes
+    into the Scoring paragraph above.
+
+    *Result, 2026-09-30.* Run with W42's runs
+    (`ic_s{23,26}_{c,untagged,before}`) standing in for
+    `cr_s{23,26}{,_untagged,_main}`, and W48's probe
+    for `cr_probe_s23`, through links under
+    `$SCRATCH/claude_work/crev_score_smoke`. `cr_validate.py` gives the same
+    lines as before its change, apart from the added ones: V2 at site 23
+    2.243e-2 (fails, first above 0.2% at day 29.25), `pbl`'s `led_fix`
+    2.033e-2 (fails), the control's 1.293 from day 10, V2b, V4, V4b and V3
+    bit for bit at 91 outputs. The added lines say "not available" for
+    `exp_negative_retained`, and skip `negative_water_interval_events` and
+    `exp_negative_retained` as "not in the table". W42's audit has neither
+    column. Site 26's `t*` is none. The source tags' negative water: `evap`
+    at site 23 −3.9e-7 of its positive water at most, `fcg` −2.3e-2, first
+    below zero at days 11 and 2. `cr_windows_score.py` passes W0 (12 of 12
+    files), fails W1 in both windows, and fails W2 and W5 for all five rises
+    (`R/R48` = 1, as the probe is W48's own). Its other lines are as before.
+    The synthetic checks hold: `cr_windows_score_synthetic.py` (W5 passes at
+    0.05, 0.10 and −1 of `R48`, fails at 0.15 and at `R48` = 0) and
+    `cr_validate_v3_synthetic.py` (13 cases). Mutant M7, W5 printed but not
+    scored, fails the `R = 0.15 R48` case. Mutant M9, V3's old clause per
+    cell, fails 7 of the 13 cases, among them the difference after `t*` in a
+    cell never negative. To exercise the fallback on a real run, V3 was also
+    pointed at site 23's W42 run against its control: `t*` is day 9.25
+    (`hus` 6-hourly), the first difference is at day 10, and all four tags
+    pass.
 
 ### 11.8 Checks before the runs
 
@@ -1102,19 +1300,19 @@ at `a4b492ec`; 11.1's amendment, the split in copies mode):
     ignoring the rule (`14010377`) fails the two coupling-1 tests that test
     the withheld gain (lines 284 and 298 of
     `tagged_water_edmf_0m_explicit_integration.jl`), and nothing else.
-  - **Integration: one file FAILS.** Eight of the nine `tagging_water*` files
-    pass (`14010379` to `14010387`). `tagged_water_edmf_0m_explicit_integration.jl`
-    (`14010383`) fails the new test's line 291, in copies mode: for the
-    partition tags, the split's result in the cells other than the test's
-    cell is not `isequal` between the two rules. The first printed values
-    agree, and the differing cells are not shown. Not diagnosed. One
-    hypothesis: the real state has other cells with the grid parent below
-    zero, where the rules differ by design, and the test should restrict
-    `others` to cells with `ρq_tot ≥ 0`. That is a hypothesis, not a
-    finding. The failing check is part of the new test. The file's earlier
-    checks pass, including the model fields against the run without tags.
-    The fix of the test, and a rerun of this file (about 35 min) and of its
-    mutant, wait for the owner.
+  - **Integration:** eight of nine `tagging_water*` files passed first
+    (`14010379` to `14010387`). `tagged_water_edmf_0m_explicit_integration.jl`
+    (`14010383`) failed the new coupling-1 test at line 291. A diagnostic
+    run (`14012457`, copies mode only) showed a test defect, not a code one:
+    `eachindex` of the 5-d parent array gives Cartesian indices, which never
+    equal the linear `k`, so the modified cell itself was among the "other"
+    cells. It is the one differing cell of 30 (grid parent `-1e-6`, where the
+    rules differ by design: 6.8e-8 against a scale of 1.7e-7 for `tropo`,
+    7.3e-10 against 3.0e-8 for `strat`). The real state has no cell with the
+    grid parent below zero. The test now compares by linear index
+    (`210eeece`, the code unchanged). Rerun (`14012892`): the file passes,
+    64 of 64. The mutant (`14012893`) fails exactly the withheld-gain tests
+    (lines 284 and 302) and nothing else.
   - **30-day parity** (jobs `14010408` to `14010411`, `output_0001`):
     Q8's rule passes. In all four pairs every model field is bit for bit, 20
     files each to day 30, and the day-30 state is `isequal` (10 model
@@ -1140,6 +1338,41 @@ about 3.5 hours when they run in parallel.
 They are submitted only after the owner has reviewed this section and the
 pre-registration.
 
+*Amended 2026-10-01, before any run (a job limit, not a tolerance):* the
+time limit is `--time=24:00:00` for all seven jobs, in place of 08:00:00 and
+12:00:00. The partition's maximum is 10 days (`sinfo -p hpda2_compute -o "%l"`).
+The 30-day parity runs of 11.8 took 1:33 h (job `14005271`, node not
+shared), 3:12 h (`14005273`, node shared) and 1:44 h each (`14010408`,
+`14010410`) with tags, and 0:33 to 0:37 h without. So a tagged 90-day run
+needs 4.6 to 9.6 h, which can exceed 8 h. The untagged twins need about 1.7
+h (3 times 0.33 to 0.37 h), but they take the same limit for one rule. The
+configs `cr_s23`, `cr_s26` and `cr_parity30_tags_rev` differ only in the site
+(`cr_s26`), `t_end` and the written output, so the cost per model day is
+taken as the same. The probe's cost per day is `cr_s23`'s plus its driver,
+and its 3 h 7 min of W48 doubles to 6.3 h on a shared node. A limit only
+ends a job that is still running. It changes no model, no output and no pass
+rule.
+
+*Result, 2026-10-01 (W49).* The seven jobs completed with exit 0 (jobs
+`14015465` to `14015471`, 1 h 07 min to 3 h 53 min each). The runs measured
+the revision's tree `b6d452b5` (model `0eb329b2`, source `c7c77faf`, before
+the merge) and `main`'s tree `d2ceaa48` (`main` at `43b01ca1`). The owner
+approved `0eb329b2` for the runs on 2026-10-01, through the coordinating
+session (11.11.11, item 10). They do not include #137's head: `main`'s #129 to
+#136 (about 30 `src` files), the `a491b3c7` meter fix, the audit docstring and
+the stage-local `δL`. The tag-side numbers (V2, V3, V5, W1 to W5) need not
+carry over to it. V1, V2 (4.056e-4 at site 23, 5.688e-12 at site 26), V2b, V3,
+V4, V4b, W0 to W2 and W5 pass (W3 and W4 are reported). The least
+favourable W5 value is +3.091e-4 of `R48`, in the control rise. W42's V2
+failure is gone. Its V5 failure remains and is larger: `led_fix` of `pbl` is
+7.330e-2 and of `free` 6.520e-2 (largest 6.601e-2, day 82.25) of the
+inventory at day 90, against 2e-2 (`main`'s runs give 2.728e-2 and
+2.274e-2; W42's `pbl` was 2.03%). 11.7 states no consequence of a V5
+failure, so the owner decides. The numbers, the source tags' negative
+water, and what is not measured, a timestep refinement of the
+crossing episodes among it, are in FINDINGS W49. No threshold or reading of
+11.7 was changed after the runs.
+
 ### 11.10 For the owner
 
  1. ~~**The rule at zero.** A parent of exactly zero gives its gain to the
@@ -1149,7 +1382,7 @@ pre-registration.
     positive, as built. The tags take the whole gain there, and `-0.0` is
     treated the same.
  2. **The stages split a crossing step** (11.2): unbiased, with a miss of up
-    to one step's gain per crossing. Accept, or ask for another split.
+    to one step's gain per crossing. ~~Accept, or ask for another split.~~
     *Facts added 2026-09-30 (the review's kernel-1; 11.2):* the miss has
     either sign. A pure source can give the partition a negative gain over a
     crossing step (ARS343: `-0.2085·G·Δt`; ARS222, when another process
@@ -1157,18 +1390,27 @@ pre-registration.
     the step below zero. With ARS222 the gain jumps at zero: `1.7071·G·Δt`
     from `-1e-30`, `G·Δt` from `±0.0`. A unit test pins these values. The
     option of reading the sign once per step, at its start, keeps the gain
-    in `[0, G·Δt]` but gives up the mean of zero.
- 3. **The implicit microphysics bracket** keeps the parent's gain (11.6).
-    Extend the rule to it, or leave it?
- 4. **Source tags and region tags that list sources** keep the parent's gain
-    (11.6). Give them the rule too?
- 5. **Transfers into a negative compartment** under
+    in `[0, G·Δt]` but gives up the mean of zero. *Decided 2026-09-30 by the
+    owner:* accepted.
+ 3. ~~**The implicit microphysics bracket** keeps the parent's gain (11.6).
+    Extend the rule to it, or leave it?~~ *Decided 2026-09-30 by the owner:*
+    extend the rule to it, now (11.11.2).
+ 4. ~~**Source tags and region tags that list sources** keep the parent's
+    gain (11.6). Give them the rule too?~~ *Decided 2026-09-30 by the owner:*
+    extend the rule to them, now. This needs a new design: what a source
+    tag's target is where the parent is at or below zero (11.11.4).
+ 5. ~~**Transfers into a negative compartment** under
     `water_tag_precipitation: true` (11.3). Give them the target's treatment,
-    in a later change?
- 6. **A ledger of the withheld gain,** `q_tag_exp_negative` (11.4). Build
-    it? It adds a state field under water tags.
- 7. **The windows' proposed rule,** "the rise goes" if `R ≤ 0.1 R48` (11.7).
-    Set it, another value, or none.
+    in a later change?~~ *Decided 2026-09-30 by the owner:* give them the
+    target's treatment now, in this PR (11.11.5).
+ 6. ~~**A ledger of the withheld gain,** `q_tag_exp_negative` (11.4). Build
+    it? It adds a state field under water tags.~~ *Decided 2026-09-30 by the
+    owner:* build it, a state field under water tags, carried through
+    restarts (11.11.6).
+ 7. ~~**The windows' proposed rule,** "the rise goes" if `R ≤ 0.1 R48`
+    (11.7). Set it, another value, or none.~~ *Decided 2026-09-30 by the
+    owner:* set it, before the runs: the rise goes if `R ≤ 0.1 R48` (W5,
+    amended in 11.7).
  8. ~~**The parity check ran to day 10, and the rule had not acted yet**
     (11.8). Rerun it longer before the validation?~~ *Decided 2026-09-29 by
     the owner:* rerun it to about 30 days, four jobs, the revision against
@@ -1188,5 +1430,1049 @@ pre-registration.
     could fail at site 26 with correct code, if its parent went below zero
     in one cell once. The primary rule, bit for bit, is not affected. The
     review proposes to compare by column and time, from the first time the
-    parent is negative anywhere in the column. V3 is pre-registered, so it
-    is not changed here. Change the fallback clause, or leave it?
+    parent is negative anywhere in the column. ~~V3 is pre-registered, so it
+    is not changed here. Change the fallback clause, or leave it?~~ *Decided
+    2026-09-30 by the owner:* amend the fallback clause before any run: it
+    compares by column and time, from the first time the parent is negative
+    anywhere in the column (amended in 11.7).
+
+**10. W49's verdicts** (added 2026-10-01). W49's V2 passes and its V5
+`led_fix` fails at site 23 (FINDINGS W49). The pre-registration states no
+consequence of a V5 failure. *Decided 2026-10-01 by the owner:* W49's V2
+counts as C's validation. At site 23, V2's largest gross is 4.1e-4 against the
+tolerance of 2e-3, and the control on `main` is at 2.2e-2. V5 `led_fix` fails
+at site 23: `pbl` is at 7.33% and `free` at 6.52% of the inventory, against 2%.
+The control on `main` is at 2.73% and 2.27%, so the rise is about 2.7 to 2.9
+times. The cause is not traced. It is recorded as an open failure, not as a
+pass. #137 merges once its CI is green. It merged on 2026-10-01 as `b4ebfca5`.
+A follow-up probe traces the rise of `led_fix`.
+
+*2026-09-30:* the points still open for the owner are in 11.11.13.
+
+### 11.11 The extension, as the owner decided on 2026-09-30
+
+The owner answered questions 2 to 7 and 9 of 11.10 on 2026-09-30. The stage
+split is accepted (Q2). The rule now also reaches the implicit microphysics
+bracket (Q3), the source tags and the region tags that list sources (Q4), and
+the transfers into a negative compartment under
+`water_tag_precipitation: true` (Q5). A ledger of the withheld gain is built
+(Q6). Questions 7 and 9 amend the pre-registration before any run (11.7).
+
+This section says how Q3 to Q6 are built. One agent drafted it and a second
+agent reviewed the draft. The draft was then revised with each point of the
+review that a check confirmed (11.11.12). Nothing here is built or run. The
+code goes on `claude/option-c-revision` after `210eeece`, and the line numbers
+below are that commit's. Where 11.1 to 11.6 say what the rule does not reach,
+this section holds.
+
+#### 11.11.1 Notation
+
+  - `P` is the partition's parent at the state where a tendency is evaluated:
+    `ρq_tot`, or under the key `N = ρq_tot − ρq_rai − ρq_sno`
+    (`water_tag_parent`).
+  - `Δ` is a bracket's tendency of `ρq_tot`.
+  - `M_k` is tag `k`'s mask, and `φ_k = water_tag_fraction(ρq_tag_k, P)` its
+    share, which is zero where `P ≤ 0`.
+  - `G(Δ, P) = ifelse(P < 0, 0, max(Δ, 0))` is `water_tag_target_gain`.
+  - `T = max(P, 0)` is the target, per compartment under the key.
+  - `L` is the new ledger, `q_tag_exp_negative` (11.11.6). `L⁻` is the
+    optional `q_tag_exp_negloss`.
+
+A parent of `+0.0` or `-0.0` counts as positive (Q1). The target takes the
+whole gain there.
+
+#### 11.11.2 The implicit microphysics bracket (question 3)
+
+**The rule.** At the `:microphysics` bracket in `implicit_tendency!`, a
+partition tag takes `M_k·G(Δ, P) + φ_k·min(Δ, 0)`, as at the explicit
+brackets.
+
+  - Where `P > 0` this is the old value, bit for bit.
+  - Where `P` is `±0` it is `M_k·max(Δ, 0)`, the whole gain (Q1).
+  - Where `P < 0` it is nothing. The gain fills the negative part, and the
+    loss share is zero.
+  - The split rain-out in copies mode takes the same rule on this path:
+    `water_tag_split_change(TargetGain(), Δʲφʲ, ρq_tot)`.
+  - The default split is unchanged. It gives the partition `S·(Δʲ + Δ⁰)`,
+    and `S = 0` wherever the grid parent is at or below zero. So at exactly
+    `±0` it withholds a gain that Q1 would give (11.11.13).
+  - The rain-out diagnostics (`add_rainout_increments!`, `pr_tag`) follow the
+    bracket through `microphysics_gain_rule`. That function now returns
+    `TargetGain()` on both paths.
+
+**Where the sign is read.** At each evaluation of the implicit tendency, so
+at each Newton iterate. With one iteration that is the stage's predictor. A
+stage whose predictor is below zero withholds the stage's whole gain, even
+where the solve lifts the parent above zero. The stage's increment enters the
+step with the implicit weights: `(0, 0.7071, 0.2929)` for ARS222, and
+`(0, 1.2085, −0.6444, 0.4359)` for ARS343. Under the follower the part of
+such a crossing above zero goes back to the partition in its own cell
+(11.11.3). Under tracer transport it lands in `q_tag_res`, at most one
+stage's gain per crossing cell.
+
+**Where in `src/`:**
+
+  - `tagged_water.jl:415-418`: `microphysics_gain_rule(atmos) = TargetGain()`
+    on both paths. The function stays, so that the bracket and `pr_tag` agree
+    by construction.
+  - The docstrings at `tagged_water.jl:368-385` and `:533-545`, the comment
+    at `implicit_tendency.jl:96-100`, and `tagged_water_rainout.jl:88-105` and
+    `:386-389`. The residual's text says that a gain stays there wherever
+    either path withholds it.
+  - The follower (11.11.3) and the ledger's writer (11.11.6).
+  - `docs/src/tagged_water.md:109-123` and `docs/known_issues.md`, issue 7.
+
+**What it changes.**
+
+  - Only 0M. Under 1M and 2M the bracket's `Δ` is zero
+    (`microphysics/tendency.jl:138-146`).
+  - Under 0M the rain-out is a sink. It is a gain only where a subdomain's
+    area is negative.
+  - The validation's configuration (0M, prognostic EDMF, the SGS mass flux
+    on, no copies) returns through the default split. There every tag's share
+    is already zero wherever the grid parent is at or below zero. So, by
+    reading the code, Q3 changes no bracket attribution in the validation.
+    Only the ledger and the follower change there.
+
+**Duals, GPU, allocation.**
+
+  - `G` is an `ifelse` on a comparison, and a `max`. The fork's overrides
+    (`implicit/autodiff_utils.jl:199-226`) compare a `Dual{Jacobian}` by its
+    value. So the branch follows the value, and `max(Δ, 0)` carries `Δ`'s
+    partials or none. The review checked this with `ForwardDiff` 1.4.6 and the
+    overrides. A unit test pins it (11.11.10).
+  - `Yₜ.c.q_tag_exp_negative` is dual-typed in `Yₜ_dual`.
+  - No water-tag test runs an autodiff Jacobian today. A recheck adds one
+    (11.11.11).
+  - The new work is in-place broadcasts over existing fields, and one
+    preallocated real cache field. The post-solve hook runs on real numbers.
+
+#### 11.11.3 The follower, amended (required by questions 3 and 5)
+
+**Why.** Per cell, the follower's negative part is
+`n = min(P_snap, 0) − min(P_new, 0)`, and `N = ∫n dz`
+(`tagged_water_increment.jl:328-333`). It assumes that the partition's own
+implicit tendencies took the parent's local change. Where the implicit
+bracket withholds a gain `w` inside the solve, `n` still holds `−dtγ·w`, but
+the partition took nothing. So `N` takes that water from the partition a
+second time, in the cells whose mismatch has `N`'s sign. A net inflow into a
+negative `N` under the key (Q5) does the same. This is by reading the code,
+and by the review's replica of `correct_water_tag_increment!`: in its case S1
+the partition ends 0.4 below a target whose column total did not change.
+
+**The amendment.**
+
+  - Snapshot `L` at the stage's start, beside `ρq_tot`
+    (`_snapshot_water_tag_increment!`, one new cache field).
+  - After the solve, per cell:
+    `δL = (U.c.q_tag_exp_negative + dtγ·dY.c.q_tag_exp_negative) − L_snap`.
+    This is the gain the rule withheld inside the solve.
+  - **The crossing's positive part, in its own cell:**
+    `g = max(min(δL + min(P_snap, 0), T(P_new) − T(P_snap)), 0)`. This is the
+    part of the withheld gain beyond the cell's deficit at the stage's start,
+    and no more than the target's rise. Each partition tag takes `M_k·g` in
+    that cell, by mask, as a bracket gives a gain. It enters `dY` as
+    `M_k·g/dtγ`. `q_tag_inc_negative` records it, and so does each tag's own
+    ledger where kept.
+  - In place of `n` and `m`: `n' = n + δL − g` and `m' = m − g`. Their column
+    totals, `N'` and `M'`, then go where `N` and `M` go now.
+  - An `ifelse(δL == 0, old, new)` keeps every old number, signed zeros
+    included, wherever the rule did not act in the stage. There `g = 0`.
+
+*Why by mask (after the review).* The review's replica, case S2: a cell
+crosses from −0.5 to 0.3 through a withheld stage gain of 0.8, and its
+partition is empty. With `n' = n + δL` alone, the follower gives the 0.3 by
+composition to a cell higher up, and the flux has to carry it down. It stops
+at an empty cell on the way. That cell ends 0.1 above its target, and the
+crossing cell 0.3 below its own. With the give by mask, the crossing cell
+ends at its target, and no cell ends above its own (a rerun of the replica
+with `g`). `g` assumes that the withheld gain fills the deficit first. Where
+other implicit terms also lift the cell, their part goes by the flux, with
+the donor's composition (the replica's case S3). The draft said that the
+positive part goes by the crossing cell's own composition. The follower in
+fact spreads `N` over every cell whose mismatch has its sign.
+
+**What it cannot do.**
+
+  - Source tags take no part of `g`. They receive the implicit bracket's gain
+    only if they list `:microphysics`, and no tag of the validation does. A
+    source tag that lists it misses that stage's positive part.
+  - Under the manual and the sparse Jacobians, `δL` is exactly the ledger's
+    `dtγ·w`. The parent's response to `w` is the solver's. The implicit
+    transport spreads it within the column. The manual Jacobian has no 0M
+    microphysics block, so there the column's response is `dtγ·w`, as far as
+    the solve keeps column totals. Under the sparse and the dense autodiff
+    Jacobians, `ρq_tot`'s diagonal also holds the rain-out's derivative. So
+    the parent moves by about `dtγ·w/(1 − dtγ·∂Δ/∂P)`. The difference enters
+    `N'`, and the follower gives it to the tags through `q_tag_inc_negative`,
+    or leaves it out where no cell can take it. *Corrected after the review:*
+    the draft said it lands in `q_tag_inc_left`, and that the tags' rows are
+    the identity under 0M. Under `implicit_diffusion: true` they hold
+    diffusion blocks. Under the manual and the sparse Jacobians the ledger's
+    row is the identity, so `δL` is exact there. For the dense autodiff
+    Jacobian and a Jacobian-free Krylov solve, see the amendment of
+    2026-10-01 in the next bullet.
+  - **Float32.** `δL` is a difference of a cumulative ledger. By the review's
+    arithmetic, `L = 1e-2` and `dtγ·w = 1e-9` give an error of 6.9%. With
+    `dtγ·w = 1e-10`, `δL` is zero, so the stage keeps `n` and the double count
+    returns. After 777,600 equal gains, 90 days at 10 s, the error bound is
+    about 4.6% in Float32 and 8.6e-11 in Float64. The validation runs in
+    Float64. The Float32 unit tests take a tolerance. The alternative, a real
+    stage cache of `w` that the bracket fills on its non-dual evaluation, is
+    for the owner (11.11.13).
+    *Amended 2026-10-01 (the owner's review of #137, finding 2):* the stage
+    cache is built. `implicit_tendency!` ends by keeping the ledger's implicit
+    tendency in `p.scratch.ᶜtagging_q_exp_rate`
+    (`keep_water_tag_exp_rate!`; an autodiff Jacobian's dual evaluations
+    write the dual copy of the scratch). The snapshot zeroes it. After the
+    solve, `δL = dtγ·(rate + dY.L)`. A Newton solve evaluates the tendency
+    last at the iterate its last step starts from, so under the manual
+    Jacobian, whose ledger row is `−I`, this is the ledger's change in the
+    solve without the rounding of the cumulative value. Under the dense
+    autodiff Jacobian the ledger's row also holds `w`'s derivatives, and
+    under a Jacobian-free Krylov solve the last evaluation is a perturbed
+    one. There the ledger's change can differ from `δL`. The cumulative
+    ledger is unchanged. A unit test (case 4 of "C's revision extended")
+    gives ledger offsets 0, 1 and 1e6 the same corrections, bit for bit, in
+    Float32 and Float64. The old subtraction fails it in Float32 at 1 and
+    1e6, and in Float64 at 1e6 (mutant job 14016367, 30 failures). The dense
+    autodiff check with the follower passes at the new code (14016259).
+    *For the 90-day runs (0eb329b2):* the old and the new `δL` differ only at
+    a stage where the implicit bracket withholds a gain. Elsewhere both are
+    exactly zero. Site 23's configuration, run to day 16 at 0eb329b2 and at
+    0eb329b2 with the new `δL` (jobs 14016543 and 14016544, the run trees'
+    `.buildkite` environment), is bit for bit in every field at every one of
+    138,240 steps. The ledger acts from day 11.3, through the explicit
+    brackets. The kept rate was zero after every step. This bounds the first
+    16 days at site 23 only. Later days and site 26 are not measured.
+  - Two texts are false already wherever `N ≠ 0`, and would stay false: that
+    the factors lie in `[-1, 1]` (`tagged_water_increment.jl:464-467`), and
+    that no cell leaves out or moves more than its own mismatch (`:276-277`). The
+    review's replica gives a factor of 3 in case S2 without the give, and
+    1.33 in the loss case below. Both texts are corrected: a factor can pass
+    1 where `N'` is not zero.
+
+**A defect that predates the revision.** An unshared loss makes `n > 0`
+while the partition does not change. Examples: the default split's rain-out
+in a cell whose grid parent is below zero, where the loss share is zero, and
+under the key water that leaves a negative `N`. `N` then gives that water to
+the partition elsewhere in the column. This is not a lag. It lifts the
+partition above its target in positive cells, which V2 and the windows
+measure. In the review's replica, a loss of 0.4 in a negative cell and a
+mismatch of ±0.3 leave one cell 0.4 above its target, moved by a factor of
+1.33. The validation's configuration exercises this path. The fix is the
+optional ledger `q_tag_exp_negloss` (11.11.6), with
+`n' = n + δL + δL⁻ − g`. For the owner (11.11.13). 11.7 registers the path
+either way.
+
+**Where:** `_water_tag_increment_cache` (`tagged_water_increment.jl:112-133`),
+`_snapshot_water_tag_increment!` (`:201-210`), `correct_water_tag_increment!`
+(`:328-432`) and its docstring (`:246-291`), and the text of
+`q_tag_inc_negative` (`:46-55`, and its diagnostic).
+
+#### 11.11.4 Source tags and region tags that list sources (question 4)
+
+The owner's decision needs a new definition: what a source tag's target is
+where the parent is at or below zero.
+
+**The definition (option A): a source tag is a part of the partition's
+target, `T = max(P, 0)`.**
+
+  - Where `P < 0` its target is zero, so it gains nothing there.
+  - At `P = ±0` the target takes the whole gain (Q1), so the tag takes it.
+  - The rule does not take away what the tag held before the parent went
+    negative. It is attribution, not correction, as section 10 chose.
+
+**The rule,** at every bracket of a label in `KNOWN_WATER_TAG_SOURCES`,
+explicit and implicit, at each stage:
+
+  - a tag without a region that lists the label: `G(Δ, P) + φ_s·min(Δ, 0)`;
+  - a region tag that lists the label: `M_k·G(Δ, P) + φ_k·min(Δ, 0)`;
+  - a tag that does not list the label: `φ·min(Δ, 0)`, as before;
+  - partition tags: unchanged. They receive every label.
+
+So every kind of tag takes the same gain function. Only the labels it
+receives, and its mask, differ. `G` reads `P` at each stage (Q2) and at the
+Newton iterate (Q3).
+
+**Where:**
+
+  - `tagged_water.jl:395`: `_tag_gain_rule(rule, tag) = rule` for every tag,
+    or the function dropped.
+  - `tagged_water.jl:644-663`, the kernel for a tag without a region:
+    `max(ᶜΔ, 0)` becomes `water_tag_gain(rule, ᶜΔ, ᶜparent)`.
+  - `tagged_water_rainout.jl:252`: in copies mode every tag's updraft part
+    takes `water_tag_split_change(rule, …)`.
+  - The docstrings at `tagged_water.jl:368-385`, `:641-643` and `:665-669`,
+    `types.jl:2320-2337` (`WaterTag`), and `docs/src/tagged_water.md`.
+  - Unchanged: the default split, whose source-tag shares are zero where
+    `P ≤ 0` already (`SplitShare`), and the copies' own rain-out and surface
+    flux (11.6).
+  - Under the key, Q5's gates reach a source tag's parts too.
+
+**How the rest of the code treats a source tag.**
+
+  - Its loss, sedimentation, SGS flux and follower shares are clamped. They
+    are zero where `P ≤ 0`, and zero for a negative tag (`water_tag_fraction`,
+    `_water_tag_share_field`, `_water_tag_follower_share_field`).
+  - The partition repair skips it (`tagged_water.jl:1538`). It has no closure
+    and no term in the follower's partition sum.
+  - The rescale takes `max(after, 0)` and empties the tag where the parent
+    was at or below zero before (`water_tag_source_rescale_shift`). But the
+    rescale runs only with a limiter, with the element constraint on
+    `q_tot`, or with a prescribed flow. The validation's configuration has
+    none of them: `cr_s23.yml` sets none, and the defaults are
+    `apply_sem_quasimonotone_limiter: false` and
+    `tracer_nonnegativity_method: ~`.
+  - The ledger is parent-side (11.11.6), and partition tags receive every
+    label. So a source tag's withheld gain is part of the parent's withheld
+    gain in that cell and bracket.
+
+**A crossing step, on both sides.** The stage split acts on source tags as on
+partition tags (11.2).
+
+  - A source tag that holds nothing can end a crossing step below zero:
+    ARS343 gives `−0.2085·G·Δt`, and ARS222 `−0.7071·G·Δt` where another
+    process takes the parent below zero by stage 2.
+  - *Corrected after the review:* the draft said such a value stays "until a
+    loss or the rescale's emptying reaches it". In the validation neither
+    can. Its loss, follower and flux shares are zero, the rescale does not
+    run, and the repair skips source tags. Only later gains in the cell offset
+    it, and diffusion spreads it. In the review's toy of 40 wet and dry cycles
+    (`G·Δt = 1e-6`), the tag ends each cycle at −7.3e-7 while its target is
+    5.5e-16. The toy does not grow across cycles. Growth over 90 days is not
+    known. With the parent's gain, the rule as it was, the same toy's tag
+    grows to 1.3e-3 by cycle 40.
+  - With ARS222, an up-crossing gives the tag `1.7071·G·Δt` while the target
+    gains less. So a source tag can also end the step above the parent in
+    that cell, by up to one step's gain (11.2's largest overclaim).
+  - V5 reports the source tags' negative water (amended in 11.7). A floor is
+    an option for the owner (11.11.13).
+
+**What it changes.**
+
+  - Where `P ≥ 0`, nothing: the same `max(Δ, 0)` on the same numbers.
+  - At site 23, `evap` (`surface_flux`) and `fcg` (subsidence, large-scale
+    advection and the external forcing) stop gaining in cells whose parent is
+    below zero. W48 placed each rise's growth in such cells, and by its
+    leave-one-out reading subsidence carries every rise. So `fcg` is where Q4
+    should act most. This is not measured.
+  - The 30-day parity found `evap` and `fcg` differing from `main` from day
+    11.5, by a path not traced (11.8). With Q4 they also change directly.
+
+**Duals, GPU, allocation:** the partition tags' kernel, `water_tag_gain`. No
+new field and no new allocation.
+
+**The definitions not chosen:**
+
+  - **B, the target's gain over a whole step:**
+    `ifelse(P < 0, max(Δ + P/Δt, 0), max(Δ, 0))`. It overclaims by half a
+    step's gain per crossing on average (11.2). So a source tag could hold
+    more than the partition in a crossing cell. The implicit stage is given
+    no `Δt`, and it adds a second rule. The owner accepted the stage split
+    for the partition (Q2).
+  - **C, withheld at or below zero:** `ifelse(P ≤ 0, 0, max(Δ, 0))`, the
+    rescale's convention. In a cell that starts at `q_tot = 0`, `fcg` would
+    never take the first forcing's water while the partition takes it (Q1).
+    The rule would depend on the tag's kind again.
+  - **D, the parent's gain** (11.6 as it was). The owner's decision excludes
+    it.
+  - **E, enforce the zero target:** where `P < 0` the bracket also empties a
+    source tag, with a ledger entry. It is a correction after the fact,
+    which section 10 set aside for the partition (option 3). It hides where
+    the water came from.
+
+#### 11.11.5 Transfers into a negative compartment (question 5)
+
+*Revised after the review (its blocking point).* The draft emptied a negative
+compartment's pool, so that it passed on no tag water. But the pool exists for
+water that passes through a compartment within the step
+(`water_tag_pool_shares`' docstring). In the review's replica, snow at
+−2e-7 kg/kg takes 1e-8 /s of deposition and passes it on as melt. The old code
+gives the parts the target's rates exactly. The draft's rule lost the whole
+flow every step, and its ledger recorded water while `min(S, 0)` did not
+change. The rule below keeps the pass-through.
+
+Under `water_tag_precipitation: true` the compartments at the stage's state
+are `N`, `R = ρq_rai` and `S = ρq_sno`. A compartment `X` is negative if
+`X < 0`. Neither `+0.0` nor `-0.0` is negative (Q1).
+
+**Bit for bit elsewhere.** Where no compartment of a cell is negative, every
+formula is the old one. The new form sits behind
+`ifelse(N < 0 || R < 0 || S < 0, new, old)`, because reordering the sums
+alone would change the rounding.
+
+**The rule,** in a cell where some compartment is negative:
+
+ 1. **A flow that touches a negative compartment is read in its actual
+    direction.** A negative flow moves water from its nominal receiver to its
+    nominal donor. The 1M flows are linear in their solved donors
+    (`NR = M31·q_lcl_new`, `RN = −(M33 + M43)·q_rai_new`), so a negative
+    content reverses its outflows. A flow between two compartments that are
+    not negative keeps the old term.
+ 2. **A negative compartment's own parts take no microphysics change:** no
+    gain and no loss. Its target stays zero.
+ 3. **Its pool stays.** It starts with no tagged water (`qX = max(X, 0) = 0`),
+    so its share `ψ_X` is the composition of what actually flows into it in
+    the step. That is the old row, with the actual inflows.
+ 4. **It passes on only what came in.** Its actual outflows carry
+    `ψ_X·min(1, in_X/out_X)`. So water that passes through (`in = out`)
+    reaches the receivers with its donors' composition, as before.
+ 5. **What it keeps, `max(in_X − out_X, 0)`,** fills its negative part. Its
+    donors' parts lose it, and no part gains it. The ledger records it.
+ 6. **What it gives beyond its inflow, `max(out_X − in_X, 0)`,** carries no
+    tag water. The receivers' target gains it, and their parts do not. It
+    lands in `q_tag_res`, as the old code has it where `X` has no inflow.
+    `q_tag_exp_negloss`, if built, records it.
+ 7. **The net-flow rule** (`water_tag_net_flow_change`, for the flows'
+    residual `δR`, `δS` and for the vapour bracket): a gaining compartment
+    takes `max(ΔX, 0)·mix` only if it is not negative. Otherwise the gain is
+    withheld and recorded. A loser keeps `min(ΔX, 0)·φ_X`, which is zero where
+    `X ≤ 0`. A negative loser's water enters `mix` with `φ = 0`, so the
+    gainer takes it untagged, as in point 6.
+ 8. **The audit** (`water_tag_microphysics_audit`) applies the same gates in
+    both its terms. So it still compares the gross flows with the net-flow
+    rule, not with the gate.
+
+On a closed partition each compartment's parts then take the target's rates.
+A flow that leaves `X ≥ 0` takes `F` from it, and a flow into `X ≥ 0` gives
+`F`. A negative compartment's parts do not change, and only its pass-through
+moves tag water. The one shortfall is point 6. The review's replica gives the
+target's rates for `in = out` (ledger 0) and for `in > out` (ledger the net
+inflow), and a shortfall of the net outflow for `out > in`.
+
+**Zero and crossing.** `±0` takes its gains (Q1), and its pool works as now.
+The signs are read at each stage on the explicit path, and at the Newton
+iterate on the implicit path, which is the default. A compartment that
+crosses zero inside the solve withholds that stage's net inflow. For `N`
+under the follower, the positive part goes back by 11.11.3. `R` and `S` have
+no follower, so there it lands in `q_tag_res`.
+
+**The ledgers.** Parent-side: `ρ` times the water, whatever the tags hold.
+The net inflow into `N` while `N < 0` goes to `q_tag_exp_negative`, as the
+brackets' withheld gain does. The net inflow into `R` or `S` while negative
+goes to `q_tag_exp_negative_precip`, a second field that exists only under
+the key. They stay apart so that the follower, which corrects `N` only, reads
+`N`'s alone.
+
+**The follower.** Under the key it corrects `N`
+(`_water_tag_parent_after`, `tagged_water_increment.jl:492-497`). A net
+inflow into a negative `N` inside the solve enters `n'` through the ledger
+(11.11.3). A pass-through leaves both `n` and `δL` at zero.
+
+**Where** (`tagged_water_precipitation.jl`):
+
+  - `water_tag_pool_shares` (`:970-1003`): a negative compartment's row
+    takes its actual inflows. The row is not emptied.
+  - `water_tag_gross_flow_change` (`:938-942`): the actual direction, the
+    gated parts and the capped outflow, for flows that touch a negative
+    compartment.
+  - `water_tag_net_flow_change` (`:1018-1031`): the gain's gate.
+  - `water_tag_microphysics_change` and the audit (`:1046-1108`): the flags
+    passed on.
+  - `_water_tag_precipitation_microphysics_tendency!` (`:1140-1167`): the
+    flags from `Y`, and both ledgers written once per cell, before the loop
+    over the tags.
+  - `attribute_water_tag_precipitation_tendency!` (`:1257-1265`): the vapour
+    bracket's gate and ledger.
+  - Unchanged: the limiters' follow, sedimentation, the repair and the
+    advection's hand-back. The follow (`water_tag_part_follow_shift`,
+    `:1376-1422`) already aims at the target before, and empties a part whose
+    compartment is at or below zero after.
+
+**What it changes.**
+
+  - Only runs with the key (1M, no EDMF, no copies), and only in cells with a
+    negative compartment at a stage. The validation does not use the key.
+  - The vapour-nonnegativity tendency lifts exactly the negative condensate.
+    So it is a transfer into a negative compartment by construction, and its
+    rain and snow parts now take nothing there.
+  - Reversed flows in such a cell now carry their actual donor's
+    composition. Before, where negative rain's evaporation ran backwards,
+    `N`'s parts lost water by rain's pool composition.
+
+**Duals, GPU, allocation.** The flags are `Bool`s from comparisons, which
+compare duals by value. The functions still return `NTuple`s. `ifelse`
+evaluates both branches, so the parts' kernel costs up to about twice as much
+under the key. No new field besides the ledger, and no allocation.
+
+#### 11.11.6 The ledger of the withheld gain (question 6)
+
+**The definition, parent-side.**
+
+  - At every attribution bracket, explicit and implicit, `L`'s tendency is
+    `w = ifelse(P < 0, max(Δ, 0), 0)`, in kg m⁻³ s⁻¹. That is the part of the
+    process's tendency that fills the parent's negative part instead of
+    reaching the tags. Under the key `P` and `Δ` are `N` and `N`'s change.
+  - Under the key it also takes the net inflow into a negative `N` from the
+    microphysics' transfers and from the vapour bracket (11.11.5).
+  - It does not depend on the tags. Partition tags receive every label, so it
+    covers every source tag's withheld gain too. On a closed partition whose
+    masks sum to 1 it equals the partition's withheld gain,
+    `Σ_k M_k·(max(Δ, 0) − G)`.
+  - The stepper weights it as it weights the tags. Each evaluation adds a
+    value `≥ 0`, but with negative weights `L` can fall within a step (11.2).
+  - It exists with water tags under every `water_tag_transport`, since the
+    explicit brackets withhold under all of them.
+  - Under the key, `q_tag_exp_negative_precip` takes the net inflow into
+    negative rain or snow (11.11.5).
+  - **Optional, for the owner (11.11.13):** `q_tag_exp_negloss`, the loss
+    that the partition does not share. At a bracket its tendency is
+    `u = ifelse(P > 0, 0, min(Δ, 0))`. Under the key `u` also takes minus
+    `ρ` times the net outflow of a negative `N`. So `u ≤ 0`, and `δL⁻`
+    cancels the loss in `n`. In copies mode, where `P < 0`, the partition
+    keeps the updraft's loss by the copies' shares, so there `u` is the
+    bracket's loss less that kept loss. *Corrected after the review:* the
+    draft wrote "plus the water moved out of a negative N". Read as a positive
+    amount, that doubles `n` instead of cancelling it.
+
+**Writers.**
+
+  - `_attribute_tagged_ρq_tot!` (`tagged_water.jl:549-576`), once per
+    bracket and before the split's early return, so that the grid kernel and
+    both split modes are covered:
+    `@. Yₜ.c.q_tag_exp_negative += water_tag_withheld_gain(rule, ᶜΔρq_tot, ᶜparent)`.
+    Here
+    `water_tag_withheld_gain(::TargetGain, Δ, P) = ifelse(P < zero(P), max(Δ, zero(Δ)), zero(Δ))`,
+    and `water_tag_withheld_gain(::ParentGain, Δ, P) = zero(Δ)`.
+  - Under the key: `_water_tag_precipitation_microphysics_tendency!` and
+    `attribute_water_tag_precipitation_tendency!` (11.11.5).
+  - Nothing else writes it: not `add_rainout_increments!`, which is
+    output-time scratch, and not the limiters, the constraints, the repair or
+    the follower.
+
+**Machinery,** on the pattern of the leak correction's ledger, which is also
+a tendency ledger:
+
+  - Names, predicate and zeros: `WATER_TAG_EXP_LEDGER_NAMES`,
+    `water_tag_exp_ledger_names(model)`,
+    `water_tag_exp_ledger_variables(ρq_tot, model)` and
+    `is_water_tag_exp_ledger_name(name)`.
+  - State: `setups/common/prognostic_variables.jl`, after the increment
+    ledger (`:124-127`), in `ρq_tot`'s type. The name has no `ρ` prefix, so
+    `gs_tracer_names` and `is_tracer_var` skip it. No transport, diffusion,
+    sponge or limiter reaches it.
+  - Jacobian: the predicate goes into `is_splittable_jacobian_field`
+    (`manual_sparse_jacobian.jl:825-836`). `fallback_identity_blocks` then
+    gives the field a `−I` block, and the split solves it apart. The sparse
+    autodiff Jacobian keeps that constant block.
+  - Per-step gross: the names go into `tag_state_ledger_names`
+    (`tag_throughput.jl:255-263`). That gives the gross, the column gross and
+    the events, which the checkpoint carries. Not into
+    `tag_attempted_ledger_names`, for the reason the leak ledger's docstring
+    gives (`tag_throughput.jl:138-150`).
+  - Diagnostics: `q_tag_exp_negative` in kg/kg, cumulative, the ledger over
+    the current `ρ`, as `q_tag_inc_negative` is, registered for every
+    water-tag model. `_gross` and `_colgross` come through
+    `register_tag_ledger_diagnostics!`. The names go into
+    `_ALL_TAG_STATE_LEDGER_NAMES` and `_TAG_MECHANISM_TEXT`
+    (`tag_ledger_diagnostics.jl:8-40`), and the imports into
+    `diagnostics/Diagnostics.jl`.
+  - Audit: `_tag_ledger_audit` takes it by its prefix, as the columns
+    `exp_negative_retained`, `exp_negative_events` and
+    `exp_negative_attempted` (NaN) (`tag_throughput.jl:1053-1080`).
+  - Reserved names: `exp_` goes into `RESERVED_WATER_TAG_PREFIXES`
+    (`config/tracer_config.jl:486-499`) and its docstring, so that no tag's
+    `q_tag_<name>` can take these names.
+  - The follower's snapshot, for `δL` (11.11.3).
+  - Hand-built states in the unit tests gain the field.
+  - **Per-tag ledgers, optional (11.11.13):** `q_tag_led_neg_<name>` under
+    `water_tag_ledger_per_tag`, each tag's own `M_k·w`. They need `led_neg_`
+    in `TAG_PER_TAG_LEDGER_PREFIXES` (`tag_throughput.jl:820-830`), in the
+    prefixes that `_tag_ledger_audit` strips before it looks up the tag
+    (`tag_throughput.jl:1087-1092`), and in the diagnostics' per-tag name
+    parsing. *Found by the review:* without the second, the first audit row
+    asks for `ρq_tag_led_neg_pbl` and fails.
+
+**The pre-registration.** Dated 2026-09-30 amendments, made before any run
+(11.7). They add reported quantities only, and change no threshold:
+
+  - 11.4's "The rule writes no ledger" no longer holds: the rule writes
+    `q_tag_exp_negative`, and `q_tag_inc_negative` records the follower's
+    `N'` and `g`.
+  - 11.5's points "No new state field…" and "The implicit bracket and the
+    rain-out split are not touched" give way to 11.11.8.
+  - V5 also reports `q_tag_exp_negative`'s per-step gross a day, and the
+    source tags' negative water.
+  - The configs `cr_s23.yml`, `cr_s26.yml` and `cr_probe_s23.yml` add
+    `q_tag_exp_negative` and `q_tag_exp_negative_gross` to the 6-hourly and
+    the daily diagnostics. The `_main` configs cannot, since `main` has no
+    such field. The untagged ones have no tags.
+  - The probe driver `ic_miss_probe2.jl` adds `:q_tag_exp_negative` to
+    `LEDGERS` (`:55-66`), a reported column. It already skips a ledger that
+    the state lacks (`:332`), so it still runs on `main`.
+
+#### 11.11.7 The closure identity
+
+The notation is 11.11.1's, and `Π` is the sum over the partition tags.
+
+**(I1) Pointwise, at every output. Unchanged (V2b):**
+`q_tag_res + q_tag_negative + Σ region q_tag = q_tot`. Here
+`q_tag_res = (T − Π)/ρ` and `q_tag_negative = min(P, 0)/ρ`, summed over the
+compartments under the key. The ledger does not enter (I1): a withheld gain
+changes `q_tag_negative`, not `q_tag_res`.
+
+**(I2) Per bracket evaluation and cell, exact up to the sign of zero:**
+
+    Δ = Ṫ + w + u.
+
+`Ṫ` is the target's rate: `Δ` where `P > 0`, `max(Δ, 0)` where `P = ±0`, and
+`0` where `P < 0`. `w` is `L`'s tendency and `u` is `L⁻`'s. The partition's
+parts sum to `Ṫ + e`. *Stated per split mode after the review:*
+
+  - The grid kernel:
+    `e = (Σ_k M_k − 1)·G + (Σ_k φ_k − [P > 0])·min(Δ, 0)`. It is zero on a
+    closed partition whose masks sum to 1.
+  - The default 0M split: the parts sum to `S·Δ`. So `e` is zero where
+    `P < 0`, and where `P > 0` on a closed partition. At `P = ±0`, `S = 0` and
+    `w = 0`, so `e = −max(Δ, 0)`: that gain is neither given nor recorded.
+  - Copies mode: where `P < 0` the partition keeps the updraft's loss by the
+    copies' shares, so `e` holds that loss.
+  - Under the key, per compartment for Q5's transfers, `e` holds one more
+    term: a negative compartment's outflow beyond its inflow, which the
+    target gains and the parts do not (11.11.5, point 6).
+
+**(I3) Per step and cell,** the tableau-weighted sum of (I2):
+`ΔL = Σ_i b_i·w_i·Δt`, each stage with its explicit or its implicit weight.
+Let `c = Σ_i b_i·Ṫ_i·Δt − ΔT` be the overclaim, the brackets' change of the
+partition less the target's change over the step. It is zero where the parent
+keeps a strict sign at every stage, and it is 11.2's miss in a crossing. Then
+the brackets move `q_tag_res` by `−c − Σ_i b_i·e_i·Δt`, and the negative part
+by `ΔL + ΔL⁻ + c`. The review checked this with a scalar replica of the
+ARS222 stepper.
+
+**(I4) Per implicit stage and column, under the follower:**
+
+    N' = ∫(n + δL + δL⁻ − g) dz,   M' = ∫(m − g) dz.
+
+  - The partition takes `g` in its own cell by mask, and `N'` by composition
+    where `m'` has `N'`'s sign. Both are recorded in `q_tag_inc_negative`.
+  - `M' − N'` is left out (`q_tag_inc_left`). That is the lag, and also the
+    default split's gain at `P = ±0` (I2). *Corrected after the review:* the
+    draft called it the lag alone.
+  - Where the rule did not act in the stage, `δL = g = 0` and `N' = N`, bit
+    for bit.
+  - Where the parent's response to `w` differs from `δL` (the autodiff
+    Jacobians, 11.11.3), the difference is in `N'`.
+
+**(I5) No closed budget of `q_tag_negative` is claimed.** Transport, the
+limiters and the parent's own processes also change the negative part, and no
+single ledger sees them all. `∫L dz` is the water that the brackets and the
+transfers gave the negative part instead of the tags.
+
+#### 11.11.8 Why every model field stays bit for bit
+
+ 1. **What is written:** tag fields (`ρq_tag_*`, and under the key
+    `ρq_rtag_*`, `ρq_stag_*`, `q_rtag_aud_*` and `q_stag_aud_*`), the new
+    ledgers, and one tag cache field, the follower's snapshot. No model
+    tendency, limiter, constraint, callback or model Jacobian block reads any
+    of them.
+ 2. **What is read:** only signs of fields the kernels already read: `P`,
+    and under the key `ρq_rai` and `ρq_sno`.
+ 3. **Transport:** the ledgers have no `ρ` prefix, so no transport,
+    diffusion, sponge or limiter touches them.
+ 4. **The Jacobian.**
+      + Manual: a ledger gets a `−I` block and is solved apart
+        (`uncoupled_jacobian_names`), as the existing ledgers are.
+      + Sparse autodiff: keeps that constant block.
+      + Dense autodiff: holds the ledger's row in full. The model's rows have
+        exact zeros in the ledger's column, and `parallel_lu_factorize!` does
+        not pivot (`auto_dense_jacobian.jl:341-370`). So the elimination
+        subtracts only products with those zeros, which leave every nonzero
+        entry as it was. The sign of a zero entry can flip (`−0.0 − (−0.0)`
+        is `+0.0`). Every tag field can do this already. The autodiff recheck
+        compares with `isequal` and reports a signed zero apart (11.11.11).
+ 5. **The follower** writes only `dY`'s tag and ledger entries. The runs
+    already have the post-solve hook. None is added under tracer transport,
+    so the stepper's cache refresh is unchanged.
+ 6. **The brackets:** the extra broadcast writes `Yₜ.c.q_tag_exp_negative`
+    only. The parent budget and the process records read `Yₜ`'s parent
+    fields, which it does not touch.
+ 7. **The state's layout** grows, as it did for every earlier ledger. The
+    stepper computes its increments field by field. The validation's settings
+    take no norm or inner product over the whole state
+    (`max_newton_iters_ode: 1`, `use_newton_rtol` and `use_krylov_method`
+    false). With either, the tags and the ledgers would enter the norms
+    alike. That holds for every tag field today.
+ 8. **Tags where the parent is not negative** stay bit for bit. `G`, Q4's
+    kernel and Q5's gate reduce to the old arithmetic there, since the
+    `ifelse` keeps the old branch. The follower keeps its numbers where
+    `δL = 0`. So site 26's tags stay `main`'s unless the rule acts (V3).
+ 9. **The checks:** V4, V4b, the 30-day parity rerun, the nine
+    `tagging_water*` integration groups, and a new autodiff parity check,
+    since no water-tag test runs an autodiff Jacobian today.
+
+#### 11.11.9 Restart
+
+  - **The new state:** `q_tag_exp_negative` in every water-tag run,
+    `q_tag_exp_negative_precip` under the key, and `q_tag_exp_negloss` if
+    built. They are fields of `Y`, so a checkpoint carries them and a restart
+    continues them. Their per-step gross, column gross and events are cache
+    accumulators. `tag_ledger_checkpoint_fields` writes them for every name
+    in `tag_state_ledger_names`, and `restore_tag_ledger_checkpoint!` reads
+    them back (`tag_throughput.jl:1161-1290`). They have no attempted total.
+    The follower's snapshot is refilled at every stage, so it is not
+    carried.
+  - **An old checkpoint is refused.** A new `check_restart_fields` entry in
+    `check_water_tag_checkpoint` (`water_tag_checkpoint.jl`, after the
+    increment ledger's at `:139-148`) uses `is_water_tag_exp_ledger_name` and
+    `water_tag_exp_ledger_names`. Its message says that the file was written
+    before the water tags kept the ledger of the withheld gain, and that a
+    new run is needed. The generic "restart with the same `water_tracers`"
+    would mislead. Zero-fill is not proposed: no restart path can add a
+    missing state field, and a ledger restarted at zero would misstate the
+    run's total, which the per-mechanism ledgers' policy already refuses
+    (`tag_throughput.jl:641-648`). None of the planned runs restarts.
+  - **The version:** `WATER_TAG_CHECKPOINT_VERSION` stays 2. Its docstring
+    says that ledgers are checked by their presence in the file, and no
+    recorded attribute changes meaning. The test's pin
+    (`tagged_water_precipitation_tests.jl:2282`) stays. A checkpoint from
+    before the revision lacks the ledger and is refused, so one run's tags are
+    never attributed under two rules.
+  - **Tests:** the guard refuses a state without the ledger. The round-trip
+    testset (`tagged_water_integration.jl:377`) restarts with the ledger and
+    its accumulators continuing. A continuous run against a restarted one
+    gives the same state bit for bit.
+
+#### 11.11.10 The tests and their mutants
+
+Each mutant runs in its own detached worktree. The new tests must fail there,
+and nothing else.
+
+ 1. **The bracket testset** (`tagged_water_tests.jl:2766`), renamed "…every
+    bracket and every tag". `microphysics_gain_rule` is `TargetGain()` for
+    `Implicit()` and `Explicit()`, in place of `:2780-2785`. Mutant M3,
+    `_microphysics_gain_rule(::Implicit) = ParentGain()`, must fail.
+ 2. **Same testset, Q4.** A tag without a region (`evap`) and a region tag
+    with sources (`tropical_evap`) gain nothing where `P < 0`. Elsewhere,
+    `±0` included, their gain `isequal`s `max(Δ, 0)` times the mask. The loss
+    half is unchanged. A tag that does not list the label takes only the
+    loss. `_tag_gain_rule(TargetGain(), tag) === TargetGain()` for every kind
+    of tag. This replaces the assertion that tags outside the partition keep
+    the parent's gain. Mutants M4a (the kernel for tags without a region
+    keeps `max(Δ, 0)`) and M4b (`_tag_gain_rule` gives `ParentGain()` to tags
+    outside the partition) must fail.
+ 3. **Same testset, the ledger.** `attribute_tagged_ρq_tot!` writes
+    `Yₜ.c.q_tag_exp_negative == ifelse(P < 0, max(Δ, 0), 0)`, written out in
+    the test and not through the rule's own function. On a closed partition,
+    with the grid kernel, `Δ ≈ Σ_partition Δ_k + w + u` within 10 eps (I2).
+    Hand-built states gain the field. Mutant M6a, the ledger's write removed,
+    must fail.
+ 4. **The stage testset** (`:2911`), extended to a tag without a region. One
+    ARS343 step from −0.5 and from −0.6 gives it `b2 + γ ≈ −0.2085`. One
+    ARS222 step with a loss outside the bracket gives `δ ≈ −0.7071`, and an
+    up-crossing gives `1.7071`, above the target's gain. The ARS222 jump at
+    zero is `1 − δ` against 1. Then steps with `P > 0` and a sink: the
+    negative value stays, since its share is zero, as 11.11.4 says. Mutant
+    M4a must fail.
+ 5. **`tagged_water_integration.jl`, the implicit bracket.** "The implicit
+    microphysics bracket keeps the parent's gain" (`:195-230`) becomes
+    "…gives the target's gain". In cell `k` the parent is made negative and
+    the cached rain-out a gain. Take `implicit_tendency!` with and without
+    the gain. The partition's and the source tags' tendencies at `k` do not
+    change. The ledger's tendency at `k` changes by exactly the gain. Every
+    other cell's tag tendencies are `isequal`. Mutants M3 and M6a must fail.
+ 6. **The copies.** The coupling-1 test of
+    `tagged_water_edmf_0m_explicit_integration.jl` (`:270-308`): a source
+    tag's updraft gain is now withheld at `k` too, in place of
+    `isequal(new, old)` for source tags. The same check on the implicit path,
+    in `tagged_water_edmf_copies_integration.jl`. Mutant M4b must fail.
+ 7. **The follower and the withheld gain,** a new testset in
+    `tagged_water_tests.jl` on the harness of the option-C testset
+    (`:2553-2765`), with `q_tag_exp_negative` in `ᶜnames`.
+      + Case 1: a cell stays below zero. The bracket withheld `w`: `U`'s
+        ledger is `Y`'s plus `dtγ·w`, the parent rises by `dtγ·w`, and the
+        partition is unchanged. A transport mismatch elsewhere gives `m` of
+        both signs. Expected: `q_tag_inc_negative`'s column total is zero,
+        with values exact in binary or to a few ulp of `P` and `L`; the
+        partition's column change equals the target's; no cell's correction
+        exceeds its mismatch. *After the review:* a hand-built `U` makes `n'`
+        a rounding, not an exact zero.
+      + Case 2, the crossing (the review's S2): `P_snap = −0.5`, a withheld
+        stage gain of 0.8, `P_new = 0.3`, and an empty partition in the
+        crossing cell and in a cell above it. Expected: the crossing cell ends
+        at its target, by mask; no cell ends above its target beyond a
+        tolerance; `q_tag_inc_negative` records `g`.
+      + Case 3, `δL = 0`: `dY` and the three increment ledgers `isequal`
+        values pinned from the current code.
+      + Mutant Mf (`n' = n`, no `δL`) must fail cases 1 and 2. Mutant Mg (no
+        give by mask, `n' = n + δL`) must fail case 2.
+ 8. **Only if `q_tag_exp_negloss` is built:** an unshared loss in a negative
+    cell and a transport mismatch elsewhere (the review's loss case). The
+    partition's column change equals the target's, and no cell moves more
+    than its mismatch. This test fails on the current code, which shows the
+    defect. A copies-mode case: where `P < 0` the kept updraft loss is not in
+    `u`. Mutants: Mf⁻ (no `δL⁻`), a sign-flipped transfer term in `u`, and
+    `u = min(Δ, 0)` in copies mode, must each fail.
+ 9. **Transfers into a negative compartment,** a new testset in
+    `tagged_water_precipitation_tests.jl`:
+      + (a) a flow `N → R` with `R < 0` and no outflow from `R`: the `N`
+        parts lose `F·ψN`, the `R` parts take 0, and the precipitation ledger
+        takes `ρF`;
+      + (b) the pass-through, the review's case: `S < 0` with deposition
+        `N → S` and melting `S → R`, `in = out`. The parts' rates equal the
+        target's (`N` −F, `R` +F, `S` 0), and the ledgers take 0;
+      + (c) `S < 0` with `in > out`: the ledger takes `ρ(in − out)`, and the
+        receivers take `out·ψS`. With `out > in`: the receivers take
+        `in·ψS`, the ledger 0, and the receivers' parts fall short of their
+        target by `out − in`;
+      + (d) a reversed flow, `F.RN < 0` with `R < 0`, read as `N → R`: the `N`
+        parts lose `|F|·ψN`, the `R` parts take nothing, and the ledger takes
+        `ρ|F|`;
+      + (e) the net-flow rule: a gaining compartment below zero takes 0, and
+        the ledger takes `max(ΔX, 0)`;
+      + (f) the vapour bracket lifting negative rain: the `R` parts take 0,
+        the `N` parts lose `ΔR·φN`, and the precipitation ledger takes `ρΔR`;
+      + (g) every compartment `≥ 0`, `±0` included: every output `isequal`s
+        the old formulas, written out in the test;
+      + (h) the audit is 0 where `R < 0`, and `isequal`s the old value
+        elsewhere.
+      + Mutants M5a (no receiver gate), M5b (the draft's empty pool,
+        `full_X &= !(X < 0)`), M5c (the nominal donor's composition for a
+        reversed flow) and M5d (no cap on the outflow) must each fail their
+        cases. M5b must fail (b).
+10. **The key under the follower** (`tagged_water_precipitation_tests.jl:1250`,
+    extended): a net inflow into a negative `N` inside the solve enters `n'`
+    through the ledger, and nothing is taken from the partition elsewhere. A
+    pass-through leaves `n'` at zero. Mutant Mf must fail.
+11. **State and names** (`tagged_water_tests.jl`, near `:1013` and `:1266`):
+    `q_tag_exp_negative` exists under tracer and increment transport, and not
+    without water tags. `q_tag_exp_negative_precip` exists only with the key.
+    Both start at zero in `ρq_tot`'s type. `is_splittable_jacobian_field` and
+    `uncoupled_jacobian_names` include them. `tag_state_ledger_names`
+    includes them, and `tag_attempted_ledger_names` does not. Mutant: a field
+    that exists only under increment transport must fail the tracer case.
+12. **Reserved names** (`test/config/tracer_config.jl`): tags named
+    `exp_negative` and `exp_x` are refused. The accumulators' checkpoint
+    round trip (`:1787-1929`) includes the new ledger's gross, column gross
+    and events. Mutant: `exp_` not reserved must fail.
+13. **The restart guard** (`tagged_water_tests.jl:913`,
+    `tagged_water_precipitation_tests.jl:2192`): a state without
+    `q_tag_exp_negative` is refused, with a message that names it. The
+    existing pin keeps `WATER_TAG_CHECKPOINT_VERSION` at 2. Mutant M6b, the
+    `check_restart_fields` entry removed, must fail.
+14. **The restart round trip** (`tagged_water_integration.jl:377`): the
+    restarted run continues the ledger bit for bit against a straight run.
+    Its field-name filter (`:429`) admits the ledger. So do the filters at
+    `tagged_water_edmf_copies_integration.jl:471`,
+    `tagged_water_increment_integration.jl:150`,
+    `tagged_water_precipitation_integration.jl:136`,
+    `tagged_water_edmf_0m_integration.jl:67`,
+    `tagged_water_leak_correction_integration.jl:125` and
+    `tagged_water_edmf_integration.jl:245`, and any energy file whose run has
+    water tags. Mutant: the names left out of `tag_state_ledger_names` must
+    fail the accumulators' part.
+15. **Diagnostics:** `q_tag_exp_negative`, `_gross` and `_colgross` are
+    registered with water tags. Registering again for a model without water
+    tags drops them, as for the increment ledgers. Mutant: the name left out
+    of `_ALL_TAG_STATE_LEDGER_NAMES` must fail the stale-entry check.
+16. **Duals:** `_accumulate_water_tags!` and `water_tag_withheld_gain` on
+    `ForwardDiff.Dual{CA.Jacobian}` inputs. The values `isequal` the Float64
+    evaluation. The partials of the partition's gain are zero where `P < 0`,
+    and `max(Δ, 0)`'s elsewhere. `@inferred` holds. Mutant:
+    `water_tag_withheld_gain` returning `zero(Float64)` in one branch must
+    fail `@inferred`.
+17. **Parity:** every `tagging_water*` file's "The model's fields do not
+    depend on the tags", with only the filters updated. Mutant: the ledger's
+    tendency also added to `Yₜ.c.ρq_tot` must fail.
+18. **A real implicit stage,** new after the review, which found that no
+    test takes `δL` through a Newton solve. One increment-transport step on
+    the integration column, with the implicit bracket's gain forced where the
+    parent is below zero, through the split solver's `−I` row, the post-solve
+    hook and the DSS. `∫q_tag_inc_negative dz` must leave out the withheld
+    gain, up to the solver's response (11.11.3). How the gain is forced, by a
+    negative updraft area or by a test double of the rain-out, is chosen
+    when the test is written. Mutant Mf must fail.
+19. **Per-tag ledgers, only if built:** an audit row with
+    `water_tag_ledger_per_tag: true`. Mutant: `led_neg_` left out of the
+    audit's prefixes must fail.
+20. **The record's score scripts:** `cr_windows_score_synthetic.py` and
+    `cr_validate_v3_synthetic.py`, with the cases of 11.7's list. Mutant M7,
+    W5 printed but not scored, must fail the failing W5 case, since the
+    script would exit 0. Mutant M9, V3's old clause per cell, must fail the
+    case whose values differ after `t*` in cells never negative.
+
+#### 11.11.11 The rechecks before the validation
+
+ 1. **The record.** The decisions are entered in 11.10, `DECISIONS.md`, the
+    register and `STATUS.md`. 11.1 to 11.6 point to this section, and 11.7
+    carries the dated amendments. All done with this section, before any
+    code. 11.8 lists the tests and mutants as they run.
+ 2. **Unit tests** in a Slurm job, both float types:
+    `tagged_water_tests.jl`, `tagged_water_precipitation_tests.jl` and
+    `test/config/tracer_config.jl`. The Float32 cases of 11.11.3 take a
+    tolerance.
+ 3. **Mutants,** each in its own detached worktree: M3, M4a, M4b, M5a to
+    M5d, M6a, M6b, Mf and Mg, the three of test 8 if the ledger is built,
+    and the revision's first mutant, the rule removed. The new tests must
+    fail and nothing else may. The jobs are recorded as in 11.8.
+ 4. **Integration:** the nine `tagging_water*` files with the updated
+    filters, and every `energy_source_tags*` file whose run has water tags.
+ 5. **Autodiff, new.** The sparse autodiff Jacobian
+    (`use_auto_jacobian: true`) on the integration column, or at site 23 for
+    one hour. The dense one (`use_dense_jacobian: true`) only on a small
+    column, `z_elem` 10 as in the CI's dense configurations. *After the
+    review:* the dense LU keeps an `N × N` static array per column, and site
+    23 has about 2,500 values per column. Tags on and off. Every model field
+    is `isequal`, and a signed zero is reported apart (11.11.8). The tags and
+    the ledger are finite. `implicit_tendency!` runs on duals. `∫n' dz` is
+    reported over the columns where the rule acted.
+ 6. **Restart:** a continuous run against a restarted one, tags on. The
+    state, the ledger and its accumulators are bit for bit. A checkpoint
+    without the ledger is refused.
+ 7. **The 30-day parity rerun** on the new commit, with
+    `cr_parity30_{tags,untagged}_{rev,main}`. At least the revision's two
+    runs. `main` is unchanged, so its outputs of jobs `14010408` to
+    `14010411` stay valid, or all four run again for a clean set (about an
+    hour each). It passes by Q8's rule. Also reported: the ledger is zero
+    before the first tag difference and nonzero after it; `evap` and `fcg`
+    now change directly; the audit has `exp_negative_retained` and
+    `exp_negative_events`, which V3 and V5 read.
+ 8. **The score scripts, before any run:** the changes of 11.7's list, their
+    synthetic checks, then `cr_validate.py` on W42's outputs and
+    `cr_windows_score.py` on W48's probe. Expected: `cr_validate.py`
+    reproduces W42's numbers, and the audit's `exp_negative_retained` is
+    reported missing, not failed. `cr_windows_score.py` fails W1, W2 and W5
+    for every rise. The result goes into 11.7's Scoring paragraph.
+ 9. **The probe driver:** after `:q_tag_exp_negative` joins `LEDGERS`, a
+    short check job, as 9.7.6's `13996777` was. W0's P0a must hold on the new
+    code.
+10. **The run trees:** `../ClimaAtmosResiDyn-crev-run` at the model commit
+    the owner approves, with the record commit that registers the
+    amendments, and `main`'s tree with the same record commit. The Manifest
+    and #128's cap on ClimaParams stay.
+11. **GPU:** not available on terrabyte, so not tested, and stated so. The
+    change adds in-place broadcasts and one preallocated field. A GPU job on
+    Levante is optional (the owner).
+12. **Allocation:** where a test group measures the tendencies' allocations
+    with water tags, the numbers must not change. By reading, nothing new
+    allocates.
+
+#### 11.11.12 The review of the draft (2026-09-30)
+
+A second agent reviewed the draft and tried to break it. It found no parity
+leak. Each of its points was checked before it went in: by reading the code, or
+by rerunning the review's replicas, now in `analysis/water/crev_ext_review/`
+with a rerun of its follower replica with this section's change
+(`follower_g.py`).
+
+**Confirmed and folded in:**
+
+ 1. **Q5's empty pool broke the pass-through** (blocking). Checked by reading
+    `water_tag_pool_shares`: the pools are `max(X, 0)`, and a row with an
+    inflow is full. The replica gives the numbers. 11.11.5.
+ 2. **A negative source tag is not removed in the validation.** Checked by
+    reading the rescale's four call sites, `cr_s23.yml` and the defaults,
+    the repair's guard and the clamped shares. 11.11.4, and V5 in 11.7.
+ 3. **The crossing's positive part could stop at an empty cell** and leave
+    an excess in a positive cell. Checked on the replica (S2) and by reading
+    the follower's donor shares. 11.11.3.
+ 4. **The follower's loss-side defect is an excess, not a lag.** With
+    `q_tag_exp_negloss`, V3's `t*` would miss a stage-only negative parent,
+    and in copies mode `u` would over-correct. Replica and reading. 11.11.3,
+    11.11.6 and 11.7.
+ 5. **"Nothing of any run has been read" was false.** The 30-day parity of
+    11.8 was read on 2026-09-30 (`833cd1dc`), and the level `0.1 R48` dates
+    from 2026-09-29 (`d719fa86`). By `git log`. 11.7.
+ 6. **The autodiff Jacobians:** the parent's response differs from `δL`,
+    and the difference goes to `q_tag_inc_negative`, not `q_tag_inc_left`.
+    Reading. 11.11.3.
+ 7. **`δL` in Float32.** Arithmetic. 11.11.3.
+ 8. **(I2) and (I4) held for the grid kernel only.** Reading of the split
+    modes. 11.11.7.
+ 9. **Per-tag ledgers need `led_neg_` in the audit's prefixes.** Reading.
+    11.11.6.
+10. **`q_tag_exp_negloss`'s sign.** 11.11.6.
+11. **The tests:** a zero that is a rounding; no test through a real solve;
+    the dense Jacobian at site 23. 11.11.10 and 11.11.11.
+12. **V3's fallback bounds and cannot attribute.** 11.7.
+
+From the review's minor points, also folded in: a source tag can overclaim
+in an ARS222 up-crossing (11.11.4); the tags' rows under implicit diffusion
+are not the identity (11.11.3); two bound texts in the follower are false
+already (11.11.3); the dense LU can flip a signed zero (11.11.8).
+
+**Refuted:** none. The review's replicas were rerun here and give its
+numbers. One qualification: it calls an empty partition next to a crossing
+cell typical. That is possible, and how often it happens is not measured.
+
+**Found while revising:**
+
+  - The draft's score change read 6-hourly `hus` from `cr_s26_untagged`,
+    which writes `hus` daily only. V3 now also reads `cr_s26`'s `hus` (11.7).
+  - The draft's Q7 text said the score scripts were rerun on 2026-09-30. They
+    are not changed yet, so that rerun is recheck 8.
+  - The draft said the crossing's positive part goes by the crossing cell's
+    own composition. The follower spreads `N` over every cell whose mismatch
+    has its sign. The give by mask replaces both (11.11.3).
+
+#### 11.11.13 For the owner
+
+ 1. **The follower's amendment goes into this PR,** as Q3 and Q5 need, with
+    the crossing's positive part given in its own cell by mask (11.11.3).
+    Confirm.
+ 2. **The loss-side defect, which predates the revision** (11.11.3). Fix it
+    now with `q_tag_exp_negloss`, or register it and leave it. 11.7
+    registers the path either way. If built, V3 takes a fourth source for
+    `t*`, and in copies mode `u` leaves out the kept loss.
+ 3. **Q4's definition:** A, a source tag as a part of the target with the
+    same `G` (proposed), over B, C, D and E (11.11.4).
+ 4. **Q4, a crossing step:** a source tag can end it below zero, or above the
+    parent, and in the validation nothing removes a negative value. Proposed:
+    accept it, with V5's report (11.7). Or a floor at the step's end, with a
+    ledger entry.
+ 5. **Q5:** a negative compartment's outflow beyond its inflow carries no tag
+    water, and lands in `q_tag_res`, as the old code has it where the
+    compartment has no inflow. Accept (proposed), or give it by the
+    receiver's composition. Flows that touch a negative compartment are read
+    in their actual direction. Confirm.
+ 6. **Q6's names and fields:** keep the name `q_tag_exp_negative`, which now
+    also covers the implicit bracket and the transfers; one field,
+    `q_tag_exp_negative_precip`, for rain and snow under the key; refuse a
+    checkpoint without the ledger, with `WATER_TAG_CHECKPOINT_VERSION` at 2.
+    Confirm, or ask for other names or a field per compartment.
+ 7. **Options not proposed by default:** per-tag ledgers
+    `q_tag_led_neg_<name>`; a real stage cache of `w`, for an exact `δL` in
+    Float32; the rule for the source-tag copies' own surface flux and
+    rain-out (11.6).
+ 8. **The default split at `P = ±0`** withholds a gain that Q1 gives.
+    Proposed: leave it. It lands in `q_tag_inc_left` or `q_tag_res`, and
+    (I2) states it. Or give it by mask.
+ 9. **Q7:** W5 is scored on all five rises, the control included, as 11.7
+    reads "per rise". Confirm, or the four rises without a ledger only.
+10. **Q9:** `t*`'s sources are `hus`, the negative-water events and the
+    ledger's retained gross, which sees the rule act at a stage that the
+    outputs do not show. Confirm. After `t*` the fallback accepts every
+    difference, so it bounds and cannot attribute.
+11. **The dated amendments in 11.7,** among them the reported items (V5, the
+    configs, the probe driver), the wording on what has been read, and that
+    V2 and W5 score the bundle. Review them before any run.
+12. **Minor, proposed as they are:** the rescale treats zero as non-positive
+    and the rule as positive. The energy source tags are not touched.
+13. **Order:** the autodiff check, the restart check and the 30-day parity
+    rerun, all before the 90-day runs. The runs of 11.9 are submitted only
+    after the owner has reviewed this section and the amended 11.7.
+
+*Decided 2026-09-30 by the owner, point by point:*
+
+ 1. The follower's amendment goes into this PR.
+ 2. The loss-side defect stays registered in 11.7. `q_tag_exp_negloss` is
+    not built now.
+ 3. Q4 is definition A. B, C and E were walked through first; D is excluded
+    by the owner's earlier decision.
+ 4. A crossing step's source-tag overshoot is accepted and reported in V5.
+    There is no floor.
+ 5. Q5: the outflow beyond the inflow lands in `q_tag_res`. Flows are read
+    in their actual direction.
+ 6. Q6 as proposed: `q_tag_exp_negative`, one `q_tag_exp_negative_precip`,
+    old checkpoints refused, the version stays 2.
+ 7. The options not proposed stay off.
+ 8. The default split at `P = ±0` is left as it is.
+ 9. Q7: W5 is scored on all five rises, the control included.
+10. Q9: `t*`'s three sources, as proposed.
+11. The dated amendments in 11.7 are accepted as recorded. The owner
+    accepted "the remaining proposals as recorded"; the 90-day runs still
+    wait for the rechecks of point 13.
+12. The minor points are left as proposed.
+13. The order is as proposed: the autodiff check, the restart check and the
+    30-day parity rerun before the 90-day runs.
