@@ -2,18 +2,12 @@
 ##### Parent budget: the authoritative integrals
 #####
 ##### The three parent quantities are defined once, here, and both ends of every
-##### transaction use these definitions, so a change of definition cannot be
-##### applied to one end and not the other.
-#####
-##### Everything in this file is local. Nothing communicates. A global total is
-##### assembled by `reduction.jl`, which packs the local values of a whole step
-##### into one buffer and reduces that buffer once. Keeping the definitions free
-##### of communication is what makes one collective per accepted step possible.
-#####
-##### All three integrals are linear extensive functionals of authoritative
-##### prognostic state, which is what makes exact additive process attribution
-##### well defined. That is a property of these particular integrals, so changing
-##### one reopens the question. See `docs/src/parent_budget/contract.md`.
+##### transaction use these definitions. Everything in this file is local and
+##### communicates nothing. `reduction.jl` packs the local values of a step into
+##### one buffer and reduces it once. All three integrals are linear extensive
+##### functionals of authoritative prognostic state, which is what makes exact
+##### additive process attribution well defined. Changing one reopens that
+##### question. See `docs/src/parent_budget/contract.md`.
 
 """
     BUDGET_ACCOUNTING_TYPE
@@ -104,7 +98,7 @@ Elements are partitioned across ranks, and `Fields.field_values` sees only the
 elements this rank owns. Spectral-element quadrature weights are per element, so
 a node shared between two elements is counted once with each element's own
 weight, which is the correct integral and needs no ownership mask. DSS makes the
-*values* at such a node agree between ranks; it does not duplicate the weights.
+*values* at such a node agree between ranks. It does not duplicate the weights.
 Summing every rank's `local_volume_integral` is the same decomposition
 `Base.sum` uses, evaluated in the accounting type.
 """
@@ -262,8 +256,8 @@ This is a **diagnostic derived from state, not a parent quantity and not a
 conservation invariant.** Prescribed forcing adds water to a column without
 adding air to it, so dry air is not conserved in a forced run and this quantity
 moves by minus the added water. Comparing it against the mass and water budgets
-is how those two are checked against each other; it is not a closure the parent budget
-claims.
+is how those two are checked against each other. It is not a closure the
+parent budget claims.
 
 Equals the total mass for a dry model, which has no water state.
 
@@ -346,9 +340,9 @@ Return this rank's share of the energy held by the prognostic surface reservoir,
 in J.
 
 Only defined for a `SurfaceConditions.SlabOceanTemperature`. Callers check
-`has_surface_reservoir` first; there is deliberately no method that
-returns a zero for a surface that does not exist, because a zero is a budget the
-identity would then have to reconcile.
+`has_surface_reservoir` first. There is deliberately no method that returns a
+zero for a surface that does not exist, because a zero is a budget the identity
+would then have to reconcile.
 """
 local_surface_energy(Y, slab::SurfaceConditions.SlabOceanTemperature) =
     local_boundary_integral(Y.sfc.T) * to_accounting(slab_heat_capacity(slab))

@@ -364,10 +364,10 @@ check_conservation:
   help: "Check conservation of mass and energy [`false` (default), `true`]"
   value: false
 parent_budget_mode:
-  help: "Reconcile each accepted step's mass, total water and total energy against the updates the integrator applied. The trajectory is unchanged and each step costs one global collective. `audit` also attributes every channel to its processes and keeps every step. A successful run writes `parent_budget_report.yaml` to the output directory. See docs/src/parent_budget/ [`off` (default), `summary`, `audit`]"
+  help: "Opt-in conservation audit: each accepted step, it checks that total air mass, total water and total energy changed by what the integrator applied, within a declared tolerance. With it on, every model field that exists without it stays bit for bit as with it off, under the default solver settings. `summary` costs one global collective per step, `audit` also attributes every channel to its processes and keeps every step, and a successful run writes `parent_budget_report.yaml` to the output directory (see docs/src/parent_budget/) [`off` (default), `summary`, `audit`]"
   value: "off"
 parent_budget_attribution:
-  help: "How the parent budget books a process row in `audit` mode: `net` books the signed integral of what the process applied; `gross` also keeps its positive and negative parts, as a diagnostic beside the net amount the identities use [`net` (default), `gross`]"
+  help: "How the parent budget books a process row in `audit` mode. `net` books the signed integral of what the process applied. `gross` also keeps its positive and negative parts beside the net amount, which the identities still use, and needs `parent_budget_mode: audit` [`net` (default), `gross`]"
   value: "net"
 check_steady_state:
   help: "Compare steady-state velocity to analytic solution; only available for certain choices of `topography` [`false` (default), `true`]"

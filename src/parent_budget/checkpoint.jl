@@ -6,8 +6,8 @@
 ##### the first transaction after the restart measures the restored state and
 ##### compares it against them exactly before it opens. A difference is a
 ##### change nobody accounted for. A custom callback runs between two
-##### transactions on the accepted state; it is accepted only when it declares
-##### itself read-only, and audit mode holds it to the declaration.
+##### transactions on the accepted state. It is accepted only when it declares
+##### itself read-only, and audit mode enforces the declaration.
 
 """
     CheckpointEndpoints
@@ -40,7 +40,7 @@ that is the closing endpoint of the committed step. Before the first commit
 it is the opening endpoint of the run. Either way it is the state being
 written, because the checkpoint callback runs after the parent budget's. A
 checkpoint saved from the crash handler may hold a state the parent budget has not
-committed; a restart from it is refused by the exact comparison. Nothing is
+committed. A restart from it is refused by the exact comparison. Nothing is
 written for a run without a parent budget. A checkpoint written that way restarts a
 parent budget as unverified rather than refusing to.
 """
@@ -186,9 +186,9 @@ end
 A user callback declared not to write the state. With the parent budget on, a custom
 callback is accepted only inside this declaration, because a callback that
 writes `Y` between two transactions is a change nothing accounts for. In
-`AuditMode` the declaration is held to. The parent integrals of the state are
+`AuditMode` the declaration is enforced. The parent integrals of the state are
 read before and after every firing, locally, and a firing that changed them
-is an error.
+is an error. `SummaryMode` trusts the declaration.
 """
 struct ReadOnlyCallback{C}
     callback::C

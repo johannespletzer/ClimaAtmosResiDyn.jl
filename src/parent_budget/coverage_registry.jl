@@ -1,20 +1,14 @@
 #####
 ##### Parent budget: the executable coverage registry
 #####
-##### Every path that can change an authoritative parent field is one row here,
-##### and the rows a configuration selects become the schema the parent budget checks a
-##### run against. `docs/src/parent_budget/coverage.md` shows the same rows as
+##### Every path that can change an authoritative parent field is one row here.
+##### The rows a configuration selects become the schema the run is checked
+##### against. `docs/src/parent_budget/coverage.md` shows the same rows as
 ##### tables, and `test/parent_budget/registry_tests.jl` holds the two to exact
-##### agreement, so a reader of either sees what the code declares.
-#####
-##### A row has two halves. The documentation half is the prose of its table
-##### cells, kept here so that the page cannot drift from the code. The
-##### executable half is a guard over a `RegistryContext`, and the derivations at
-##### the end of this file, which turn a selected row into a reservoir, a
-##### channel, a roster entry, a final map, or a transfer event.
-#####
-##### Expectations come from the configuration. The schema is built here before
-##### the first step, and nothing on the collection path adds to it.
+##### agreement. A row has a documentation half, the text of its table cells,
+##### and an executable half, a guard over a `RegistryContext` plus the
+##### derivations at the end of this file. Nothing on the collection path adds
+##### to the schema built here.
 
 # ============================================================================
 # Context and guards
@@ -147,7 +141,7 @@ vertical_water_borrowing(c::RegistryContext) =
 out_of_scope(c::RegistryContext) = !is_supported(c.atmos)
 
 # Any prognostic field the horizontal tracer advection and the tracer
-# hyperdiffusion would move. Water is the common case; the tag families and the
+# hyperdiffusion would move. Water is the common case. The tag families and the
 # passive tracers are the others.
 function has_tracers(c::RegistryContext)
     c.moist && return true
@@ -240,7 +234,7 @@ column.
 the configuration selects the row. It is the executable form of the `Guard`
 cell, and the two are written to agree.
 
-`event` is the label of the applied-update bracket that measures the row. It
+`event` is the label of the applied-update event that measures the row. It
 is `nothing` for a row that needs no measurement. Such a row has every
 quantity provably zero or not applicable, and the parent budget books it from this
 registry. It is not a table cell. The labels are the ones the tendency code
@@ -1518,9 +1512,9 @@ selected_rows(c::RegistryContext) = filter(r -> r.applies(c), COVERAGE_ROWS)
 """
     REGISTRY_EVENTS
 
-Every applied-update label some row is measured by. A bracket in the tendency
-code that passes a label outside this set names a process the registry does
-not know, which the adapter refuses when it is metering.
+Every applied-update label some row is measured by. A call to
+`open_applied_update!` with a label outside this set names a process the
+registry does not know, and the adapter refuses it when it is metering.
 """
 const REGISTRY_EVENTS = Tuple(
     unique(
@@ -1552,7 +1546,7 @@ const CHANNEL_LABELS = Dict(
     channel_name(row) -> Symbol
 
 Return the schema label of a dispatch row's channel. Errors for a transfer row,
-whose channel depends on the configuration; see `transfer_channel`.
+whose channel depends on the configuration. See `transfer_channel`.
 """
 function channel_name(row::CoverageRow)
     isnothing(row.channel) &&
@@ -1755,7 +1749,7 @@ row gives one `TransferEventSpec`, with its topology and legs resolved.
 
 The `initialization` rows are not final maps of an ordinary step. They set
 `B⁰` outside every transaction, or describe the restart transition, which is
-its own transaction; neither is a term a step could record.
+its own transaction. Neither is a term a step could record.
 """
 function budget_schema(
     atmos;

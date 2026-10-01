@@ -12,14 +12,13 @@
 #####   R_attribution(q, c) = Q_envelope(q, c) − Σ_{e ∈ c} Q(q, e)
 #####   R_transfer(q, e)    = Σ_{r ∈ modeled(e)} Q(q, e, r)
 #####
-##### Every one of them is a subtraction or a sum of recorded amounts. No
-##### function here creates a leg, so the journal cannot close a budget it has not
-##### accounted for, and nothing in this file knows what a ClimaAtmos process is
-##### or how a collective is issued.
+##### Each is a subtraction or a sum of amounts already in the journal. No
+##### function here creates a leg, and nothing in this file knows what a
+##### ClimaAtmos process is or how a collective is issued.
 #####
 ##### What is expected comes from the schema and what happened comes from the
 ##### journal. Every enumeration below walks the schema, so a channel or event
-##### that recorded nothing is a blocked row naming it rather than an absent one.
+##### with no entries is a blocked row naming it rather than an absent one.
 
 # ============================================================================
 # Endpoints
@@ -324,8 +323,8 @@ pass. Both are worse than having no tolerance at all, which at least reports
 
 `kappa` has no default on purpose. It must be calibrated against measured serial
 and distributed runs and recorded with the result, and a guessed value presented
-as universal is not a tolerance. Until it is calibrated, a reconciliation
-computed without a tolerance reports `blocked` rather than `pass`.
+as universal is not a tolerance. A reconciliation computed without a calibrated
+tolerance reports `blocked` rather than `pass`.
 """
 struct BudgetTolerance{FT}
     absolute::FT
@@ -757,7 +756,7 @@ Refused, loudly, in these cases.
   - A component contradicts the disposition its declaration gave it, such as a
     measurement on a quantity the registry says the path leaves provably zero.
   - A leg with the same `execution_identity` is already recorded, which is how a
-    bracket that fires twice at the same point shows up. A correction that
+    applied-update event that fires twice at the same point shows up. A correction that
     legitimately fires once per stage carries a different `stage` and is not a
     duplicate.
   - The same event is already recorded at a different `CollectionLevel`, or a

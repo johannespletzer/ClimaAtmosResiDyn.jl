@@ -105,11 +105,11 @@ The order of calls matters: microphysics must precede `surface_temp_tendency!`
 
 Every process that writes `ρ`, `ρq_tot` or `ρe_tot` with a net integral the
 coverage registry does not prove zero sits inside an applied-update event. The
-bracket is `open_applied_update!` and `close_applied_update!`, under the label
+event is the pair `open_applied_update!` and `close_applied_update!`, under the label
 the registry names for it. The parent budget attributes the explicit
 channel from those events, and the tag families and process records read the
-same brackets for the labels they know. A process added here without a
-bracket lands in the parent budget's attribution residual, which is how the omission
+same events for the labels they know. A process added here without an event
+lands in the parent budget's attribution residual, which is how the omission
 is found.
 """
 NVTX.@annotate function additional_tendency!(Yₜ, Y, p, t)
@@ -187,7 +187,7 @@ NVTX.@annotate function additional_tendency!(Yₜ, Y, p, t)
     subsidence_tendency!(Yₜ, Y, p, t, p.atmos.subsidence)
     close_applied_update!(Yₜ, Y, p, :subsidence)
 
-    # The bracket has to span the ρq_tot half of the forcing too, not just the
+    # The event has to span the ρq_tot half of the forcing too, not just the
     # ρe_tot half, or the water tags would miss prescribed moistening entirely.
     open_applied_update!(Yₜ, p, :large_scale_advection)
     @. Yₜ.c.ρe_tot += bc_lsa_tend_ρe_tot

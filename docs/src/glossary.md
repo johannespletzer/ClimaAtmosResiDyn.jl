@@ -48,13 +48,14 @@ These are accessed through the integrator after a run, e.g.
 Three families of bookkeeping words: budget is the parent's, ledger is a tag's,
 record is a process's.
 
-  - **Parent budget**: the internal accounting that checks whether air
-    mass, total water and total energy changed by exactly what the accepted
-    time step applied. Its terms, from *reservoir* to *reported*, are explained
-    in plain language on the
-    [parent-budget vocabulary](parent_budget/vocabulary.md) page. In the code
-    its per-step store is `BudgetJournal`, and the tendency code reaches it
-    through `open_parent_budget_event!` and `close_parent_budget_event!`.
+  - **Parent budget**: an opt-in conservation audit that checks whether air
+    mass, total water and total energy changed over each accepted time step by
+    what the step applied, within the declared tolerance. It is off by default
+    (`parent_budget_mode`). See the
+    [parent-budget vocabulary](parent_budget/vocabulary.md) for its terms. In
+    the code its per-step store is `BudgetJournal`, and the tendency code
+    reaches it through `open_parent_budget_event!` and
+    `close_parent_budget_event!`.
   - **Tag ledger**: a running total that a tag correction keeps of what it
     moved. It comes in three kinds: a *fix* ledger (`q_tag_fix_*`,
     `e_src_fix_*`), an *increment* ledger (`q_tag_inc_*`, `e_src_inc_*`) and a

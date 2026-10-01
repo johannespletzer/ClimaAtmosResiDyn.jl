@@ -57,7 +57,7 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
         # `KNOWN_TAG_SOURCES`). Extending it here would change the energy tags'
         # results.
         #
-        # The parent budget takes the whole increment, through its own
+        # The parent budget takes the whole tendency, through its own
         # half of the applied-update event, and only while it is metering the
         # audit evaluation at the Newton-solved stage. It reads `Yₜ` and writes
         # nothing, so the Newton iterations see no difference.
