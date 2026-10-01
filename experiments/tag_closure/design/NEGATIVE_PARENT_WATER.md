@@ -1338,6 +1338,21 @@ about 3.5 hours when they run in parallel.
 They are submitted only after the owner has reviewed this section and the
 pre-registration.
 
+*Amended 2026-10-01, before any run (a job limit, not a tolerance):* the
+time limit is `--time=24:00:00` for all seven jobs, in place of 08:00:00 and
+12:00:00. The partition's maximum is 10 days (`sinfo -p hpda2_compute -o
+"%l"`). The 30-day parity runs of 11.8 took 1:33 h (job `14005271`, node not
+shared), 3:12 h (`14005273`, node shared) and 1:44 h each (`14010408`,
+`14010410`) with tags, and 0:33 to 0:37 h without. So a tagged 90-day run
+needs 4.6 to 9.6 h, which can exceed 8 h. The untagged twins need about 1.7
+h (3 times 0.33 to 0.37 h), but they take the same limit for one rule. The
+configs `cr_s23`, `cr_s26` and `cr_parity30_tags_rev` differ only in the site
+(`cr_s26`), `t_end` and the written output, so the cost per model day is
+taken as the same. The probe's cost per day is `cr_s23`'s plus its driver,
+and its 3 h 7 min of W48 doubles to 6.3 h on a shared node. A limit only
+ends a job that is still running. It changes no model, no output and no pass
+rule.
+
 ### 11.10 For the owner
 
  1. ~~**The rule at zero.** A parent of exactly zero gives its gain to the
