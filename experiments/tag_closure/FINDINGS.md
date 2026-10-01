@@ -2311,6 +2311,98 @@ numbers and was discarded.
 `wp4aj_score.txt` and `.json`, the verifier's reports in `verifier/`, and each
 run's tables, manifest and provenance.*
 
+**W53. V5's `led_fix` at site 23: the rule makes all of the rise, and where
+the repair raises `free`, the follower took it below zero in that step. With the
+rule switched back to the parent's gain, the run's tags equal `main`'s bit
+for bit (54 of 54 files), so `f = 1.0000` for both tags (P1). In the
+repaired steps of the traced windows, `free`'s decline comes from the
+follower (`φ = 0.999`, least favourable window 0.997). For `pbl`, `φ` is
+0.591, both sides of the step.** The probe of design section 11.12,
+pre-registered before any job (commits `6351e9c8`, `df90416e`), and stage A
+before it.
+
+**Stage A, from W49's output** (`output/w53/ledfix_s23_localise.txt`, not
+pre-registered). `cr_s23` against `cr_s23_main`, whose parent fields are bit
+for bit the same.
+
+  - All of `led_fix` is the partition repair. The rescale's and the
+    emptying's ledgers are zero in both runs.
+  - The repair trades between the two region tags. Each tag's extra gross is
+    the other's to 5e-4 of itself (0.2700, 0.2698), and the net repair grows
+    by 0.004. In the signed ledgers the repair mostly raised `free` from
+    below zero and took the water from `pbl` (+0.182 and −0.178 of a gross
+    0.270).
+  - The extra starts in the interval ending at day 11.5, when the rule first
+    withholds a gain. It is episodic: 5 of 360 six-hour intervals carry 0.62
+    of it, 10 carry 0.80, the largest (days 15.75 to 16.0) 0.20. In 63
+    intervals the revision repairs less than `main`.
+  - It lies below 2 km: 0.80 below 1 km, 0.20 at 1 to 2 km, 0.43 at the one
+    level 435 m. `free`'s extra is in the boundary layer too.
+  - 0.91 of it lies in the 6-hour cells where `q_tag_exp_negative` grew (1157
+    of 21600 cells). 0.85 lies where the follower's negative part moved, and
+    0.66 where the parent is negative at an end of the interval.
+
+**The probe.** Two arms at model `0eb329b2`, run tree `e524dbac` (W49's
+`b6d452b5` with the driver and two configs; `src` unchanged):
+
+  - `rev`, the revision as W49 ran it, to day 56.5;
+  - `switch`, to day 90, in which the driver redefines the rule's three
+    numbers to `ParentGain()`'s before the simulation is built.
+
+Both trace every step in days 11.25 to 11.75, 15.75 to 16.0 and 55.75 to
+56.25 at levels 8 to 14 (310 to 764 m). These windows hold 0.42 of stage A's
+extra.
+
+| item                                                        | value                                                             | pass                 |
+|:----------------------------------------------------------- |:----------------------------------------------------------------- |:-------------------- |
+| B1, `lf_rev_s23` against `cr_s23`, bit for bit              | 87 of 87 files (57 daily, 227 six-hourly outputs), 227 audit rows | pass                 |
+| B2, `lf_switch_s23`'s 12 model files against `cr_s23`       | 12 of 12, 91 and 361 outputs                                      | pass                 |
+| B3, `lf_switch_s23`'s withheld-gain ledger                  | zero in all four files and all 361 audit rows                     | pass                 |
+| B4, `lf_switch_s23`'s tags against `cr_s23_main` (reported) | 54 of 54 water tag files bit for bit                              | —                    |
+| P1, `f` for `pbl`; `free`                                   | 1.0000; 1.0000 (`F_switch` 2.728e-2 and 2.274e-2)                 | the rule makes ≥ 0.9 |
+| P2, `φ` for `free`, arm `rev` (windows 1.000, 1.000, 0.997) | 0.999                                                             | the follower         |
+| P2, `φ` for `pbl`, arm `rev` (windows 0.001, 0.988, 0.663)  | 0.591                                                             | both                 |
+| P2, the switch (reported): `free`; `pbl`                    | 0.986; 0.456                                                      | —                    |
+
+  - **P1 isolates the rule from the rest of the bundle, as one thing.** The
+    switch changes the gain in every bracket at once (the explicit ones,
+    the source tags, and the implicit microphysics, inert here). B4 goes
+    further than P1 asks: with the rule off, `0eb329b2`'s tags are `main`'s
+    bit for bit for 90 days. So at site 23 the merges, the meter fix, the
+    follower's amendment and the docstring change no tag number. P1 does not
+    say which bracket's part of the rule matters.
+  - **P2 says which side of the step the decline is on, not why.** Where the
+    repair raises `free`, the follower took `free` below zero in the same
+    step. Its drain over those cell-steps is 11 times what the repair gives
+    back (`D_a` −1.87e-2 against `Σr` 1.71e-3 kg m⁻³, summed over the
+    windows and levels; 8 to 24 times per window). `free`'s mean share of
+    the partition at those steps' start is 0.008 and 0.003 in windows 2 and
+    3 (reported, not scored). For `pbl`'s repairs it is both: in window 1
+    everything else in the step (0.001), in window 2 the follower (0.988).
+  - **The windows carry the difference.** The repair's gross at the traced
+    levels, `rev` less `switch`: 1.37e-4, 8.03e-4 and 6.56e-4 kg m⁻³ for
+    `pbl` in the three windows, against 1.37e-4, 8.06e-4 and 6.68e-4 from
+    the 6-hourly files. In window 2 the switch repairs 0.034 of what `rev`
+    does at these levels.
+  - **The least favourable numbers.** P2 for `pbl`, 0.591 (both). `free`'s
+    least favourable window, 0.997. The trace against the 6-hourly gross:
+    within 4% for `rev` (window 3, `free`: 7.26e-4 against 7.55e-4), and up
+    to 25% for the switch's small values (window 3, `free`: 5.23e-5 against
+    6.97e-5). The 6-hourly value is per unit mass times `rhoa` at the
+    window's end, so it is an approximation of the trace's sum.
+  - **What it does not show.** Why the follower drains more `free` under the
+    rule. The design's reading of the follower (it sends a donor cell's
+    whole flux with the partition's normalized shares, so a draining cell
+    whose partition is nearly empty can take a tag below zero) fits, but no
+    run here isolates it. V5 itself is unchanged: `main` fails it too (2.7%
+    and 2.3%), so with the rule off V5 still fails at site 23.
+
+*`hpda2_compute`, 2026-10-01 to 02, jobs `14063995` (the check, 43 min),
+`14074174` (`lf_rev_s23`, 2 h 35 min) and `14074175` (`lf_switch_s23`, 3 h
+42 min), all exit 0, from `../ClimaAtmosResiDyn-ledfix-run` at `e524dbac`,
+driver `analysis/water/ledfix_trace.jl`. Scored with
+`analysis/water/ledfix_score.py`; `output/w53/`.*
+
 ## 2. Energy source tags: closure by transport
 
 Under the default `tracer` transport the tags move as passive tracers while the
