@@ -2536,9 +2536,15 @@ cannot show the step.
 #### 11.12.3 The runs
 
 The run tree is the record merged into `0eb329b2`, detached and clean, with
-no change in `src`. The driver is `analysis/water/ledfix_trace.jl`. The
-configs are `cr_s23.yml` with the job id and `t_end` changed. The radiation's
-seed is reset in all of them.
+no change in `src`. *Amended 2026-10-01, before any job:* the record now
+holds `0eb329b2` as an ancestor, so a merge fast-forwards to the record's
+own `src`. The run tree is therefore W49's run tree `b6d452b5` with this
+section's driver and two configs added in one commit (`e524dbac`, not
+pushed). Its `src` equals `0eb329b2`'s.
+
+The driver is `analysis/water/ledfix_trace.jl`. The configs are `cr_s23.yml`
+with the job id and `t_end` changed. The radiation's seed is reset in all of
+them.
 
 | run               | arm    | `t_end` | what for                     |
 |:----------------- |:------ |:------- |:---------------------------- |
