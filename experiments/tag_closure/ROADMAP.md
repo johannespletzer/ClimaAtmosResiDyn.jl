@@ -237,8 +237,11 @@ open.
     stays a failure);
   - ~~W21's surface rule in the first hour~~ **decided 2026-09-28:** model
     the surface flux at the plume's start (below);
-  - **option C's revision after W47:** open. The owner chose on 2026-09-28 to
-    probe more first (`design/NEGATIVE_PARENT_WATER.md`, section 9.7);
+  - ~~**option C's revision after W47**~~ **built, validated and merged
+    2026-10-01** (#137, `b4ebfca5`). The owner chose on 2026-09-28 to probe
+    more first (`design/NEGATIVE_PARENT_WATER.md`, section 9.7). W49's V2
+    counts as C's validation. V5's `led_fix` fails at site 23 and stays an
+    open failure, which a follow-up probe traces (section 11.10, item 10);
   - **OD9 to OD15, G4.3 to G4.6's seven points and WP4b stage 1's five
     points:** to be walked through one at a time (below).
 

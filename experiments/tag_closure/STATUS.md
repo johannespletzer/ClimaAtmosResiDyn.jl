@@ -127,7 +127,9 @@ not checked, it says so.
         rule review (`review/agent_reviews/crev_rule_review_2026-09-30.md`)
         found no blocker. Its kernel-1 is in Q2. One test bug in the
         coupling-1 test is being fixed. The owner's section-11 review (Q2 to
-        Q9) is pending. The 90-day validation waits for it.
+        Q9) is pending. The 90-day validation waits for it. *Superseded
+        2026-10-01: W49 ran, the owner decided on its verdicts, and #137
+        merged (`b4ebfca5`); see the update line of 2026-10-01 below.*
       + **WP9:** the first pass was noisy (19 of 30 points spread over 10%,
         node contention). The exclusive-node rerun (jobs `14005213` to
         `14005221`) is pending, with an estimated start of 2026-10-01. The
@@ -603,12 +605,15 @@ Each is captured in the archive's `worktrees/`.
 | #131 to #134 | (other sessions)                         | merged by 2026-09-30: tiered CI, split memory groups, docs simplification, CI for other workflows                                                                                                                                                                                                                                                                                     |                                                                                                                                                      |
 | #135         | (the WP4b review's transport-2)          | merged 2026-09-30 (`b983d62b`); the leak is the raw difference in both modes; test 4b sets `EDMF_interface_entr_efficiency` for ClimaParams 1.1.15                                                                                                                                                                                                                                    |                                                                                                                                                      |
 | #136         | (W21: the plume's surface-flux start)    | merged 2026-09-30 (`6657ae6c`); water and energy; a chosen, test-supported rule; W50 and E89 recorded                                                                                                                                                                                                                                                                                 |                                                                                                                                                      |
+| #137         | `claude/option-c-revision`               | merged 2026-10-01 (`b4ebfca5`); C's revision for known issue 7; W49's V2 counts as its validation, V5's `led_fix` at site 23 is an open failure                                                                                                                                                                                                                                       |                                                                                                                                                      |
 
 Only the owner merges. The token cannot mark a PR ready for review. Rows #104
 to #126 were read from GitHub on 2026-09-28.
 Rows #127 to #135 are from the coordinating session's report of 2026-09-30,
-not read from GitHub here. Not yet in a PR: `claude/w21-surface-flux`
-(local head `16453638`) and `claude/option-c-revision` (`a4b492ec`).
+not read from GitHub here. Row #137 is from the coordinating session's
+report of 2026-10-01, also not read from GitHub here. Both branches that this
+sentence once named as not yet in a PR are now merged: `claude/w21-surface-flux`
+as #136 and `claude/option-c-revision` as #137.
 
 ## Jobs in flight
 
@@ -684,6 +689,15 @@ not read from GitHub here. Not yet in a PR: `claude/w21-surface-flux`
     numbers need not carry over. The score is of the bundle and bounds the
     rule's part. 11.7 states no consequence for a V5 failure, so the owner
     decides (FINDINGS W49, `output/w49/`).
+  - **2026-10-01, the owner's decision on W49, and #137 merged**
+    (`b4ebfca5`): W49's V2 counts as C's validation (V2 at site 23 is 4.1e-4
+    against 2e-3; the control on `main` is 2.2e-2). V5's `led_fix` fails at
+    site 23 and stays an open failure: `pbl` is at 7.33% and `free` at 6.52%
+    against 2%, and the control is at 2.73% and 2.27%, a rise of about 2.7 to
+    2.9 times with the cause untraced. A follow-up probe will trace the rise.
+    It is not designed or run. The record is design 11.10 (item 10),
+    DECISIONS.md (2026-10-01) and FINDINGS W49. Known issue 7's option C
+    revision is closed in the records except for that probe.
 
 ## The housekeeping, H0 to H7: done
 
@@ -740,7 +754,10 @@ OD7 is the only open numbered decision. Open now, each with its entry in
 
   - **OD7**, G4.15's rule for energy, deferred until site 23 can be scored.
 
-  - **Option C after its validation (W42).** V2 fails at site 23 (2.2%
+  - ~~**Option C after its validation (W42).**~~ *Closed 2026-10-01: #137
+    merged, W49's V2 counts as C's validation, and V5's `led_fix` stays an
+    open failure that a probe will trace (the update line of 2026-10-01).*
+    The text as it stood: V2 fails at site 23 (2.2%
     against 0.2%) and `pbl`'s per-tag row (2.03%). By the design note's
     section 8.3 the owner decides; site 23's long-run rerun, which OD7 waits
     on, is not submitted until then. *Decided 2026-09-25: probe the miss

@@ -81,6 +81,11 @@ Restated 2026-09-30 from the findings; the plan's section 2 holds the criteria's
         cell by cell), and rerun the probe on `main` now with #118's check at
         every step. Both are pre-registered as an amendment to section 9. No
         fix is chosen yet. W45's investigation waits until C's revision.
+      + *2026-10-01:* C's revision is built, validated by W49 and merged as
+        #137 (`b4ebfca5`). W49's V2 passes: the largest gross is 4.1e-4
+        against 2e-3, and the control on `main` is 2.2e-2. The owner counted
+        it as C's validation. V5's `led_fix` fails at site 23 and stays open
+        (the item "Trace V5" under known issue 7's fix).
   - [ ] **OD9 to OD14, proposed by the provenance pathway.** *Scope added
     (provenance pathway, 2026-09-26):*
     [PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), section 9. They are in [the
@@ -180,6 +185,15 @@ Restated 2026-09-30 from the findings; the plan's section 2 holds the criteria's
     is checked at every accepted step, as the owner decided on 2026-09-27.
     #126, merged on 2026-09-28 (`d2f119ab`), renamed D's total an
     accumulator, the owner's choice.
+    *2026-10-01 (W49, #137):* C's revision is merged (`b4ebfca5`). W49's V2
+    counts as C's validation (largest gross 4.1e-4 against 2e-3; the control
+    on `main` 2.2e-2). V5's `led_fix` fails at site 23: `pbl` 7.33% and
+    `free` 6.52% against 2%, where the control is at 2.73% and 2.27% (about
+    2.7 to 2.9 times, cause untraced). The owner recorded it as an open
+    failure (design 11.10, item 10; DECISIONS.md, 2026-10-01).
+  - [ ] **Trace V5 `led_fix`'s rise at site 23 (W49).** The owner decided on
+    2026-10-01 that a follow-up probe traces it. Not designed or run yet. The
+    rise is 2.7 to 2.9 times `main`'s, and its cause is untraced.
   - [x] **R2, the Newton row, on D4-W** (W25's scoring: 4.1e-3 to 1.7e-2 at two
     iterations, against 1e-3). *The owner, 2026-09-25:* measure three and four
     iterations first (job `13944802`); then raise OD1's Newton count or revise
@@ -484,8 +498,11 @@ jobs from frozen snapshot worktrees under `claude_work/g3/wp3/`.
         section 5), its config `lr_s23_probe_ledgers.yml`, its run tree
         `../ClimaAtmosResiDyn-issue7-probe-run` (the record, #109 and
         `claude/long-run-samesign`; one conflict, resolved). Not submitted.
-      + [ ] The owner's choice among B, C and D, then the fix and its tests,
-        before the sphere (step 8a). *2026-09-30: C was chosen and is built
+      + [x] The owner's choice among B, C and D, then the fix and its tests,
+        before the sphere (step 8a). *2026-10-01: done: C is merged as #137
+        (`b4ebfca5`), W49 validates it, and V5's `led_fix` at site 23 stays
+        an open failure (the item "Trace V5" under known issue 7's fix).*
+        *2026-09-30: C was chosen and is built
         on `claude/option-c-revision` (`a4b492ec`; W49, design section 11):
         the rule, coupling-1 and the review's wording fixes. The 30-day
         parity passes Q8 twice (`cfb72587`, `a4b492ec`): every model field is
