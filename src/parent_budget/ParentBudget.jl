@@ -1,14 +1,15 @@
 """
     ClimaAtmos.Internals.ParentBudget
 
-The parent budget: the accounting that decides whether an accepted
-timestep's change in atmospheric mass, total water, and total energy is
-explained by what the model recorded.
+The parent budget: an opt-in conservation audit. Over each accepted step it
+checks whether air mass, total water and total energy changed by what the
+step applied, within a declared tolerance. It is off by default, and
+`parent_budget_mode: summary` or `audit` switches it on. It never writes the
+model state. With it on, every model field that exists without it stays bit for
+bit as in the same run with it off, under the default solver settings. Only its
+own fields and output are added.
 
-**Unstable internal machinery.** Nothing here is exported, public, or covered by
-any compatibility promise. A simulation constructs a parent budget only when
-`parent_budget_mode` is not `off`, and the parent budget never writes the state, so a
-run with it off is the run without it. See
+Nothing here is exported, public, or covered by a compatibility promise. See
 `docs/src/parent_budget/` for the contract these types implement.
 
 The files are included in dependency order.
@@ -21,20 +22,19 @@ The files are included in dependency order.
     row, and builds the schema a configuration selects from those rows.
   - `reduction.jl` packs local values into a fixed layout and reduces the whole
     packet with one collective.
-  - `journal.jl` records what happened, with evidence per component.
-  - `transaction.jl` compares the two and produces the three residuals.
+  - `journal.jl` stores what happened, with evidence per component.
+  - `transaction.jl` compares the journal with the schema and produces the
+    three residuals.
   - `transfer_legs.jl` measures each modeled leg of a transfer event inside the
-    applied-update event that applied it. Some legs are that event's own total,
-    the others are read from the flux field the tendency reads.
+    applied-update event that applied it.
   - `checkpoint.jl` carries the closing endpoint through a checkpoint, checks
-    the restored state against it, and declares the custom callbacks.
+    the restored state against it, and declares the read-only callbacks.
   - `calibration.jl` reads the committed κ calibration table and states the
     protocol that fills it.
-  - `adapter.jl` is the place that knows the timestepper's stages and hooks.
-    It captures the accepted envelopes after each step, meters the
-    applied-update events the tendency code brackets, and drives the
-    transactions.
-  - `report.jl` writes the claim certificate at the end of a run.
+  - `adapter.jl` is the only file that knows the timestepper's stages and
+    hooks. It captures the accepted envelopes after each step, meters the
+    applied-update events, and drives the transactions.
+  - `report.jl` writes `parent_budget_report.yaml` at the end of a run.
 """
 module ParentBudget
 
@@ -74,14 +74,20 @@ import ...TracerNonnegativityElementConstraint
 import ...TracerNonnegativityVerticalWaterBorrowing
 # The adapter asks the space whether it performs DSS.
 import ...do_dss
-# The parent-budget half of the applied-update event. The functions are declared in
-# the main module, next to the tag half, so the tendency code calls one API
-# whether the parent budget is on or off; the adapter adds its methods here.
+# The parent budget's half of the applied-update event. The functions are
+# declared in the main module, next to the tags' half. The tendency code calls
+# one API whether the parent budget is on or off, and the adapter adds its
+# methods here.
 import ...open_parent_budget_event!
 import ...close_parent_budget_event!
 # The slab's prescribed Q-flux, read for its leg through the same function the
 # slab tendency applies it with.
 import ...slab_q_flux
+# The audit's extra implicit evaluation keeps the water tags' ledger rate, which
+# the post-solve hook reads at the solve's last evaluation. The adapter saves
+# and restores it around that evaluation.
+import ...save_water_tag_exp_rate!
+import ...restore_water_tag_exp_rate!
 
 include("integrals.jl")
 include("schema.jl")

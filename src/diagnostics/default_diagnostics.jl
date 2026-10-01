@@ -740,7 +740,7 @@ function default_diagnostics(
             ],
         )
     end
-    # The repair ledgers are running totals too, so they are sampled like the
+    # The fix ledgers are running totals too, so they are sampled like the
     # records. Without them a run with the repair on cannot say how much energy
     # the repair moved between the tags, or where. With the repair off they are
     # zero, so they are left out.

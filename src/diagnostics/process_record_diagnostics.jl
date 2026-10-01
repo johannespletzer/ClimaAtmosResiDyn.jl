@@ -7,10 +7,9 @@
 # `register_process_record_diagnostics!(model)` runs during simulation setup,
 # from `setup_diagnostics_and_writers` in `simulation/AtmosSimulations.jl`.
 #
-# A record is a prognostic field holding the time-integrated signed increment
-# one process applied, in J/m³ or kg/m³. It is divided by the current density
-# here, so like `q_tag_fix_<name>` it is not exactly the sum of the per-step
-# specific increments.
+# A record is a prognostic field that accumulates the signed change one process
+# made, in J/m³ or kg/m³. It is divided by the current density here, so like
+# `q_tag_fix_<name>` it is not exactly the sum of the per-step specific changes.
 #
 # `ALL_DIAGNOSTICS` is a process-global registry, so an entry registered by an
 # earlier simulation can outlive it. Guard on the field actually being in the

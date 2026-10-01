@@ -51,10 +51,12 @@ with it, and one written without it only without it.
     diffuse as the parent's diffusing water.
   - **Microphysics.** The 1-moment scheme moves water between the compartments.
     The tags follow it with six gross flows between the compartments
-    ([`ClimaAtmos.WATER_TAG_FLOW_NAMES`](@ref)). Each flow carries its donor's
-    composition over the step. The flows sum to the model's tendency to
-    rounding. The remainder, or all of the change where the flows are not
-    available, moves by the net-flow rule. The flows are summed over the
+    ([`ClimaAtmos.WATER_TAG_FLOW_NAMES`](@ref)). Each flow carries the
+    composition of the compartment it leaves, over the step. The flows sum to the
+    model's tendency to rounding. The remainder, or all of the change where the
+    flows are not available, moves by the net-flow rule. Under that rule, a
+    compartment that loses gives its own composition, and one that gains takes the
+    losers' compositions weighted by their losses. The flows are summed over the
     substeps, and the tags move once per model step.
   - **Limiters and constraints.** A correction that changes a compartment moves
     the change between the part and the tag's non-precipitating part. Floors
@@ -91,7 +93,7 @@ source of `q_tag_res + q_tag_negative`, with the opposite sign. For the
 hyperdiffusion it also holds the reference-profile term
 ``(1 - \sum_i \varphi_i) q_\mathrm{tot,r}``.
 
-The donor's composition is taken over the step
+The composition of the compartment a flow leaves is taken over the step
 ([`ClimaAtmos.water_tag_pool_shares`](@ref)): the compartment's water at the
 start, mixed with what flowed into it during the step. Water can pass through a
 compartment within one step, as rain that forms and evaporates again. The start
@@ -143,9 +145,19 @@ is slightly negative. Without the key it is the negative part of
 ``\rho q_\mathrm{tot}`` alone, so its values with and without the key do not
 compare. `q_tag_res`, `q_tag_negative` and the partition's parts add up to
 ``q_\mathrm{tot}``, to rounding. Under `water_tag_transport: increment` the
-follower takes the increment of the non-precipitating water's target, and
-`q_tag_inc_negative` holds what it gives the tags for that water's negative
+correction after each solve takes the increment of the non-precipitating water's
+target, and `q_tag_inc_negative` holds what it gives the tags for that water's negative
 part. Where no compartment is negative, nothing changes, bit for bit.
+
+A transfer into a negative compartment takes the target's treatment. In a cell
+where a compartment is below zero, a flow that touches it is read in its actual
+direction, and its parts take no microphysics change. Its pool starts empty, so
+it passes on only what came in, with that water's composition. What it keeps
+fills its negative part, and what it gives beyond its inflow carries no tag's
+water and lands in `q_tag_res`. The net-flow rule gives a negative compartment
+no gain. The ledgers `q_tag_exp_negative` and `q_tag_exp_negative_precip`
+record what the negative non-precipitating water and the negative rain and
+snow keep.
 
 ## Limits and cost
 
@@ -184,6 +196,9 @@ ClimaAtmos.water_tag_gross_flow_change
 ClimaAtmos.water_tag_pool_shares
 ClimaAtmos.water_tag_net_flow_change
 ClimaAtmos.water_tag_microphysics_change
+ClimaAtmos.water_tag_oriented_flows
+ClimaAtmos.water_tag_microphysics_withheld
+ClimaAtmos.water_tag_negative_compartments
 ClimaAtmos.water_tag_microphysics_audit
 ClimaAtmos.water_tag_precipitation_microphysics_tendency!
 ClimaAtmos.snapshot_water_tag_precipitation_tendency!

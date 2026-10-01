@@ -256,6 +256,62 @@ column_integral(p, ᶜx) = (
 
             # 3. The model's fields.
             test_same_model_fields(Y, Y_plain)
+
+            # 4. C's revision in copies mode (the review of 2026-09-30,
+            # coupling-1). In the cell with the updraft's strongest rain-out,
+            # the grid parent is made negative and the updraft's area too, so
+            # the updraft's rain-out is a gain. Stepped explicitly, the
+            # bracket withholds every tag's gain from the updraft's part
+            # there, the source tag's too (question 4). The parent's rule
+            # would give it. Elsewhere the two rules agree bit for bit.
+            if mode == "copies"
+                Y_negative = copy(Y)
+                ᶜdqʲ = p.precomputed.ᶜmp_tendencyʲs.:(1).dq_tot_dt
+                k = argmin(vec(parent(ᶜdqʲ)))
+                @test parent(ᶜdqʲ)[k] < 0
+                parent(Y_negative.c.ρq_tot)[k] = -1e-6
+                ᶜρaʲ = parent(Y_negative.c.sgsʲs.:(1).ρa)
+                ᶜρaʲ[k] = -abs(ᶜρaʲ[k])
+                at(ᶜx) = parent(ᶜx)[k]
+                @test at(copy(CA._rainout_updraft(Y_negative, p))) > 0
+                function split_with(rule)
+                    ᶜdest = CA._water_fix_fields(Y_negative.c.ρ, model.tags)
+                    CA.add_split_rainout!(ᶜdest, Y_negative, p, model, nothing, rule)
+                    return ᶜdest
+                end
+                target = split_with(CA.TargetGain())
+                before = split_with(CA.ParentGain())
+                @test CA.microphysics_gain_rule(p.atmos) === CA.TargetGain()
+                @test iszero(at(partition(target)))
+                @test at(partition(before)) > 0
+                # Linear indices, as `k` is. `eachindex` of the 5-d parent array
+                # gives Cartesian indices, which never equal `k`, so the
+                # cell `k` itself, where the rules differ by design, would
+                # be among `others`.
+                others = [i for i in eachindex(vec(parent(Y_negative.c.ρ))) if i != k]
+                ᶜsgsʲ = Y_negative.c.sgsʲs.:(1)
+                Δʲ = at(copy(CA._rainout_updraft(Y_negative, p)))
+                source_gain = 0.0
+                for tag in model.tags
+                    new_part = vec(parent(CA.tag_field(target, tag)))
+                    old_part = vec(parent(CA.tag_field(before, tag)))
+                    @test isequal(new_part[others], old_part[others])
+                    # At `k` the updraft's part, `Δʲ φʲ`, is withheld.
+                    φʲ = CA.water_tag_fraction(
+                        at(CA.updraft_copy_field(ᶜsgsʲ, tag)),
+                        at(ᶜsgsʲ.q_tot),
+                    )
+                    @test new_part[k] ≈ old_part[k] - Δʲ * φʲ atol =
+                        1e-12 * abs(Δʲ)
+                    CA._is_partition_tag(tag) || (source_gain += Δʲ * φʲ)
+                end
+                # The source tag's copy holds water there, so the check is
+                # not vacuous.
+                @test source_gain > 0
+                # The bracket itself takes the explicit rule.
+                Yₜ_negative = explicit_microphysics_bracket(Y_negative, p, t)
+                @test iszero(at(partition(Yₜ_negative.c)))
+            end
         end
     end
 end

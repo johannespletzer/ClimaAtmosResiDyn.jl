@@ -31,6 +31,7 @@ What is tested here, without a simulation:
 using Test
 import Random
 import ClimaAtmos as CA
+import ClimaParams as CP
 import ClimaCore.MatrixFields: @name
 import CloudMicrophysics.BulkMicrophysicsTendencies as BMT
 
@@ -318,13 +319,67 @@ end
         # The partition's `N` takes the whole loss where it holds all of its
         # compartment.
         @test ᶜYₜ.ρq_tag_low .+ ᶜYₜ.ρq_tag_high ≈ ᶜΔ
+
+        # C's revision: a bracket's gain reaches the `N` parts only where the
+        # non-precipitating water is not negative. In the second cell
+        # `ρq_tot` is positive but `N` is -1, so the gain fills `N`'s negative
+        # part and no `N` part changes, the source tag's included (question
+        # 4).
+        ᶜY_gain = merge(ᶜY, (; ρq_tot = FT[8, 2, 8, 8], ρq_rai = FT[2, 2, 0, 4]))
+        ᶜparent_gain = CA.water_tag_parent(ᶜY_gain, model)
+        @test collect(ᶜparent_gain .+ 0) == FT[4, -1, 8, 4]
+        ᶜΔ_gain = FT[1, 2, 3, 1]
+        ᶜYₜ = map(_ -> zeros(FT, 4), (; ρq_tag_low = 0, ρq_tag_high = 0, ρq_tag_evap = 0))
+        CA._accumulate_water_tags!(
+            ᶜYₜ,
+            ᶜY_gain,
+            ᶜmasks,
+            ᶜΔ_gain,
+            :surface_flux,
+            tags,
+            ᶜparent_gain,
+        )
+        @test ᶜYₜ.ρq_tag_low[2] == 0 && ᶜYₜ.ρq_tag_high[2] == 0
+        @test ᶜYₜ.ρq_tag_low .+ ᶜYₜ.ρq_tag_high ≈ FT[1, 0, 3, 1]
+        @test ᶜYₜ.ρq_tag_evap == FT[1, 0, 3, 1]
+        # The same through the bracket's entry point, which reads the sign
+        # from the parent the key gives (`water_tag_parent`). With the key the
+        # second cell's gain is withheld, since `N` is -1. Without it the sign
+        # is that of `ρq_tot`, 2, and the partition takes the gain.
+        for (tagging_model, withheld) in ((model, true), (plain, false))
+            p = (;
+                atmos = (; water_tagging_model = tagging_model),
+                tagging = (; ᶜwater_masks = ᶜmasks),
+                scratch = (; ᶜtagging_q_snapshot = zeros(FT, 4)),
+            )
+            Yₜ = (;
+                c = merge(
+                    (; ρq_tot = copy(ᶜΔ_gain), q_tag_exp_negative = zeros(FT, 4)),
+                    map(
+                        _ -> zeros(FT, 4),
+                        (; ρq_tag_low = 0, ρq_tag_high = 0, ρq_tag_evap = 0),
+                    ),
+                ),
+            )
+            CA.attribute_tagged_ρq_tot!(Yₜ, (; c = ᶜY_gain), p, :surface_flux)
+            @test iszero(Yₜ.c.ρq_tag_low[2] + Yₜ.c.ρq_tag_high[2]) == withheld
+            @test Yₜ.c.ρq_tag_low[2] + Yₜ.c.ρq_tag_high[2] ≈
+                  (withheld ? 0 : ᶜΔ_gain[2]) atol = 10 * eps(FT)
+            # The ledger takes the withheld gain by the sign of `N` under the
+            # key, and the source tag gains nothing there either (question 4).
+            @test Yₜ.c.q_tag_exp_negative == (withheld ? FT[0, 2, 0, 0] : zeros(FT, 4))
+            @test iszero(Yₜ.c.ρq_tag_evap[2]) == withheld
+        end
     end
 end
 
 # Random states of the 1-moment scheme: warm and cold, sub- and
-# supersaturated, with and without rain and snow.
+# supersaturated, with and without rain and snow, in rising and sinking air.
 function microphysics_states(FT, n; seed = 1234)
     rng = Random.MersenneTwister(seed)
+    # The vertical velocity draws from a generator of its own, so it leaves
+    # the other variables' random sequence alone.
+    rng_w = Random.MersenneTwister(seed + 1)
     params = CA.ClimaAtmosParameters(FT)
     tps = CA.Parameters.thermodynamics_params(params)
     states = map(1:n) do _
@@ -337,28 +392,58 @@ function microphysics_states(FT, n; seed = 1234)
         q_sno = FT(rand(rng) < 0.6 ? 5e-4 * rand(rng) : 0)
         q_vap = q_sat * FT(0.8 + 0.25 * rand(rng))
         q_tot = q_vap + q_lcl + q_icl + q_rai + q_sno
-        (; ρ, T, q_tot, q_lcl, q_icl, q_rai, q_sno)
+        w = FT(-2 + 7 * rand(rng_w))
+        (; ρ, T, w, q_tot, q_lcl, q_icl, q_rai, q_sno)
     end
     return (params, states)
+end
+
+# A 1-moment parameter set in which `w` matters. ClimaParams 1.2 sets both
+# `*_stratiform_scale` keys to 1, so Kessler1M's timescale and threshold do
+# not depend on `w`. A ten times longer stratiform timescale makes the rain
+# formation depend on it, as in upstream's microphysics_wrappers.jl test.
+function w_active_1m_params(FT)
+    toml_dict = CP.create_toml_dict(
+        FT;
+        override_file = Dict(
+            "rain_autoconversion_timescale_stratiform_scale" =>
+                Dict("value" => 10.0, "type" => "float"),
+        ),
+    )
+    params = CA.ClimaAtmosParameters(toml_dict)
+    return CA.Parameters.microphysics_1m_params(params)
 end
 
 @testset "The microphysics by gross flows" begin
     for FT in (Float32, Float64)
         (params, states) = microphysics_states(FT, 400)
-        mp = CA.Parameters.microphysics_1m_params(params)
+        mp = w_active_1m_params(FT)
         tps = CA.Parameters.thermodynamics_params(params)
         dt = FT(60)
+        # `w` reaches the reference: at rest and in an updraft it forms rain
+        # at different rates. Else the replay below could drop `w` unseen.
+        w_dependent = count(states) do s
+            rain(w) =
+                BMT.bulk_microphysics_tendencies(
+                    BMT.LinearizedAverage(),
+                    BMT.Microphysics1Moment(),
+                    mp, tps, s.ρ, s.T, w, s.q_tot, s.q_lcl, s.q_icl, s.q_rai,
+                    s.q_sno, dt, 1,
+                ).dq_rai_dt
+            rain(FT(0)) != rain(FT(5))
+        end
+        @test w_dependent > 10
         two_way = 0
         for s in states, nsub in (1, 3)
             reference = BMT.bulk_microphysics_tendencies(
                 BMT.LinearizedAverage(),
                 BMT.Microphysics1Moment(),
-                mp, tps, s.ρ, s.T, s.q_tot, s.q_lcl, s.q_icl, s.q_rai, s.q_sno,
-                dt, nsub,
+                mp, tps, s.ρ, s.T, s.w, s.q_tot, s.q_lcl, s.q_icl, s.q_rai,
+                s.q_sno, dt, nsub,
             )
             flows = CA.water_tag_1m_flows(
-                mp, tps, s.ρ, s.T, s.q_tot, s.q_lcl, s.q_icl, s.q_rai, s.q_sno,
-                dt, nsub,
+                mp, tps, s.ρ, s.T, s.w, s.q_tot, s.q_lcl, s.q_icl, s.q_rai,
+                s.q_sno, dt, nsub,
             )
             # The substeps repeat CloudMicrophysics' arithmetic, so the net
             # tendencies are the model's. The compiler may fuse a `muladd`
@@ -394,9 +479,12 @@ end
         quad = CA.SGSQuadrature(FT; quadrature_order = 3)
         s = states[findfirst(s -> s.q_rai > 0 && s.q_lcl > 0, states)]
         corr_Tq = FT(0.6)
+        # Uniform fractions inside (0, 1), so both halves of the condensate
+        # reconstruction are used.
         args = (
-            quad, mp, tps, s.ρ, s.T, s.q_tot, s.q_lcl, s.q_icl, s.q_rai, s.q_sno,
-            FT(1), FT(1e-7), corr_Tq, s.q_lcl + s.q_icl, FT(1), dt, 2,
+            quad, mp, tps, s.ρ, s.T, s.w, s.q_tot, s.q_lcl, s.q_icl, s.q_rai,
+            s.q_sno, FT(1), FT(1e-7), corr_Tq, s.q_lcl + s.q_icl, FT(1),
+            FT(0.3), FT(0.6), dt, 2,
         )
         reference = CA.microphysics_tendencies_1m(BMT.Microphysics1Moment(), args...)
         flows = CA.microphysics_tendencies_1m(CA.WaterTagFlows1M(), args...)
@@ -574,6 +662,287 @@ end
           (0.3, 0.4, 0.6)
 end
 
+# Transfers into a negative compartment (the owner, 2026-09-30; the design
+# note, 11.11.5). A compartment below zero has a target of zero. Its parts take
+# no change, a flow that touches it is read in its actual direction, its pool
+# starts empty and passes on only what came in, and what it keeps goes to the
+# ledgers. Where no compartment is negative, every number is the old one.
+@testset "Transfers into a negative compartment" begin
+    Δt = 60.0
+    Fv = 1e-7
+    flows(; NR = 0.0, NS = 0.0, RN = 0.0, RS = 0.0, SR = 0.0, SN = 0.0) =
+        (; NR, NS, RN, RS, SR, SN)
+    net_rai(F) = (F.NR + F.SR) - (F.RN + F.RS)
+    net_sno(F) = (F.NS + F.RS) - (F.SN + F.SR)
+    change(F, q, φᵢ, neg) = CA.water_tag_microphysics_change(
+        F,
+        net_rai(F),
+        net_sno(F),
+        q...,
+        Δt,
+        φᵢ...,
+        neg...,
+    )
+    withheld(F, neg) =
+        CA.water_tag_microphysics_withheld(F, net_rai(F), net_sno(F), neg...)
+    # A partition of two tags. A negative compartment's shares are zero.
+    parts_sum(F, q, φ, neg) =
+        ntuple(k -> sum(i -> change(F, q, φ[i], neg)[k], 1:2), 3)
+    rain_negative = (false, true, false)
+    snow_negative = (false, false, true)
+    φ_rain_negative = ((0.3, 0.0, 0.4), (0.7, 0.0, 0.6))
+    φ_snow_negative = ((0.3, 0.4, 0.0), (0.7, 0.6, 0.0))
+
+    # (a) A flow from `N` into negative rain, which gives nothing on: the `N`
+    # parts lose it by their composition, the rain parts take nothing, and
+    # the rain and snow ledger takes all of it.
+    F = flows(NR = Fv)
+    q = (1e-2, 0.0, 1e-3)
+    for i in 1:2
+        (ΔN, ΔR, ΔS) = change(F, q, φ_rain_negative[i], rain_negative)
+        @test ΔN ≈ -Fv * φ_rain_negative[i][1] rtol = 1e-12
+        @test ΔR == 0
+        @test ΔS == 0
+    end
+    @test withheld(F, rain_negative) == (0.0, Fv)
+    # (h) The audit is zero for negative rain: both of its terms take the gate.
+    for i in 1:2
+        audit = CA.water_tag_microphysics_audit(
+            F,
+            net_rai(F),
+            net_sno(F),
+            q...,
+            Δt,
+            φ_rain_negative[i]...,
+            rain_negative...,
+        )
+        @test audit[1] == 0
+    end
+
+    # (b) Water passes through negative snow: deposition from `N` and melting
+    # into rain, in = out. The parts take the target's rates, `N` -F, rain +F
+    # and snow 0, and the ledgers take nothing. The snow passes on the
+    # composition it came with.
+    F = flows(NS = Fv, SR = Fv)
+    q = (1e-2, 1e-3, 0.0)
+    (sN, sR, sS) = parts_sum(F, q, φ_snow_negative, snow_negative)
+    @test sN ≈ -Fv rtol = 1e-10
+    @test sR ≈ Fv rtol = 1e-10
+    @test sS == 0
+    @test withheld(F, snow_negative) == (0.0, 0.0)
+    for i in 1:2
+        @test change(F, q, φ_snow_negative[i], snow_negative)[2] ≈
+              Fv * φ_snow_negative[i][1] rtol = 1e-10
+    end
+
+    # (c) More in than out: snow keeps the difference, which the ledger
+    # takes, and the receivers take what goes out with the donors'
+    # composition. More out than in: the receivers take only what came in,
+    # and their parts fall short of their target by the rest.
+    F = flows(NS = 2Fv, SR = Fv)
+    (sN, sR, sS) = parts_sum(F, q, φ_snow_negative, snow_negative)
+    @test sN ≈ -2Fv rtol = 1e-10
+    @test sR ≈ Fv rtol = 1e-10
+    @test sS == 0
+    @test withheld(F, snow_negative)[2] ≈ Fv rtol = 1e-12
+    F = flows(NS = Fv, SR = 2Fv)
+    (sN, sR, sS) = parts_sum(F, q, φ_snow_negative, snow_negative)
+    @test sN ≈ -Fv rtol = 1e-10
+    @test sR ≈ Fv rtol = 1e-10
+    @test net_rai(F) - sR ≈ Fv rtol = 1e-10
+    @test withheld(F, snow_negative) == (0.0, 0.0)
+
+    # (d) A reversed flow, rain's evaporation below zero, read as a flow from
+    # `N` into rain: as (a).
+    F = flows(RN = -Fv)
+    q = (1e-2, 0.0, 1e-3)
+    for i in 1:2
+        (ΔN, ΔR, ΔS) = change(F, q, φ_rain_negative[i], rain_negative)
+        @test ΔN ≈ -Fv * φ_rain_negative[i][1] rtol = 1e-12
+        @test ΔR == 0
+    end
+    @test withheld(F, rain_negative) == (0.0, Fv)
+    @test CA.water_tag_oriented_flows(F, rain_negative...) == flows(NR = Fv)
+
+    # (e) The net-flow rule: a gaining compartment below zero takes nothing,
+    # and the ledger takes its gain.
+    d = 2e-8
+    @test CA.water_tag_net_flow_change(-d, d, 0.0, 0.3, 0.0, 0.4, rain_negative...) ==
+          (-d * 0.3, 0.0, 0.0)
+    @test CA.water_tag_microphysics_withheld(flows(), d, 0.0, rain_negative...) ==
+          (0.0, d)
+    @test CA.water_tag_microphysics_withheld(flows(), -d, 0.0, true, false, false) ==
+          (d, 0.0)
+
+    # (g) Where no compartment is negative, `±0` included, every output is the
+    # old formula's, bit for bit. The old net-flow rule, written out.
+    function old_net_flow(ΔN, ΔR, ΔS, φN, φR, φS)
+        lossN = max(-ΔN, zero(ΔN))
+        lossR = max(-ΔR, zero(ΔR))
+        lossS = max(-ΔS, zero(ΔS))
+        loss = lossN + lossR + lossS
+        mix =
+            loss > zero(loss) ? (lossN * φN + lossR * φR + lossS * φS) / loss :
+            zero(loss)
+        return (
+            min(ΔN, zero(ΔN)) * φN + max(ΔN, zero(ΔN)) * mix,
+            min(ΔR, zero(ΔR)) * φR + max(ΔR, zero(ΔR)) * mix,
+            min(ΔS, zero(ΔS)) * φS + max(ΔS, zero(ΔS)) * mix,
+        )
+    end
+    function old_change(F, dq_rai, dq_sno, qN, qR, qS, Δt, φN, φR, φS)
+        (ψN, ψR, ψS) = CA.water_tag_pool_shares(F, qN, qR, qS, Δt, φN, φR, φS)
+        (gN, gR, gS) = CA.water_tag_gross_flow_change(F, ψN, ψR, ψS)
+        δR = dq_rai - ((F.NR + F.SR) - (F.RN + F.RS))
+        δS = dq_sno - ((F.NS + F.RS) - (F.SN + F.SR))
+        (nN, nR, nS) = old_net_flow(-(δR + δS), δR, δS, φN, φR, φS)
+        return (gN + nN, gR + nR, gS + nS)
+    end
+    rng = Random.MersenneTwister(7)
+    for _ in 1:500
+        compartments = map(_ -> rand(rng, (1e-3 * rand(rng), 0.0, -0.0)), 1:3)
+        neg = map(x -> x < 0, Tuple(compartments))
+        @test neg == (false, false, false)
+        q = Tuple(max.(compartments, 0))
+        F = flows(; (name => 1e-7 * rand(rng) for name in CA.WATER_TAG_FLOW_NAMES)...)
+        φs = Tuple(rand(rng, 3))
+        (dq_rai, dq_sno) = (net_rai(F) + 1e-12 * randn(rng), net_sno(F))
+        new = CA.water_tag_microphysics_change(F, dq_rai, dq_sno, q..., Δt, φs..., neg...)
+        @test isequal(new, old_change(F, dq_rai, dq_sno, q..., Δt, φs...))
+        (_, aR, aS) = old_net_flow(-(dq_rai + dq_sno), dq_rai, dq_sno, φs...)
+        old = old_change(F, dq_rai, dq_sno, q..., Δt, φs...)
+        @test isequal(
+            CA.water_tag_microphysics_audit(F, dq_rai, dq_sno, q..., Δt, φs..., neg...),
+            (aR - old[2], aS - old[3]),
+        )
+        @test isequal(
+            CA.water_tag_net_flow_change(-(dq_rai + dq_sno), dq_rai, dq_sno, φs..., neg...),
+            old_net_flow(-(dq_rai + dq_sno), dq_rai, dq_sno, φs...),
+        )
+        @test CA.water_tag_microphysics_withheld(F, dq_rai, dq_sno, neg...) == (0.0, 0.0)
+    end
+
+    # (i) The audit records rain's and snow's differences only (the owner's
+    # review of #137). Under the gates the rules need not keep the tag's total.
+    # Here they do not, so the non-precipitating part's difference is not minus
+    # their sum. The review's counterexample: water cycles through negative
+    # rain, from `N` to rain, rain to snow and snow to `N`. Over `Δt = 1` the
+    # pools are `(2, 0, 1)`, and the tag holds all of `N`.
+    F = flows(NR = 2.0, RS = 1.0, SN = 1.0)
+    (q, φ) = ((2.0, 0.0, 1.0), (1.0, 0.0, 0.0))
+    (dq_rai, dq_sno) = (net_rai(F), net_sno(F))
+    @test (dq_rai, dq_sno) == (1.0, 0.0)
+    rules(neg...) = (
+        CA.water_tag_microphysics_change(F, dq_rai, dq_sno, q..., 1.0, φ..., neg...),
+        CA.water_tag_net_flow_change(-(dq_rai + dq_sno), dq_rai, dq_sno, φ..., neg...),
+        CA.water_tag_microphysics_audit(F, dq_rai, dq_sno, q..., 1.0, φ..., neg...),
+    )
+    (gross, net, audit) = rules(rain_negative...)
+    @test gross[1] ≈ -6 / 5 rtol = 1e-14
+    @test gross[2] == 0
+    @test gross[3] ≈ 2 / 5 rtol = 1e-14
+    @test net == (-1.0, 0.0, 0.0)
+    @test sum(gross) ≈ -4 / 5 rtol = 1e-14
+    @test sum(net) == -1
+    # Each record is its compartment's difference of the two rules.
+    @test audit == (net[2] - gross[2], net[3] - gross[3])
+    @test audit[1] == 0
+    @test audit[2] ≈ -2 / 5 rtol = 1e-14
+    # `N`'s difference is 1/5. Minus the records' sum is 2/5.
+    @test net[1] - gross[1] ≈ 1 / 5 rtol = 1e-13
+    @test -(audit[1] + audit[2]) ≈ 2 / 5 rtol = 1e-14
+    @test !isapprox(net[1] - gross[1], -(audit[1] + audit[2]); rtol = 0.1)
+    # Without the gates both rules keep the total, and `N`'s difference is
+    # minus the records' sum.
+    (gross₀, net₀, audit₀) = rules(false, false, false)
+    @test abs(sum(gross₀)) <= 1e-15
+    @test sum(net₀) == 0
+    @test net₀[1] - gross₀[1] ≈ -(audit₀[1] + audit₀[2]) rtol = 1e-14
+
+    # Through the model's entry points, on one cell: the flags come from the
+    # state, and the ledgers take `ρ` times the water.
+    tags = precipitation_tags()
+    model = CA.WaterTaggingModel(tags; precipitation = true)
+    part_names = (
+        CA.water_tag_state_names(model)...,
+        CA.water_tag_precip_part_state_names(model)...,
+    )
+    ρ = 1.2
+    function one_cell(ρq_rai)
+        ρq_tot = 1e-2
+        ρq_sno = 1e-4
+        N = ρq_tot - ρq_rai - ρq_sno
+        parts = (;
+            ρq_tag_low = [0.4N],
+            ρq_tag_high = [0.6N],
+            ρq_tag_evap = [0.1N],
+            ρq_rtag_low = [0.4 * max(ρq_rai, 0)],
+            ρq_rtag_high = [0.6 * max(ρq_rai, 0)],
+            ρq_rtag_evap = [0.0],
+            ρq_stag_low = [0.5ρq_sno],
+            ρq_stag_high = [0.5ρq_sno],
+            ρq_stag_evap = [0.0],
+        )
+        return (;
+            c = (;
+                ρ = [ρ],
+                ρq_tot = [ρq_tot],
+                ρq_rai = [ρq_rai],
+                ρq_sno = [ρq_sno],
+                parts...,
+            ),
+        )
+    end
+    zero_tendency() = (;
+        c = (;
+            ρq_rai = [0.0],
+            ρq_sno = [0.0],
+            NamedTuple{part_names}(ntuple(_ -> [0.0], length(part_names)))...,
+            NamedTuple{CA.water_tag_audit_state_names(model)}(
+                ntuple(_ -> [0.0], 6),
+            )...,
+            q_tag_exp_negative = [0.0],
+            q_tag_exp_negative_precip = [0.0],
+        ),
+    )
+    p = (;
+        atmos = (; water_tagging_model = model),
+        dt = Δt,
+        scratch = (;
+            ᶜtagging_q_share_norm = [0.0],
+            ᶜtagging_q_share_norm_rai = [0.0],
+            ᶜtagging_q_share_norm_sno = [0.0],
+            ᶜtagging_q_rai_snapshot = [0.0],
+            ᶜtagging_q_sno_snapshot = [0.0],
+        ),
+        tagging = (; ᶜwater_mp_flows = [flows(NR = Fv)]),
+        precomputed = (; ᶜmp_tendency = (; dq_rai_dt = [Fv], dq_sno_dt = [0.0])),
+    )
+    # The microphysics, rain negative: (a) through the entry point.
+    Y = one_cell(-1e-6)
+    Yₜ = zero_tendency()
+    CA.water_tag_precipitation_microphysics_tendency!(Yₜ, Y, p)
+    @test Yₜ.c.q_tag_exp_negative_precip[1] ≈ ρ * Fv rtol = 1e-12
+    @test Yₜ.c.q_tag_exp_negative[1] == 0
+    @test Yₜ.c.ρq_rtag_low[1] == 0 && Yₜ.c.ρq_rtag_high[1] == 0
+    @test Yₜ.c.ρq_tag_low[1] + Yₜ.c.ρq_tag_high[1] ≈ -ρ * Fv rtol = 1e-10
+    # With rain not negative, no ledger takes anything.
+    Yₜ = zero_tendency()
+    CA.water_tag_precipitation_microphysics_tendency!(Yₜ, one_cell(1e-4), p)
+    @test Yₜ.c.q_tag_exp_negative_precip[1] == 0
+    @test Yₜ.c.ρq_rtag_low[1] + Yₜ.c.ρq_rtag_high[1] ≈ ρ * Fv rtol = 1e-10
+    # (f) The vapour bracket lifts negative rain: the rain parts take
+    # nothing, the `N` parts lose it by their shares, and the rain and snow
+    # ledger takes it.
+    Yₜ = zero_tendency()
+    Yₜ.c.ρq_rai[1] = 1e-6
+    CA.attribute_water_tag_precipitation_tendency!(Yₜ, Y, p)
+    @test Yₜ.c.ρq_rtag_low[1] == 0 && Yₜ.c.ρq_rtag_high[1] == 0
+    @test Yₜ.c.ρq_tag_low[1] + Yₜ.c.ρq_tag_high[1] ≈ -1e-6 rtol = 1e-12
+    @test Yₜ.c.q_tag_exp_negative_precip[1] == 1e-6
+    @test Yₜ.c.q_tag_exp_negative[1] == 0
+end
+
 # The ordering error of the microphysics' attribution.
 #
 # The model sums the flows over the microphysics substeps and attributes them
@@ -713,14 +1082,14 @@ function microphysics_substeps(mp, tps, state, parts, Δt, nsub)
     cp_d = BMT.TDI.TD.Parameters.cp_d(tps)
     Lv_over_cp = BMT.TDI.TD.Parameters.LH_v0(tps) / cp_d
     Ls_over_cp = BMT.TDI.TD.Parameters.LH_s0(tps) / cp_d
-    (; ρ, q_tot) = state
+    (; ρ, w, q_tot) = state
     (T, q_lcl, q_icl, q_rai, q_sno) =
         (state.T, state.q_lcl, state.q_icl, state.q_rai, state.q_sno)
     Δt_sub = Δt / FT(nsub)
     sums = ntuple(_ -> zero(FT), 6)
     for _ in 1:nsub
         (; rates, flows) = CA._water_tag_1m_substep(
-            mp, tps, ρ, T, q_tot, q_lcl, q_icl, q_rai, q_sno, Δt_sub,
+            mp, tps, ρ, T, w, q_tot, q_lcl, q_icl, q_rai, q_sno, Δt_sub,
         )
         F = (; flows..., dq_rai_dt = rates.dq_rai_dt, dq_sno_dt = rates.dq_sno_dt)
         compartments = (q_tot - q_rai - q_sno, q_rai, q_sno)
@@ -907,8 +1276,8 @@ end
         for (i, nsub) in enumerate(nsubs), (j, Δt) in enumerate(steps)
             reference = microphysics_substeps(mp, tps, s, parts, Δt, nsub)
             F = CA.water_tag_1m_flows(
-                mp, tps, s.ρ, s.T, s.q_tot, s.q_lcl, s.q_icl, s.q_rai, s.q_sno,
-                Δt, nsub,
+                mp, tps, s.ρ, s.T, s.w, s.q_tot, s.q_lcl, s.q_icl, s.q_rai,
+                s.q_sno, Δt, nsub,
             )
             # The reference steps the state as `water_tag_1m_flows` does, with
             # the same arithmetic. The compiler may fuse a `muladd` in one and
@@ -1254,6 +1623,8 @@ end
             :q_tag_inc_left,
             :q_tag_inc_moved,
             :q_tag_inc_negative,
+            :q_tag_exp_negative,
+            :q_tag_exp_negative_precip,
         )
         state() = CC.Fields.FieldVector(;
             c = similar(
@@ -1291,6 +1662,7 @@ end
             atmos = (; water_tagging_model = model),
             tagging = (;
                 CA._water_tag_increment_cache(state(), model)...,
+                ᶜwater_masks = CA._tag_masks(CC.Fields.coordinate_field(ᶜspace), tags),
                 ᶜwater_parent = similar(ᶜbase),
                 ᶜwater_pos = similar(ᶜbase),
             ),
@@ -1298,6 +1670,7 @@ end
                 ᶜtagging_q_share_norm = similar(ᶜbase),
                 ᶜtagging_q_share_norm_rai = similar(ᶜbase),
                 ᶜtagging_q_share_norm_sno = similar(ᶜbase),
+                ᶜtagging_q_exp_rate = similar(ᶜbase),
                 ᶜtemp_scalar = similar(ᶜbase),
             ),
         )
@@ -1403,6 +1776,60 @@ end
             vec(parent(CA.water_closure_parent(after3, p3))),
             vec(parent(after3.c.ρq_tot)),
         )
+
+        # The key under the follower, with the ledger of the withheld gain
+        # (the owner, 2026-09-30; the design note, 11.11.5). Inside the solve
+        # rain gives `f` to `N` in cell 3, where `N` stays negative. The
+        # parent's `N` rises by `f`, the ledger takes it, and the partition's
+        # parts do not change. A transport mismatch in cells 4 and 5 has both
+        # signs and no column total. The follower then takes nothing from the
+        # partition elsewhere: `N'` is zero, and the partition's column change
+        # is the target's.
+        (f, d) = (FT(2)^-12, FT(2)^-10)
+        ρq_tot_negative = copy(ρq_tot)
+        parent(ρq_tot_negative)[3] = rai + sno - FT(2)^-10
+        Y4 = closed!(state(), ρq_tot_negative)
+        @test level(ᶜN(Y4), 3) < 0
+        # The solve's evaluations keep the ledger's implicit tendency, here
+        # its change over `dtγ`, as the solve gives it.
+        function follow(Y, U)
+            p = cache()
+            CA.snapshot_water_tag_increment!(Y, p, dtγ)
+            @. p.scratch.ᶜtagging_q_exp_rate =
+                (U.c.q_tag_exp_negative - Y.c.q_tag_exp_negative) / dtγ
+            dY = zero(U)
+            CA.correct_water_tag_increment!(dY, U, p)
+            after = copy(U)
+            @. after.c.ρq_tag_low += dtγ * dY.c.ρq_tag_low
+            @. after.c.ρq_tag_high += dtγ * dY.c.ρq_tag_high
+            return after, dY
+        end
+        ᶜN_target(Y) = @. CA.water_tag_partition_target($(ᶜN(Y)))
+        ᶜN_parts(Y) = @. Y.c.ρq_tag_low + Y.c.ρq_tag_high
+        Δz = FT(200)
+        U4 = copy(Y4)
+        parent(U4.c.ρq_rai)[3] = rai - f
+        parent(U4.c.q_tag_exp_negative)[3] += f
+        parent(U4.c.ρq_tot)[4] += d
+        parent(U4.c.ρq_tot)[5] -= d
+        @test level(ᶜN(U4), 3) < 0
+        after4, dY4 = follow(Y4, U4)
+        @test abs(sum(dtγ .* dY4.c.q_tag_inc_negative)) <= tol * Δz
+        @test abs(
+            sum(ᶜN_parts(after4) .- ᶜN_parts(Y4)) -
+            sum(ᶜN_target(U4) .- ᶜN_target(Y4)),
+        ) <= tol * Δz
+        @test abs(level(ᶜN_parts(after4), 3) - level(ᶜN_parts(Y4), 3)) <= tol
+        for name in (:ρq_rtag_low, :ρq_rtag_high, :ρq_stag_low, :ρq_stag_high)
+            @test all(iszero, parent(getproperty(dY4.c, name)))
+        end
+        # A pass-through leaves `N` and the ledger unchanged, so the negative
+        # part gives nothing.
+        U5 = copy(Y4)
+        parent(U5.c.ρq_tot)[4] += d
+        parent(U5.c.ρq_tot)[5] -= d
+        _, dY5 = follow(Y4, U5)
+        @test all(iszero, parent(dY5.c.q_tag_inc_negative))
     end
 end
 
@@ -1884,6 +2311,7 @@ end
             ρq_stag_low = FT[1, 0.5, 0],
             ρq_stag_high = FT[1, 0.5, 0],
             ρq_stag_evap = FT[0, 0, 0],
+            q_tag_exp_negative = FT[0.25, 0.5, 0],
         )
         Y = (; c = ᶜY)
         p = (;
@@ -1892,11 +2320,13 @@ end
                 ᶜtagging_q_share_norm = zeros(FT, 3),
                 ᶜtagging_q_share_norm_rai = zeros(FT, 3),
                 ᶜtagging_q_share_norm_sno = zeros(FT, 3),
+                ᶜtagging_q_exp_rate = ones(FT, 3),
             ),
             tagging = (;
                 ᶜwater_pos = zeros(FT, 3),
                 ᶜq_tag_ρq_tot_snapshot = zeros(FT, 3),
                 ᶜq_tag_partition_snapshot = zeros(FT, 3),
+                ᶜq_tag_exp_change = zeros(FT, 3),
                 q_tag_dtγ = Ref(FT(0)),
             ),
         )
@@ -1908,6 +2338,9 @@ end
         @test p.tagging.ᶜq_tag_ρq_tot_snapshot == FT[4, -2, 4]
         @test p.tagging.ᶜq_tag_partition_snapshot == FT[4, 4, 12]
         @test p.tagging.q_tag_dtγ[] == dtγ
+        # It zeroes the kept rate of the ledger of the withheld gain, which the
+        # solve's evaluations then set. It does not read the ledger.
+        @test p.scratch.ᶜtagging_q_exp_rate == zeros(FT, 3)
         # After the solve it takes `N` again, with the post-solve `dY`.
         ᶜdY = (;
             ρq_tot = FT[0.5, -1, 0.25],
@@ -2171,16 +2604,22 @@ end
             _ -> 0.0,
             NamedTuple{CA.WATER_TAG_MECHANISM_NAMES}(CA.WATER_TAG_MECHANISM_NAMES),
         )
-    state(names) = (;
+    # A state written with the ledger of the withheld gain holds one ledger
+    # without the key and two with it.
+    state(names; exp = (:q_tag_exp_negative,)) = (;
         c = (;
             NamedTuple{(:ρ, :ρq_tot, names...)}(Tuple(zeros(2 + length(names))))...,
+            NamedTuple{exp}(Tuple(zeros(length(exp))))...,
             ledgers...,
         ),
     )
     tag_names = CA.water_tag_state_names(keyed)
+    keyed_names = (tag_names..., CA.water_tag_precip_part_state_names(keyed)...)
+    keyed_exp = CA.water_tag_exp_ledger_names(keyed)
+    @test keyed_exp == (:q_tag_exp_negative, :q_tag_exp_negative_precip)
     keyed_state = (;
         c = (;
-            state((tag_names..., CA.water_tag_precip_part_state_names(keyed)...)).c...,
+            state(keyed_names; exp = keyed_exp).c...,
             map(
                 _ -> 0.0,
                 NamedTuple{CA.water_tag_audit_state_names(keyed)}(
@@ -2218,7 +2657,7 @@ end
         plain_state,
     )
     # The audit's records come with the parts.
-    no_audit = state((tag_names..., CA.water_tag_precip_part_state_names(keyed)...))
+    no_audit = state(keyed_names; exp = keyed_exp)
     @test_throws r"microphysics audit.*`water_tag_precipitation`" check(
         written,
         keyed,
@@ -2250,4 +2689,26 @@ end
     )
     @test isnothing(check(version_1, plain, plain_state))
     @test CA.WATER_TAG_CHECKPOINT_VERSION == 2
+    # The ledgers of the withheld gain (the owner, 2026-09-30). A checkpoint
+    # without them was written under the rule before and is refused, and the
+    # message names them. One without the rain and snow ledger does not
+    # restart with the key.
+    audit_records = map(
+        _ -> 0.0,
+        NamedTuple{CA.water_tag_audit_state_names(keyed)}(
+            CA.water_tag_audit_state_names(keyed),
+        ),
+    )
+    with_exp(exp) = (; c = (; state(keyed_names; exp).c..., audit_records...))
+    @test_throws r"before the water tags kept the ledger of the withheld gain \(q_tag_exp_negative, q_tag_exp_negative_precip\)" check(
+        written,
+        keyed,
+        with_exp(()),
+    )
+    @test_throws r"Missing from the file: q_tag_exp_negative_precip" check(
+        written,
+        keyed,
+        with_exp((:q_tag_exp_negative,)),
+    )
+    @test isnothing(check(written, keyed, with_exp(keyed_exp)))
 end

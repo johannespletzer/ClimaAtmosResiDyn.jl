@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# Local pre-flight for a parent-budget batch. Run it before every push so that one
-# push costs one CI round. It mirrors what CI checks, in the order the cheap checks
-# come first:
+# Local pre-flight. Run it before every push, so that one push costs one CI round.
+# It runs the cheap CI checks first, on the files the branch changed against a base
+# ref:
 #
-#   1. parse   every Julia file the branch changed, plus src/parent_budget and
+#   1. parse   every changed Julia file, plus src/parent_budget and
 #              test/parent_budget, with the Julia parser
 #   2. hygiene trailing whitespace and a final newline on changed text files, which
 #              is what the prek hooks in .pre-commit-config.yaml fix
 #   3. columns report .jl lines wider than the 92-column margin. The formatter cannot
 #              wrap comments and strings, so this is a warning, not a failure
 #   4. links   .dev/check_markdown_link_ambiguity.py on changed .jl and .md files
-#   5. shapes  .dev/check_identity_shapes.jl: a named identity tuple and the
-#              container that stores it must agree
+#   5. shapes  .dev/check_identity_shapes.jl on src/parent_budget: a named identity
+#              tuple and the container that stores it must agree
 #   6. format  the pinned JuliaFormatter =2.10.1 from .dev/format over the whole
 #              repository, exactly as the prek julia-formatter hook runs it. With
 #              --fix the files are rewritten in place, which also pads every
@@ -21,7 +21,7 @@
 #
 # Usage: .dev/preflight.sh [--base <ref>] [--fix] [--test]
 #   --base  the ref the branch is compared against to find changed files. Defaults to
-#           origin/main. For a stacked branch pass the parent branch.
+#           origin/main. For a branch that builds on another branch, pass that branch.
 set -euo pipefail
 
 base="origin/main"

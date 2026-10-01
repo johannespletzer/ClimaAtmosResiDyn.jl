@@ -139,6 +139,7 @@ include("tagged_water_edmf_copies_common.jl")
             startswith(string(name), "ρq_tag_") ||
             CA.is_tag_mechanism_ledger_name(name) ||
             CA.is_water_tag_leak_mechanism_name(name) ||
+            CA.is_water_tag_exp_ledger_name(name) ||
             CA.is_tag_per_tag_ledger_name(name)
         @test Set(filter(!is_tag, propertynames(Y_both.c))) ==
               Set(propertynames(Y_plain.c))

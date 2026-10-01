@@ -176,12 +176,14 @@ ClimaAtmos.NoGridScaleTendency
 ClimaAtmos.NoSubgridScaleTendency
 ```
 
-Closure parameters. The fields of this set, and the ClimaParams names they come
+Closure parameters. The fields of these sets, and the ClimaParams names they come
 from, are listed in [PROPHET: Closures](prophet_closures.md#Parameters):
 
 ```@docs
 ClimaAtmos.Parameters.AbstractTurbulenceConvectionParameters
 ClimaAtmos.Parameters.TurbulenceConvectionParameters
+ClimaAtmos.Parameters.AbstractSGSQuadratureParameters
+ClimaAtmos.Parameters.SGSQuadratureParameters
 ```
 
 ### Radiation
@@ -281,13 +283,14 @@ ClimaAtmos.AbstractGravityWave
 ClimaAtmos.NonOrographicGravityWave
 ClimaAtmos.OrographicGravityWave
 ClimaAtmos.FullOrographicGravityWave
-ClimaAtmos.LinearOrographicGravityWave
 ```
 
 ### Forcings
 
-Forcing terms for externally driven single-column cases are documented on the
-[Single Column Models](single_column.md) page.
+The forcing formulations are described in
+[Forcings and Idealized Cases](forcings.md); the terms for externally driven
+single-column cases are documented on the
+[Column Datasets](column_datasets_reference.md) page.
 
 ```@docs
 ClimaAtmos.AbstractForcing
@@ -309,6 +312,7 @@ ClimaAtmos.GasPhaseChem
 ### COSP and CloudSat
 
 ```@docs
+ClimaAtmos.COSPModel
 ClimaAtmos.COSP.COSPCloudSatOptics.cloudsat_gas_attenuation!
 ClimaAtmos.COSP.COSPCloudSatOptics.cloudsat_grid_mean_sizes!
 ClimaAtmos.COSP.COSPCloudSatOptics.cloudsat_optics_subcolumn!
@@ -499,24 +503,17 @@ ClimaAtmos.parallel_lu_solve!
 
 ### Parent budget
 
-The accounting layer that reconciles mass, total water, and total energy against
-the accepted discrete update. It is described in the Developer Guide: [the
-closure contract](parent_budget/contract.md) for what it claims, [the
-architecture](parent_budget/architecture.md) for how it is put together, and
-[the coverage registry](parent_budget/coverage.md) for what it covers.
-
-Only the two module docstrings are rendered, because they are what declares the
-namespace unstable. **Nothing inside them is rendered.** Users reach the parent
-budget through configuration and a report. The key `parent_budget_mode` takes
-`off` (the default), `summary` or `audit`. The key `parent_budget_attribution`
-takes `net` (the default) or `gross`. A successful run with the parent budget on
-writes the claim certificate `parent_budget_report.yaml` to its output directory
-and logs a summary. Two `AtmosSimulation` inputs do name types from inside. The
-keyword `parent_budget_tolerances` takes `BudgetTolerance` values. When the
-parent budget is on, a custom callback must be wrapped in `ReadOnlyCallback`.
-The types, the mutable journal operations and the helpers stay internal.
-Publishing them would freeze a compatibility surface around an implementation
-that is still expected to move.
+The parent budget is an opt-in conservation audit of mass, total water and total
+energy. It is internal and unstable: nothing in it is exported, and only the two
+module docstrings below are rendered. Users reach it through the keys
+`parent_budget_mode` (`off` by default, `summary` or `audit`) and
+`parent_budget_attribution` (`net` by default or `gross`), and through the report
+`parent_budget_report.yaml` that a successful run writes. Two `AtmosSimulation`
+inputs name its types: `parent_budget_tolerances` takes `BudgetTolerance` values,
+and a custom callback must be wrapped in `ReadOnlyCallback`. The
+[contract](parent_budget/contract.md) states what it claims, the
+[architecture](parent_budget/architecture.md) how it is put together, and the
+[coverage registry](parent_budget/coverage.md) what it covers.
 
 ```@docs
 ClimaAtmos.Internals
@@ -525,10 +522,10 @@ ClimaAtmos.Internals.ParentBudget
 
 ### Applied-update event
 
-The one bracket in the tendency code around every process that writes a parent
-field. The tag families and the process records read it for the labels they
-know, the parent budget for every label. These are internal functions of
-the tendency code, rendered so their cross-references resolve; they are not a
+The open and close calls in the tendency code around every process that writes a
+parent field. The tag families and the process records read the event for the
+labels they know, and the parent budget reads it for every label. These internal
+functions are rendered so that cross-references resolve. They are not a
 compatibility surface.
 
 ```@docs

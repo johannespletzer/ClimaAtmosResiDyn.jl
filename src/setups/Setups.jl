@@ -46,6 +46,7 @@ import ..stratospheric_tracer_symbols
 import ..tagging_variables
 import ..water_tagging_variables
 import ..water_tag_increment_ledger_variables
+import ..water_tag_exp_ledger_variables
 import ..energy_source_tagging_variables
 import ..energy_source_parent
 import ..energy_source_increment_ledger_variables
@@ -396,7 +397,7 @@ include("RisingThermalBubbleProfile.jl")
 include("MoistAdiabaticProfileEDMFX.jl")
 include("SimplePlume.jl")
 include("MoistBaroclinicWave.jl")
-include("RCEMIPIIProfile.jl")
+include("RCEMIPProfile.jl")
 include("PrecipitatingColumn.jl")
 include("ShipwayHill2012.jl")
 

@@ -186,7 +186,11 @@ end
         # The gross per step is at least what the ledger holds, per cell and
         # per column, since each ledger starts at zero.
         (; ledgers) = p.tagging.tag_ledger_steps
-        @test propertynames(ledgers) == CA.water_tag_mechanism_names(model)
+        # The ledger of the withheld gain (C's revision) follows the mechanisms.
+        @test propertynames(ledgers) == (
+            CA.water_tag_mechanism_names(model)...,
+            CA.water_tag_exp_ledger_names(model)...,
+        )
         for name in propertynames(ledgers)
             ᶜL = getproperty(Y.c, name)
             (; ᶜgross, colgross) = getproperty(ledgers, name)
@@ -450,7 +454,6 @@ end
         ᶜw = zero.(Y.c.ρ) .+ 3.0
         ᶜinv_ρ̂ = zero.(Y.c.ρ) .+ 1.0
         ᶠJ = CA.Fields.local_geometry_field(Y.f).J
-        α_lat = 1.0
         ᶜq_rain = ᶜsgsʲ.q_rai .+ 1e-6
         ᶜinflow = Y.c.ρ .* 1e-6
         ᶜzero = zero.(Y.c.ρ)
@@ -470,7 +473,6 @@ end
                 ᶜw,
                 ᶜa,
                 ᶜρ⁰w⁰q⁰,
-                α_lat,
                 ᶜinv_ρ̂,
                 ᶠJ,
             )
@@ -484,7 +486,6 @@ end
                     ᶜqʲ .* getproperty(up, name),
                     ᶠJ,
                     ᶜρ⁰w⁰q⁰ .* getproperty(env, name),
-                    α_lat,
                 )
                 ᶜχₜ = getproperty(Yₜ.c.sgsʲs.:(1), Symbol(:q_tag_, name))
                 @test maximum(abs, parent(ᶜχₜ)) > 0
@@ -517,7 +518,8 @@ end
         @test isnothing(plain.integrator.p.atmos.water_tagging_model)
         is_tag(name) =
             startswith(string(name), "ρq_tag_") ||
-            CA.is_tag_mechanism_ledger_name(name)
+            CA.is_tag_mechanism_ledger_name(name) ||
+            CA.is_water_tag_exp_ledger_name(name)
         @test Set(filter(!is_tag, propertynames(Y.c))) ==
               Set(propertynames(Y_plain.c))
         for name in propertynames(Y_plain.c)
@@ -576,7 +578,10 @@ end
         integrator = copies.integrator
         (; ledgers) = integrator.p.tagging.tag_ledger_steps
         names = keys(ledgers)
-        @test names == CA.water_tag_mechanism_names(model)
+        @test names == (
+            CA.water_tag_mechanism_names(model)...,
+            CA.water_tag_exp_ledger_names(model)...,
+        )
         L_before = map(n -> Float64.(parent(getproperty(integrator.u.c, n))), names)
         G_before = map(n -> copy(parent(getproperty(ledgers, n).ᶜgross)), names)
         CA.CTS.step!(integrator)

@@ -20,7 +20,9 @@ refused.
 
 The tags' own ledgers and the accumulators that a checkpoint carries need no
 version of their own. The guard and `restore_tag_ledger_checkpoint!` check them
-by whether the file holds them.
+by whether the file holds them. So does the guard for the ledger of the withheld
+gain, `q_tag_exp_negative`. No recorded attribute changes meaning, so the
+version stays 2.
 """
 const WATER_TAG_CHECKPOINT_VERSION = 2
 
@@ -94,10 +96,11 @@ Refuse a restart that would change what the water tags in `restart_file` mean.
 It checks, in this order, and stops at the first mismatch:
 
  1. The water tag fields in `Y`, the rain and snow parts, the increment's
-    ledger, the tags' copies in the first updraft, then the ledgers per
-    mechanism, the leak correction's and each tag's own, then the
-    microphysics audit's fields, against what `model` configures. A
-    checkpoint without the ledgers per mechanism is refused here. A changed
+    ledger, the ledgers of the withheld gain, the tags' copies in the first
+    updraft, then the ledgers per mechanism, the leak correction's and each
+    tag's own, then the microphysics audit's fields, against what `model`
+    configures. A checkpoint without the ledgers per mechanism or the ledger of
+    the withheld gain is refused here. A changed
     `water_tag_precipitation`, `water_tag_transport`,
     `water_tag_updraft_copy`, `water_tag_ledger_per_tag` or
     `water_tag_leak_correction` fails here,
@@ -117,14 +120,13 @@ the cache is built, so a refused restart fails in seconds.
 
 What continues through a restart:
 
-  - The state ledgers: the ledgers per mechanism, the increment follower's
-    ledger, the leak correction's ledgers and each tag's own ledgers. They are
+  - The state ledgers: the ledgers per mechanism, the increment ledger, the leak correction's ledgers and each tag's own ledgers. They are
     fields of the state, so they continue from the checkpoint. A checkpoint
     without the configured ones is refused, in step 1. Under
     `water_tag_precipitation: true` the microphysics audit's fields are state
     fields too, and continue the same way.
-  - The cache accumulators: the repair ledgers `q_tag_fix_<name>` and
-    `q_tag_upfix_<name>`, their gross twins and counts, and each state
+  - The cache accumulators: the fix ledgers `q_tag_fix_<name>` and
+    `q_tag_upfix_<name>`, their grosses and counts, and each state
     ledger's per-step gross, column gross, events and attempted total. The
     checkpoint carries them beside the state, and
     `restore_tag_ledger_checkpoint!` reads them back after the cache is built,
@@ -170,6 +172,13 @@ function check_water_tag_checkpoint(restart_file, model, Y, context)
         "fields of the water tags' increment ledger",
         "water_tag_transport",
         "",
+    )
+    # The ledgers of the withheld gain. A checkpoint without them was written
+    # under the rule before, and is refused.
+    check_water_tag_exp_ledgers(
+        restart_file,
+        Y,
+        water_tag_exp_ledger_names(water_model),
     )
     # As for the energy source tags' copies, the first updraft stands for all.
     check_restart_fields(
@@ -284,6 +293,33 @@ function check_water_tag_checkpoint(restart_file, model, Y, context)
         )
     end
     return nothing
+end
+
+# A checkpoint without the ledger of the withheld gain is refused with its own
+# message. Its tags took a gain where the parent was below zero, and the ledger
+# would start at zero partway through the run. The generic message would ask for
+# the same `water_tracers`. Otherwise the ledgers are in the file or are not, as
+# for the other ledgers.
+function check_water_tag_exp_ledgers(restart_file, Y, expected)
+    if !isempty(expected) &&
+       !any(is_water_tag_exp_ledger_name, propertynames(Y.c))
+        error(
+            "The restart file $restart_file was written before the water tags \
+            kept the ledger of the withheld gain ($(join(expected, ", "))). \
+            Its tags took a process's gain where the parent was below zero, \
+            and the ledger would start at zero partway through the run. Start \
+            a new run.",
+        )
+    end
+    return check_restart_fields(
+        restart_file,
+        Y,
+        is_water_tag_exp_ledger_name,
+        expected,
+        "water tags' ledgers of the withheld gain",
+        "water_tag_precipitation",
+        "",
+    )
 end
 
 # The recorded settings, or `nothing` when the file has no version attribute.
