@@ -8,6 +8,11 @@ files of the check are compared with the reference's, bit for bit, at every
 output time they share, as `ic_miss_score2.py` does. A file missing from either
 side, or no common time, fails. Every other NetCDF is a tag's or a ledger's and
 is reported, not gated (P0b).
+
+Every model file must have 86400 s (day 1) among the times compared. The first
+output time is t = 0, where both runs hold the same initial state, so a pass on
+t = 0 alone says nothing about the steps. The check run's window ends at day 1
+for this reason.
 """
 import glob
 import os
@@ -18,6 +23,7 @@ import netCDF4 as nc
 import numpy as np
 
 MODEL_FIELDS = ("rhoa", "ta", "hus", "clw", "cli", "wa", "pr", "lwp", "arup", "husup")
+DAY1 = 86400.0
 MODEL_FILES = tuple(f"{v}_1d_inst.nc" for v in MODEL_FIELDS) + ("rhoa_6h_inst.nc", "hus_6h_inst.nc")
 
 
@@ -42,6 +48,7 @@ def compare(path, other, var):
 
 def main(check, ref):
     model, differ, times, tags, tags_differ = 0, [], set(), 0, []
+    no_day1 = []
     for path in sorted(glob.glob(os.path.join(check, "*.nc"))):
         name = os.path.basename(path)
         other = os.path.join(ref, name)
@@ -55,6 +62,8 @@ def main(check, ref):
         if var in MODEL_FIELDS:
             model += 1
             times.update(ts)
+            if DAY1 not in ts:
+                no_day1.append(name)
             if not same:
                 differ.append(f"{name} ({rel:.1e}, {n} times)")
         else:
@@ -63,10 +72,11 @@ def main(check, ref):
                 tags_differ.append(f"{name} ({rel:.1e})")
     missing = [f for f in MODEL_FILES
                if not (os.path.exists(os.path.join(check, f)) and os.path.exists(os.path.join(ref, f)))]
-    ok = model == len(MODEL_FILES) and not differ and not missing
+    ok = model == len(MODEL_FILES) and not differ and not missing and not no_day1
     print(f"P0a, the model's fields are the reference's: {model} of {len(MODEL_FILES)} files compared at "
           f"{len(times)} output times ({sorted(times)}), missing: {missing or 'none'}, "
-          f"differing: {differ or 'none'}: {'pass' if ok else 'FAIL'}")
+          f"differing: {differ or 'none'}, without 86400 s among the compared times: "
+          f"{no_day1 or 'none'}: {'pass' if ok else 'FAIL'}")
     print(f"P0b, the tags' fields (reported): {tags} files compared, differing: {len(tags_differ)}"
           + (f": {', '.join(tags_differ)}" if tags_differ else ""))
     return 0 if ok else 1
