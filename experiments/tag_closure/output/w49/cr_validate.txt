@@ -32,4 +32,3 @@ V3 site 26 q_tag_free: bit for bit at 91 outputs: pass
 V3 site 26 q_tag_evap: bit for bit at 91 outputs: pass
 V3 site 26 q_tag_fcg: bit for bit at 91 outputs: pass
 RESULT failed: ['V5 led_fix pbl s23', 'V5 led_fix free s23']
-python3 cr_validate.py  0.53s user 0.13s system 14% cpu 4.446 total

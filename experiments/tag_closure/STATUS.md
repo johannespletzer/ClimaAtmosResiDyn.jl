@@ -556,15 +556,20 @@ to #126 were read from GitHub on 2026-09-28.
     design is section 11.11, revised after an agent's review. 11.7 carries the
     dated amendments, made before any run. Nothing is built or run. The owner
     reviews 11.11 next (its 11.11.13).
-  - **2026-10-01, `crev`, the 90-day validation (W49, model `0eb329b2`):** the
-    seven jobs `14015465` to `14015471` finished, exit 0. V1 (site 23), V3 (site 26), and V2, V2b, V4
-    and V4b at both sites pass, and W0 to W2 and W5 pass. V2's largest gross
-    is 4.06e-4 at site 23 (budget 2e-3; the control on `main` 2.24e-2), and no
-    check exceeds 0.2%. V5's `led_fix` fails at site 23: `pbl` 7.33% and
-    `free` 6.52% of inventory at day 90 (budget 2%; the control on `main`
-    2.73% and 2.27%). 11.7 states no consequence for that, so the owner
-    decides. The score is of the bundle and bounds the rule's part
-    (FINDINGS W49, `output/w49/`).
+  - **2026-10-01, `crev`, the 90-day validation (W49, model `0eb329b2`):**
+    all seven jobs (`14015465` to `14015471`) completed with exit 0. V1, V2,
+    V2b, V3, V4, V4b, W0 to W2 and W5 pass (W3 and W4 are reported). V2's
+    largest gross is 4.056e-4 at site 23 (budget 2e-3; the control on `main`
+    2.24e-2), and no check exceeds 0.2%. W42's V2 failure is gone. V5 fails
+    at site 23: `led_fix` of `pbl` 7.33e-2 and of `free` 6.520e-2 (largest
+    6.601e-2, day 82.25) at day 90, limit 2e-2 (`main`: 2.73e-2, 2.27e-2).
+    That is larger than W42's (`pbl` 2.03%). It measured `0eb329b2`
+    (approved by the owner on 2026-10-01 through the coordinating session),
+    not #137's head. #137's head adds `main`'s #129 to #136, the `a491b3c7`
+    meter fix, the audit docstring and the stage-local `δL`, so the tag-side
+    numbers need not carry over. The score is of the bundle and bounds the
+    rule's part. 11.7 states no consequence for a V5 failure, so the owner
+    decides (FINDINGS W49, `output/w49/`).
 
 ## The housekeeping, H0 to H7: done
 

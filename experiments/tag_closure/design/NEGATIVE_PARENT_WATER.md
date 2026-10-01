@@ -1353,6 +1353,26 @@ and its 3 h 7 min of W48 doubles to 6.3 h on a shared node. A limit only
 ends a job that is still running. It changes no model, no output and no pass
 rule.
 
+*Result, 2026-10-01 (W49).* The seven jobs completed with exit 0 (jobs
+`14015465` to `14015471`, 1 h 07 min to 3 h 53 min each). The runs measured
+the revision's tree `b6d452b5` (model `0eb329b2`, source `c7c77faf`, before
+the merge) and `main`'s tree `d2ceaa48` (`main` at `43b01ca1`). The owner
+approved `0eb329b2` for the runs on 2026-10-01, through the coordinating
+session (11.11.11, item 10). They do not include #137's head: `main`'s #129 to
+#136 (about 30 `src` files), the `a491b3c7` meter fix, the audit docstring and
+the stage-local `δL`. The tag-side numbers (V2, V3, V5, W1 to W5) need not
+carry over to it. V1, V2 (4.056e-4 at site 23, 5.688e-12 at site 26), V2b, V3,
+V4, V4b, W0 to W2 and W5 pass (W3 and W4 are reported). The least
+favourable W5 value is +3.091e-4 of `R48`, in the control rise. W42's V2
+failure is gone. Its V5 failure remains and is larger: `led_fix` of `pbl` is
+7.330e-2 and of `free` 6.520e-2 (largest 6.601e-2, day 82.25) of the
+inventory at day 90, against 2e-2 (`main`'s runs give 2.728e-2 and
+2.274e-2; W42's `pbl` was 2.03%). 11.7 states no consequence of a V5
+failure, so the owner decides. The numbers, the source tags' negative
+water, and what is not measured, a timestep refinement of the
+crossing episodes among it, are in FINDINGS W49. No threshold or reading of
+11.7 was changed after the runs.
+
 ### 11.10 For the owner
 
  1. ~~**The rule at zero.** A parent of exactly zero gives its gain to the
