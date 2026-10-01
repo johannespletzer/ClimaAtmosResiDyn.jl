@@ -73,8 +73,10 @@ two halves are attributed by **different rules**:
 
   - **Production is mask-weighted.** ``M_k`` is the tag's region mask (1 for a
     region-less source tag, 0 if the tag does not list this process). New water
-    carries the label of where it entered. No tag gains where
-    ``\rho q_\mathrm{tot} < 0``, since the target does not rise there.
+    carries the label of where it entered. No partition tag gains where
+    ``\rho q_\mathrm{tot} < 0``, since the target does not rise there. In
+    copies mode, a source tag's environment part of the split 0M rain-out is
+    the exception: it keeps its share of the environment's change.
   - **Loss is donor-proportional.** Water leaves in proportion to what is
     actually present, and **every** tag is depleted — including source tags,
     whatever processes they list. This is what makes ``\rho q_{\mathrm{tag},k}``
