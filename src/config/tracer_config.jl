@@ -1447,9 +1447,11 @@ function check_energy_source_offset_given(value)
         kilogram of air in J/kg that the tags add to `ρe_tot`. Without one each \
         tag's share is undefined wherever `ρe_tot` is not positive, which is \
         much of a typical domain. The shipped baroclinic-wave configuration \
-        uses 110495 J/kg. The smallest offsets that made the total positive \
-        were 45.4 kJ/kg on a DYCOMS RF02 column and 100.4 kJ/kg on the moist \
-        baroclinic wave sphere. Set `energy_source_tag_offset: 0` to keep the \
+        uses 110495 J/kg. In earlier validation runs the smallest offsets that \
+        made the total positive were 45.4 kJ/kg on a DYCOMS RF02 column and \
+        100.4 kJ/kg on the moist baroclinic wave sphere. The offset a run needs \
+        depends on its state and energy reference, so neither value guarantees \
+        a positive total in another run. Set `energy_source_tag_offset: 0` to keep the \
         tags on `ρe_tot` itself.",
     )
     return nothing
@@ -1624,13 +1626,15 @@ function check_energy_source_increment_microphysics_supported(
     end
     measured =
         one_moment ?
-        "On a DYCOMS RF02 EDMF column with one Newton iteration and without \
-        the blocks, the closure residual after an hour was 2.1e-4 of the \
-        partitioned energy, against 1.5e-6 with the microphysics implicit. \
-        With the blocks the gross residual was 1.4e-15." :
-        "With 1M stepped explicitly on a DYCOMS RF02 EDMF column, the closure \
-        residual after an hour was 2.1e-4 of the partitioned energy without \
-        the blocks, and the gross residual 1.4e-15 with them."
+        "An earlier validation run on a DYCOMS RF02 EDMF column, with one \
+        Newton iteration and without the blocks, measured a closure residual \
+        after an hour of 2.1e-4 of the partitioned energy, against 1.5e-6 with \
+        the microphysics implicit. With the blocks the gross residual was \
+        1.4e-15. The values depend on the configuration and model version." :
+        "An earlier validation run with 1M stepped explicitly on a DYCOMS RF02 \
+        EDMF column measured a closure residual after an hour of 2.1e-4 of the \
+        partitioned energy without the blocks, and a gross residual of 1.4e-15 \
+        with them. The values depend on the configuration and model version."
     remedy =
         one_moment ?
         "Use the manual Jacobian, the default, step the microphysics \
@@ -1797,11 +1801,13 @@ const _EXPLICIT_ONE_MOMENT_INCREMENT_MESSAGE = "`water_tag_transport: \
     increment` is refused with 1M microphysics stepped explicitly \
     (`implicit_microphysics: false`) under `use_auto_jacobian: true`. That \
     Jacobian does not carry the tags' sedimentation cross blocks, so the tags \
-    lag the parent's sedimentation by about 0.8% of the column's water an \
-    hour on a DYCOMS RF02 EDMF column with one Newton iteration. The lag \
-    changes the column's total, which the correction after each solve cannot \
-    move. Use the manual Jacobian, the default, step the microphysics implicitly, or set \
-    `water_tag_transport: tracer`, which lags alike."
+    lag the parent's sedimentation. An earlier validation run on a DYCOMS \
+    RF02 EDMF column with one Newton iteration measured about 0.8% of the \
+    column's water an hour. The value depends on the configuration and model \
+    version. The lag changes the column's total, which the correction after \
+    each solve cannot move. Use the manual Jacobian, the default, step the \
+    microphysics implicitly, or set `water_tag_transport: tracer`, which lags \
+    alike."
 
 """
     water_tag_updraft_copy_from_config(value)
