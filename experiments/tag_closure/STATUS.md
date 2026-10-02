@@ -85,6 +85,7 @@ not checked, it says so.
     two differ in every model field from 30 min, with or without tags. The
     parent's negative water is 0.52 of its net water (0.34 of its positive
     water) at 6 h. Criterion 3 is met for the MPI paths (W59, reviewed).
+
   - **Update, 2026-10-02: V-W7, the Float32 twin (W60, reviewed).** D4-W in
     Float32 on `main` `d3c5e42f` (`design/F32_TWIN.md`). Both modes are bit
     for bit the Float32 twin. Each judged criterion-4 measure is at most 1.21
@@ -121,12 +122,14 @@ not checked, it says so.
       + **W53:** the revision's rule alone makes V5's `led_fix` rise at site
         23. Where the repair refills `free`, the follower drained it in the
         same step (share 0.999; 0.591 for `pbl`).
-      + **Open for the owner:**
-          * why the follower drains `free` more under the rule, which is not
-            isolated;
-          * V5's 2% limit, since `main` is at 2.7% and 2.3%;
+      + **Answered by the owner later on 2026-10-02** (DECISIONS):
+          * why the follower drains `free` more under the rule: a probe will
+            be pre-registered;
+          * V5's 2% limit, since `main` is at 2.7% and 2.3%: it stays;
           * OD2's windows, which do not mark a startup on the new twins
-            (their peak tendency comes at 3.2 to 3.3 h).
+            (their peak tendency comes at 3.2 to 3.3 h): the rule stays, and
+            each finding that uses it adds its verdict from 1 h as a
+            sensitivity row.
 
   - **Update, 2026-10-02: physics baseline.** Main is `b34bbd8b` (2026-10-02).
     Its model physics is upstream `a9287b2d`. Nothing was run for this entry.

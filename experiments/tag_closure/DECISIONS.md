@@ -293,6 +293,16 @@ option on all five. The brief was
   - **KI4-COPIES and UP1: option B.** **In force.** Fold a fixed-parent
     one-step probe (W35's pattern) into PX12, on its 0M copies states. Decide
     UP1 by its own rule.
+  - **OD2's window rule stays as approved, with a sensitivity row.**
+    **In force.** Every finding that uses the window rule also reports its
+    verdict from 1 h, as a sensitivity row beside the windowed one. The
+    ground is W56: from 1 h the pulse's copies repair 1.26e-3 of the water a
+    day, and from 1.8 h or 2 h 1.31e-3, while the rule's startup ran to
+    8.5 h. [FINDINGS W56](FINDINGS.md)
+  - **W53: a probe of the follower's drain, and V5's limit.** **In force.**
+    A probe of why the follower drains `free` more under the revision's rule
+    will be pre-registered. V5's 2% limit stays as it is.
+    [FINDINGS W53](FINDINGS.md)
 
 ## 2026-10-01
 
