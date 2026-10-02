@@ -2390,7 +2390,8 @@ struct IncrementWaterTagTransport <: AbstractWaterTagTransport end
     WaterTaggingModel(tags::Tuple; updraft_copies = false,
                       transport = TracerWaterTagTransport(),
                       ledger_per_tag = false, precipitation = false,
-                      leak_correction = false, rainout_jacobian = false)
+                      leak_correction = false, rainout_jacobian = false,
+                      precipitation_audit = true)
 
 Model component holding a `Tuple` of [`WaterTag`](@ref)s. Constructed from the
 `water_tracers` config entry; see `AtmosTagging(::AtmosConfig)` in
@@ -2422,6 +2423,13 @@ parameter too. It needs 1-moment microphysics, which the configuration checks,
 and it is refused here with updraft copies. See
 [`has_water_tag_precipitation`](@ref).
 
+`precipitation_audit`, from `water_tag_precipitation_audit`, keeps the
+microphysics audit of the rain and snow parts, `q_rtag_aud_<name>` and
+`q_stag_aud_<name>`, as state fields. On by default. It matters only with
+`precipitation`. Off, the audit's fields are not in the state and its kernels do
+not run. The parts and every other field are the same either way. A type
+parameter too. See [`has_water_tag_precipitation_audit`](@ref).
+
 `leak_correction`, from `water_tag_leak_correction`, charges each tag the EDMF
 vertical diffusion of its share of the rain and snow, which the parent does not
 diffuse, on the grid mean and on the copies. Off by default. A type
@@ -2440,6 +2448,7 @@ struct WaterTaggingModel{
     Precipitation,
     LeakCorrection,
     RainoutJacobian,
+    PrecipitationAudit,
 }
     tags::T
     transport::TR
@@ -2452,6 +2461,7 @@ function WaterTaggingModel(
     precipitation::Bool = false,
     leak_correction::Bool = false,
     rainout_jacobian::Bool = false,
+    precipitation_audit::Bool = true,
 )
     # The updraft copies of the rain and snow parts are not built.
     precipitation &&
@@ -2484,6 +2494,7 @@ function WaterTaggingModel(
         precipitation,
         leak_correction,
         rainout_jacobian,
+        precipitation_audit,
     }(
         tags,
         transport,
@@ -2561,6 +2572,21 @@ has_water_tag_rainout_jacobian(::Nothing) = false
 has_water_tag_rainout_jacobian(
     ::WaterTaggingModel{T, U, TR, L, P, LC, RainoutJacobian},
 ) where {T, U, TR, L, P, LC, RainoutJacobian} = RainoutJacobian
+
+"""
+    has_water_tag_precipitation_audit(model)
+
+Whether the water tags of `model` keep the microphysics audit of their rain and
+snow parts, `q_rtag_aud_<name>` and `q_stag_aud_<name>`, from the
+`water_tag_precipitation_audit` config key. It needs the parts, so it is
+`false` without [`has_water_tag_precipitation`](@ref), and `false` without
+water tags.
+"""
+has_water_tag_precipitation_audit(::Nothing) = false
+has_water_tag_precipitation_audit(
+    model::WaterTaggingModel{T, U, TR, L, P, LC, RJ, PrecipitationAudit},
+) where {T, U, TR, L, P, LC, RJ, PrecipitationAudit} =
+    has_water_tag_precipitation(model) && PrecipitationAudit
 
 """
     EnergySourceTag{name}(region, source = :none)

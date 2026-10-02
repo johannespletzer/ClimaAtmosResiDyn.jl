@@ -487,6 +487,9 @@ water_tag_transport:
 water_tag_precipitation:
   help: "Experimental. Whether each of the `water_tracers` is split into the water that is neither rain nor snow, rain and snow [`false` (default), `true`]. The parts are the fields `ρq_tag_<name>`, `ρq_rtag_<name>` and `ρq_stag_<name>`, each a share of its own part of the parent. It needs `microphysics_model: 1M`, is refused under `turbconv: prognostic_edmfx` or `edonly_edmfx` and with `water_tag_updraft_copy: true`, and a restart must keep the key as the checkpoint has it. `true` is refused without `water_tracers`. See docs/src/tagged_water_precipitation.md."
   value: false
+water_tag_precipitation_audit:
+  help: "Experimental. Whether the rain and snow parts of `water_tag_precipitation` keep the microphysics audit [`true` (default), `false`]. `true` adds two state fields per tag, `q_rtag_aud_<name>` and `q_stag_aud_<name>`: what the net-flow rule would have given the tag's rain and snow parts, less what the gross flows gave. `false` leaves them and their kernels out. The parts and the model's fields are the same either way, and a restart must keep the key as the checkpoint has it. `false` is refused without `water_tag_precipitation: true`. See docs/src/tagged_water_precipitation.md."
+  value: true
 water_tag_ledger_per_tag:
   help: "Experimental. Whether each of the `water_tracers` keeps its own state ledgers of what the corrections changed it by [`false` (default), `true`]. `true` adds `q_tag_led_fix_<name>`, the limiters' rescale and the partition repair, and under `water_tag_transport: increment` also `q_tag_led_inc_<name>`, what the correction after each solve moved into or out of the tag. The model's fields are unchanged, the cost is one or two state fields per tag, and `true` is refused without `water_tracers`. See docs/src/tagged_water.md."
   value: false

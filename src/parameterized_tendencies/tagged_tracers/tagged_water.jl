@@ -492,7 +492,9 @@ function water_closure_parent(Y, p)
 end
 
 # The closure's `nonpositive_fraction` and the audit's `nonpositive_mass` read
-# the raw parent, since the partition's target is never negative.
+# the raw parent, since the partition's target is never negative. Under
+# `water_tag_precipitation: true` that is still the raw `ρq_tot`, not the
+# compartments' negative parts, as `parent_negative_water` says.
 closure_signed_parent(Y, p, ::typeof(water_closure_parent)) = Y.c.ρq_tot
 
 """
@@ -516,8 +518,13 @@ The parent's negative water, from the raw `ρq_tot`:
   - `relative = negative / total` ([`negative_water_relative`](@ref)).
 
 Not the partition's target `max(ρq_tot, 0)`, whose negative part is zero by
-construction. `negative` is the integral of `ρ q_tag_negative` up to sign.
-It writes no field, not even scratch. So the check at every accepted step
+construction. Without `water_tag_precipitation`, `negative` is the integral of
+`ρ q_tag_negative` up to sign. With it, it is not. There `q_tag_negative` is
+the sum of the three compartments' negative parts, and a cell with negative
+rain or snow but positive `ρq_tot` adds to `q_tag_negative` and not here. The
+check reads the raw `ρq_tot` by the owner's decision of 2026-09-25, so it does
+not gate those remainders. `q_ntag_res`, `q_rtag_res`, `q_stag_res` and
+`q_tag_negative` report them. It writes no field, not even scratch. So the check at every accepted step
 ([`check_negative_water_step!`](@ref)), which takes the same sums, writes none
 either. `Base.sum` reduces across processes, so this is collective: every
 process must call it.
@@ -1244,12 +1251,15 @@ from the tracer limiters by [`is_tagged_tracer_name`](@ref).
     transport operators disagree", which `q_tag_res` alone would conflate.
   - Under `water_tag_precipitation: true` a correction can also change `ρq_rai`
     and `ρq_sno`. Their changes since
-    [`snapshot_water_tag_precipitation!`](@ref) move first, each between the
-    tags' rain or snow parts and their non-precipitating parts
+    [`snapshot_water_tag_precipitation!`](@ref) move between the tags' rain or
+    snow parts and their non-precipitating parts
     ([`water_tag_part_follow_shift`](@ref)). Where a compartment is negative
     before or after, the non-precipitating parts then also take the rest of
-    their compartment's change of target. Then they take the change of `ρq_tot`
-    on their own compartment `ρq_tot - ρq_rai - ρq_sno`.
+    their compartment's change of target. The non-precipitating parts take the
+    change of `ρq_tot` on their own compartment `ρq_tot - ρq_rai - ρq_sno`.
+    The changes that raise that compartment go first, and those that lower it
+    last. Where it is positive before and after, it does not pass zero in
+    between.
 """
 rescale_water_tags!(Y, p, ᶜρq_tot_before) =
     _rescale_water_tags!(Y, p, ᶜρq_tot_before, p.atmos.water_tagging_model)

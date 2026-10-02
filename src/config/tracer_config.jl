@@ -1993,7 +1993,8 @@ end
 
 Assemble the `AtmosTagging` group from the `energy_tracers`, `water_tracers`
 (with `water_tag_updraft_copy`, `water_tag_transport`,
-`water_tag_precipitation`, `water_tag_ledger_per_tag`,
+`water_tag_precipitation`, `water_tag_precipitation_audit`,
+`water_tag_ledger_per_tag`,
 `water_tag_leak_correction` and `water_tag_rainout_jacobian`),
 `energy_source_tags` (with `energy_source_tag_offset`, `energy_source_tag_repair`,
 `energy_source_tag_transport`, `energy_source_tag_updraft_copy` and
@@ -2034,6 +2035,17 @@ function AtmosTagging(config::AtmosConfig)
     water_precipitation = water_tag_precipitation_from_config(
         get(config.parsed_args, "water_tag_precipitation", false),
     )
+    water_precipitation_audit = water_tag_precipitation_audit_from_config(
+        get(config.parsed_args, "water_tag_precipitation_audit", true),
+    )
+    # The audit belongs to the rain and snow parts. Switching it off without
+    # them would do nothing, so it is refused, as the other keys are.
+    water_precipitation_audit || water_precipitation ||
+        error(
+            "`water_tag_precipitation_audit: false` is set but \
+            `water_tag_precipitation` is not, so there is no audit to switch off. \
+            Drop the key, or set `water_tag_precipitation: true`.",
+        )
     water_ledger_per_tag = tag_ledger_per_tag_from_config(
         get(config.parsed_args, "water_tag_ledger_per_tag", false),
         "water_tag_ledger_per_tag",
@@ -2125,6 +2137,7 @@ function AtmosTagging(config::AtmosConfig)
             updraft_copies = water_updraft_copies,
             transport = water_transport,
             precipitation = water_precipitation,
+            precipitation_audit = water_precipitation_audit,
             ledger_per_tag = water_ledger_per_tag,
             leak_correction = water_leak_correction,
             rainout_jacobian = water_rainout_jacobian,

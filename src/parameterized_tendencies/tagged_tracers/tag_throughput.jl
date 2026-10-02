@@ -137,6 +137,17 @@ const WATER_TAG_ALL_MECHANISM_NAMES =
     (WATER_TAG_MECHANISM_NAMES..., WATER_TAG_COPY_MECHANISM_NAMES...)
 
 """
+    WATER_TAG_PRECIP_MECHANISM_NAMES
+
+The water tags' state ledger of the closing step under
+`water_tag_precipitation: true`: `q_tag_led_close`, what the closing step after
+each follow added to the partition's rain and snow parts, or took from them
+(`follow_water_tag_precipitation!`). Only with the key, so the state of other
+runs keeps its layout. The key and updraft copies are never on together.
+"""
+const WATER_TAG_PRECIP_MECHANISM_NAMES = (:q_tag_led_close,)
+
+"""
     WATER_TAG_LEAK_MECHANISM_NAMES
 
 The water tags' state ledgers of the diffusion leak's correction, under
@@ -200,10 +211,15 @@ The names of the water tags' state ledgers per mechanism, in state order, or
 `()` without water tags.
 """
 water_tag_mechanism_names(::Nothing) = ()
-water_tag_mechanism_names(model::WaterTaggingModel) =
-    _water_tag_mechanism_names(Val(has_water_tag_updraft_copies(model)))
-_water_tag_mechanism_names(::Val{false}) = WATER_TAG_MECHANISM_NAMES
-_water_tag_mechanism_names(::Val{true}) = WATER_TAG_ALL_MECHANISM_NAMES
+water_tag_mechanism_names(model::WaterTaggingModel) = _water_tag_mechanism_names(
+    Val(has_water_tag_updraft_copies(model)),
+    Val(has_water_tag_precipitation(model)),
+)
+_water_tag_mechanism_names(::Val{false}, ::Val{false}) = WATER_TAG_MECHANISM_NAMES
+_water_tag_mechanism_names(::Val{true}, ::Val{false}) =
+    WATER_TAG_ALL_MECHANISM_NAMES
+_water_tag_mechanism_names(::Val{false}, ::Val{true}) =
+    (WATER_TAG_MECHANISM_NAMES..., WATER_TAG_PRECIP_MECHANISM_NAMES...)
 
 """
     energy_source_mechanism_names(model)
@@ -228,7 +244,12 @@ water_tag_mechanism_variables(value, ::Nothing) = (;)
 water_tag_mechanism_variables(value, model::WaterTaggingModel) =
     _mechanism_zeros(
         value,
-        Val(_water_tag_mechanism_names(Val(has_water_tag_updraft_copies(model)))),
+        Val(
+            _water_tag_mechanism_names(
+                Val(has_water_tag_updraft_copies(model)),
+                Val(has_water_tag_precipitation(model)),
+            ),
+        ),
     )
 energy_source_mechanism_variables(value, ::Nothing) = (;)
 energy_source_mechanism_variables(value, ::EnergySourceTaggingModel) =
@@ -244,6 +265,7 @@ Whether `name` is a state ledger per mechanism of either family.
 is_tag_mechanism_ledger_name(name::Symbol) =
     name in WATER_TAG_MECHANISM_NAMES ||
     name in WATER_TAG_COPY_MECHANISM_NAMES ||
+    name in WATER_TAG_PRECIP_MECHANISM_NAMES ||
     name in ENERGY_SOURCE_MECHANISM_NAMES
 
 """
