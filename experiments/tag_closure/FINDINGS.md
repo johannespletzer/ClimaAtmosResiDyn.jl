@@ -2592,8 +2592,8 @@ iterations against ten, to 6 h; then P2 from the 6 h state.
 untagged twin; under the follower the partition closes to 3.8e-15 and the
 partition's surface precipitation by tag is `pr` to 4.3e-15. The copies close
 to 3.5e-4, repair 5.1e-4 of the water a day, and give `pr` to 3.1e-4. Default
-against copies, `pbl` reaches L1 2.06% at 6 h.** *Draft, 2026-10-02, for the
-Opus review.* Updates W26 (`Σ pr_tag` within 1.8e-3, measured under the
+against copies, `pbl` reaches L1 2.06% at 6 h.** *Reviewed 2026-10-02
+(Opus).* Updates W26 (`Σ pr_tag` within 1.8e-3, measured under the
 tracer transport), W28's TRMM closure (4e-15) and W21's TRMM copies (repair
 below 1e-5 over 3 h). Runs 9 to 11; the twin is new.
 
@@ -2790,7 +2790,7 @@ limits lie below the Float32 partition's rounding at 0 h. So this failure
 cannot tell a defect from rounding. With one iteration every named-part
 measure is within 10 times at 24 h, the least margin `N` at 9.1 times, and
 Float32's `N` sits at the same rounding level.**
-*Draft, for the Opus review.* Pre-registered in section 9 (`2f8a2287`; the
+*Reviewed 2026-10-02 (Opus).* Pre-registered in section 9 (`2f8a2287`; the
 check and a 12 h cap noted in `a423c8b6`) before runs 5 and 6. The parts:
 `q_tag_inc_left` is the one-iteration part; what they leave is
 `N = q_tag_res − q_tag_inc_left`, gross over the cells. The leak is absorbed
