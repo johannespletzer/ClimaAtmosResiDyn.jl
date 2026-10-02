@@ -48,7 +48,20 @@ FLOAT_COLUMNS = (
 )
 
 
-def read_points(root):
+def drop_blocks(row, discard):
+    """Section 10 (2026-10-02): the first `discard` timed blocks are not measured.
+    The minimum, median and maximum are taken over the blocks that remain."""
+    if discard == 0:
+        return
+    blocks = [float(x) for x in row["step_ms_blocks"].split(";")]
+    if len(blocks) - discard < 4:
+        sys.exit(f"{row['label']} has {len(blocks)} blocks; {discard} discarded leaves under 4.")
+    kept = np.array(blocks[discard:])
+    row["step_ms_blocks"] = ";".join(str(x) for x in kept)
+    row["step_ms_min"], row["step_ms_median"], row["step_ms_max"] = kept.min(), float(np.median(kept)), kept.max()
+
+
+def read_points(root, discard=0):
     rows, statuses = {}, []
     arms = sorted(p for p in root.iterdir() if p.is_dir())
     if not arms:
@@ -78,6 +91,7 @@ def read_points(root):
                 row[c] = float(row[c])
             row["ntags"] = int(row["ntags"])
             row["arm"] = arm.name
+            drop_blocks(row, discard)
             if (arm.name, row["label"]) in rows:
                 sys.exit(f"Two CSVs in {arm.name} have the label {row['label']}.")
             rows[(arm.name, row["label"])] = row
@@ -113,8 +127,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("root", type=Path)
     parser.add_argument("--out", type=Path)
+    parser.add_argument("--discard", type=int, default=0, help="timed blocks to discard (section 10: 1)")
     args = parser.parse_args()
-    rows, statuses = read_points(args.root)
+    rows, statuses = read_points(args.root, args.discard)
     not_finished = check_statuses(rows, statuses)
 
     # Since the amendment of 2026-10-02 every arm runs its own untagged point on
@@ -125,7 +140,7 @@ def main():
     groups = defaultdict(list)
     for r in rows.values():
         groups[(r["arm"],) if same_node else (r["family"], r["base"])].append(r)
-    lines = []
+    lines = [f"First {args.discard} timed block(s) discarded; the measure is the blocks after them.", ""] if args.discard else []
     for key, points in sorted(groups.items()):
         family = next(r["family"] for r in points if r["ntags"] > 0) if any(
             r["ntags"] > 0 for r in points) else points[0]["family"]

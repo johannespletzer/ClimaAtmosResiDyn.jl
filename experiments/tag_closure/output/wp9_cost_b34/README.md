@@ -6,33 +6,35 @@ Model `main` `b34bbd8b` (new physics, after #139, #140 and #141), record
 nine exclusive jobs on `hpda2_compute`, 50 warm-up steps, and an untagged
 point `0` in every arm.
 
-| arm                 | job      | node            | state at writing        |
+| arm                 | job      | node            | state                   |
 |:--------------------|:---------|:----------------|:------------------------|
 | `water_default`     | 14112139 | `hpdar07c04s03` | COMPLETED, 01:13:54     |
 | `water_default_32`  | 14112140 | `hpdar07c04s08` | COMPLETED, 00:17:49     |
 | `water_copies`      | 14112141 | `hpdar09c01s05` | COMPLETED, 01:01:27     |
 | `water_1m_off`      | 14112142 | `hpdar09c01s06` | COMPLETED, 00:53:45     |
 | `water_1m_on`       | 14112143 | `hpdar09c01s07` | COMPLETED, 01:43:46     |
-| `energy_default`    | 14112144 | `hpdar09c01s08` | RUNNING (8:records left) |
+| `energy_default`    | 14112144 | `hpdar09c01s08` | COMPLETED, 02:11:51     |
 | `energy_default_32` | 14112145 | `hpdar09c01s09` | COMPLETED, 00:52:38     |
-| `energy_copies`     | 14112146 | `hpdar09c01s10` | RUNNING (8, 8:ledgers left) |
+| `energy_copies`     | 14112146 | `hpdar09c01s10` | COMPLETED, 02:59:05     |
 | `both_default`      | 14112147 | `hpdar09c01s11` | COMPLETED, 01:24:42     |
 
-`table_b34_partial.md` and `fit_b34_partial.txt` cover the 37 points that had
-finished (28 tagged, 9 baselines). They are the tools of section 9, run on this
-directory. They are partial: `energy_default` and `energy_copies` were still
-running.
+`table_b34.md` and `fit_b34.txt` are the tools of section 9, run on this
+directory, over all 40 points (31 tagged, 9 baselines). The stop below was
+first read on 37 points, while `energy_default` and `energy_copies` were still
+running (`061967cad`). Their last points were added on 2026-10-02 for
+completeness. The owner then chose a rerun with a discarded block (section
+10), so these data count for nothing beyond this record.
 
 ## The spread rule
 
 Section 9's rule: each point's block spread, and each tagged point's ratio
-spread against its arm's baseline, at most 10%. **It fails at 36 of the 37
-finished points.** As section 9 says, nothing was rerun and no finding is
+spread against its arm's baseline, at most 10%. **It fails at 39 of the 40
+points** (36 of 37 at the stop). As section 9 says, nothing was rerun and no finding is
 drafted. The work stops for the owner.
 
 What the blocks show:
 
-  - Block 1 is the slowest block at 36 of 37 points. It exceeds the median of
+  - Block 1 is the slowest block at 39 of 40 points. It exceeds the median of
     blocks 2 to 5 by up to 65%, in the baselines too.
   - Over blocks 2 to 5, every point spreads by at most 2.7%. Its ratio to the
     baseline spreads by at most 2.5%.

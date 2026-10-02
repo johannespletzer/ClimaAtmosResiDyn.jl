@@ -67,7 +67,7 @@ fi
 # whole nodes. SET=b34check submits its short check jobs to hpda2_test.
 PARTITION=hpda2_compute
 EXPECT_SHA=43b01ca1d
-if [[ "${SET:-}" == b34 || "${SET:-}" == b34check ]]; then
+if [[ "${SET:-}" == b34 || "${SET:-}" == b34check || "${SET:-}" == b34d ]]; then
     EXPECT_SHA=b34bbd8b8
     export WP9_WARMUP=50
     TABLE=(
@@ -95,13 +95,24 @@ if [[ "${SET:-}" == b34 || "${SET:-}" == b34check ]]; then
         OUT_ROOT=wp9_check_b34
     fi
 fi
+# SET=b34d submits the rerun of the amendment of 2026-10-02, section 10: the
+# arms of section 9 at b34bbd8b, 6 timed blocks of which the first is
+# discarded, and energy copies at 32 tags with an 8 h build limit. A row's
+# ninth field, when present, is that arm's build limit.
+if [[ "${SET:-}" == b34d ]]; then
+    EXPECT_SHA=b34bbd8b8
+    export WP9_WARMUP=50 WP9_REPEATS=6
+    TABLE+=("energy_copies_32 energy copies 0 wp9_energy_d4_edmf 0,32 200G 10:00:00 8h")
+    EXTRA=(--exclusive)
+    OUT_ROOT=wp9_cost_b34d
+fi
 export OUT_ROOT
 [[ "${RUN_SHA}" == "${EXPECT_SHA}"* ]] || [[ -n "${ALLOW_OTHER_MODEL_COMMIT:-}" ]] || {
     echo "ERROR: the model tree is at ${RUN_SHA}, not ${EXPECT_SHA}." >&2; exit 1; }
 LOGS="${SCRATCH:?}/tag_closure/logs/${OUT_ROOT}"
 mkdir -p "${LOGS}"
 for row in "${TABLE[@]}"; do
-    read -r arm family mode precip base points mem time <<<"${row}"
+    read -r arm family mode precip base points mem time blimit <<<"${row}"
     if (( ${#ARMS[@]} )); then
         [[ " ${ARMS[*]} " == *" ${arm} "* ]] || continue
     fi
@@ -110,11 +121,11 @@ for row in "${TABLE[@]}"; do
          --cpus-per-task=4 --mem="${mem}" ${EXTRA[@]+"${EXTRA[@]}"} --time="${time}" -J "wp9${EXTRA[@]+x}_${arm}"
          -o "${LOGS}/%x-%j.out" "${REC_TREE}/experiments/tag_closure/runscripts/wp9_cost.sh")
     if (( DRY )); then
-        echo "[dry run] ARM=${arm} FAMILY=${family} MODE=${mode} PRECIP=${precip} BASE=${base} POINTS='${points}' ${cmd[*]}"
+        echo "[dry run] ARM=${arm} FAMILY=${family} MODE=${mode} PRECIP=${precip} BASE=${base} POINTS='${points}' BUILD_LIMIT=${blimit:-${BUILD_LIMIT:-4h}} ${cmd[*]}"
         continue
     fi
     id="$(RUN_TREE="${RUN_TREE}" REC_TREE="${REC_TREE}" RUN_SHA="${RUN_SHA}" REC_SHA="${REC_SHA}" \
         ARM="${arm}" FAMILY="${family}" MODE="${mode}" PRECIP="${precip}" BASE="${base}" \
-        POINTS="${points}" "${cmd[@]}")"
+        POINTS="${points}" BUILD_LIMIT="${blimit:-${BUILD_LIMIT:-4h}}" "${cmd[@]}")"
     echo "${arm} ${id}"
 done

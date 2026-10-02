@@ -358,3 +358,41 @@ and writes the warm-up into the CSV. The runscript runs point `0` without mode
 or rain and snow tags. `submit_wp9.sh` takes `SET=b34` and `SET=b34check`. The
 table and the fit read each arm against its own baseline when every arm has
 one, and the table prints the ratio spread.
+
+## 10. Amendment of 2026-10-02 (later): a discarded first block
+
+Written before any job of this section, and pushed first. The owner decided
+on 2026-10-02 to rerun with a discarded block, after section 9's run failed
+its spread rule at 39 of its 40 points (`output/wp9_cost_b34/`). In that run
+block 1 was the slowest block at 39 points, by up to 65%, with 50 warm-up
+steps and no compile in any block. Blocks 2 to 5 spread by at most 2.7%.
+Section 9's data count for nothing beyond that record.
+
+**What changes, and nothing else.**
+
+  - Each point times 6 blocks of 20 steps instead of 5. The first timed block
+    is discarded. The measure is blocks 2 to 6: the minimum and the median
+    over them, and the spread over them. So five blocks are measured, as in
+    section 4. The CSV keeps all six. `wp9_cost_table.py` and
+    `wp9_cost_fit.py` drop block 1 with `--discard 1`.
+  - The spread rule is section 9's, on the measured blocks. For every point the
+    block spread is at most 10%. For every tagged point the spread of its ratio
+    to its arm's baseline, block by block, is at most 10% too. If any point
+    fails, it is reported with its spreads, nothing is rerun, and the work
+    stops for the owner before any finding is drafted.
+  - The arms, points, commit (`b34bbd8b`), run tree, warm-up (50 steps), the
+    same-node untagged point `0` and the combined 8 + 8 arm are section 9's.
+  - Energy copies at 32 tags is added as a tenth arm, `energy_copies_32`
+    (points `0`, `32`), with an 8 h build limit and a 10 h job limit. It did
+    not finish in 4 h twice at `43b01ca1`. Energy default at 32 tags (with its
+    point `0`) took 53 min in section 9, so its 4 h limit fits and stays.
+  - Submitted by `SET=b34d runscripts/submit_wp9.sh`, exclusive, account
+    `pn49go-c`. Results go to `$SCRATCH/tag_closure/output/wp9_cost_b34d/`.
+    No check job: the code paths are section 9's, which passed its checks and
+    ran every arm. Only the block count and one build limit change.
+  - Ten jobs. From section 9's times the arms take about 15 h of wall time in
+    all, plus up to 10 h for `energy_copies_32`.
+
+**How it is read.** As section 9, on blocks 2 to 6. If the rule passes, the
+table and the fit give W52 (water) and E88 (energy), the RUNS rows and the
+budget proposal, marked as waiting for the owner.
