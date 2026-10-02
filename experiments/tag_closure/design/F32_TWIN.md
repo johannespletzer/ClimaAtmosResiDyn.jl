@@ -309,3 +309,11 @@ none.
 It does not run the copies at ten iterations, or read the rain and snow tags,
 which are refused under EDMF until WP4b's stage 2 (T3). It decides no cause.
 Finding: W61.
+
+*The check's result, 2026-10-02, before runs 5 and 6.* Job `14126446` (1 h
+1 min) passed. Both runs exited 0 and wrote `q_tag_res`, `q_tag_inc_left` and
+the closure table (77 files each). At 1 h the gross residual is 9.1e-16 in
+Float64 and 5.6e-7 in Float32. Each run took about 30 minutes, about 16 of
+them to build. So an hour of the day takes up to about 14 minutes, and a day
+up to about 5.5 h. The limit of runs 5 and 6 is raised from 6 h to 12 h, a cap
+only. Nothing else changes.
