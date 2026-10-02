@@ -29,10 +29,12 @@ end
 
 """
     hyperdiffusion_cache(Y, atmos)
-    hyperdiffusion_cache(Y, hyperdiff::Hyperdiffusion, turbconv_model)
+    hyperdiffusion_cache(Y, hyperdiff, turbconv_model, water_tagging_model = nothing)
 
 Allocate the cache fields that hold the DSSed Laplacians (`∇²`) used by the
-hyperdiffusion tendencies.
+hyperdiffusion tendencies. Under `water_tag_precipitation: true` the water tags
+add one field, `ᶜ∇²q_tot_r` ([`water_tag_hyperdiffusion_quantities`](@ref)).
+Without the key the cache is as without tags.
 
 Returns an empty `NamedTuple` when `atmos.hyperdiff` is `nothing`. Otherwise
 allocates `ᶜ∇²u`, the energy-split fields `ᶜ∇²s_d` and `ᶜ∇²q_tot_eff` (energy
