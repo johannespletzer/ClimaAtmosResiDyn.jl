@@ -4427,9 +4427,11 @@ The bounds hold for both findings:
     3.18 against 4.53 ms). So times in ms are the node's, and only ratios
     are quoted. Where points of one count series ran on two nodes, the added
     cost is given in untagged steps, not in ms. A node's effect on a ratio
-    is not measured directly. The one pair that bounds it is energy at 8
-    tags: 1.579 on a node with a 3.18 ms untagged step and 1.526 on one with
-    4.53 ms, at the two commits.
+    is not measured directly. Four points ran at both commits on other
+    nodes. Their quoted ratios differ by at most 3.5%: energy at 8 tags,
+    1.579 on a node with a 3.18 ms untagged step and 1.526 on one with
+    4.53 ms. Each pair changes the node and the commit together, so it
+    bounds a node effect on these points and does not isolate it.
   - Section 9's run and the first `water_copies` arm of section 10 failed
     their rule. They count for nothing here.
   - W52 and E88 update WP9's first pass and its exclusive rerun at
@@ -4508,6 +4510,8 @@ Other measures:
     0.222. Fitted on `ratio - 1`, the exponent is 1.40, and between 8 and 32
     tags it is 1.81. The points at 2 to 8 ran on a node whose untagged step
     was 29% shorter than that of the point at 32 (3.18 against 4.47 ms).
+    So the exponents carry a node effect on the ratio at 32, which is not
+    measured.
   - **Allocation per step:** from 560 kB untagged to 741 kB at 8 and 5.5 MB
     at 32.
   - **Build:** 1.20× the untagged column's at 8 tags and 1.93× at 32.

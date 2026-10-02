@@ -63,11 +63,16 @@ The minimum block is block 2, 3, 4 or 5 at every point. These numbers do not
 meet the rule and are not quoted in a finding. Ratio to the same node's
 untagged column, minimum block:
 
-  - water under EDMF, default: 1.157, 1.267, 1.508 and 8.080 at 2, 4, 8 and 32
-    tags; 3.565 with ledgers at 8;
+  - water under EDMF, default: 1.153, 1.234, 1.421 and 7.141 at 2, 4, 8 and 32
+    tags; 2.436 with ledgers at 8;
   - water, copies: 1.176, 1.368, 1.687 at 2, 4, 8;
   - 1M, no rain and snow: 1.222, 1.395, 1.770, 14.28; with them: 1.675,
     4.727, 11.85, 246.3;
-  - energy, default: 1.153, 1.234, 1.421 at 2, 4, 8, and 7.141 at 32;
+  - energy, default: 1.157, 1.267, 1.508 at 2, 4, 8, and 8.080 at 32; 3.565
+    with ledgers and 1.530 with records at 8;
   - energy, copies: 1.186, 1.343 at 2, 4;
   - 8 water + 8 energy on D4: 4.163, and 9.053 with ledgers.
+
+*Corrected 2026-10-02 (review of W52 and E88):* the lists above first gave
+water's and energy's EDMF numbers under each other's name. They now follow
+`table_b34.md`. These data still count for nothing beyond this record.

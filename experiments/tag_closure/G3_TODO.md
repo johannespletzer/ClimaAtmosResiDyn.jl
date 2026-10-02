@@ -1328,8 +1328,9 @@ owner's points in the note's section 8.
         water tags (TRMM), 1.58× at 8 energy tags (D4), and 4.16× at 8 + 8
         on D4, 9.10× with ledgers. Alone on D4 the halves cost 1.44× and
         1.53×, so the families do not add. The cost per tag grows past 8
-        tags (exponent 1.8 to 2.2 from 8 to 32). The runs at `43b01ca1`
-        (sections 4 and 7) stay as prior evidence. The earlier reruns failed
+        tags (exponent 1.8 to 2.2 from 8 to 32, fitted by hand on
+        `ratio - 1`). The runs at `43b01ca1` (sections 4 and 7) stay as
+        prior evidence. The earlier reruns failed
         the spread rule, and the owner chose each next design (2026-09-29,
         2026-10-01, 2026-10-02).
 
