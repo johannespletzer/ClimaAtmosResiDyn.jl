@@ -1,4 +1,5 @@
 date,decided_by,decision,doc,section,still_in_force,superseded_by
+2026-10-02,owner,"Criterion 9's rounding floor: a Float32 measure passes if at most max(10 x Float64, 3 eps32 sqrt(n_steps)), eps32 = 2^-23, 9.6e-6 of the water for a day of 720 steps; set after W60's addendum failed criterion 9 at ten Newton iterations, so that verdict stays and the rule is judged on a fresh run (F32_TWIN section 10, W62).",G3_PLAN.md,criterion 9,yes,
 2026-10-02,owner,"OD2: the window rule stays as approved; every finding that uses it also reports its verdict from 1 h as a sensitivity row (grounded in W56: 1.26e-3 a day from 1 h against 1.31e-3 from 1.8 h or 2 h).",FINDINGS.md,W56,yes,
 2026-10-02,owner,"W53: a probe of the follower's drain of free under the revision's rule will be pre-registered; V5's 2% limit stays.",FINDINGS.md,W53,yes,
 2026-10-02,owner,"Option D for D4-W: no eligible comparator at production cost (W54, PX5); criteria 5 and 6 are not judged on D4-W; per-tag accuracy moves to TRMM 0M after PX12 and the Soares air twin (PX11); a D4-W reference is not pursued unless reopened.",G3_PLAN.md,criteria 5 and 6,yes,

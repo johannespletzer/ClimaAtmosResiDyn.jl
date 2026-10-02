@@ -111,6 +111,13 @@ stratocumulus. D4-W's tags are shown to close and are costed. A D4-W
 reference (a copies-only fix, or the air twin with PP-TRACER, PX17) is not
 pursued unless the owner reopens it.
 
+*Restated 2026-10-02 (criterion 9's rounding floor, the owner):* a Float32
+measure meets criterion 9 if it is at most `max(10 × Float64, 3 · eps32 · √n_steps)`, where `eps32 = 2^-23` and `n_steps` is the number of time steps
+the measure accumulates over (9.6e-6 of the water for a day at 120 s). The
+floor was set after W60's addendum had failed criterion 9 on the named parts
+at ten Newton iterations. That verdict stands. The rule is judged on a fresh
+pre-registered run (`design/F32_TWIN.md`, section 10).
+
 *Rev. 2:* each criterion is judged by the acceptance contract's rows in
 ROADMAP.md, with pass, fail or not assessable. Criterion 4 is the closure row
 and criterion 5 the provenance row. Criterion 5 is judged only against copies

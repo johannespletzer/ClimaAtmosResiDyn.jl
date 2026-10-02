@@ -271,6 +271,16 @@ option on all five. The brief was
         registry row.
       + The PR also checks whether #137's Q5 rule already covers micro-1 in
         the microphysics hook.
+  - **Criterion 9's rounding floor, set later on 2026-10-02.** **In force.**
+    After W60's addendum (criterion 9 failed on the named parts at ten
+    Newton iterations: Float32 3.2e-6 against 3.8e-13), the owner set the
+    rule: a Float32 measure passes if it is at most
+    `max(10 × Float64, 3 · eps32 · √n_steps)`, with `eps32 = 2^-23`. That is
+    9.6e-6 of the water over a day of 720 steps of 120 s. The rule was set
+    after the data were seen. So W60's registered verdict stays "fails", and
+    the rule is judged only on a fresh, pre-registered run
+    (`design/F32_TWIN.md`, section 10; finding W62)
+    ([G3_PLAN.md](G3_PLAN.md), the note under the criteria).
   - **Option D for D4-W, accepted later on 2026-10-02.** **In force.** After
     W54, the owner accepted D. D4-W has no eligible comparator at production
     cost, and criteria 5 and 6 are not judged on D4-W
