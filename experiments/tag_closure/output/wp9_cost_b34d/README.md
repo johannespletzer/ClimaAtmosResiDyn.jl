@@ -31,8 +31,8 @@ by at most 1.8% themselves. Against that baseline, their ratio spreads are 47%
 to 48%. As section 10 says, nothing is rerun, no finding is drafted, and the
 work stops for the owner.
 
-The other 34 points pass. Over them the largest block spread is 2.8% and the
-largest ratio spread 2.9%. (Section 9's 40 points failed at 39, with block 1
+The other 34 points pass. Over them the largest block spread is 3.9% and the
+largest ratio spread 4.4%. (Section 9's 40 points failed at 39, with block 1
 the slowest at 39.)
 
 ## Node to node, again
