@@ -1641,10 +1641,13 @@ end
             q_sno_after = q_sno + Δt * F.dq_sno_dt
             formed = label == :rain ? q_rai_after : q_sno_after
             @test formed > 1e-6
+            # The source tag holds some of `N` and none of the compartment. So
+            # a closing step that took it in would change it.
+            N_evap = FT(0.1) * (q_tot - q_rai_after - q_sno_after)
             (; Y, p, model) = one_cell_setup(
                 FT,
                 (q_tot, q_rai_after, q_sno_after),
-                (after[1][1], after[2][1], 0),
+                (after[1][1], after[2][1], N_evap),
                 (after[1][2], after[2][2], 0),
                 (after[1][3], after[2][3], 0),
             )
