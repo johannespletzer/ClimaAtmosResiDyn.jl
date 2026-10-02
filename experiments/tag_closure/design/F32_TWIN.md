@@ -205,3 +205,107 @@ atmospheres, so a measure's ratio mixes rounding with a different trajectory
 iteration. It compares the tags with their own residuals, not with an
 independent reference (PX13). R1 checks the written diagnostics, not the
 prognostic state. Finding: W60.
+
+## 9. Amendment, 2026-10-02: the named parts, before any of their jobs
+
+W60's review left criterion 9 partial (`b0ef19d0`). Criterion 4's third
+clause, what the named parts leave, was not read in either precision. The
+coordinator asked for it on 2026-10-02. This section is pushed before its
+check job and its runs.
+
+### 9.1 The question
+
+G3_PLAN 6.1: "What the named parts leave: at most 1e-6 of `∫ρq_tot` at 24 h.
+The named parts are the one-iteration part from the 10-Newton twin, the loss
+rule's flushing, the leaks and the ledgers." **On D4-W's default mode, what do
+the named parts leave at 24 h in Float64, against 1e-6, and is each
+named-part measure in Float32 at most 10 times its Float64 value?**
+
+### 9.2 The parts, for the water in the default mode
+
+  - **The one-iteration part** is `q_tag_inc_left`: the part of the parent's
+    implicit increment that changes a column's total and that the follower
+    leaves in `q_tag_res` (its docstring; W24). With ten iterations the Newton
+    solve converges, and this part should vanish with the residual (W24 on the
+    old physics: 5.6e-10 gross at 24 h). The ten-iteration twin shows it does.
+  - **The leaks.** Under the follower the tags take the parent's implicit
+    increment, the vertical diffusion included. So the closed-form leak
+    `q_tag_leak_vdiff` does not land in `q_tag_res`. W40 found the follower
+    leaves no remainder of it on D4-W. Its size is reported, not subtracted.
+    *Read before this was written:* the smoke run below gave the leak's sum
+    over the day as 4.6e-3 of the water, gross, on W55's run, while
+    `q_tag_res` tracks `q_tag_inc_left`. Subtracting the leak would make up a
+    remainder of that size that the residual does not hold.
+  - **The ledgers** (the partition repair, the rescale, the emptying) move
+    water between tags or with the parent, and keep the partition closed. They
+    are reported in W55 and W60 (R8) and not subtracted.
+  - **The loss rule's flushing** is the energy tags' (E64). The water
+    partition has no loss rule, so this part is zero.
+
+So what the named parts leave is `N = q_tag_res − q_tag_inc_left`, per cell.
+Each measure is gross over the cells, `Σ ρ |x| Δz`, divided by the column's
+water `Σ ρ q_tot Δz` at the same hour, from the hourly NetCDF output.
+
+### 9.3 Runs and rules
+
+| # | run (`configs/<run>.yml`)       | precision | Newton | made from               |
+|:- |:------------------------------- |:--------- |:------ |:----------------------- |
+| 5 | `f32_d4w_default_z60_c_n10_f64` | Float64   | 10     | `g3b_d4w_default_z60_c` |
+| 6 | `f32_d4w_default_z60_c_n10_f32` | Float32   | 10     | `f32_d4w_default_z60_c` |
+
+Each is its source config with only the header, the `job_id` and
+`max_newton_iters_ode: 10` changed, as `w5_d4w_increment_n10` was for W24.
+The one-iteration pair is W55's `g3b_d4w_default_z60_c` (P0 confirms it on
+`d3c5e42f`) and W60's `f32_d4w_default_z60_c`. The copies are not run: the
+named parts are the partition's, and the copies' own residual and repair are
+criterion 4's other clauses, read in W60. Same trees, runscript and Slurm
+settings as section 3.
+
+The scorer is `analysis/water/f32_named_score.py`.
+
+| rule | measure                                                                                    | pass rule                                                                                           |
+|:---- |:------------------------------------------------------------------------------------------ |:--------------------------------------------------------------------------------------------------- |
+| C4   | `N` at 24 h, Float64, at one and at ten iterations                                         | at most 1e-6 of the water (6.1), at both                                                            |
+| C9   | at 24 h, at one and at ten iterations: `G` (the residual), `P_inc` (`q_tag_inc_left`), `N` | Float32 at most 10 × Float64. If Float64 is zero: pass if Float32 is zero, else judged against 1e-6 |
+
+Reported, not judged: every measure at 12 h; the leak's gross sum; the
+one-iteration part net over the column; `G` from NetCDF beside the closure
+table's `gross_relative` (a check of the method); and the Float32 rounding
+level, the Float32 one-iteration run's `G` at 0 h (1.7e-8, W60), beside each
+Float32 value. That level changes no verdict. A non-finite value or a missing
+hour fails.
+
+Criterion 4's named-parts clause reads pass if both C4 rows pass. Criterion
+9's named-parts measures pass if every C9 row passes.
+
+*The smoke run, before this was pushed.* `F32N_SMOKE=1` reads W55's run in
+place of all four. Its `G` from NetCDF equals the closure table's 6.49e-6 at
+24 h, so the method reads the same residual. On that run, `P_inc` is 6.87e-6
+and `N` 4.1e-7 at 24 h. So the Float64 one-iteration reading of C4 is known
+before the jobs: it passes. The Float32 one-iteration run was not read. The
+thresholds are 6.1's and criterion 9's, and the smoke run changed neither.
+
+### 9.4 The check job and the jobs
+
+The check job runs runs 5 and 6 to 1 h, as `f32_check_n10_{f64,f32}`, with
+configs in `$SCRATCH/claude_work/f32/check/` and `CHECK_PROBE_CONFIG=none`.
+It passes when both exit 0 and write `q_tag_res`, `q_tag_inc_left` and the
+closure table. Then runs 5 and 6, with a 6 h limit each. Ten iterations cost
+more per step. W24's ten-iteration day is not timed in the record, so no
+estimate is given. Three jobs, within the amendment's 6.
+
+### 9.5 Expected, before the runs
+
+In Float64, `N` at ten iterations falls with the residual, toward W24's
+5.6e-10. In Float32 the residual cannot fall below rounding: its floor is
+near the 1.7e-8 the partition starts with, and the Float64 ten-iteration
+values may be far below it. If so, the C9 rows at ten iterations fail by
+orders of magnitude, from rounding alone. W61 would then say so, and the
+owner decides whether criterion 9 needs a rounding floor. This section sets
+none.
+
+### 9.6 What this does not do
+
+It does not run the copies at ten iterations, or read the rain and snow tags,
+which are refused under EDMF until WP4b's stage 2 (T3). It decides no cause.
+Finding: W61.
