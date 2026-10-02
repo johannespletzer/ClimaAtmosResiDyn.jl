@@ -282,9 +282,16 @@ Restated 2026-09-30 from the findings; the plan's section 2 holds the criteria's
             submitted.
           * [ ] B: PX12 on TRMM 0M, about 12 short jobs ("Provenance
             pathway"). Not submitted.
-          * If C confirms a per-step cause, the owner may choose to declare
+          * ~~If C confirms a per-step cause, the owner may choose to declare
             that D4-W has no eligible comparator at production cost
-            (option D of the brief).
+            (option D of the brief).~~ *Corrected 2026-10-02:* the brief had
+            the condition backwards. By PX5's pre-registered rule, a per-step
+            cause leaves routes to a D4-W comparator (a copies-only draft PR,
+            or the air twin with PX17). No per-step cause means PX5 records
+            "no eligible D4-like comparator at production cost", which is
+            option D's declaration. W54 found no per-step cause. Whether to
+            adopt D, and so restate criteria 5 and 6 for D4-W, is the owner's
+            decision.
   - [x] **The prognostic fields of the rain and snow tags**, settled in the
     design note WP4b-D and its review. *Decided 2026-09-25:* the three parts;
     `ρq_tag_<name>` holds the non-precipitating water, beside `ρq_rtag_<name>`

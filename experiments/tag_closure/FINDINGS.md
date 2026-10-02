@@ -2446,11 +2446,12 @@ W21's repair, and R5 in G3_PLAN section 10. Pre-registered in
     physics and the code between `43b01ca1` and `b34bbd8b` both changed, so
     the difference is not isolated.
   - **What follows.** DECISIONS.md (2026-10-02) set C, then B, so B (PX12)
-    comes next. The brief's option D, to declare that D4-W has no eligible
-    comparator and restate criteria 5 and 6, was to be chosen only if C
-    confirmed a per-step cause (G3_TODO). C does not, so that condition is
-    not met. The phrase above is PX5's record for this branch, not option
-    D. D4-W's provenance at 60 levels stays not assessable (R7, W55).
+    comes next. PX5 records no eligible D4-like comparator at production
+    cost. That is option D's declaration. The brief tied D to a per-step
+    cause, which is the reverse of PX5's rule; G3_TODO carries the
+    correction (2026-10-02). Whether to restate criteria 5 and 6 for D4-W is
+    the owner's decision. Until then, D4-W's provenance at 60 levels stays
+    not assessable (R7, W55).
   - **What this does not show.** Why the repair is 0.4% a day. One uniform
     column at 60 levels, one Newton iteration, one day. The modes are compared
     with each other, not with an independent reference (PX13).
