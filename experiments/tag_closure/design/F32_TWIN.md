@@ -319,3 +319,93 @@ Float64 and 5.6e-7 in Float32. Each run took about 30 minutes, about 16 of
 them to build. So an hour of the day takes up to about 14 minutes, and a day
 up to about 5.5 h. The limit of runs 5 and 6 is raised from 6 h to 12 h, a cap
 only. Nothing else changes.
+
+## 10. Amendment, 2026-10-02: criterion 9 under the rounding floor, on fresh runs
+
+Pushed before any of its jobs.
+
+### 10.1 The rule, and why fresh runs
+
+After W60's addendum, the owner set criterion 9's rounding floor on
+2026-10-02 (DECISIONS.md; G3_PLAN, the note under the criteria): a Float32
+measure passes if it is at most
+
+    max(10 × Float64, 3 · eps32 · √n_steps),   eps32 = 2^-23.
+
+The rule was set after the data were seen. So W60's registered verdict stays
+"fails", and the rule is judged here on runs made for it.
+
+**`n_steps`** is the number of 120 s steps over which the measure
+accumulates:
+
+| measure                                                                | interval   | `n_steps` | floor   |
+|:---------------------------------------------------------------------- |:---------- |:--------- |:------- |
+| a state at 24 h (the residual, `q_tag_inc_left`, what the parts leave) | 0 to 24 h  | 720       | 9.60e-6 |
+| the copies' own residual, the largest over the outputs                 | 0 to 24 h  | 720       | 9.60e-6 |
+| the second 12 h's addition                                             | 12 to 24 h | 360       | 6.79e-6 |
+| a rate over OD2's window (the repairs per day, `led_fix`)              | 1 to 24 h  | 690       | 9.39e-6 |
+
+The window is W54's twin's, 1 h, as in W60.
+
+### 10.2 The runs
+
+| #  | run (`configs/<run>.yml`)         | precision | mode    | made from               |
+|:-- |:--------------------------------- |:--------- |:------- |:----------------------- |
+| 7  | `f32fl_d4w_default_z60_c_n10_f64` | Float64   | default | `g3b_d4w_default_z60_c` |
+| 8  | `f32fl_d4w_default_z60_c_n10_f32` | Float32   | default | `f32_d4w_default_z60_c` |
+| 9  | `f32fl_d4w_copies_z60_c_n10_f64`  | Float64   | copies  | `g3b_d4w_copies_z60_c`  |
+| 10 | `f32fl_d4w_copies_z60_c_n10_f32`  | Float32   | copies  | `f32_d4w_copies_z60_c`  |
+
+Each is its source with only the header, a new `job_id`,
+`max_newton_iters_ode: 10`, and `radiation_reset_rng_seed` removed. Ten
+iterations, because that is where criterion 9 failed. The copies are run
+because criterion 4's measures include their own residual and their repair.
+Same trees (`d3c5e42f`), runscript and Slurm settings as section 3, with a
+12 h cap.
+
+**What "fresh" can and cannot do.** The model is deterministic. The seed key
+acts only on RRTMGP's cloud sampling, which DYCOMS's radiation does not call.
+So runs 7 and 8 are expected to repeat runs 5 and 6 bit for bit, with the
+values already seen (Float32 residual 3.9e-6, `q_tag_inc_left` 4.3e-6, `N`
+3.2e-6 at 24 h, each below the 9.6e-6 floor). For the default mode the fresh
+runs guard the record against a run that does not reproduce. They are not an
+independent sample, so they do not guard against a floor fitted to the data.
+The copies at ten iterations, runs 9 and 10, are new data. The scorer
+reports whether runs 7 and 8 repeat runs 5 and 6.
+
+**No separate check job.** Ten iterations in both precisions passed check
+`14126446`, and the copies in Float32 passed check `14125010`. The copies at
+ten iterations have not run. If a run fails, it is bounded and the task
+stops. Four jobs, within the amendment's 4.
+
+### 10.3 What is judged
+
+The scorer is `analysis/water/f32_floor_score.py`. It computes W60's
+measures (`f32_score.py`'s R4, R5 and R8) and its addendum's (the
+one-iteration part and what the named parts leave), the same way.
+
+| rule | measure, at 24 h unless said                                                                                                    | pass rule                                           |
+|:---- |:------------------------------------------------------------------------------------------------------------------------------- |:--------------------------------------------------- |
+| C9   | both modes: the gross residual; the second 12 h's addition; the partition repair per day and each tag's `led_fix` in the window | Float32 at most `max(10 × Float64, floor(n_steps))` |
+| C9   | default: `q_tag_inc_left`; what the named parts leave, `q_tag_res − q_tag_inc_left`                                             | as above                                            |
+| C9   | copies: their own residual, the largest over the outputs; their repair per day in the window                                    | as above                                            |
+
+Criterion 9 under the floor passes on these runs if every C9 row passes. A
+non-finite value or a missing hour fails.
+
+Reported, not judged: each Float64 value against criterion 4's own budget
+(the residual 2e-3, the second-half rule, the repairs 5e-3 and 2e-3, `led_fix`
+2%, the copies' own residual 2e-4, what the named parts leave 1e-6); the
+whole-day readings; and whether runs 7 and 8 repeat runs 5 and 6 byte for byte
+in their closure tables. Criterion 3 (parity) is W60's, at one iteration. It
+is not rerun.
+
+*The smoke run, before this was pushed:* `F32FL_SMOKE=1` read runs 5 and 6
+and W54's and W60's one-iteration copies. It wrote 50 rows, found the window
+at 1.0 h and `n_steps` of 720, 360 and 690. Its values were not read.
+
+### 10.4 What this does not do
+
+It sets no threshold: the floor is the owner's. It decides no cause. It runs
+no untagged twin at ten iterations, and no rain and snow tags, which wait for
+T3's stage 2. Finding: W62.
