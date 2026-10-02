@@ -1,0 +1,65 @@
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=1 ledger=q_tag_led_rescale per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=1 ledger=q_tag_led_empty per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=1 ledger=q_tag_led_repair per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=1 ledger=q_tag_led_repairnet per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=1 ledger=q_tag_led_uprepair per_hour=0.00015255938760379804
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=1 ledger=q_tag_led_upfilter per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=1 ledger=q_tag_exp_negative per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=1 ledger=q_tag_led_fix_tropo per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=1 ledger=q_tag_led_fix_strat per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=1 ledger=q_tag_led_fix_evap per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=1 ledger=q_tag_led_fix_evap_tropo per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=1 ledger=q_tag_led_fix_evap_strat per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=1 parent_hus_change=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=2 ledger=q_tag_led_rescale per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=2 ledger=q_tag_led_empty per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=2 ledger=q_tag_led_repair per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=2 ledger=q_tag_led_repairnet per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=2 ledger=q_tag_led_uprepair per_hour=0.00012790353486857197
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=2 ledger=q_tag_led_upfilter per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=2 ledger=q_tag_exp_negative per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=2 ledger=q_tag_led_fix_tropo per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=2 ledger=q_tag_led_fix_strat per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=2 ledger=q_tag_led_fix_evap per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=2 ledger=q_tag_led_fix_evap_tropo per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=2 ledger=q_tag_led_fix_evap_strat per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=2 parent_hus_change=0.04525436733541353
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=10 ledger=q_tag_led_rescale per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=10 ledger=q_tag_led_empty per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=10 ledger=q_tag_led_repair per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=10 ledger=q_tag_led_repairnet per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=10 ledger=q_tag_led_uprepair per_hour=0.00012514450174149524
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=10 ledger=q_tag_led_upfilter per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=10 ledger=q_tag_exp_negative per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=10 ledger=q_tag_led_fix_tropo per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=10 ledger=q_tag_led_fix_strat per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=10 ledger=q_tag_led_fix_evap per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=10 ledger=q_tag_led_fix_evap_tropo per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=10 ledger=q_tag_led_fix_evap_strat per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=120 newton=10 parent_hus_change=0.05010885600607677
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=60 newton=1 ledger=q_tag_led_rescale per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=60 newton=1 ledger=q_tag_led_empty per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=60 newton=1 ledger=q_tag_led_repair per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=60 newton=1 ledger=q_tag_led_repairnet per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=60 newton=1 ledger=q_tag_led_uprepair per_hour=0.00016149736295756277
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=60 newton=1 ledger=q_tag_led_upfilter per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=60 newton=1 ledger=q_tag_exp_negative per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=60 newton=1 ledger=q_tag_led_fix_tropo per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=60 newton=1 ledger=q_tag_led_fix_strat per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=60 newton=1 ledger=q_tag_led_fix_evap per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=60 newton=1 ledger=q_tag_led_fix_evap_tropo per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=60 newton=1 ledger=q_tag_led_fix_evap_strat per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=60 newton=1 parent_hus_change=0.031262166411425964
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=30 newton=1 ledger=q_tag_led_rescale per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=30 newton=1 ledger=q_tag_led_empty per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=30 newton=1 ledger=q_tag_led_repair per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=30 newton=1 ledger=q_tag_led_repairnet per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=30 newton=1 ledger=q_tag_led_uprepair per_hour=0.00014220683726571843
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=30 newton=1 ledger=q_tag_led_upfilter per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=30 newton=1 ledger=q_tag_exp_negative per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=30 newton=1 ledger=q_tag_led_fix_tropo per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=30 newton=1 ledger=q_tag_led_fix_strat per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=30 newton=1 ledger=q_tag_led_fix_evap per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=30 newton=1 ledger=q_tag_led_fix_evap_tropo per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=30 newton=1 ledger=q_tag_led_fix_evap_strat per_hour=0.0
+RESULT run=g3b_d4w_copies_z60_c probe=refinement dt=30 newton=1 parent_hus_change=0.03591568034542057

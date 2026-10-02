@@ -1,0 +1,30 @@
+run: g3b_d4w_pulse_copies_z30_c
+machine: terrabyte
+config: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-g3base/experiments/tag_closure/configs/g3b_d4w_pulse_copies_z30_c.yml
+driver: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-g3base/experiments/tag_closure/analysis/water/d4w_driver.jl
+commit: e2f9c6e3b16a91971e23a4816e3a8f8cb3758cda
+model_commit: b34bbd8b81483d1b5b52890cea2b7cada774ee9a
+model_tree: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g3base-run
+commit_source: git-files
+commit_dirty: unknown
+branch: claude/rec-g3base
+commit_error: git is not on PATH
+julia: 1.11.9
+julia_depot: /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+project: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g3base-run/.buildkite
+started: 2026-10-02T02:06:55+02:00
+finished: 2026-10-02T02:51:07+02:00
+exit_status: 0
+slurm_job_id: 14119362
+slurm_job_name: g3b_d4w_pulse_copies_z30_c
+partition: hpda2_compute
+nodelist: hpdar07c05s09
+cpus_per_task: 2
+ntasks: 1
+launch: direct
+node_type: Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30GHz
+climacomms_context: SINGLETON
+climacomms_device: CPU
+output_dir: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/g3b_d4w_pulse_copies_z30_c/output_0000
+netcdf_and_checkpoints: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/g3b_d4w_pulse_copies_z30_c/output_0000 (left on scratch, not committed)
+manifest_path: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/manifests/g3b_d4w_pulse_copies_z30_c.20261002T000652Z.json

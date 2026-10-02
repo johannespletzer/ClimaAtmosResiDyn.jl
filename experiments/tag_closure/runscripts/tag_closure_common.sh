@@ -381,6 +381,9 @@ echo "Tasks:           ${NTASKS}"
 echo "Launch:          ${LAUNCH[*]:-(direct)}"
 echo "Repository:      ${ROOT}"
 echo "Commit:          ${GIT_COMMIT} (from ${GIT_SOURCE})"
+# A run whose model comes from another tree (PROJECT outside ROOT, as the G3
+# baselines run it) names that tree and its commit; g3base_submit.sh sets them.
+[[ -z "${MODEL_COMMIT:-}" ]] || echo "Model commit:    ${MODEL_COMMIT} (${MODEL_TREE:-unknown tree})"
 echo "Julia:           ${JULIA} ${JULIA_CHANNEL}"
 echo "Project:         ${PROJECT}"
 echo "Driver:          ${DRIVER}"
@@ -458,6 +461,8 @@ node_type="$(
     echo "config: ${CONFIG}"
     echo "driver: ${DRIVER}"
     echo "commit: ${GIT_COMMIT}"
+    [[ -z "${MODEL_COMMIT:-}" ]] || echo "model_commit: ${MODEL_COMMIT}"
+    [[ -z "${MODEL_TREE:-}" ]] || echo "model_tree: ${MODEL_TREE}"
     echo "commit_source: ${GIT_SOURCE}"
     echo "commit_dirty: ${GIT_DIRTY}"
     echo "branch: ${GIT_BRANCH}"
