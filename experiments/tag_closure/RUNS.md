@@ -652,7 +652,9 @@ Measured after the fact, not pre-registered. The driver
 `output/w61/scripts/transport1_sphere.jl` ran from `$SCRATCH/claude_work/wp4bfix_run/`
 in CI's 1.11 test environments: `main_ci111_env` (`d3c5e42f`, the shared
 tree `../ClimaAtmosResiDyn-main`) and `wp4bfix_t1_ci111_env` (`81884d5b`,
-`../ClimaAtmosResiDyn-wp4bfix-t1`, main plus the passive form only).
+`../ClimaAtmosResiDyn-wp4bfix-t1`, main plus the passive form only). The
+third run used `transport1_sphere_regime.jl` through
+`transport1_regime_job.sh`, both in `output/w61/scripts/`.
 
 | Run               | Output | Config        | Commit   | Date       | Job        | Purpose                                                                 | Findings | Repo                       | Scratch                                    | Archive    |
 |:----------------- |:------ |:------------- |:-------- |:---------- |:---------- |:----------------------------------------------------------------------- |:-------- |:-------------------------- |:------------------------------------------ |:---------- |

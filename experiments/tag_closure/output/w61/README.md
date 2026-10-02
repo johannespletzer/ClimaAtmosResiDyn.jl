@@ -12,7 +12,17 @@ the moist baroclinic wave, `h_elem` 6, `nh_poly` 3, 10 levels to 30 km, 1M,
 - `passive/`: `main` plus the passive form only, the detached tree
   `81884d5b` (`scripts/passive_form_tree_81884d5b.diff`). Job `14125085`.
 - `cross_regime/`: `cross` again, with the regime's fractions. Job
-  `14126689`. Its ledgers equal `cross/`'s, byte for byte.
+  `14126689`, through `scripts/transport1_regime_job.sh`. Its ledgers, and
+  the columns its `forms.csv` shares with `cross/`'s, equal `cross/`'s byte
+  for byte.
+
+`scripts/review_1d_check.py` is the review's scalar check (2026-10-02) that
+the regime `0 < q < q_tot_r` is a flat-state result: in one dimension the
+cross form can raise a tag's variance with no regime, and lower it in total
+with one.
+
+The fractions are of the geometric volume: the driver integrates 1 over the
+domain.
 
 `forms.csv`: every 6 h, per tag, on the run's own state, both forms evaluated
 by hand with the model's operators and DSS. `var_*` is `∫ χ T dV` (negative
