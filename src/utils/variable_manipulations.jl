@@ -89,6 +89,55 @@ start with `ρ`. This is the auto-discovery predicate behind
 ) where {name_chain} =
     length(name_chain) == 1 && startswith(string(name_chain[1]), "ρ")
 
+# The name walks below read the names of `Y.c` from its element type, not from
+# `propertynames`. In ClimaCore 1.0.1, `propertynames` of a data layout uses
+# `Base.filter` on a tuple of field names. From 32 names on, Julia builds that
+# tuple at run time. A walk over `Y.c` then allocates and dispatches at run
+# time on every call. These two helpers give the same answers at compile time,
+# for any number of fields.
+
+"""
+    static_top_level_names(x)
+
+Return the same `Tuple` as `MatrixFields.top_level_names(x)`.
+
+For a `Field`, the names come from its element type and are known at compile
+time. Like ClimaCore's `propertynames`, it skips fields of zero size. Any
+other `x` falls back to `MatrixFields.top_level_names`.
+"""
+static_top_level_names(x) = MatrixFields.top_level_names(x)
+static_top_level_names(field::Fields.Field) =
+    _static_top_level_names(eltype(field))
+@generated function _static_top_level_names(::Type{T}) where {T}
+    names = filter(name -> sizeof(fieldtype(T, name)) > 0, collect(fieldnames(T)))
+    return Tuple(map(MatrixFields.FieldName, names))
+end
+
+"""
+    static_has_field(x, name)
+
+Return the same `Bool` as `MatrixFields.has_field(x, name)`.
+
+For a `Field`, the answer comes from its element type and is known at compile
+time. Any other `x` falls back to `MatrixFields.has_field`.
+"""
+static_has_field(x, name) = MatrixFields.has_field(x, name)
+static_has_field(field::Fields.Field, name::MatrixFields.FieldName) =
+    _static_has_field(eltype(field), name)
+@generated function _static_has_field(
+    ::Type{T},
+    ::MatrixFields.FieldName{name_chain},
+) where {T, name_chain}
+    # Follow the name chain one type at a time, as `has_field` follows it one
+    # `getproperty` at a time.
+    S = T
+    for name in name_chain
+        name in fieldnames(S) && sizeof(fieldtype(S, name)) > 0 || return false
+        S = fieldtype(S, name)
+    end
+    return true
+end
+
 """
     specific_tracer_name(ρχ_name)
 
@@ -116,7 +165,7 @@ fields are excluded automatically, because `uₕ` and `sgsʲs` are not
 tracer into the generic transport, diffusion, and hyperdiffusion loops.
 """
 gs_tracer_names(Y) =
-    unrolled_filter(MatrixFields.top_level_names(Y.c)) do name
+    unrolled_filter(static_top_level_names(Y.c)) do name
         is_ρ_weighted_name(name) && !(name in (@name(ρ), @name(ρe_tot), @name(ρtke)))
     end
 
@@ -240,7 +289,7 @@ foreach_gs_tracer(f::F, Y_or_similar_values...) where {F} =
         ρχ_or_χ_fields = unrolled_map(Y_or_similar_values) do value
             field = value isa Fields.Field ? value : value.c
             ρχ_or_χ_name =
-                MatrixFields.has_field(field, ρχ_name) ? ρχ_name :
+                static_has_field(field, ρχ_name) ? ρχ_name :
                 specific_tracer_name(ρχ_name)
             MatrixFields.get_field(field, ρχ_or_χ_name)
         end
@@ -270,12 +319,12 @@ inactive, i.e. when `Y.c` has no `sgsʲs` field. Every updraft carries the same
 set of tracers, so the first updraft is representative.
 """
 sgs_tracer_names(Y) =
-    _sgs_tracer_names(Val(hasproperty(Y.c, :sgsʲs)), Y)
+    _sgs_tracer_names(Val(static_has_field(Y.c, @name(sgsʲs))), Y)
 _sgs_tracer_names(::Val{false}, Y) = ()
 _sgs_tracer_names(::Val{true}, Y) =
     unrolled_filter(
         _is_sgs_tracer_name,
-        MatrixFields.top_level_names(Y.c.sgsʲs.:(1)),
+        static_top_level_names(Y.c.sgsʲs.:(1)),
     )
 
 

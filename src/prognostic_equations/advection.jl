@@ -118,7 +118,9 @@ NVTX.@annotate function horizontal_tracer_advection_tendency!(Yₜ, Y, p, t)
         (; ᶜuʲs) = p.precomputed
     end
 
-    for ρχ_name in filter(is_tracer_var, propertynames(Y.c))
+    # `gs_tracer_names` applies the rule of `is_tracer_var` at compile time.
+    # Filtering `propertynames(Y.c)` allocates once `Y.c` has 32 fields.
+    for ρχ_name in unrolled_map(MatrixFields.extract_first, gs_tracer_names(Y))
         # Under enthalpy transport the energy source tags take their shares of
         # the parent's own flux instead, just below.
         energy_source_tag_moves_as_enthalpy(p, ρχ_name) && continue

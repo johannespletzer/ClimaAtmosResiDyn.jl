@@ -135,7 +135,7 @@ so the result adapts to the active microphysics model. See
 """
 sedimenting_tracer_names(Y) =
     unrolled_filter(
-        name -> MatrixFields.has_field(Y.c, name),
+        name -> static_has_field(Y.c, name),
         gs_sedimenting_tracer_candidates,
     )
 
@@ -150,7 +150,7 @@ Their sedimentation also transports total water and enthalpy, so they couple to
 """
 sedimenting_mass_names(Y) =
     unrolled_filter(
-        name -> MatrixFields.has_field(Y.c, name),
+        name -> static_has_field(Y.c, name),
         gs_sedimenting_mass_candidates,
     )
 
@@ -165,7 +165,7 @@ Returns `()` when prognostic EDMF is not active. See
 """
 sedimenting_sgs_tracer_names(Y) =
     _sedimenting_sgs_names(
-        Val(hasproperty(Y.c, :sgsʲs)),
+        Val(static_has_field(Y.c, @name(sgsʲs))),
         Y,
         sgs_sedimenting_tracer_candidates,
     )
@@ -181,7 +181,7 @@ Returns `()` when prognostic EDMF is not active.
 """
 sedimenting_sgs_mass_names(Y) =
     _sedimenting_sgs_names(
-        Val(hasproperty(Y.c, :sgsʲs)),
+        Val(static_has_field(Y.c, @name(sgsʲs))),
         Y,
         sgs_sedimenting_mass_candidates,
     )
@@ -196,7 +196,7 @@ time.
 _sedimenting_sgs_names(::Val{false}, Y, candidates) = ()
 _sedimenting_sgs_names(::Val{true}, Y, candidates) =
     unrolled_filter(
-        name -> MatrixFields.has_field(Y.c.sgsʲs.:(1), name),
+        name -> static_has_field(Y.c.sgsʲs.:(1), name),
         candidates,
     )
 
@@ -292,7 +292,7 @@ whose vertical advection with the grid-mean velocity is treated implicitly:
 advected_gs_scalar_names(Y) = (
     @name(ρ),
     @name(ρe_tot),
-    (MatrixFields.has_field(Y.c, @name(ρq_tot)) ? (@name(ρq_tot),) : ())...,
+    (static_has_field(Y.c, @name(ρq_tot)) ? (@name(ρq_tot),) : ())...,
 )
 
 """
@@ -305,7 +305,7 @@ These take part in the implicit moisture processes: sedimentation, vertical
 diffusion, and the SGS mass flux.
 """
 microphysics_tracer_names(Y) = (
-    (MatrixFields.has_field(Y.c, @name(ρq_tot)) ? (@name(ρq_tot),) : ())...,
+    (static_has_field(Y.c, @name(ρq_tot)) ? (@name(ρq_tot),) : ())...,
     sedimenting_tracer_names(Y)...,
 )
 
@@ -368,7 +368,7 @@ implicitly: sedimenting tracers, then `q_tot` and `mse`, then passive tracers.
 Returns `()` when prognostic EDMF is not active.
 """
 advected_sgs_scalar_names(Y) =
-    hasproperty(Y.c, :sgsʲs) ?
+    static_has_field(Y.c, @name(sgsʲs)) ?
     (
         sedimenting_sgs_tracer_names(Y)...,
         @name(q_tot),

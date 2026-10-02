@@ -213,3 +213,107 @@ end
     @test CA.center_state_name(@name(ρq_rai)) == @name(c.ρq_rai)
     @test CA.sgs_state_name(@name(q_rai)) == @name(c.sgsʲs.:(1).q_rai)
 end
+
+# The name walks must resolve the names of `Y.c` at compile time for any
+# number of fields. In ClimaCore 1.0.1, `propertynames` of a field builds its
+# tuple at run time from 32 names on. A walk that calls it then allocates on
+# every call, which made the step with 8 water and 8 energy tags slow (38
+# fields). These tests fail if any walk allocates there.
+import ClimaCore: MatrixFields
+
+# A state like `Y.c` with `n` top-level fields: the 1M water species, a passive
+# tracer, tags, a process record without the `ρ` prefix, and one updraft.
+function name_walk_state(n; FT = Float32)
+    (; cent_space) = get_cartesian_spaces(; FT)
+    sgs_names = (:ρa, :mse, :q_tot, :q_lcl, :q_icl, :q_rai, :q_sno, :q_gas_A)
+    sgs_type = NamedTuple{sgs_names, NTuple{length(sgs_names), FT}}
+    base = (:ρ, :ρe_tot, :ρq_tot, :ρq_lcl, :ρq_icl, :ρq_rai, :ρq_sno)
+    tail = (:ρq_gas_A, :prc_e_test, :sgsʲs)
+    ntags = n - length(base) - length(tail)
+    tags = ntuple(i -> Symbol(:ρq_tag_, i), ntags)
+    names = (base..., tags..., tail...)
+    types = (ntuple(_ -> FT, n - 1)..., Tuple{sgs_type})
+    coords = Fields.coordinate_field(cent_space)
+    c = similar(coords, NamedTuple{names, Tuple{types...}})
+    return (; c)
+end
+
+# Allocation of one call, after a call that compiles it.
+walk_allocations(walk::F, Y) where {F} = (walk(Y); @allocated walk(Y))
+
+foreach_gs_tracer_one(Y) = CA.foreach_gs_tracer((x, name) -> nothing, Y)
+# With two values, `foreach_gs_tracer` allocates 160 bytes per call at any
+# number of fields, also at 12. That is not a name walk, so the test holds it
+# to its size at 12 fields.
+foreach_gs_tracer_two(Y) = CA.foreach_gs_tracer((x, y, name) -> nothing, Y, Y)
+
+@testset "Name walks resolve at compile time at 31 and 38 fields" begin
+    two_values_at_12 = walk_allocations(foreach_gs_tracer_two, name_walk_state(12))
+    for n in (31, 38)
+        Y = name_walk_state(n)
+        @test length(propertynames(Y.c)) == n
+
+        # The helpers agree with ClimaCore's run-time answers, and are
+        # inferred.
+        @test (@inferred CA.static_top_level_names(Y.c)) ==
+              MatrixFields.top_level_names(Y.c)
+        sgs = Y.c.sgsʲs.:(1)
+        @test CA.static_top_level_names(sgs) ==
+              MatrixFields.top_level_names(sgs)
+        for name in (
+            @name(ρq_rai),
+            @name(ρq_tag_1),
+            @name(prc_e_test),
+            @name(sgsʲs),
+            @name(sgsʲs.:(1)),
+            @name(sgsʲs.:(1).q_rai),
+            @name(ρn_rai),
+            @name(sgsʲs.:(2)),
+            @name(sgsʲs.:(1).n_rai),
+            @name(ρq_rai.x),
+        )
+            @test (@inferred CA.static_has_field(Y.c, name)) ==
+                  MatrixFields.has_field(Y.c, name)
+        end
+
+        # The names the walks give, against the rules they implement.
+        tracers = Tuple(
+            MatrixFields.FieldName(s) for
+            s in propertynames(Y.c) if CA.is_tracer_var(s)
+        )
+        @test CA.gs_tracer_names(Y) == tracers
+        # The names the horizontal tracer advection loops over.
+        @test map(MatrixFields.extract_first, CA.gs_tracer_names(Y)) ==
+              Tuple(filter(CA.is_tracer_var, propertynames(Y.c)))
+        @test CA.sgs_tracer_names(Y) ==
+              (@name(q_lcl), @name(q_icl), @name(q_rai), @name(q_sno), @name(q_gas_A))
+        sedimenting = (@name(ρq_lcl), @name(ρq_icl), @name(ρq_rai), @name(ρq_sno))
+        @test CA.sedimenting_tracer_names(Y) == sedimenting
+        @test CA.sedimenting_mass_names(Y) == sedimenting
+        @test CA.microphysics_tracer_names(Y) == (@name(ρq_tot), sedimenting...)
+        @test CA.sedimenting_sgs_tracer_names(Y) ==
+              (@name(q_lcl), @name(q_icl), @name(q_rai), @name(q_sno))
+
+        # No walk allocates. A run-time `filter` over the names would.
+        walks = (
+            CA.gs_tracer_names,
+            CA.specific_gs_tracer_names,
+            CA.sgs_tracer_names,
+            CA.sedimenting_tracer_names,
+            CA.sedimenting_mass_names,
+            CA.sedimenting_sgs_tracer_names,
+            CA.sedimenting_sgs_mass_names,
+            CA.microphysics_tracer_names,
+            CA.diffused_gs_scalar_names,
+            CA.advected_gs_scalar_names,
+            CA.passive_gs_tracer_names,
+            CA.passive_sgs_tracer_names,
+            CA.advected_sgs_scalar_names,
+            foreach_gs_tracer_one,
+        )
+        for walk in walks
+            @test walk_allocations(walk, Y) == 0
+        end
+        @test walk_allocations(foreach_gs_tracer_two, Y) <= two_values_at_12
+    end
+end
