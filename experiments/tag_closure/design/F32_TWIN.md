@@ -163,6 +163,13 @@ committed and pushed first. If Float32 itself breaks the model (a crash or a
 non-finite state that no config can avoid), no model code is changed: W60
 bounds the failure and the task stops.
 
+*The check's result, 2026-10-02, before the real jobs.* Job `14125010`
+(1 h 44 min) passed. All three runs exited 0. The tagged runs wrote both
+tables and every configured diagnostic: 72 files for the default, 68 for the
+copies and 42 for the twin, as the Float64 runs. The output is Float32.
+Reported: at 2 h both modes are bit for bit the twin in all 37 fields. The
+default's closure warning read 1.06e-6 of the water at 2 h. Nothing changes.
+
 ## 6. Expected, before the runs
 
 R1 passes in both modes: the tags write no model field, and Float32 changes no
