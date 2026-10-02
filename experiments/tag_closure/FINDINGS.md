@@ -98,7 +98,7 @@ changes, which [RUNS.md](RUNS.md) records.
 | E7–E9, E20–E24, E26, E28, E30, E38, E49, E63, E87     | 7. The process records and the per-process checks   |
 | E50, E60, E69, E70, E74, E75, E81                     | 8. The sphere and long runs                         |
 | E68, E72, E73, E76, E83, E84, E86                     | 9. Mixing: V3 and the updraft gap                   |
-| T1–T10, E44, E44b–E44e, E52, E56, E77, E78            | 10. Cost                                            |
+| T1–T10, E44, E44b–E44e, E52, E56, E77, E78, W52, E88  | 10. Cost                                            |
 | M1–M8                                                 | 11. Method                                          |
 | old claims, errata, conflicts                         | 12. Superseded and falsified claims                 |
 | FQ-1 to FQ-24                                         | 13. What is not established                         |

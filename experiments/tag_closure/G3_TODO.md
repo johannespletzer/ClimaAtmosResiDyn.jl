@@ -1087,11 +1087,13 @@ owner's points in the note's section 8.
         assumed to exist at 32 tags. From 8 to 16 copies the build grew as
         about N^1.8, which projects 2.3 h at 32; the 4 h attempt did not
         build (W30, W34), so the growth steepens past that trend.
+
       + The cost qualification (step 8) covers build time, peak memory and
         per-step scaling at the intended tag count, for the default and the
         comparator; the aggregation test (Insight 10); and the sphere's
         run-length budget. Its ceilings are OD3's, set before the held-out and
         default-selection runs.
+
       + *Decided 2026-09-24 (OD8):* 8 water and 8 energy tags; copies at 8 are
         the direct audit where they pass eligibility; no aggregation bridge
         for qualification, so the aggregation test is reported, not required.
@@ -1100,6 +1102,37 @@ owner's points in the note's section 8.
         *Scope added (provenance pathway, 2026-09-26, pending OD9):*
         the aggregation row stays reported. PP-BAND (PX18) is deferred
         until a measured result needs it.
+
+      + [x] **V-W10 measured at `b34bbd8b` (2026-10-02, drafts on
+        `claude/rec-wp9`, awaiting the Opus review):** FINDINGS W52 (water)
+        and E88 (energy). Design `design/WP9_COST.md` sections 9 and 10, data
+        `output/wp9_cost_b34d/`. The default mode costs 1.43× at 8 water
+        tags, 1.58× at 8 energy tags and 4.19× at 8 + 8 on D4. The cost per
+        tag grows past 8 tags (exponent about 2 from 8 to 32). The runs at
+        `43b01ca1` (sections 4, 7 and 9) stay as prior evidence. The earlier
+        reruns failed the spread rule, and the owner chose each next design
+        (2026-09-29, 2026-10-01, 2026-10-02).
+
+      + [x] P2 and P3: profiled at `43b01ca1` (`output/wp9_profile/`). Neither
+        shows where read. P2 was not read at 32 tags (E88).
+
+      + [ ] **The cost budget: proposal, waiting for the owner.** For the
+        default mode at the intended count, 8 water + 8 energy tags, on one
+        column, one CPU rank, ledgers off:
+
+          * a step time of at most 4.5× the untagged column (measured 4.19×);
+          * with the per-tag ledgers of validation runs, at most 9.5×
+            (measured 9.04×);
+          * a build of at most 2× the untagged build, or 2.5× with ledgers
+            (measured 1.51× and 2.14×);
+          * a peak of at most 16 GB per rank (measured 12.5 GB, and 13.4 GB
+            with ledgers);
+          * per family at 8 tags, as a guard against regressions: water at
+            most 1.6× (1.43×) and energy at most 1.75× (1.58×).
+
+        The margins are 5% to 32% over the least favourable measured value.
+        The sphere's run-length budget (OD6) and the GPU are not covered. The
+        copies are measured, not budgeted.
 
 ## The sphere
 

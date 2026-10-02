@@ -401,6 +401,21 @@ yet.
 | `wp4c_corr_smoke`                   | —      | `wp4c_corr_d4w_default`          | ee3b4d0d                                           | 2026-09-25 | login node              | two steps of V1 before the jobs; its first attempt's log kept beside                                                                                                                           | none                            | no                                                    | 1 reference dir                               | synced 2026-09-28 |
 | `wp4c_corr_diag`                    | —      | V1's case                        | the WP4c validation tree, with uncommitted scripts | 2026-09-25 | login node              | the start of W45's investigation: `analysis/water/wp4c_diag_probe.jl` and `wp4c_diag_read.py`, uncommitted, kept on `claude/backup/plan2-2026-09-25` (`b3cd940a`); smoke and login-node probes | none (waits until C's revision) | no                                                    | 8 files                                       | synced 2026-09-28 |
 
+### WP9 / V-W10: the cost runs (2026-09-29 to 2026-10-02)
+
+Each row is one results root with one directory per arm, from
+`runscripts/submit_wp9.sh`. The jobs, nodes and spreads are in the README of
+each `output/` directory. Only `wp9_cost_b34d` is quoted in a finding.
+
+| Run             | Output  | Config                         | Commit   | Date       | Job                                       | Purpose                                                                                  | Findings | Repo | Scratch | Archive |
+|:--------------- |:------- |:------------------------------ |:-------- |:---------- |:----------------------------------------- |:---------------------------------------------------------------------------------------- |:-------- |:---- |:------- |:------- |
+| `wp9_cost`      | per arm | `configs/wp9_*.yml`            | 43b01ca1 | 2026-09-29 | `13999627`–`13999635`                     | V-W10 first pass, shared nodes; spread over 10% at most points                           | none     | CSVs | yes     | no      |
+| `wp9_cost_excl` | per arm | same                           | 43b01ca1 | 2026-10-01 | `14005213`–`14005221`                     | exclusive rerun (design section 7); spread rule fails, block 1                           | none     | CSVs | yes     | no      |
+| `wp9_profile`   | per arm | same                           | 43b01ca1 | 2026-10-01 | `14055213`–`14055215`                     | P2/P3 time and allocation profile (section 8)                                            | E88, W52 | CSVs | yes     | no      |
+| `wp9_check_b34` | per arm | same                           | b34bbd8b | 2026-10-02 | `14103199`–`14103201`                     | check jobs before section 9's run                                                        | none     | CSVs | yes     | no      |
+| `wp9_cost_b34`  | per arm | same                           | b34bbd8b | 2026-10-02 | `14112139`–`14112147`                     | section 9: same-node baselines, 50 warm-up steps; spread rule fails at 39 of 40, block 1 | none     | CSVs | yes     | no      |
+| `wp9_cost_b34d` | per arm | same, with `FAMILY=both` on D4 | b34bbd8b | 2026-10-02 | `14121227`–`14121236`, `14122295` (rerun) | section 10: first block discarded; all points pass except `water_copies`, rerun as `_r2` | W52, E88 | CSVs | yes     | no      |
+
 ### Analysis outputs, not model runs
 
 | Run                       | Output | Config | Commit   | Date | Job | Purpose                                                                                                                           | Findings       | Repo | Scratch  | Archive  |
