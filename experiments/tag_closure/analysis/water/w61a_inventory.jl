@@ -68,7 +68,8 @@ inventory(Y, n) =
 function reference_terms(Y, p)
     (; ν₄_scalar) = CA.ν₄(p.atmos.hyperdiff, Y)
     ρ = Y.c.ρ
-    ᶜq_r = @. CA.q_tot_r(thermo_params, p.precomputed.ᶜp)
+    ᶜp = p.precomputed.ᶜp
+    ᶜq_r = @. CA.q_tot_r(thermo_params, ᶜp)
     L_r = @. wdivₕ(gradₕ(ᶜq_r))
     dss!(L_r)
     H_r = @. ν₄_scalar * wdivₕ(ρ * gradₕ(L_r))
@@ -91,7 +92,8 @@ function variance_rates(Y, p, ref)
     rows = String[]
     for (tag, term) in zip(tags, terms)
         n = CA.tag_name(tag)
-        χ = @. getproperty(Y.c, Symbol(:ρq_tag_, n)) / ρ
+        ᶜρq_tag = getproperty(Y.c, Symbol(:ρq_tag_, n))
+        χ = @. ᶜρq_tag / ρ
         L_i = @. wdivₕ(gradₕ(χ))
         dss!(L_i)
         L_x = @. wdivₕ(gradₕ(χ - term.φ * ᶜq_r))
