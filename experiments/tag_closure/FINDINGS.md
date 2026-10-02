@@ -2630,15 +2630,19 @@ below 1e-5 over 3 h). Runs 9 to 11; the twin is new.
 *Jobs `14119365` to `14119367`, as W54.*
 
 **W60. V-W7, the Float32 twin of D4-W on `main` `d3c5e42f`: criterion 9
-passes on the measures that were read (the named parts were not). In
-Float32 both modes are bit for bit their untagged twin, and every judged
+passes on every measure read, and stays partial, since the named parts and
+the rain and snow tags are not assessable in either precision. In Float32
+both modes are bit for bit their untagged twin, and every judged
 criterion-4 measure is within 10 times its Float64 value. The least
 favourable is the default's second 12 h, 1.21 times (3.24e-6 of the water
-against 2.67e-6). In the first two hours the default's residual is 85 and 8.1
-times its Float64 value, which no rule judges.** *Draft, 2026-10-02, for the
-Opus review.* Pre-registered in `design/F32_TWIN.md` (`211fedc1`; the check
-noted in `abe8f9ed`) before the real jobs. The Float64 reference is W54's and
-W55's runs on `b34bbd8b`. P0 confirms them bit for bit on `d3c5e42f`.
+against 2.67e-6). At 1 h the default's residual is 85 times its Float64
+value, which no rule judges. That Float64 value is below Float32's rounding
+level.** *Draft, 2026-10-02, for the Opus review.* Pre-registered in
+`design/F32_TWIN.md` (`211fedc1`; the check noted in `abe8f9ed`) before the
+real jobs. The Float64 reference is W54's and W55's runs on `b34bbd8b`. P0
+reproduces W55's default run bit for bit on `d3c5e42f`. W54's twin and
+copies were not rerun, since their code changed only in text between the two
+commits (the design, section 2).
 
 | rule (Float32 against Float64, limit 10×)               | least favourable result                                                                   |
 |:------------------------------------------------------- |:----------------------------------------------------------------------------------------- |
@@ -2652,15 +2656,21 @@ W55's runs on `b34bbd8b`. P0 confirms them bit for bit on `d3c5e42f`.
 | R5 copies, own residual                                 | *pass*, 5.35e-5 against 7.10e-5 (0.75×)                                                   |
 | R5 copies, repair a day                                 | *pass* of the 10× rule, 3.29e-3 against 3.98e-3 (0.83×); above criterion 4's 2e-3 in both |
 | R8 copies, partition repair a day; `led_fix`            | *pass*, 1.14e-3 against 1.31e-3 (0.88×); `strat` 0.48% against 0.55%                      |
-| C9                                                      | *pass*                                                                                    |
+| C9, the design's rule: R1 and every row above           | *pass*; criterion 9 stays partial (see "Not assessed")                                    |
 
-  - **The first hours, reported.** Float32 starts with a residual of 1.7e-8
-    of the water, the rounding of the initial partition, where Float64 has
-    4e-17. At 1 h the default reads 5.6e-7 against 6.6e-9 (85 times), at 2 h
-    1.06e-6 against 1.31e-7 (8.1 times), and from 3 h on 1.05 to 1.99 times.
-    Criterion 4 reads 24 h, so the rule does not judge these hours. Both are
-    far below the 2e-3 budget. The copies stay within 0.41 to 1.66 times at
-    every hour.
+  - **The first hours, reported.** They were read after the runs; the design
+    does not list them. Float32 starts at 1.7e-8 of the water, 0.29 of its
+    unit roundoff (2⁻²⁴). Float64 starts at 4e-17, 0.36 of its own. At 1 h
+    the default reads 5.6e-7 against 6.6e-9 (85 times), at 2 h 1.06e-6
+    against 1.31e-7 (8.1 times), and from 3 h on 1.05 to 1.99 times. A
+    partition that closes exactly reads about 2e-8 in Float32 from rounding
+    alone (the review's estimate on these profiles). Float64's value at 1 h
+    is about a third of that, so ten times it is about three times that. The
+    1 h ratio therefore says little about precision. Criterion 4 reads 24 h,
+    so no rule judges these hours, and every value there is far below the
+    2e-3 budget. The copies stay within 0.41 to 1.66 times from 1 h on. Over the
+    first hour the repairs and the copies' own residual read 0.75 to 0.94
+    times their Float64 values.
   - **Not an ordering by precision.** The copies' residual and repair are
     smaller in Float32. The two precisions give two atmospheres: the parent's
     column water differs by 0.46% at 24 h, and the Float32 twin's startup
@@ -2671,12 +2681,15 @@ W55's runs on `b34bbd8b`. P0 confirms them bit for bit on `d3c5e42f`.
     6 are not judged on D4-W (option D).
   - **The whole day, reported.** The default's partition repair is 1.08e-2
     a day (Float64 1.20e-2) and `strat`'s `led_fix` 4.7% (5.2%). The copies'
-    repair is 3.84e-3 (4.62e-3). The second-half rule as written passes in
-    both modes and both precisions.
+    repair is 3.84e-3 (4.62e-3). The default's two readings are above R8's
+    0.5% and 2% in both precisions, as W55 reads in Float64. The second-half
+    rule as written passes in both modes and both precisions.
   - **Not assessed.** What the named parts leave: the reference has no
     10-Newton split on the new physics. The rain and snow tags: refused under
-    EDMF until WP4b's stage 2. R3 is reported: no point at the floor, the top
-    level moves 2.15 K, no negative water.
+    EDMF until WP4b's stage 2, and 6.1 gives their Float32 closure to
+    criterion 9. So criterion 9 cannot be met on D4-W before both can be
+    read. R3 is reported: no point at the floor, the top level moves 2.15 K,
+    no negative water.
   - **What this does not show.** A cause: that needs tagged and untagged
     pairs at each precision, and refinement. One case, one grid, one day, one
     Newton iteration. R1 checks the written diagnostics, not the prognostic
@@ -2686,7 +2699,11 @@ W55's runs on `b34bbd8b`. P0 confirms them bit for bit on `d3c5e42f`.
 `14125570` (copies) and `14125571` (P0), model `d3c5e42f` from the clean run
 tree `../ClimaAtmosResiDyn-f32-run`, record `abe8f9ed`. Check job `14125010`.
 `analysis/water/f32_score.py`; `output/f32/` (`f32_scores.csv`,
-`windows.csv`, `data/`, `logs/`).*
+`windows.csv`, `data/`, `logs/`). Opus review, 2026-10-02: every number
+recomputed from the tables. P0 and R1 were rechecked over every variable. R1
+also holds on the three hourly precipitation averages, which the scorer
+skips. In P0, 12 files differ only in their `comments` attribute, text that
+`d3c5e42f` changed.*
 
 ## 2. Energy source tags: closure by transport
 

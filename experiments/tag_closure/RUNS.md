@@ -606,7 +606,7 @@ Pre-registered in `design/G3_BASELINE_RERUN.md` (`cb166788`, amended `e2f9c6e3` 
 
 ### V-W7, the Float32 twin of D4-W on main d3c5e42f (T4)
 
-Pre-registered in `design/F32_TWIN.md` (`211fedc1`, the check noted in `abe8f9ed` before the real jobs). The model ran from the clean detached tree `../ClimaAtmosResiDyn-f32-run` at `d3c5e42f`, and the driver, configs and runscripts from `claude/rec-f32` through `g3base_submit.sh`. Each `provenance.txt` names both commits. The Float64 reference is the G3 baselines' `g3b_d4w_{untagged,default,copies}_z60_c` above. Draft, waiting for the Opus review.
+Pre-registered in `design/F32_TWIN.md` (`211fedc1`, the check noted in `abe8f9ed` before the real jobs). The model ran from the clean detached tree `../ClimaAtmosResiDyn-f32-run` at `d3c5e42f`, and the driver, configs and runscripts from `claude/rec-f32` through `g3base_submit.sh`. Each `provenance.txt` names both commits. The Float64 reference is the G3 baselines' `g3b_d4w_{untagged,default,copies}_z60_c` above. Reviewed by Opus on 2026-10-02 (W60).
 
 | Run                         | Output | Config       | Commit                     | Date       | Job        | Purpose                                                                                      | Findings          | Repo                            | Scratch                            | Archive    |
 |:--------------------------- |:------ |:------------ |:-------------------------- |:---------- |:---------- |:-------------------------------------------------------------------------------------------- |:----------------- |:------------------------------- |:---------------------------------- |:---------- |

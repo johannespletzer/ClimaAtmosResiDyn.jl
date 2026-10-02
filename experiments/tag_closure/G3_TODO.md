@@ -39,7 +39,7 @@ The twelve criteria of the plan, section 2, in short:
 | 6  | Convergence of the default's error and of the copies                                           | not assessable: no eligible comparator (W38); centred rows R6, R9, R10 pass; first-order breaks the copies (R4, R6)                                                                                                                               |
 | 7  | Precipitation provenance: the 0M split, rain and snow tags, `Σ pr_tag = pr`, the audit         | partial: 0M split validated (W26); WP4a-V passes (W32); rain/snow stage 1 without EDMF (W43); stages 2 and 3, V-W5 and the audit's acceptance open                                                                                                |
 | 8  | Held-out columns: RICO, BOMEX, ARM SGP, GCM-driven 0M                                          | not started: waits on V-W5 (OD14 accepted 2026-10-02)                                                                                                                                                                                             |
-| 9  | Float32 twin                                                                                   | passes on D4-W (W60, draft for review): Float32 parity in both modes; each judged criterion-4 measure at most 1.21× Float64 (limit 10×); named parts and rain/snow not assessed; first 2 h 85× and 8.1×, reported                                 |
+| 9  | Float32 twin                                                                                   | partial (W60, reviewed 2026-10-02): D4-W in Float32 bit for bit its twin in both modes; every criterion-4 measure read at most 1.21× Float64 (limit 10×); named parts and rain/snow not assessable in either precision                            |
 | 10 | Cost, both modes and both families                                                             | in progress: WP9 first pass noisy (19 of 30 points spread over 10%; W52 to follow); exclusive-node rerun pending (jobs 14005213–21); 32 water copies not built in 8 h; rain/snow under EDMF not buildable at 43b01ca1; budget waits for the owner |
 | 11 | Ten days on the sphere (superseded 2026-09-24: 90 days at 60 levels), a copies twin, a restart | not started: waits on step 8a (crev) and step 8 (WP9)                                                                                                                                                                                             |
 | 12 | Reviews, CI, draft PRs, docs                                                                   | partial: reviews WP1–WP6 on file; WP4b stage-1 review done (12 findings, none moving a model field; transport-2 in #135); CI green on main; water claim contract (WP8) and final docs pass open                                                   |
@@ -1175,12 +1175,15 @@ jobs.
     0M column.
   - [ ] Red team before the default is confirmed (`clima-numerics-reviewer`,
     xhigh).
-  - [x] **V-W7**, the Float32 twin of D4-W. *Done 2026-10-02 (W60, draft
-    for the Opus review):* `design/F32_TWIN.md`, on `d3c5e42f`. Both modes
-    are bit for bit the Float32 twin. Each judged criterion-4 measure is at
-    most 1.21 times its Float64 value (the limit is 10). The default's
-    residual is 85 and 8.1 times Float64's at 1 h and 2 h, reported only.
-    The copies' repair still fails criterion 4's own row (3.29e-3 a day).
+  - [x] **V-W7**, the Float32 twin of D4-W. *Done 2026-10-02 (W60,
+    reviewed by Opus the same day):* `design/F32_TWIN.md`, on `d3c5e42f`.
+    Both modes are bit for bit the Float32 twin. Each judged criterion-4
+    measure is at most 1.21 times its Float64 value (the limit is 10). The
+    default's residual is 85 times Float64's at 1 h, reported only, where
+    Float64's value is below Float32's rounding level. The copies' repair
+    still fails criterion 4's own row (3.29e-3 a day). Criterion 9 stays
+    partial: the named parts and the rain and snow tags are not assessable
+    in either precision.
   - [x] **V-W8**, the file-based column with water and energy tags, 3 h.
     Done: FINDINGS W22. Parity bit for bit; water gross 4.2e-4 at 3 h,
     energy source 1.3e-3; `evap` and the forcing tag fill.
