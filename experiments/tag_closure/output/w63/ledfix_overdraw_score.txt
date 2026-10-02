@@ -1,0 +1,53 @@
+C1, C2: each arm against its reference, bit for bit at every output both have
+  lf_od_rev_s23 against cr_s23: 87 of 87 NetCDF files bit for bit (outputs per file [57, 227]), 0 differ, 0 missing; audit rows equal in all 227 common rows: True
+  lf_od_switch_s23 against lf_switch_s23: 87 of 87 NetCDF files bit for bit (outputs per file [57, 227]), 0 differ, 0 missing; audit rows equal in all 227 common rows: True
+RESULT C1 pass
+RESULT C2 pass
+V0 lf_od_rev_s23 free: largest |out − in − give − cross + led| 6.776e-21 against largest |led| 4.017e-05: pass
+V0 lf_od_rev_s23 pbl: largest |out − in − give − cross + led| 2.033e-20 against largest |led| 9.158e-05: pass
+V1 lf_od_rev_s23 free window 0: Σ|stages − step| 1.416e-15 against Σ|a| 1.190e-02: pass
+V1 lf_od_rev_s23 free window 1: Σ|stages − step| 4.573e-15 against Σ|a| 1.861e-02: pass
+V1 lf_od_rev_s23 free window 2: Σ|stages − step| 1.917e-14 against Σ|a| 1.208e-02: pass
+V1 lf_od_rev_s23 pbl window 0: Σ|stages − step| 5.941e-15 against Σ|a| 5.070e-02: pass
+V1 lf_od_rev_s23 pbl window 1: Σ|stages − step| 1.462e-14 against Σ|a| 5.810e-02: pass
+V1 lf_od_rev_s23 pbl window 2: Σ|stages − step| 8.486e-14 against Σ|a| 6.718e-02: pass
+V2 lf_od_rev_s23: 237600 cell-steps, stages per cell-step [2], unmatched stage rows 0, bad stage index 0: pass
+V0 lf_od_switch_s23 free: largest |out − in − give − cross + led| 6.776e-21 against largest |led| 2.239e-05: pass
+V0 lf_od_switch_s23 pbl: largest |out − in − give − cross + led| 2.033e-20 against largest |led| 9.158e-05: pass
+V1 lf_od_switch_s23 free window 0: Σ|stages − step| 1.449e-15 against Σ|a| 1.185e-02: pass
+V1 lf_od_switch_s23 free window 1: Σ|stages − step| 4.062e-15 against Σ|a| 1.452e-02: pass
+V1 lf_od_switch_s23 free window 2: Σ|stages − step| 1.883e-14 against Σ|a| 2.935e-02: pass
+V1 lf_od_switch_s23 pbl window 0: Σ|stages − step| 5.921e-15 against Σ|a| 5.091e-02: pass
+V1 lf_od_switch_s23 pbl window 1: Σ|stages − step| 1.476e-14 against Σ|a| 6.220e-02: pass
+V1 lf_od_switch_s23 pbl window 2: Σ|stages − step| 9.604e-14 against Σ|a| 1.254e-01: pass
+V2 lf_od_switch_s23: 237600 cell-steps, stages per cell-step [2], unmatched stage rows 0, bad stage index 0: pass
+RESULT V pass
+Same cell-steps in both arms: True (237600 and 237600)
+Scored levels 1 to 22, windows (11.25, 15.75, 55.75)
+S, all windows, free: R rev 1.7439e-03, switch 1.3918e-04, extra 1.6047e-03; explained rev 1.7305e-03 (0.992 of R), switch 1.3233e-04 (0.951 of R); S 0.996
+RESULT S_free 0.996
+RESULT extra_R_free 1.6047e-03
+S, window 0 (day 11.25), free: R rev 1.8387e-04, switch 5.8931e-05, extra 1.2494e-04; explained rev 1.8298e-04 (0.995 of R), switch 5.8931e-05 (1.000 of R); S 0.993
+RESULT S_free_window0 0.993
+S, window 1 (day 15.75), free: R rev 8.3080e-04, switch 2.7965e-05, extra 8.0284e-04; explained rev 8.3080e-04 (1.000 of R), switch 2.7956e-05 (1.000 of R); S 1.000
+RESULT S_free_window1 1.000
+S, window 2 (day 55.75), free: R rev 7.2924e-04, switch 5.2286e-05, extra 6.7695e-04; explained rev 7.1676e-04 (0.983 of R), switch 4.5441e-05 (0.869 of R); S 0.992
+RESULT S_free_window2 0.992
+Reported, W53's levels 8 to 14, free: R rev 1.7057e-03, switch 1.1304e-04, extra 1.5927e-03; explained rev 1.6924e-03 (0.992 of R), switch 1.0619e-04 (0.939 of R); S 0.996
+Reported, pbl: R rev 2.5808e-04, switch 2.3149e-04, extra 2.6591e-05; explained rev 7.4253e-06 (0.029 of R), switch 1.5234e-05 (0.066 of R); S -0.294
+Reading: the mechanism is confirmed at site 23 (S >= 0.8). Least favourable window: 0.992
+RESULT reading the_mechanism_is_confirmed_at_site_23_(S_>=_0.8)
+
+Reported (not scored), free, all scored levels and windows:
+  lf_od_rev_s23: events 12561; over them Σ(−O) -1.7653e-02, ΣI 1.2910e-04, ΣG -1.2734e-03, ΣX 0.0000e+00, Σb 1.7038e-02, D_a -1.8797e-02, ΣE 1.7641e-02, ΣEs (stage variant) 4.6265e-03
+    all cell-steps: Σ outflow 2.5826e-02, ΣE 1.9428e-02, Σr+ 1.7439e-03
+  lf_od_switch_s23: events 6821; over them Σ(−O) -7.0251e-04, ΣI 3.8683e-05, ΣG -4.2889e-06, ΣX 0.0000e+00, Σb 5.1650e-04, D_a -6.6812e-04, ΣE 6.9236e-04, ΣEs (stage variant) 2.6085e-04
+    all cell-steps: Σ outflow 3.9679e-02, ΣE 1.0624e-02, Σr+ 1.3918e-04
+  Q_a, the extra ΣE over the events against the extra drain D_a: 0.935
+  S with the stage variant: 0.957
+  In rev's events, the same cell-steps in both arms: outflow rev 1.7653e-02, switch 1.4040e-02; whole flux out rev 7.0744e-02, switch 7.2469e-02; free at the start rev 1.5650e-05, switch 1.8347e-02; E rev 1.7641e-02, switch 9.6261e-03
+  lf_od_rev_s23: 19147 cell-steps with E > 0; their E's share where the whole outflow ≥ the partition's water at the start 0.998; median free's share of the partition 0.0000, median whole outflow over the partition's water 5237780400.01
+  lf_od_rev_s23: Σr+ by level, largest four: 10: 1.481e-03, 12: 1.414e-04, 14: 6.759e-05, 15: 3.492e-05
+  lf_od_switch_s23: 13486 cell-steps with E > 0; their E's share where the whole outflow ≥ the partition's water at the start 0.987; median free's share of the partition 0.0001, median whole outflow over the partition's water 7470537.07
+  lf_od_switch_s23: Σr+ by level, largest four: 10: 3.847e-05, 14: 3.253e-05, 12: 2.846e-05, 15: 2.574e-05
+Reading of S (11.13.5): S >= 0.8 confirmed at site 23; S < 0.5 not the mechanism; otherwise partly.

@@ -89,7 +89,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                                   | section                                             |
 |:----------------------------------------------------- |:--------------------------------------------------- |
-| W1–W61 (W46 for PX7; W52, W53 for WP9 and `led_fix`)  | 1. Water tags                                       |
+| W1–W61, W63 (W46 PX7; W52 WP9; W53, W63 `led_fix`)    | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48, E85 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11                 | 3. The energy reference and the offset              |
 | E40, E53                                              | 4. EDMF and the updrafts                            |
@@ -2989,6 +2989,82 @@ more small-scale variance.
 from the shared detached tree `../ClimaAtmosResiDyn-main`, and `81884d5b`
 from `../ClimaAtmosResiDyn-wp4bfix-t1`. `output/w61/` (`forms.csv`,
 `ledgers.csv` per run, the driver, the passive-form diff, log tails).*
+
+**W63. W53's follow-up: at site 23, the follower's outflow beyond `free`'s
+content accounts for the extra repair (`S = 0.996`, least favourable window
+0.992; 0.832 if the negative part's give is counted first).** Where the
+repair raises `free` under the rule, the donor cell's partition is nearly
+empty, and the follower still sends the parent's whole flux with the
+normalized shares. The probe of design section 11.13, pre-registered before
+any job (commit `7a169230`). It tests the one mechanism W53 named and did not
+isolate.
+
+**The probe.** Two arms on W53's model, `0eb329b2` (the physics before
+#139, kept so that the arms are W53's runs again), run tree `bda3f660`
+(W53's `e524dbac` with the driver and two configs). No run had saved a
+state, so both start from day 0 and run 56.5 days: `rev`, the rule as W49
+ran it, and `switch`, the rule's gain redefined to `ParentGain()`'s. The
+driver redefines the follower's post-solve hook to call the same two
+functions and then read, in each stage, the follower's four parts for each
+tag: the outflow through the cell's faces, the inflow, the negative part's
+give and the crossing's part. W53's three windows, levels 1 to 22 (15 m to
+1911 m), 10800 steps and 237600 cell-steps per arm.
+
+| item                                                             | value                                                        | pass             |
+|:---------------------------------------------------------------- |:------------------------------------------------------------ |:---------------- |
+| C1, `lf_od_rev_s23` against `cr_s23`, bit for bit                | 87 of 87 files (57 daily, 227 six-hourly), 227 audit rows    | pass             |
+| C2, `lf_od_switch_s23` against W53's `lf_switch_s23`             | 87 of 87 files, 227 audit rows                               | pass             |
+| V0, four parts against the follower's ledger, per cell and stage | largest difference 2.0e-20, largest increment 9.2e-5         | pass             |
+| V1, ARS222's stage weights against the step's ledger change      | at most 9.6e-14 against `Σ\|a\|` 1.2e-2 to 1.3e-1 per window | pass             |
+| V2, two stages per traced step                                   | 237600 of 237600 cell-steps, both arms                       | pass             |
+| S, `free`, all windows (`R_rev` 1.744e-3, `R_switch` 1.39e-4)    | 0.996                                                        | ≥ 0.8: confirmed |
+| S per window (days 11.25, 15.75, 55.75)                          | 0.993, 1.000, 0.992                                          | —                |
+| reported: S at W53's levels 8 to 14; with a stage-level overdraw | 0.996; 0.957                                                 | —                |
+| reported, not pre-registered: S with the give counted first      | 0.832                                                        | —                |
+| reported: S for `pbl` (extra repair 2.7e-5 at these levels)      | −0.29                                                        | —                |
+
+  - **What S measures.** `E`, the step's outflow of `free` from a cell less
+    what `free` held at the step's start, against the repair `r` that then
+    raised it, in the same cell-step. `X = Σ min(E, r)` and
+    `S = (X_rev − X_switch) / (R_rev − R_switch)`. Under the rule the
+    overdraw accounts for 0.992 of the repair, under the switch for 0.951.
+  - **The overdraw is about ten times the repair, and the rest of the step
+    refills most of it.** Over `rev`'s 12561 repaired cell-steps the
+    outflow is −1.77e-2 kg m⁻³ (summed over cell-steps), `E` 1.76e-2, the
+    give −1.27e-3, the inflow 1.3e-4 and everything else in the step
+    +1.70e-2. So `min(E, r)` is `r` almost wherever the outflow overdrew.
+    The score separates the outflow from the other channels that can take
+    `free` below zero: the negative part's give and the rest of the step.
+  - **The least favourable number.** The give drains `free` in the same
+    cell-steps, 0.07 of the outflow there. Counting it first (taking
+    `max(−give, 0)` out of `r` before `E`) gives `S = 0.832`, still above
+    0.8. This ordering was not pre-registered.
+  - **The donor's partition is nearly empty.** Where `E > 0` under the
+    rule, 0.998 of `E` lies in cell-steps whose whole outflow is at least
+    the partition's water at the step's start (0.987 for the switch). In
+    `rev`'s repaired cell-steps, both arms in the same cell-steps: the whole
+    flux out is about the same (7.07e-2 and 7.25e-2), and `free`'s outflow
+    is 1.77e-2 and 1.40e-2. But `free` at the steps' start is 1.6e-5 under
+    the rule against 1.8e-2 under the switch. So the switch's outflow there
+    mostly stays within what `free` holds (`E` 9.6e-3), and the rule's does
+    not.
+  - **Where.** One level, 435 m (level 10), carries 0.85 of `rev`'s repair
+    of `free` at these levels (1.48e-3 of 1.74e-3), as stage A's 0.43 of
+    the 90-day extra at that level suggested.
+  - **What it does not show.** Why `free` starts the step nearly empty in
+    those cells under the rule. That fits the rule withholding gains where
+    the parent is negative, but no run here isolates it. The reading is for
+    site 23, these windows and levels below 2 km. It does not generalise to
+    other sites or to `pbl`, for which the overdraw accounts for 0.03 of
+    the repair under the rule (W53: `pbl` is the side that gives water in
+    the trade). V5 is unchanged, and so is its 2% limit (owner).
+
+*`hpda2_compute`, 2026-10-02 to 03, jobs `14126834` (the check, 40 min,
+V0 to V2 pass), `14126889` (`lf_od_rev_s23`, 2 h 46 min) and `14126890`
+(`lf_od_switch_s23`, 2 h 46 min), all exit 0, from
+`../ClimaAtmosResiDyn-ledfix-od-run` at `bda3f660`, driver
+`analysis/water/ledfix_overdraw.jl`. Scored with
+`analysis/water/ledfix_overdraw_score.py`; `output/w63/`.*
 
 ## 2. Energy source tags: closure by transport
 

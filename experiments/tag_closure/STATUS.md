@@ -150,7 +150,12 @@ not checked, it says so.
         23. Where the repair refills `free`, the follower drained it in the
         same step (share 0.999; 0.591 for `pbl`).
       + **Open for the owner:**
-          * why the follower drains `free` more under the rule, which is not
+          * why the follower drains `free` more under the rule: *W63
+            (2026-10-03)* confirms the mechanism at site 23. The follower's
+            outflow beyond `free`'s content accounts for the extra repair
+            (`S = 0.996`; 0.832 with the give counted first). The donor's
+            partition is nearly empty and the follower sends the parent's
+            whole flux. Why `free` starts those steps nearly empty is not
             isolated;
           * V5's 2% limit, since `main` is at 2.7% and 2.3%;
           * OD2's windows, which do not mark a startup on the new twins

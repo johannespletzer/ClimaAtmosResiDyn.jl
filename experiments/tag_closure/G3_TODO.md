@@ -213,6 +213,13 @@ Restated 2026-09-30 from the findings; the plan's section 2 holds the criteria's
     raises `free`, the follower took it below zero in that step (`φ` 0.999).
     Why the follower drains more under the rule is not isolated. V5 still
     fails with the rule off (`main`'s 2.7%). What follows is for the owner.
+    *Follow-up done 2026-10-03 (W63, design 11.13, approved by the owner on
+    2026-10-02):* at site 23 the follower's outflow beyond `free`'s content
+    accounts for the extra repair (`S = 0.996`, least favourable window
+    0.992; 0.832 with the negative part's give counted first). The donor's
+    partition is nearly empty, and the normalized shares send the parent's
+    whole flux. Why `free` starts those steps nearly empty under the rule
+    is not isolated. V5's 2% limit stays (owner).
   - [x] **R2, the Newton row, on D4-W** (W25's scoring: 4.1e-3 to 1.7e-2 at two
     iterations, against 1e-3). *The owner, 2026-09-25:* measure three and four
     iterations first (job `13944802`); then raise OD1's Newton count or revise

@@ -206,7 +206,8 @@ function main_overdraw()
     csv = joinpath(outdir, "$(job_id)_trace.csv")
     io = open(csv, "w")
     println(io, join(header, ","))
-    stage_header = ["step", "stage", "t_stage", "dtgamma", "level", "z_m", "parent", "pos", "outtot"]
+    stage_header =
+        ["step", "stage", "t_stage", "dtgamma", "level", "z_m", "parent", "pos", "outtot"]
     for name in TRACED_TAGS, part in ("C", "s", "out", "in", "give", "cross", "led")
         push!(stage_header, "$(part)_$(name)")
     end
@@ -225,7 +226,10 @@ function main_overdraw()
             ),
         )
         for l in LEVELS
-            println(io, join([STEP[], t, step_end, l, z[l], (v[l] for v in values)...], ","))
+            println(
+                io,
+                join([STEP[], t, step_end, l, z[l], (v[l] for v in values)...], ","),
+            )
         end
     end
 
