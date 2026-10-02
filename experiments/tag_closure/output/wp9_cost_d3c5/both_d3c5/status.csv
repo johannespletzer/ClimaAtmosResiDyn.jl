@@ -1,0 +1,4 @@
+point,ntags,variant,exit_status,seconds,slurm_job
+0,0,none,0,1140,14125001
+8,8,none,0,1682,14125001
+8:ledgers,8,ledgers,0,2286,14125001

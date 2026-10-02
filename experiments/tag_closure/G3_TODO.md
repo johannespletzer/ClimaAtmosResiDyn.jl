@@ -29,20 +29,20 @@ Marks: `[ ]` open, `[~]` under way, `[x]` done, `[!]` waiting for a decision.
 
 The twelve criteria of the plan, section 2, in short:
 
-| #  | Criterion                                                                                      | Status                   |
-|:-- |:---------------------------------------------------------------------------------------------- |:------------------------ |
-| 1  | Evidence: every headline number goes through the verifier and a manifest                       | tools built; review open |
-| 2  | Refusals with tests, known issues settled, a file-based start, restart round trips             | open                     |
-| 3  | Parity in both modes: 1M and 0M EDMF columns, explicit microphysics, two MPI ranks             | open                     |
-| 4  | Closure on D4-W, including the copies' own residual and the rain and snow parts                | open                     |
-| 5  | Per-tag accuracy against the copies, at 24 h and in the first hour                             | open                     |
-| 6  | Convergence of the default's error and of the copies                                           | open                     |
-| 7  | Precipitation provenance: the 0M split, rain and snow tags, `Σ pr_tag = pr`, the audit         | open                     |
-| 8  | Held-out columns: RICO, BOMEX, ARM SGP, GCM-driven 0M                                          | open                     |
-| 9  | Float32 twin                                                                                   | open                     |
-| 10 | Cost, both modes and both families                                                             | open                     |
-| 11 | Ten days on the sphere (superseded 2026-09-24: 90 days at 60 levels), a copies twin, a restart | open                     |
-| 12 | Reviews, CI, draft PRs, docs                                                                   | open                     |
+| #  | Criterion                                                                                      | Status                                                                               |
+|:-- |:---------------------------------------------------------------------------------------------- |:------------------------------------------------------------------------------------ |
+| 1  | Evidence: every headline number goes through the verifier and a manifest                       | tools built; review open                                                             |
+| 2  | Refusals with tests, known issues settled, a file-based start, restart round trips             | open                                                                                 |
+| 3  | Parity in both modes: 1M and 0M EDMF columns, explicit microphysics, two MPI ranks             | open                                                                                 |
+| 4  | Closure on D4-W, including the copies' own residual and the rain and snow parts                | open                                                                                 |
+| 5  | Per-tag accuracy against the copies, at 24 h and in the first hour                             | open                                                                                 |
+| 6  | Convergence of the default's error and of the copies                                           | open                                                                                 |
+| 7  | Precipitation provenance: the 0M split, rain and snow tags, `Σ pr_tag = pr`, the audit         | open                                                                                 |
+| 8  | Held-out columns: RICO, BOMEX, ARM SGP, GCM-driven 0M                                          | open                                                                                 |
+| 9  | Float32 twin                                                                                   | open                                                                                 |
+| 10 | Cost, both modes and both families                                                             | measured; 8 + 8 step 4.16× fails OD3's 2× unless revised; budget waits for the owner |
+| 11 | Ten days on the sphere (superseded 2026-09-24: 90 days at 60 levels), a copies twin, a restart | open                                                                                 |
+| 12 | Reviews, CI, draft PRs, docs                                                                   | open                                                                                 |
 
 ## Decisions
 
@@ -1103,36 +1103,49 @@ owner's points in the note's section 8.
         the aggregation row stays reported. PP-BAND (PX18) is deferred
         until a measured result needs it.
 
-      + [x] **V-W10 measured at `b34bbd8b` (2026-10-02, drafts on
+      + [x] **V-W10 measured on the new physics (2026-10-02, drafts on
         `claude/rec-wp9`, awaiting the Opus review):** FINDINGS W52 (water)
-        and E88 (energy). Design `design/WP9_COST.md` sections 9 and 10, data
-        `output/wp9_cost_b34d/`. The default mode costs 1.43× at 8 water
-        tags, 1.58× at 8 energy tags and 4.19× at 8 + 8 on D4. The cost per
-        tag grows past 8 tags (exponent about 2 from 8 to 32). The runs at
-        `43b01ca1` (sections 4, 7 and 9) stay as prior evidence. The earlier
-        reruns failed the spread rule, and the owner chose each next design
-        (2026-09-29, 2026-10-01, 2026-10-02).
+        and E88 (energy). Design `design/WP9_COST.md` sections 9 to 11, data
+        `output/wp9_cost_b34d/` (`b34bbd8b`) and `output/wp9_cost_d3c5/`
+        (`d3c5e42f`, the 8 + 8 point). The default mode costs 1.43× at 8
+        water tags (TRMM), 1.58× at 8 energy tags (D4), and 4.16× at 8 + 8
+        on D4, 9.10× with ledgers. Alone on D4 the halves cost 1.44× and
+        1.53×, so the families do not add. The cost per tag grows past 8
+        tags (exponent 1.8 to 2.2 from 8 to 32). The runs at `43b01ca1`
+        (sections 4 and 7) stay as prior evidence. The earlier reruns failed
+        the spread rule, and the owner chose each next design (2026-09-29,
+        2026-10-01, 2026-10-02).
 
       + [x] P2 and P3: profiled at `43b01ca1` (`output/wp9_profile/`). Neither
         shows where read. P2 was not read at 32 tags (E88).
 
-      + [ ] **The cost budget: proposal, waiting for the owner.** For the
-        default mode at the intended count, 8 water + 8 energy tags, on one
-        column, one CPU rank, ledgers off:
+      + [ ] **The cost budget: proposal, waiting for the owner.** OD3's
+        approved row (2026-09-24) caps the default mode at 8 + 8 tags at 2×
+        the untagged step and 2× the untagged build. The step measures 4.16×,
+        so against that row criterion 10 fails. The build, 1.51×, meets it.
+        Two ways on:
 
-          * a step time of at most 4.5× the untagged column (measured 4.19×);
-          * with the per-tag ledgers of validation runs, at most 9.5×
-            (measured 9.04×);
-          * a build of at most 2× the untagged build, or 2.5× with ledgers
-            (measured 1.51× and 2.14×);
-          * a peak of at most 16 GB per rank (measured 12.5 GB, and 13.4 GB
-            with ledgers);
-          * per family at 8 tags, as a guard against regressions: water at
-            most 1.6× (1.43×) and energy at most 1.75× (1.58×).
+          * **Keep OD3's 2×.** Then criterion 10 fails, and the step cost
+            must come down before V-W11. The joint excess over the halves
+            (E88) and the growth past 8 tags (W52) are where to look. Neither
+            cause is isolated.
+          * **Revise OD3's step row (proposed).** For the default mode at 8
+            water + 8 energy tags, one column, one CPU rank:
+              - step time at most 4.5× the untagged step (measured 4.16×);
+              - with the per-tag ledgers of validation runs, at most 9.5×
+                (measured 9.10×);
+              - build at most 2× the untagged build as approved, or 2.5×
+                with ledgers (measured 1.51× and 2.14×);
+              - peak at most 16 GB per rank (measured 14.5 GB);
+              - per family at 8 tags on D4, as a guard against regressions:
+                water at most 1.6× (1.44×), energy at most 1.75× (1.58×).
 
-        The margins are 5% to 32% over the least favourable measured value.
-        The sphere's run-length budget (OD6) and the GPU are not covered. The
-        copies are measured, not budgeted.
+        The margins are 4% to 32% over the least favourable measured value.
+        The sphere's run-length budget (OD6) and the GPU are not covered;
+        T5 checks the sphere against this budget. OD3's row for the copies,
+        both families' copies in one model built within 4 h, is not
+        measured: each family's copies at 8 were measured alone (energy
+        2446 s, water 485 s).
 
 ## The sphere
 
