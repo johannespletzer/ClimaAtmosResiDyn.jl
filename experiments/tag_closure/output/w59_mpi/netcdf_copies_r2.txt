@@ -1,0 +1,2 @@
+RESULT 54 fields compared, 54 bitwise identical over 13 outputs
+only in the tagged run: ['q_tag_copy_res', 'q_tag_evap', 'q_tag_evap_tropics', 'q_tag_extratropics', 'q_tag_fix_evap', 'q_tag_fix_evap_tropics', 'q_tag_fix_extratropics', 'q_tag_fix_tropics', 'q_tag_res', 'q_tag_tropics']

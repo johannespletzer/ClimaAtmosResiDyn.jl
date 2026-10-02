@@ -121,7 +121,11 @@ everywhere. Then stop and report. No model code changes in this task.
 
 ## 5. Results
 
-To be written after the jobs, as FINDINGS W59.
+FINDINGS W59 (draft, 2026-10-02): both modes pass on two ranks, 0 of
+884,736 state values and 0 of 54 diagnostics differ. The coverage numbers
+of `mpi_score.sh` first read the NetCDF time axis wrongly; it was fixed
+before anything was recorded. The judged checks compare whole arrays and were
+not affected.
 
 ## 6. The CI column checks
 

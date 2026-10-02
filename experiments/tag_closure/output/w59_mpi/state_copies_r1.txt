@@ -1,0 +1,14 @@
+day0.10800.hdf5: 19 of 19 fields bit for bit; only in the second run: 15
+   only in the second run: Y.c.q_tag_exp_negative, Y.c.q_tag_led_empty, Y.c.q_tag_led_repair, Y.c.q_tag_led_repairnet, Y.c.q_tag_led_rescale, Y.c.q_tag_led_upfilter, Y.c.q_tag_led_uprepair, Y.c.sgsʲs.1.q_tag_evap, Y.c.sgsʲs.1.q_tag_evap_tropics, Y.c.sgsʲs.1.q_tag_extratropics, Y.c.sgsʲs.1.q_tag_tropics, Y.c.ρq_tag_evap, Y.c.ρq_tag_evap_tropics, Y.c.ρq_tag_extratropics, Y.c.ρq_tag_tropics
+day0.12600.hdf5: 19 of 19 fields bit for bit; only in the second run: 15
+day0.14400.hdf5: 19 of 19 fields bit for bit; only in the second run: 15
+day0.16200.hdf5: 19 of 19 fields bit for bit; only in the second run: 15
+day0.1800.hdf5: 19 of 19 fields bit for bit; only in the second run: 15
+day0.18000.hdf5: 19 of 19 fields bit for bit; only in the second run: 15
+day0.19800.hdf5: 19 of 19 fields bit for bit; only in the second run: 15
+day0.21600.hdf5: 19 of 19 fields bit for bit; only in the second run: 15
+day0.3600.hdf5: 19 of 19 fields bit for bit; only in the second run: 15
+day0.5400.hdf5: 19 of 19 fields bit for bit; only in the second run: 15
+day0.7200.hdf5: 19 of 19 fields bit for bit; only in the second run: 15
+day0.9000.hdf5: 19 of 19 fields bit for bit; only in the second run: 15
+PASS parity: 12 checkpoints, 228 field comparisons, 884736 values

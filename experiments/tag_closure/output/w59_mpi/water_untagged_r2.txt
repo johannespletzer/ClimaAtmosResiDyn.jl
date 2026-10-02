@@ -1,0 +1,12 @@
+day0.10800.hdf5: global mean column water 0.08498094084303133 kg m⁻²; ρq_tot 4.3345758713497734e13, ρq_lcl 0.0, ρq_icl 0.0, ρq_rai 0.0, ρq_sno 0.0
+day0.12600.hdf5: global mean column water 0.09895597247584324 kg m⁻²; ρq_tot 5.047392584321052e13, ρq_lcl 0.0, ρq_icl 0.0, ρq_rai 0.0, ρq_sno 0.0
+day0.14400.hdf5: global mean column water 0.11288202484918204 kg m⁻²; ρq_tot 5.757711039280563e13, ρq_lcl 0.0, ρq_icl 0.0, ρq_rai 0.0, ρq_sno 0.0
+day0.16200.hdf5: global mean column water 0.1269104567838711 kg m⁻²; ρq_tot 6.473251511929522e13, ρq_lcl 0.0, ρq_icl 0.0, ρq_rai 0.0, ρq_sno 0.0
+day0.1800.hdf5: global mean column water 0.014364231373322127 kg m⁻²; ρq_tot 7.3266840898235625e12, ρq_lcl 0.0, ρq_icl 0.0, ρq_rai 0.0, ρq_sno 0.0
+day0.18000.hdf5: global mean column water 0.14113046769086238 kg m⁻²; ρq_tot 7.198563747312116e13, ρq_lcl 0.0, ρq_icl 0.0, ρq_rai 0.0, ρq_sno 0.0
+day0.19800.hdf5: global mean column water 0.15551594931177334 kg m⁻²; ρq_tot 7.932316055925906e13, ρq_lcl 0.0, ρq_icl 0.0, ρq_rai 0.0, ρq_sno 0.0
+day0.21600.hdf5: global mean column water 0.17006779864829658 kg m⁻²; ρq_tot 8.67455419064036e13, ρq_lcl 0.0, ρq_icl 0.0, ρq_rai 0.0, ρq_sno 0.0
+day0.3600.hdf5: global mean column water 0.028583550977271714 kg m⁻²; ρq_tot 1.457945383452861e13, ρq_lcl 0.0, ρq_icl 0.0, ρq_rai 0.0, ρq_sno 0.0
+day0.5400.hdf5: global mean column water 0.042754792485250395 kg m⁻²; ρq_tot 2.1807700650601824e13, ρq_lcl 0.0, ρq_icl 0.0, ρq_rai 0.0, ρq_sno 0.0
+day0.7200.hdf5: global mean column water 0.056878793985245035 kg m⁻²; ρq_tot 2.901185201694965e13, ρq_lcl 0.0, ρq_icl 0.0, ρq_rai 0.0, ρq_sno 0.0
+day0.9000.hdf5: global mean column water 0.07095529380223253 kg m⁻²; ρq_tot 3.619177446243961e13, ρq_lcl 0.0, ρq_icl 0.0, ρq_rai 0.0, ρq_sno 0.0

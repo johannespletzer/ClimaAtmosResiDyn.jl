@@ -604,6 +604,19 @@ Pre-registered in `design/G3_BASELINE_RERUN.md` (`cb166788`, amended `e2f9c6e3` 
 | `g3b_trmm0m_default_6h`                             | 0000   | same                         | b34bbd8b (record e2f9c6e3) | 2026-10-02 | `14119366` | Task 7: TRMM 0M 6 h, the follower, per-tag ledgers                                                                                                                              | W58                      | `output/g3base/` (scores, `data/`: CSVs) | 52 nc                                 | not synced |
 | `g3b_trmm0m_copies_6h`                              | 0000   | same                         | b34bbd8b (record e2f9c6e3) | 2026-10-02 | `14119367` | Task 7: TRMM 0M 6 h, the copies, per-tag ledgers                                                                                                                                | W58                      | `output/g3base/` (scores, `data/`: CSVs) | 52 nc                                 | not synced |
 
+### W59: criterion 3 on two MPI ranks (T2)
+
+Pre-registered in `design/MPI_PARITY.md` (`f519462a`). The model ran from the clean detached tree `../ClimaAtmosResiDyn-mpi-run` at `d3c5e42f`, and the driver (`run_tag_closure.jl`), configs and runscripts from `claude/rec-mpi`. The G2 sphere's physics at h_elem 2, Float64, 6 h, from a dry start. Each run also wrote 12 checkpoints (every 30 min), compared by `mpi_parity.jl`.
+
+| Run                   | Output | Config | Commit                     | Date       | Job        | Purpose                                       | Findings | Repo                                                            | Scratch        | Archive    |
+|:--------------------- |:------ |:------ |:-------------------------- |:---------- |:---------- |:--------------------------------------------- |:-------- |:--------------------------------------------------------------- |:-------------- |:---------- |
+| `w59_mpi_untagged_r2` | 0000   | same   | d3c5e42f (record f519462a) | 2026-10-02 | `14125044` | W59: 2 ranks, no tags; the twin               | W59      | `output/w59_mpi/` (scores, `runs/`: provenance, manifest, CSVs) | 54 nc, 12 hdf5 | not synced |
+| `w59_mpi_default_r2`  | 0000   | same   | d3c5e42f (record f519462a) | 2026-10-02 | `14125045` | W59: 2 ranks, default mode (increment chosen) | W59      | `output/w59_mpi/` (scores, `runs/`: provenance, manifest, CSVs) | 63 nc, 12 hdf5 | not synced |
+| `w59_mpi_copies_r2`   | 0000   | same   | d3c5e42f (record f519462a) | 2026-10-02 | `14125046` | W59: 2 ranks, the copies                      | W59      | `output/w59_mpi/` (scores, `runs/`: provenance, manifest, CSVs) | 64 nc, 12 hdf5 | not synced |
+| `w59_mpi_untagged_r1` | 0000   | same   | d3c5e42f (record f519462a) | 2026-10-02 | `14125047` | W59: 1 rank, no tags; reported only           | W59      | `output/w59_mpi/` (scores, `runs/`: provenance, manifest, CSVs) | 54 nc, 12 hdf5 | not synced |
+| `w59_mpi_default_r1`  | 0000   | same   | d3c5e42f (record f519462a) | 2026-10-02 | `14125048` | W59: 1 rank, default mode; reported only      | W59      | `output/w59_mpi/` (scores, `runs/`: provenance, manifest, CSVs) | 63 nc, 12 hdf5 | not synced |
+| `w59_mpi_copies_r1`   | 0000   | same   | d3c5e42f (record f519462a) | 2026-10-02 | `14125049` | W59: 1 rank, the copies; reported only        | W59      | `output/w59_mpi/` (scores, `runs/`: provenance, manifest, CSVs) | 64 nc, 12 hdf5 | not synced |
+
 ### Analysis outputs, not model runs
 
 | Run                       | Output | Config | Commit   | Date | Job | Purpose                                                                                                                           | Findings       | Repo | Scratch  | Archive  |

@@ -101,7 +101,9 @@ d = sys.argv[1]
 for var in ("hus", "clw", "cli", "husra", "hussn", "pr", "hfls"):
     try:
         with nc.Dataset(f"{d}/{var}_30m_inst.nc") as f:
-            a = np.asarray(f[var][:])
+            # The time is the last dimension, (z, lat, lon, time) or
+            # (lat, lon, time), so take it from the names.
+            a = np.moveaxis(np.asarray(f[var][:]), f[var].dimensions.index("time"), 0)
         peaks = [float(np.max(np.abs(a[i]))) for i in range(a.shape[0])]
         print(f"coverage {var}: largest |value| at 0 h {peaks[0]:.3e}, at the end {peaks[-1]:.3e}, over the run {max(peaks):.3e}")
     except Exception as error:
