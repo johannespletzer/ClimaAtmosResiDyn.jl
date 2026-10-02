@@ -2,7 +2,7 @@
 Where the step's time and allocation go, one process per point (G3 WP9, the
 P2/P3 profile of design/WP9_COST.md section 8). It decides nothing.
 
-    FAMILY=water|energy MODE=default NTAGS=<n> [PRECIP=1] OUTDIR=<dir> \
+    FAMILY=water|energy|both MODE=default NTAGS=<n> [PRECIP=1] OUTDIR=<dir> \
     MODEL_COMMIT=<sha> \
         julia +1.11 --project=<run tree>/.buildkite \
         experiments/tag_closure/analysis/wp9_profile_driver.jl <base config.yml>
@@ -26,6 +26,12 @@ of the stepper's hooks (`PHASES`), or `callbacks` for a frame in
 also put on a frame: the innermost frame in the model's `src/`. And it is
 marked `tag code` when any frame on its stack is in
 `src/parameterized_tendencies/tagged_tracers/`.
+
+Since design section 12 (2026-10-02) each sample and allocation is also put
+on a call: its phase and the first frame in `src/` inside the hook, so the
+tendency or cache function the hook called. And on a tag entry: the outermost
+frame in `tagged_tracers/`, or none. These two tables are written in full,
+so the excess of one point over others can be read key by key.
 =#
 
 import Profile
@@ -81,6 +87,31 @@ function frame_key(c, frames)
         in_src(c, f) && return "$(relpath(String(f.file), c.srcdir)):$(f.line) $(f.func)"
     end
     return "(outside src)"
+end
+# The call: the phase's hook and the first frame in `src/` inside it, which
+# is the function the hook called (section 12). `frames` is innermost first.
+function call_key(c, frames)
+    for i in reverse(eachindex(frames))
+        name = String(frames[i].func)
+        in_src(c, frames[i]) && occursin("/callbacks/", String(frames[i].file)) &&
+            return "callbacks"
+        haskey(PHASES, name) || continue
+        for j in (i - 1):-1:1
+            f = frames[j]
+            in_src(c, f) && String(f.func) != name &&
+                return "$(PHASES[name]) > $(f.func) ($(basename(String(f.file))))"
+        end
+        return "$(PHASES[name]) > (no src frame)"
+    end
+    return "other"
+end
+# The tag entry: the outermost frame in `tagged_tracers/` (section 12).
+function tag_entry_key(c, frames)
+    for f in Iterators.reverse(frames)
+        in_src(c, f) && occursin("/tagged_tracers/", String(f.file)) &&
+            return "$(f.func) ($(basename(String(f.file))))"
+    end
+    return "(not tag code)"
 end
 tag_code(c, frames) =
     any(f -> in_src(c, f) && occursin("/tagged_tracers/", String(f.file)), frames)
@@ -176,6 +207,7 @@ function profile_main(base_path)
     data = Profile.fetch(include_meta = false)
     lidict = Profile.getdict(data)
     t_phase, t_frame = Dict{String, Float64}(), Dict{String, Float64}()
+    t_call, t_entry = Dict{String, Float64}(), Dict{String, Float64}()
     nsamples, ntag = 0, 0
     t_watch = Dict{String, Float64}(w => 0.0 for w in WATCH)
     frames = Base.StackTraces.StackFrame[]
@@ -185,6 +217,8 @@ function profile_main(base_path)
                 nsamples += 1
                 add!(t_phase, phase(c, frames), 1)
                 add!(t_frame, frame_key(c, frames), 1)
+                add!(t_call, call_key(c, frames), 1)
+                add!(t_entry, tag_entry_key(c, frames), 1)
                 ntag += tag_code(c, frames)
                 for w in WATCH
                     on_stack(frames, w) && add!(t_watch, w, 1)
@@ -211,6 +245,7 @@ function profile_main(base_path)
         Dict{String, Float64}(), Dict{String, Float64}(), Dict{String, Float64}()
     n_phase, n_frame = Dict{String, Float64}(), Dict{String, Float64}()
     a_tag = 0.0
+    a_call, a_entry = Dict{String, Float64}(), Dict{String, Float64}()
     a_watch = Dict{String, Float64}(w => 0.0 for w in WATCH)
     for a in res.allocs
         st = a.stacktrace
@@ -220,6 +255,8 @@ function profile_main(base_path)
         add!(a_frame, k, b)
         add!(n_frame, k, scale)
         add!(a_type, string(a.type), b)
+        add!(a_call, call_key(c, st), b)
+        add!(a_entry, tag_entry_key(c, st), b)
         tag_code(c, st) && (a_tag += b)
         for w in WATCH
             on_stack(st, w) && add!(a_watch, w, b)
@@ -265,6 +302,17 @@ function profile_main(base_path)
         ])
     write_table("$(stem)_alloc_type.csv", ["type", "bytes_per_step"],
         [[k, v] for (k, v) in sorted(a_type)[1:min(end, 40)]])
+    # Section 12: the calls and tag entries, in full.
+    for (name, t, a) in (("call", t_call, a_call), ("tag_entry", t_entry, a_entry))
+        keys_all = union(keys(t), keys(a))
+        write_table("$(stem)_$(name).csv",
+            ["key", "samples", "share", "ms_per_step", "bytes_per_step"],
+            [
+                [k, get(t, k, 0.0), get(t, k, 0.0) / nsamples,
+                    step_ms * get(t, k, 0.0) / nsamples, get(a, k, 0.0)] for
+                k in sort(collect(keys_all); by = k -> -get(t, k, 0.0))
+            ])
+    end
     println("RESULT $label done")
     return nothing
 end

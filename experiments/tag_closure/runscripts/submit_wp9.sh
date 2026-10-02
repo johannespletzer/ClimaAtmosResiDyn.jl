@@ -120,6 +120,29 @@ if [[ "${SET:-}" == d3c5 ]]; then
     EXTRA=(--exclusive)
     OUT_ROOT=wp9_cost_d3c5
 fi
+# Section 12 (2026-10-02, late), at main d3c5e42f. SET=prof88 submits the
+# profile of the 8 + 8 point and its halves, all four points on one node, in
+# two jobs on two nodes. SET=copies88 submits OD3's copies row: 8 water and 8
+# energy tags in copies mode in one model, with a 5 h point limit, so that a
+# build of up to 4 h is still followed by its timed steps.
+if [[ "${SET:-}" == prof88 ]]; then
+    EXPECT_SHA=d3c5e42f5
+    export WP9_WARMUP=50 WP9_PROFILE_SECONDS=20 DRIVER_NAME=wp9_profile_driver.jl BUILD_LIMIT=90m
+    TABLE=(
+      "prof88_a both default 0 wp9_energy_d4_edmf 0,8@water,8@energy,8@both 200G 06:00:00"
+      "prof88_b both default 0 wp9_energy_d4_edmf 0,8@water,8@energy,8@both 200G 06:00:00"
+    )
+    EXTRA=(--exclusive)
+    OUT_ROOT=wp9_profile_d3c5
+elif [[ "${SET:-}" == copies88 ]]; then
+    EXPECT_SHA=d3c5e42f5
+    export WP9_WARMUP=50 WP9_REPEATS=6
+    TABLE=(
+      "copies88 both copies 0 wp9_energy_d4_edmf 0,8 200G 06:00:00 5h"
+    )
+    EXTRA=(--exclusive)
+    OUT_ROOT=wp9_copies_d3c5
+fi
 export OUT_ROOT
 [[ "${RUN_SHA}" == "${EXPECT_SHA}"* ]] || [[ -n "${ALLOW_OTHER_MODEL_COMMIT:-}" ]] || {
     echo "ERROR: the model tree is at ${RUN_SHA}, not ${EXPECT_SHA}." >&2; exit 1; }

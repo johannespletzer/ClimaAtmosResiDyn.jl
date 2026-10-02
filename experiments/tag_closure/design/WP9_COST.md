@@ -463,3 +463,79 @@ set here.
 section 10's `both_default`, which took 83 min, each should take under 2 h.
 No check job: the driver, the configs and `FAMILY=both` are section 10's, and
 the only model change these configs reach is in message strings.
+
+## 12. Amendment of 2026-10-02 (late): where the 8 + 8 excess sits, and OD3's copies row
+
+Written before any job of this section, and pushed first. The owner decided
+on 2026-10-02, after section 11: profile first, then decide the budget.
+OD3's ceiling of 2× stays for now, so criterion 10 is recorded as failing.
+Two runs follow. One profiles why 8 + 8 costs more than its halves (E88: its
+added step is about 3.3 times theirs). The other measures OD3's copies row,
+never run: both families' copies in one model, built within 4 h.
+
+**Commit and tree.** `main` `d3c5e42f`, the run tree of section 11
+(`../ClimaAtmosResiDyn-wp9-run-d3c5`). Julia, depot, modules, one rank and
+one thread are section 4's. Exclusive nodes, account `pn49go-c`, partition
+`hpda2_compute`.
+
+### 12.1 P-8+8: the profile
+
+**Points.** Four points on D4 (`wp9_energy_d4_edmf`), default mode, in one
+job, so on one node: untagged, 8 water, 8 energy, and 8 + 8. The tag layouts
+are section 11's. The runscript takes a point's family as `8@water`, so that
+the halves and the joint point share the node and its untagged step. Two such
+jobs, `prof88_a` and `prof88_b`, on two nodes, as a replicate.
+
+**Tool.** Section 8's `analysis/wp9_profile_driver.jl`, with 50 warm-up
+steps and a time profile of at least 20 s (`WP9_PROFILE_SECONDS=20`), so
+about 20,000 samples per point. It gains two tables, written in full, that
+section 8 did not have:
+
+  - **the call**: the phase's hook and the first frame in `src/` inside it,
+    that is the tendency or cache function the hook called;
+  - **the tag entry**: the outermost frame in `tagged_tracers/`, or none.
+
+Each table gives the time per step (sample share times the point's timed
+step) and the bytes per step. Section 8's tables are unchanged. 90 min limit
+per point, 6 h per job. Results go to
+`$SCRATCH/tag_closure/output/wp9_profile_d3c5/`.
+
+**How it is read.** `analysis/wp9_excess.py` forms, for every key of the
+phase, call and tag-entry tables,
+
+    excess = (8 + 8) - (8 water) - (8 energy) + (untagged),
+
+the joint point's cost beyond the sum of its halves' added costs, in ms per
+step on that job's node, with its sampling error from the four sample counts.
+The keys are ranked by excess. A key is reported as holding the excess when
+it is among the rows that hold 80% of the timed blocks' excess in both jobs.
+The share quoted is the smaller of the two jobs'. The same is read for bytes
+per step.
+
+The profile locates where the excess is recorded, by hook and function. It
+does not say why it arises. The profile's own step carries the sampler's
+overhead, so the timed block is the step time quoted. Nothing here changes
+model code or sets the budget. A finding is drafted from it whatever it
+shows. If the two jobs disagree on the top key, both are reported and nothing
+is rerun.
+
+### 12.2 OD3's copies row
+
+**Point.** `copies88`: 8 water and 8 energy tags in copies mode in one model
+(both families' updraft copies), on D4, with its own untagged point `0` on
+the same node, in one job. The cost driver, 50 warm-up steps and 6 timed
+blocks with the first discarded are section 10's.
+
+**The limit.** OD3's row: the build within 4 h. The point gets a 5 h process
+limit and the job 6 h, so that a build of up to 4 h is still followed by its
+timed steps. The build time is the driver's `build_s`. A point that does not
+finish within 5 h has not built within 4 h, unless its log shows the build
+finished before 4 h.
+
+**How it is read.** The row passes if `build_s` is at most 4 h. If it builds,
+the step ratio to the untagged point is read as in section 10 (blocks 2 to 6,
+the less favourable of minimum and median), with its spread rule. A failure
+of that rule is reported and not rerun. The row has no step ceiling in OD3.
+
+**Submission.** `SET=prof88` and `SET=copies88` in `runscripts/submit_wp9.sh`:
+three jobs in all.
