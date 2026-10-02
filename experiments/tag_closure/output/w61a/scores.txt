@@ -1,19 +1,23 @@
-passive arm, extratropics, pass form at 72 h: signed 1.467e+11 (2.196e-05 of start inventory, 9.830e-07 of export), absolute 1.326e+13 (1.985e-03 of inventory, 8.888e-05 of export); inventory 6.679e+15 -> 6.291e+15, export 1.492e+17
-passive arm, extratropics, face form at 72 h: signed 3.774e-05 (5.650e-21 of start inventory, 2.529e-22 of export), absolute 1.328e+13 (1.988e-03 of inventory, 8.902e-05 of export); inventory 6.679e+15 -> 6.291e+15, export 1.492e+17
-passive arm, tropics, pass form at 72 h: signed -1.084e+11 (-1.140e-05 of start inventory, -7.098e-06 of export), absolute 5.030e+12 (5.291e-04 of inventory, 3.294e-04 of export); inventory 9.506e+15 -> 9.640e+15, export 1.527e+16
-passive arm, tropics, face form at 72 h: signed -8.649e-05 (-9.099e-21 of start inventory, -5.664e-21 of export), absolute 5.108e+12 (5.373e-04 of inventory, 3.345e-04 of export); inventory 9.506e+15 -> 9.640e+15, export 1.527e+16
+passive arm, extratropics, pass form at 72 h: signed 1.467e+11 (2.196e-05 of start inventory, 2.458e-04 of export), absolute 1.326e+13 (1.985e-03 of inventory, 2.222e-02 of export); inventory 6.679e+15 -> 6.291e+15, export 5.968e+14
+passive arm, extratropics, face form at 72 h: signed 3.774e-05 (5.650e-21 of start inventory, 6.324e-20 of export), absolute 1.328e+13 (1.988e-03 of inventory, 2.225e-02 of export); inventory 6.679e+15 -> 6.291e+15, export 5.968e+14
+passive arm, tropics, pass form at 72 h: signed -1.084e+11 (-1.140e-05 of start inventory, -1.775e-03 of export), absolute 5.030e+12 (5.291e-04 of inventory, 8.234e-02 of export); inventory 9.506e+15 -> 9.640e+15, export 6.109e+13
+passive arm, tropics, face form at 72 h: signed -8.649e-05 (-9.099e-21 of start inventory, -1.416e-18 of export), absolute 5.108e+12 (5.373e-04 of inventory, 8.361e-02 of export); inventory 9.506e+15 -> 9.640e+15, export 6.109e+13
 passive arm, var_pass from 6 h: max -3.502e+06, min -2.180e+07, positive samples 0 of 24
 passive arm, var_face from 6 h: max -3.499e+06, min -2.180e+07, positive samples 0 of 24
 passive arm, var_cross from 6 h: max -3.002e+06, min -1.839e+07, positive samples 0 of 24
 passive arm, ledgers at the end: {'t': '259200.0', 'led_repair': '4.8047278909422525e14', 'led_repairnet': '1.7692830233371014e11', 'led_rescale': '3.3797697020665874e10', 'led_empty': '2.07829287667358e12'}
-face arm, extratropics, pass form at 72 h: signed 1.465e+11 (2.193e-05 of start inventory, 9.819e-07 of export), absolute 1.326e+13 (1.985e-03 of inventory, 8.887e-05 of export); inventory 6.679e+15 -> 6.291e+15, export 1.492e+17
-face arm, extratropics, face form at 72 h: signed 3.427e-05 (5.131e-21 of start inventory, 2.297e-22 of export), absolute 1.328e+13 (1.988e-03 of inventory, 8.901e-05 of export); inventory 6.679e+15 -> 6.291e+15, export 1.492e+17
-face arm, tropics, pass form at 72 h: signed -1.081e+11 (-1.137e-05 of start inventory, -7.080e-06 of export), absolute 5.030e+12 (5.291e-04 of inventory, 3.294e-04 of export); inventory 9.506e+15 -> 9.640e+15, export 1.527e+16
-face arm, tropics, face form at 72 h: signed -8.683e-05 (-9.134e-21 of start inventory, -5.685e-21 of export), absolute 5.108e+12 (5.373e-04 of inventory, 3.345e-04 of export); inventory 9.506e+15 -> 9.640e+15, export 1.527e+16
+face arm, extratropics, pass form at 72 h: signed 1.465e+11 (2.193e-05 of start inventory, 2.455e-04 of export), absolute 1.326e+13 (1.985e-03 of inventory, 2.222e-02 of export); inventory 6.679e+15 -> 6.291e+15, export 5.968e+14
+face arm, extratropics, face form at 72 h: signed 3.427e-05 (5.131e-21 of start inventory, 5.743e-20 of export), absolute 1.328e+13 (1.988e-03 of inventory, 2.225e-02 of export); inventory 6.679e+15 -> 6.291e+15, export 5.968e+14
+face arm, tropics, pass form at 72 h: signed -1.081e+11 (-1.137e-05 of start inventory, -1.770e-03 of export), absolute 5.030e+12 (5.291e-04 of inventory, 8.234e-02 of export); inventory 9.506e+15 -> 9.640e+15, export 6.109e+13
+face arm, tropics, face form at 72 h: signed -8.683e-05 (-9.134e-21 of start inventory, -1.421e-18 of export), absolute 5.108e+12 (5.373e-04 of inventory, 8.362e-02 of export); inventory 9.506e+15 -> 9.640e+15, export 6.109e+13
 face arm, var_pass from 6 h: max -3.502e+06, min -2.180e+07, positive samples 0 of 24
 face arm, var_face from 6 h: max -3.499e+06, min -2.180e+07, positive samples 0 of 24
 face arm, var_cross from 6 h: max -3.002e+06, min -1.839e+07, positive samples 0 of 24
 face arm, ledgers at the end: {'t': '259200.0', 'led_repair': '4.804742153827622e14', 'led_repairnet': '1.9163581680562442e11', 'led_rescale': '3.381326128723458e10', 'led_empty': '2.0950334884997466e12'}
 Q2 inventory rule (|face| <= 1e-9 of start inventory, face arm): pass
 Q2 mixing rule (face variance rate < 0 from 6 h, face arm): pass
-passive arm reproduces W61's passive ledgers byte for byte: True
+passive arm reproduces W61's passive ledgers byte for byte (all 13 samples): True
+review, passive arm: passive form summed over the tags at 72 h: 3.826e+10 (2.364e-06 of the total start inventory); face form summed: -4.876e-05
+review, face arm: passive form summed over the tags at 72 h: 3.836e+10 (2.370e-06 of the total start inventory); face form summed: -5.255e-05
+review, extratropics: face arm's inventory minus passive arm's at the end -1.295e+11; the driver's estimate (minus the passive arm's ref_pass) -1.467e+11; ratio 0.883
+review, tropics: face arm's inventory minus passive arm's at the end 1.244e+11; the driver's estimate (minus the passive arm's ref_pass) 1.084e+11; ratio 1.147

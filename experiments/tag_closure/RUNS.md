@@ -661,13 +661,13 @@ tree `../ClimaAtmosResiDyn-main`) and `wp4bfix_t1_ci111_env` (`81884d5b`,
 third run used `transport1_sphere_regime.jl` through
 `transport1_regime_job.sh`, both in `output/w61/scripts/`.
 
-| Run               | Output | Config        | Commit   | Date       | Job        | Purpose                                                                       | Findings | Repo                       | Scratch                                    | Archive    |
-|:----------------- |:------ |:------------- |:-------- |:---------- |:---------- |:----------------------------------------------------------------------------- |:-------- |:-------------------------- |:------------------------------------------ |:---------- |
-| `t1_cross`        | none   | in the driver | d3c5e42f | 2026-10-02 | `14125084` | W61: the cross form, 3 days, both forms evaluated every 6 h; 1 h 17 min       | W61      | `output/w61/cross/`        | `claude_work/wp4bfix_run/t1_cross/`        | not synced |
-| `t1_passive`      | none   | in the driver | 81884d5b | 2026-10-02 | `14125085` | W61: the passive form, the same; 1 h 18 min                                   | W61      | `output/w61/passive/`      | `claude_work/wp4bfix_run/t1_passive/`      | not synced |
-| `t1_cross_regime` | none   | in the driver | d3c5e42f | 2026-10-02 | `14126689` | W61: `t1_cross` again with the regime's fractions; ledgers identical          | W61      | `output/w61/cross_regime/` | `claude_work/wp4bfix_run/t1_cross_regime/` | not synced |
-| `w61a_passive`    | none   | in the driver | 81884d5b | 2026-10-02 | `14126932` | W61 addendum: passive form, the reference term integrated per tag; 1 h 34 min | W61 add. | `output/w61a/passive/`     | `claude_work/wp4bfix_run/w61a_passive2/`   | not synced |
-| `w61a_face`       | none   | in the driver | d4cda274 | 2026-10-02 | `14126933` | W61 addendum: face form, the same; first try `14126905` failed at start       | W61 add. | `output/w61a/face/`        | `claude_work/wp4bfix_run/w61a_face2/`      | not synced |
+| Run               | Output | Config        | Commit   | Date       | Job        | Purpose                                                                                 | Findings | Repo                       | Scratch                                    | Archive    |
+|:----------------- |:------ |:------------- |:-------- |:---------- |:---------- |:--------------------------------------------------------------------------------------- |:-------- |:-------------------------- |:------------------------------------------ |:---------- |
+| `t1_cross`        | none   | in the driver | d3c5e42f | 2026-10-02 | `14125084` | W61: the cross form, 3 days, both forms evaluated every 6 h; 1 h 17 min                 | W61      | `output/w61/cross/`        | `claude_work/wp4bfix_run/t1_cross/`        | not synced |
+| `t1_passive`      | none   | in the driver | 81884d5b | 2026-10-02 | `14125085` | W61: the passive form, the same; 1 h 18 min                                             | W61      | `output/w61/passive/`      | `claude_work/wp4bfix_run/t1_passive/`      | not synced |
+| `t1_cross_regime` | none   | in the driver | d3c5e42f | 2026-10-02 | `14126689` | W61: `t1_cross` again with the regime's fractions; ledgers identical                    | W61      | `output/w61/cross_regime/` | `claude_work/wp4bfix_run/t1_cross_regime/` | not synced |
+| `w61a_passive`    | none   | in the driver | 81884d5b | 2026-10-02 | `14126932` | W61 add.: passive form, reference term per tag; 1 h 41 min; first try `14126904` failed | W61 add. | `output/w61a/passive/`     | `claude_work/wp4bfix_run/w61a_passive2/`   | not synced |
+| `w61a_face`       | none   | in the driver | d4cda274 | 2026-10-02 | `14126933` | W61 add.: face form, the same; 1 h 41 min; first try `14126905` failed                  | W61 add. | `output/w61a/face/`        | `claude_work/wp4bfix_run/w61a_face2/`      | not synced |
 
 ### W59 addendum: the moist two-rank pair
 

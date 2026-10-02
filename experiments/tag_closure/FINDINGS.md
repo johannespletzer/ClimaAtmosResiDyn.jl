@@ -3056,16 +3056,18 @@ from `../ClimaAtmosResiDyn-wp4bfix-t1`. `output/w61/` (`forms.csv`,
 `ledgers.csv` per run, the driver, the passive-form diff, log tails).*
 
 **W61 addendum. Each tag's inventory under the reference term, and a face
-arm: over 3 days the passive form's reference term changes a tag's inventory
-by at most 2.2e-5 of it, signed, and moves 2.0e-3 of it in absolute value.
+arm: on W61's sphere over 3 days, the passive form's reference term changes a
+tag's inventory by at most 2.2e-5 of it, signed. Its absolute value integrates
+to at most 2.0e-3 of the tag's inventory and 8.2e-2 of its precipitation.
 Allocating the parent's reference flux before the divergence (the face form)
-keeps every inventory to rounding (5e-21), keeps the mixing diffusive at all
-24 samples, and leaves the repair ledgers within 8% of the passive form's.**
-*Drafted 2026-10-03 (Opus); for the coordinator's review.* Pre-registered in
-`design/W61_ADDENDUM.md` (`8173f6e0`) before any job, for point 2 of the
-owner's review of PR #146. The first two jobs failed in their first sample (a
-broadcast of `getproperty` in the driver); the fix was pushed (`f49f2849`)
-before the rerun, which changed nothing else.
+keeps every inventory to rounding (9.1e-21), keeps the mixing diffusive at all
+24 samples, and leaves the repair ledgers within 8.3% of the passive form's.**
+*Drafted 2026-10-03 (Opus); reviewed 2026-10-03 (Opus), which rescored the
+export (below).* Pre-registered in `design/W61_ADDENDUM.md` (`8173f6e0`)
+before any job, for point 2 of the owner's review of PR #146. The first two
+jobs failed in their first sample (a broadcast of `getproperty` in the
+driver); the fix was pushed (`f49f2849`) before the rerun, which changed
+nothing else.
 
 W61's sphere: the moist baroclinic wave, `h_elem` 6, 10 levels, 1M, `dt`
 400 s, 3 days, region tags `tropics` and `extratropics` with the key. The
@@ -3073,45 +3075,75 @@ W61's sphere: the moist baroclinic wave, `h_elem` 6, 10 levels, 1M, `dt`
 the same plus the face form (`d4cda274`). Neither is for merge. Every step the
 driver evaluates both forms' reference term per tag on the step's end state
 and integrates it with a rectangle rule, so the numbers give the size, not the
-exact budget.
+exact budget. The passive form's rows come from the `passive` arm, the face
+form's from the `face` arm.
 
 | reading (3 days)                                 | tropics  | extratropics |
 |:------------------------------------------------ |:-------- |:------------ |
 | passive form, signed, over the start inventory   | −1.14e-5 | +2.20e-5     |
 | passive form, absolute, over the start inventory | 5.29e-4  | 1.99e-3      |
-| passive form, signed, over the 3-day export      | −7.1e-6  | +9.8e-7      |
-| passive form, absolute, over the 3-day export    | 3.29e-4  | 8.89e-5      |
-| face form, signed, over the start inventory      | −9.1e-21 | +5.6e-21     |
+| passive form, signed, over the 3-day export      | −1.78e-3 | +2.46e-4     |
+| passive form, absolute, over the 3-day export    | 8.23e-2  | 2.22e-2      |
+| face form, signed, over the start inventory      | −9.1e-21 | +5.1e-21     |
 | face form, absolute, over the start inventory    | 5.37e-4  | 1.99e-3      |
+| 3-day export over the start inventory            | 6.4e-3   | 8.9e-2       |
 
 | rule (section 4)                                      | result                                                      |
 |:----------------------------------------------------- |:----------------------------------------------------------- |
 | Q2 inventory: `abs(∫∫R_face) ≤ 1e-9` of the inventory | *pass*, 9.1e-21 at most                                     |
 | Q2 mixing: face variance rate < 0 from 6 h, both tags | *pass*, 24 of 24 samples, at most −3.50e6 (passive −3.50e6) |
-| check: the `passive` arm reproduces W61's ledgers     | *pass*, byte for byte                                       |
+| check: the `passive` arm reproduces W61's ledgers     | *pass*, byte for byte at all 13 samples                     |
 | Q2 ledgers, face over passive (reported)              | repair 1.000, empty 1.008, rescale 1.0005, repairnet 1.083  |
+
+**The export, rescored in review.** The driver sums each tag's surface flux
+with `sum` on the bottom face level of the 3D space. That level keeps the 3D
+quadrature weight, so `sum` returns the area integral times the bottom face's
+height, 250 m on this grid. The ratio is the same at every point
+(`analysis/water/w61a_export_weight.jl`, `output/w61a/export_weight.txt`).
+The first scoring (`beb503f7`) read the raw column as kg, so the export came
+out about 20 times the inventory. The scorer now divides it by 250 m. The
+3-day export is then 6.1e13 kg for `tropics` and 6.0e14 kg for
+`extratropics`. A check against the parent: the tags hold 1.62e16 kg of water
+at the start and 1.59e16 kg at 3 days. The corrected precipitation, 6.6e14 kg,
+then needs about 4.0e14 kg of surface evaporation, 0.26 mm per day over the
+globe. The raw column would need 1.6e17 kg, 107 mm per day. Only the export's
+rows changed. No rule reads the export.
+
+Two checks added in review, not pre-registered. First, the passive form is
+not only an exchange between tags. Summed over the two tags, its reference
+term adds 3.8e10 kg over 3 days. That is 2.4e-6 of the water, and 26% of the
+least favourable tag's signed change. The shares sum to one where the
+partition holds water and to zero where it is empty. Where the tags are
+empty, the parent's term goes to no tag, so the partition gains against the
+parent. The face form's sum is zero to rounding. Second, the driver's
+estimate has the right size. The `face` arm's inventories end 1.24e11 kg above
+(`tropics`) and 1.30e11 kg below (`extratropics`) the `passive` arm's, 1.15
+and 0.88 times the driver's estimate of the passive form's term.
 
   - **What it shows.** The passive form's per-tag inventory change is small
     against the inventories in this run: the least favourable tag moves by
-    2.2e-5 of its water, signed, over 3 days. The face form removes that
-    change and, on this run's states, mixes the composition as the passive
-    form does: their variance rates agree to three digits at every sample.
-  - **What it does not show.** Another grid, length or physics. Whether the
-    face form's extra advection of the composition by the reference flux,
-    `F⋅∇φ`, matters where the reference profile varies more, for example over
-    topography. The integrals are taken once per step, not per stage. The
-    export is the driver's sum of each tag's surface precipitation over the
-    surface field. It is about 20 times the inventory over 3 days here, so
-    its ratios are reported, not judged.
-  - **For the owner.** The face form is a candidate that keeps per-tag
-    inventories without the anti-diffusion in this configuration. The PR
-    keeps the passive form; the switch would be a separate change.
+    2.2e-5 of its water, signed, over 3 days. Against the 3-day precipitation
+    the least favourable tag is `tropics`: 1.8e-3 signed and 8.2e-2 in
+    absolute value. The face form removes the change and, on this run's
+    states, mixes the composition as the passive form does: their variance
+    rates agree to three digits at every sample.
+  - **What it does not show.** Another grid, length or physics: this is one
+    configuration over 3 days. Whether the face form's extra advection of the
+    composition by the reference flux, `F⋅∇φ`, matters where the reference
+    profile varies more, for example over topography. The integrals are taken
+    once per step, not per stage.
+  - **For the owner.** The face form is a candidate, on a tree not for
+    merge. In this configuration it keeps per-tag inventories without
+    bringing back the anti-diffusion. One configuration's pass does not make
+    it the better default. The PR keeps the passive form; a switch would be a
+    separate change.
 
 *`hpda2_compute`, 2026-10-02, jobs `14126932` (passive) and `14126933`
 (face); first submissions `14126904` and `14126905` failed in their first
-sample. `analysis/water/w61a_inventory.jl`, `w61a_score.py`;
-`output/w61a/` (`inventory.csv`, `variance.csv`, `ledgers.csv` per arm,
-`scores.txt`, the face-form diff, log tails).*
+sample. `analysis/water/w61a_inventory.jl`, `w61a_score.py`,
+`w61a_export_weight.jl`; `output/w61a/` (`inventory.csv`, `variance.csv`,
+`ledgers.csv` per arm, `scores.txt`, `export_weight.txt`, the face-form diff,
+log tails).*
 
 ## 2. Energy source tags: closure by transport
 
