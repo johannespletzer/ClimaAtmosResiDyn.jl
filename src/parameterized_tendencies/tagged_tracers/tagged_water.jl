@@ -1258,7 +1258,8 @@ from the tracer limiters by [`is_tagged_tracer_name`](@ref).
     their compartment's change of target. The non-precipitating parts take the
     change of `ρq_tot` on their own compartment `ρq_tot - ρq_rai - ρq_sno`.
     The changes that raise that compartment go first, and those that lower it
-    last, so it does not pass zero in between.
+    last. Where it is positive before and after, it does not pass zero in
+    between.
 """
 rescale_water_tags!(Y, p, ᶜρq_tot_before) =
     _rescale_water_tags!(Y, p, ᶜρq_tot_before, p.atmos.water_tagging_model)
