@@ -1,0 +1,47 @@
+B1: 87 files equal cr_s23's bit for bit, 0 differ, 0 missing in cr_s23; audit rows equal in all 227 common rows: True
+    outputs compared per file: [57, 227]
+RESULT B1 pass
+B2: 12 of 12 model files equal cr_s23's bit for bit; differ []; missing []
+    outputs compared per file: [91, 361]
+RESULT B2 pass
+B3: largest |q_tag_exp_negative| over its four files 0.000e+00; largest audit exp_negative_retained 0.000e+00 over 361 rows
+RESULT B3 pass
+B4 (reported): 54 of 54 water tag files equal cr_s23_main's bit for bit; 0 differ, 0 not in cr_s23_main
+    cr_s23: last audit row at day 90
+    lf_switch_s23: last audit row at day 90
+    cr_s23_main: last audit row at day 90
+P1 pbl: F_rev 7.3300e-02, F_switch 2.7283e-02, F_main 2.7283e-02; f = 1.0000; F_switch against 2%: above
+RESULT P1_f_pbl 1.0000
+RESULT P1_F_switch_pbl 2.7283e-02
+P1 free: F_rev 6.5196e-02, F_switch 2.2736e-02, F_main 2.2736e-02; f = 1.0000; F_switch against 2%: above
+RESULT P1_f_free 1.0000
+RESULT P1_F_switch_free 2.2736e-02
+P1 reading: the rule makes at least 0.9 of the extra
+RESULT P1_reading the_rule_makes_at_least_0.9_of_the_extra
+P2 lf_rev_s23 pbl window from day 11.25: events 2167, Σr 1.7764e-04, gross 3.2239e-04, D_a -8.8192e-07, D_b -7.1175e-04, φ 0.001, mean free share at the start 4.712e-02
+P2 lf_rev_s23 pbl window from day 15.75: events 19, Σr 5.2862e-07, gross 8.3133e-04, D_a -9.2234e-04, D_b -1.1627e-05, φ 0.988, mean free share at the start 4.203e-01
+P2 lf_rev_s23 pbl window from day 55.75: events 39, Σr 7.9107e-05, gross 7.8461e-04, D_a -4.5089e-04, D_b -2.2915e-04, φ 0.663, mean free share at the start 7.157e-01
+P2 lf_rev_s23 pbl all windows: D_a -1.3741e-03, D_b -9.5252e-04, φ 0.591
+RESULT P2_phi_lf_rev_s23_pbl 0.591
+P2 lf_rev_s23 free window from day 11.25: events 3737, Σr 1.5007e-04, gross 3.2659e-04, D_a -3.6042e-03, D_b -1.2240e-06, φ 1.000, mean free share at the start 5.598e-01
+P2 lf_rev_s23 free window from day 15.75: events 916, Σr 8.3080e-04, gross 8.3098e-04, D_a -9.4991e-03, D_b -2.0715e-08, φ 1.000, mean free share at the start 7.558e-03
+P2 lf_rev_s23 free window from day 55.75: events 2505, Σr 7.2486e-04, gross 7.2550e-04, D_a -5.5879e-03, D_b -1.5721e-05, φ 0.997, mean free share at the start 2.895e-03
+P2 lf_rev_s23 free all windows: D_a -1.8691e-02, D_b -1.6966e-05, φ 0.999
+RESULT P2_phi_lf_rev_s23_free 0.999
+P2 lf_switch_s23 pbl window from day 11.25: events 2108, Σr 1.5213e-04, gross 1.8492e-04, D_a -7.7269e-07, D_b -4.8795e-04, φ 0.002, mean free share at the start 5.087e-02
+P2 lf_switch_s23 pbl window from day 15.75: events 11, Σr 4.8182e-07, gross 2.8438e-05, D_a -1.7778e-04, D_b -1.1627e-05, φ 0.939, mean free share at the start 1.573e-01
+P2 lf_switch_s23 pbl window from day 55.75: events 4, Σr 7.6862e-05, gross 1.2900e-04, D_a -4.3092e-04, D_b -2.2871e-04, φ 0.653, mean free share at the start 4.454e-05
+P2 lf_switch_s23 pbl all windows: D_a -6.0947e-04, D_b -7.2828e-04, φ 0.456
+RESULT P2_phi_lf_switch_s23_pbl 0.456
+P2 lf_switch_s23 free window from day 11.25: events 3644, Σr 3.2792e-05, gross 1.8492e-04, D_a -3.2917e-05, D_b -4.8362e-11, φ 1.000, mean free share at the start 5.848e-01
+P2 lf_switch_s23 free window from day 15.75: events 636, Σr 2.7965e-05, gross 2.8092e-05, D_a -5.0086e-04, D_b -2.0292e-08, φ 1.000, mean free share at the start 7.185e-03
+P2 lf_switch_s23 free window from day 55.75: events 101, Σr 5.2286e-05, gross 5.2286e-05, D_a -8.4487e-05, D_b -8.7987e-06, φ 0.906, mean free share at the start 5.360e-02
+P2 lf_switch_s23 free all windows: D_a -6.1827e-04, D_b -8.8191e-06, φ 0.986
+RESULT P2_phi_lf_switch_s23_free 0.986
+P2 pbl days 11.25-11.75, repair gross at the traced levels (kg m^-3, summed over levels): trace rev 3.2239e-04, switch 1.8492e-04, difference 1.3747e-04; 6-hourly cr_s23 3.2242e-04, switch 1.8495e-04, difference 1.3747e-04
+P2 pbl days 15.75-16.0, repair gross at the traced levels (kg m^-3, summed over levels): trace rev 8.3133e-04, switch 2.8438e-05, difference 8.0289e-04; 6-hourly cr_s23 8.3819e-04, switch 3.2342e-05, difference 8.0585e-04
+P2 pbl days 55.75-56.25, repair gross at the traced levels (kg m^-3, summed over levels): trace rev 7.8461e-04, switch 1.2900e-04, difference 6.5561e-04; 6-hourly cr_s23 8.1235e-04, switch 1.4448e-04, difference 6.6787e-04
+P2 free days 11.25-11.75, repair gross at the traced levels (kg m^-3, summed over levels): trace rev 3.2659e-04, switch 1.8492e-04, difference 1.4167e-04; 6-hourly cr_s23 3.2661e-04, switch 1.8494e-04, difference 1.4167e-04
+P2 free days 15.75-16.0, repair gross at the traced levels (kg m^-3, summed over levels): trace rev 8.3098e-04, switch 2.8092e-05, difference 8.0289e-04; 6-hourly cr_s23 8.3793e-04, switch 3.1992e-05, difference 8.0594e-04
+P2 free days 55.75-56.25, repair gross at the traced levels (kg m^-3, summed over levels): trace rev 7.2550e-04, switch 5.2286e-05, difference 6.7321e-04; 6-hourly cr_s23 7.5533e-04, switch 6.9675e-05, difference 6.8565e-04
+P2 reading: φ ≥ 2/3 the follower; φ ≤ 1/3 everything else in the step; otherwise both (11.12.5)

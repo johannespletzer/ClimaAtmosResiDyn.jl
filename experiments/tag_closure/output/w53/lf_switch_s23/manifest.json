@@ -1,0 +1,73 @@
+{
+  "branch": "detached",
+  "buildkite_files": {
+    "LocalPreferences.toml": "8526a30f4bae0b5d6f062a9998a8141a0b3d65bf94349e21617cb4fddd70de76",
+    "Manifest-v1.11.toml": "d9653513f0038dddacb701ff096df93e1d2a811d87b6a5e3cb24a878560a2ed9",
+    "Project.toml": "ee8cf81147f2b886dead56c62013acde26222d9230030aa70fe4fdd2d76768b7"
+  },
+  "command": "env CONFIG=/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-ledfix-run/experiments/tag_closure/configs/lf_switch_s23.yml DRIVER=experiments/tag_closure/analysis/water/ledfix_trace.jl MANIFEST_PATH=/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/manifests/lf_switch_s23.20261001T192052Z.json sbatch --account=pn49go-c --partition=hpda2_compute --time=10:00:00 --cpus-per-task=2 --mem=48G --job-name=ledfix-switch --output=/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/logs/ledfix-switch-%j.out --error=/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/logs/ledfix-switch-%j.err /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-ledfix-run/experiments/tag_closure/runscripts/phase_c.sh",
+  "config": {
+    "path": "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-ledfix-run/experiments/tag_closure/configs/lf_switch_s23.yml",
+    "sha256": "028f113c09263befdee36b5142fd051918ad4a886882b87a15401c3f7479a768"
+  },
+  "config_paths": [
+    {
+      "exists": false,
+      "key": "external_forcing_file",
+      "mtime": null,
+      "raw": "artifact\"cfsite_gcm_forcing\"/HadGEM2-A_amip.2004-2008.07.nc",
+      "resolved": "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-ledfix-run/artifact\"cfsite_gcm_forcing\"/HadGEM2-A_amip.2004-2008.07.nc",
+      "sha256": null,
+      "size": null
+    },
+    {
+      "exists": true,
+      "key": "toml",
+      "mtime": "2026-10-01T18:36:07.277199+00:00",
+      "raw": "toml/prognostic_edmfx_gcmdriven.toml",
+      "resolved": "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-ledfix-run/toml/prognostic_edmfx_gcmdriven.toml",
+      "sha256": "3c9bb8f963ad15128e41c2e7a71f2857741ba4787eb702a9a08e97385f6a346b",
+      "size": 672
+    }
+  ],
+  "diff": "",
+  "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "driver": {
+    "path": "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-ledfix-run/experiments/tag_closure/analysis/water/ledfix_trace.jl",
+    "sha256": "24b82bbd3a7afb683adbce99574f3d5a758c287901217f012a4a3033df708c97"
+  },
+  "env_vars": {
+    "CLIMACOMMS_CONTEXT": null,
+    "CLIMACOMMS_DEVICE": null,
+    "JULIA_CPU_TARGET": null,
+    "JULIA_DEPOT_PATH": null,
+    "JULIA_NUM_THREADS": null,
+    "MKL_NUM_THREADS": null,
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": null
+  },
+  "extra": [],
+  "head_on_remote": [],
+  "head_sha": "e524dbaccdf5d75c6378a8934dbc8a6139888ce9",
+  "hostname": "dlr-login2",
+  "julia_binary": "/dss/dsshome1/0D/di38kez/.juliaup/bin/julia",
+  "julia_channel": "+1.11",
+  "julia_depot_path": "",
+  "julia_version": "julia version 1.11.9",
+  "loaded_modules": [
+    "tempdir/2.0",
+    "stack/24.4.0",
+    "dsstools/1.0",
+    "lrz_setup/1.0",
+    "python/3.12"
+  ],
+  "manifest_tool_sha256": "32a1a595c4004e5fe58e484c76599d263ba494ef563db33fdc7fdb45d75cb440",
+  "repo": "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-ledfix-run",
+  "status_lines": [],
+  "untracked": {
+    "count": 0,
+    "files": [],
+    "sha256": null
+  },
+  "utc_time": "2026-10-01T19:20:52.543398+00:00"
+}

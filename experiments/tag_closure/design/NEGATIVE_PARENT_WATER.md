@@ -2476,3 +2476,166 @@ cell typical. That is possible, and how often it happens is not measured.
 12. The minor points are left as proposed.
 13. The order is as proposed: the autodiff check, the restart check and the
     30-day parity rerun before the 90-day runs.
+
+### 11.12 V5's `led_fix` at site 23: the switch and the trace, pre-registered before any run (2026-10-01)
+
+W49 left one item open: at site 23 the repair's corrections of `pbl` and
+`free` reach 7.3% and 6.5% of their inventories at day 90, against 2.7% and
+2.3% on `main` (V5 fails). This section registers a probe of that rise. It
+is written after stage A read W49's existing output, and before any job.
+Nothing in 11.12.3 to 11.12.6 changes after the runs.
+
+#### 11.12.1 What stage A found (existing output only)
+
+`analysis/water/ledfix_s23_localise.py`, output in `output/w53/`. It
+compares `cr_s23` (the revision, model `0eb329b2`) with `cr_s23_main`
+(`main`, `43b01ca1`). Their parent fields are bit for bit the same, so only
+the tag side differs. The two codes differ in more than the rule (W49, "What
+was measured"), so each number bounds the bundle and isolates nothing.
+
+  - **The mechanism.** All of `led_fix` is the partition repair: the
+    rescale's and the emptying's ledgers are zero in both runs. The repair
+    trades water between `pbl` and `free`. Each tag's extra gross is the
+    other's to 5e-4 of itself (0.2700 and 0.2698), and the net part
+    (`led_repairnet`) grows by only 0.004. In the signed ledgers the repair
+    raised `free` from below zero and took the water from `pbl` in most of
+    the extra: `free` +0.182, `pbl` −0.178 of a gross 0.270.
+  - **When.** The extra starts in the interval that ends at day 11.5. That is
+    when the rule first withholds a gain (11.11.3). It is episodic, not a
+    steady growth. Of 360 six-hour intervals, the largest 5 carry 0.62 of
+    the extra and the largest 10 carry 0.80. The largest single interval is
+    days 15.75 to 16.0 (0.20). In 63 intervals the revision repairs less
+    than `main`.
+  - **Where.** Every level of the extra is below 2 km: 0.80 below 1 km and
+    0.20 between 1 and 2 km. One level, 435 m, carries 0.43. So the extra of
+    the tag `free` lies in the boundary layer too, where `free`'s mask is
+    small.
+  - **What co-varies.** 0.91 of the extra lies in the 6-hour cells (interval
+    and level) where `q_tag_exp_negative` grew, 1157 of 21600 cells. 0.85
+    lies where the follower's negative part moved, and 0.66 where the parent
+    is negative at either end of the interval. None lies in cells with none
+    of the three. In the two largest intervals (days 16.0 and 56.25, both at
+    435 m), the follower moved `free` down, and `pbl` up by about as much,
+    more than on `main`. The difference is 2.6 to 2.7 times the repair's
+    extra in that cell. Precipitation at the day's end does not co-vary
+    (rank correlation −0.04; instantaneous values only).
+
+Stage A locates the extra. It does not say which part of the bundle makes
+it, nor what takes `free` below zero within a step. The 6-hourly outputs
+cannot show the step.
+
+#### 11.12.2 The question
+
+ 1. **P1.** How much of the extra does the rule make, the gain function of
+    `TargetGain()`, against the rest of the bundle: `main`'s #129 to #136,
+    the meter fix, the follower's amendment, the audit docstring?
+ 2. **P2.** In the steps where the repair raises a tag from below zero,
+    what took the tag below zero in that step: the follower, or everything
+    else in the step?
+
+#### 11.12.3 The runs
+
+The run tree is the record merged into `0eb329b2`, detached and clean, with
+no change in `src`. *Amended 2026-10-01, before any job:* the record now
+holds `0eb329b2` as an ancestor, so a merge fast-forwards to the record's
+own `src`. The run tree is therefore W49's run tree `b6d452b5` with this
+section's driver and two configs added in one commit (`e524dbac`, not
+pushed). Its `src` equals `0eb329b2`'s.
+
+The driver is `analysis/water/ledfix_trace.jl`. The configs are `cr_s23.yml`
+with the job id and `t_end` changed. The radiation's seed is reset in all of
+them.
+
+| run               | arm    | `t_end` | what for                     |
+|:----------------- |:------ |:------- |:---------------------------- |
+| `lf_switch_check` | switch | 1 hour  | the check, before the others |
+| `lf_rev_s23`      | rev    | 56.5 d  | P2's trace on the revision   |
+| `lf_switch_s23`   | switch | 90 d    | P1, and P2's trace           |
+
+  - **The switch.** The driver redefines three methods before the
+    simulation is built: `water_tag_gain(::TargetGain, Δ, P) = max(Δ, 0)`,
+    `water_tag_withheld_gain(::TargetGain, Δ, P) = 0` and
+    `water_tag_split_change(::TargetGain, x, P) = x`. These are
+    `ParentGain()`'s numbers. Every bracket then gives the parent's gain, as
+    before the revision: the explicit ones, the implicit microphysics
+    (inert in this configuration by 11.11.2) and the source tags (Q4).
+    Nothing else changes. The follower's amendment stays. It acts only
+    where `δL` is not zero, and with nothing withheld `δL` is zero.
+  - **The arm `rev`** is the revision as W49 ran it.
+  - **The trace.** In the windows days 11.25 to 11.75, 15.75 to 16.0 and
+    55.75 to 56.25, after every step: the parent, `ρq_tag_pbl`,
+    `ρq_tag_free`, `q_tag_led_fix_pbl`, `_free`, `q_tag_led_inc_pbl`,
+    `_free`, `q_tag_exp_negative` and `q_tag_inc_negative`, at levels 8 to
+    14 (310 m to 764 m) and as column integrals. The windows hold 0.42 of
+    the extra (11.12.1). The levels hold the largest cells of those
+    intervals.
+  - **The check** runs the switch for one hour with the windows in seconds
+    (600 to 1200 and 3000 to 3600). Its config is kept outside the run
+    tree. It must exit 0 and write the trace. The other two jobs are
+    submitted only after it passes.
+
+#### 11.12.4 Validity, before any score
+
+  - **B1.** `lf_rev_s23`'s NetCDF files and audit rows equal `cr_s23`'s bit
+    for bit at every output to day 56.5. If not, P2's trace speaks to
+    `lf_rev_s23` only, and P2 is reported, not read.
+  - **B2.** `lf_switch_s23`'s ten daily model fields and `hus`, `rhoa`
+    6-hourly equal `cr_s23`'s bit for bit at every output. If not, the switch
+    moved the parent, and P1 and P2 are void.
+  - **B3.** `lf_switch_s23`'s `q_tag_exp_negative` is zero at every output
+    and level, and its audit's `exp_negative_retained` is zero in every row.
+    If not, the switch did not reach every bracket, and P1 is void.
+  - **B4, reported.** `lf_switch_s23`'s water tag files against
+    `cr_s23_main`'s: how many are bit for bit the same, and the largest
+    difference.
+
+#### 11.12.5 The scores and their reading
+
+**P1.** At day 90, for `pbl` and for `free`, with `F` the audit's
+`led_fix_<tag>_inventory_fraction`:
+
+    f = (F_rev − F_switch) / (F_rev − F_main),
+
+with `F_rev` from `cr_s23` (B1 ties it to the arm) and `F_main` from
+`cr_s23_main`.
+
+  - `f ≥ 0.9` for both tags: the rule makes at least 0.9 of the extra.
+  - `f ≤ 0.1` for both tags: the rule makes at most 0.1 of it. The rest of
+    the bundle makes the rise.
+  - Otherwise: both, as measured. The smaller `f` is quoted.
+
+`F_switch` against 2% is reported. The switch changes the gain function in
+every bracket at once. So P1 isolates the rule as a whole from the rest of
+the bundle, and not one bracket's part.
+
+**P2.** Per arm, over the traced levels and the windows' steps. In a step,
+for tag `k`: `Δ` is the change of `ρq_tag_k`, `r` the change of
+`q_tag_led_fix_k` (the repair), `a` the change of `q_tag_led_inc_k` (the
+follower), and `b = Δ − r − a`, everything else in the step. The events are
+the cell-steps with `r > 0`, where the repair raised the tag. Over them:
+
+    D_a = Σ min(a, 0),   D_b = Σ min(b, 0),   φ = D_a / (D_a + D_b).
+
+  - `φ ≥ 2/3`: in the repaired steps the tag's decline comes mostly from the
+    follower.
+  - `φ ≤ 1/3`: it comes mostly from everything else in the step.
+  - Otherwise: from both.
+
+It is read for `free` and for `pbl` in the arm `rev`, and reported for the
+switch. Also reported: `Σ r` in each arm, its difference between the arms
+against the 6-hourly extra in the same intervals, and per window. Not
+scored: `free`'s share of the partition at the start of the repaired steps.
+
+`b` bundles the explicit brackets and every other change in the step. P2
+says which side of the step the decline is on. It does not say why the
+follower drains more in one arm than in the other.
+
+#### 11.12.6 Cost and jobs
+
+Three jobs, `sbatch -A pn49go-c -p hpda2_compute`, 2 CPUs, 48 GB. W49's
+`cr_s23` ran 90 days in 3 h 36 min. So the check takes under an hour,
+`lf_rev_s23` about 2.5 h (`--time=08:00:00`), and `lf_switch_s23` about
+3.8 h (`--time=10:00:00`). No W49 run saved a state, so both start from day
+0. Within the brief's limits: at most 4 jobs and 12 hours.
+
+What follows from the result is for the owner. No code changes here.

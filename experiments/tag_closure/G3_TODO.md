@@ -206,9 +206,13 @@ Restated 2026-09-30 from the findings; the plan's section 2 holds the criteria's
     `free` 6.52% against 2%, where the control is at 2.73% and 2.27% (about
     2.7 to 2.9 times, cause untraced). The owner recorded it as an open
     failure (design 11.10, item 10; DECISIONS.md, 2026-10-01).
-  - [ ] **Trace V5 `led_fix`'s rise at site 23 (W49).** The owner decided on
-    2026-10-01 that a follow-up probe traces it. Not designed or run yet. The
-    rise is 2.7 to 2.9 times `main`'s, and its cause is untraced.
+  - [x] **Trace V5 `led_fix`'s rise at site 23 (W49).** The owner decided on
+    2026-10-01 that a follow-up probe traces it. *Done 2026-10-02 (W53,
+    design 11.12):* the rule makes all of the rise (`f = 1.0000`; with the
+    rule switched off the tags are `main`'s bit for bit). Where the repair
+    raises `free`, the follower took it below zero in that step (`φ` 0.999).
+    Why the follower drains more under the rule is not isolated. V5 still
+    fails with the rule off (`main`'s 2.7%). What follows is for the owner.
   - [x] **R2, the Newton row, on D4-W** (W25's scoring: 4.1e-3 to 1.7e-2 at two
     iterations, against 1e-3). *The owner, 2026-09-25:* measure three and four
     iterations first (job `13944802`); then raise OD1's Newton count or revise

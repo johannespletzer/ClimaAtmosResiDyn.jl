@@ -1,0 +1,28 @@
+run: lf_switch_check
+machine: terrabyte
+config: /dss/dsstbyfs02/scratch/0D/di38kez/claude_work/ledfix/lf_switch_check.yml
+driver: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-ledfix-run/experiments/tag_closure/analysis/water/ledfix_trace.jl
+commit: e524dbaccdf5d75c6378a8934dbc8a6139888ce9
+commit_source: git-files
+commit_dirty: unknown
+branch: detached
+commit_error: git is not on PATH
+julia: 1.11.9
+julia_depot: /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+project: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-ledfix-run/.buildkite
+started: 2026-10-01T20:37:30+02:00
+finished: 2026-10-01T21:20:41+02:00
+exit_status: 0
+slurm_job_id: 14063995
+slurm_job_name: ledfix-check
+partition: hpda2_compute
+nodelist: hpdar03c05s08
+cpus_per_task: 2
+ntasks: 1
+launch: direct
+node_type: Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30GHz
+climacomms_context: SINGLETON
+climacomms_device: CPU
+output_dir: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/lf_switch_check/output_0000
+netcdf_and_checkpoints: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/lf_switch_check/output_0000 (left on scratch, not committed)
+manifest_path: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/manifests/lf_switch_check.20261001T183727Z.json
