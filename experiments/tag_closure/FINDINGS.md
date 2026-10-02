@@ -87,21 +87,21 @@ changes, which [RUNS.md](RUNS.md) records.
 
 ## Index
 
-| IDs                                                   | section                                             |
-|:----------------------------------------------------- |:--------------------------------------------------- |
-| W1–W48 (W46 reserved for PX7)                         | 1. Water tags                                       |
-| E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48, E85 | 2. Energy source tags: closure by transport         |
-| E1–E6, E9b, E9c, E10–E19, E71, R1–R11                 | 3. The energy reference and the offset              |
-| E40, E53                                              | 4. EDMF and the updrafts                            |
-| E39, E39b, E43, E59, E61, E62, E64–E67, E79, E80, E82 | 5. The implicit channel and the increment prototype |
-| E45, E47, E51, E54, E55, E57, E58                     | 6. Parity, Float32, MPI and restarts                |
-| E7–E9, E20–E24, E26, E28, E30, E38, E49, E63, E87     | 7. The process records and the per-process checks   |
-| E50, E60, E69, E70, E74, E75, E81                     | 8. The sphere and long runs                         |
-| E68, E72, E73, E76, E83, E84, E86                     | 9. Mixing: V3 and the updraft gap                   |
-| T1–T10, E44, E44b–E44e, E52, E56, E77, E78, W52, E88  | 10. Cost                                            |
-| M1–M8                                                 | 11. Method                                          |
-| old claims, errata, conflicts                         | 12. Superseded and falsified claims                 |
-| FQ-1 to FQ-24                                         | 13. What is not established                         |
+| IDs                                                       | section                                             |
+|:--------------------------------------------------------- |:--------------------------------------------------- |
+| W1–W48 (W46 reserved for PX7)                             | 1. Water tags                                       |
+| E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48, E85     | 2. Energy source tags: closure by transport         |
+| E1–E6, E9b, E9c, E10–E19, E71, R1–R11                     | 3. The energy reference and the offset              |
+| E40, E53                                                  | 4. EDMF and the updrafts                            |
+| E39, E39b, E43, E59, E61, E62, E64–E67, E79, E80, E82     | 5. The implicit channel and the increment prototype |
+| E45, E47, E51, E54, E55, E57, E58                         | 6. Parity, Float32, MPI and restarts                |
+| E7–E9, E20–E24, E26, E28, E30, E38, E49, E63, E87         | 7. The process records and the per-process checks   |
+| E50, E60, E69, E70, E74, E75, E81                         | 8. The sphere and long runs                         |
+| E68, E72, E73, E76, E83, E84, E86                         | 9. Mixing: V3 and the updraft gap                   |
+| T1–T10, E44, E44b–E44e, E52, E56, E77, E78, W52, E88, E90 | 10. Cost                                            |
+| M1–M8                                                     | 11. Method                                          |
+| old claims, errata, conflicts                             | 12. Superseded and falsified claims                 |
+| FQ-1 to FQ-24                                             | 13. What is not established                         |
 
 ## 1. Water tags
 
@@ -3675,6 +3675,67 @@ at 32 tags, and the closure audit was off.
 at `b34bbd8b` from record `ed9db0b10`, and `14125001` (both_d3c5) and
 `14125003` (energy_d4) at `d3c5e42f` from record `e149c2382`. Data are in
 `output/wp9_cost_b34d/` and `output/wp9_cost_d3c5/`, read as for W52.*
+
+*Addendum to E88, 2026-10-02: OD3's copies row fails by 16 minutes.* OD3
+asks that both families' copies at 8 tags build in one model within 4 h. At
+`d3c5e42f` on D4 (design section 12.2), 8 water and 8 energy tags in copies
+mode built in 15,377 s (4 h 16 min), 977 s over the limit and 23.6 times the
+untagged build on the same node. The first step compiled for another 996 s,
+and the peak was 21.4 GB. The point then stepped at 4.88× the untagged step
+(the median; 4.85× at the minimum), within section 10's spread rule (2.9%,
+3.3%). OD3 sets no step ceiling for the copies. Alone, each family's copies at
+8 built in 2446 s (energy, D4) and 485 s (water, TRMM's column) at
+`b34bbd8b`, on other nodes. One build is one sample: how much a build varies
+from node to node is not measured, and this one is 6.8% over. *Job `14125922`
+(`copies88`, `hpdar09c05s06`) from record `84d03ff68`; data in
+`output/wp9_copies_d3c5/`.*
+
+**E90. The 8 + 8 point's excess over its halves is recorded in the parent
+model's walks over tracer names, not in the tag code.** Drafted on 2026-10-02
+from design/WP9_COST.md section 12.1, for an Opus review. E88's 8 + 8 point
+adds about 3.3 times the sum of its halves' added step time. Two exclusive
+jobs profiled the untagged point, 8 water, 8 energy and 8 + 8 on D4, all four
+on one node per job, at `d3c5e42f`. The excess is
+`(8 + 8) - (8 water) - (8 energy) + (untagged)`: 6.28 and 8.11 ms per step
+of the two jobs' timed blocks, and 2.2 MB allocated per step in both.
+
+  - **Not the tag code.** At most 3.5% of the excess (2.5% in the other job)
+    is in a frame under `src/parameterized_tendencies/tagged_tracers/`.
+  - **By hook** (pre-registered): the implicit tendency holds 20.7% and
+    23.7%, the explicit tendency 16.6% and 15.5%. The per-call table did not
+    resolve further, since the first frame inside each hook is a
+    `macro expansion` frame.
+  - **By innermost frame** (post hoc, from section 8's top-80 frame tables):
+    six frames in `src/utils/` that filter or walk tuples of tracer names by
+    `MatrixFields.has_field` hold 3.21 and 5.13 ms, at least 51% of the
+    excess (63% in the other job). They are `sedimenting_tracer_names` and
+    `sedimenting_mass_names` (`tracer_processes.jl:138`, `:153`), the
+    closure of `foreach_gs_tracer` (`variable_manipulations.jl:242`),
+    `gs_tracer_names`, `microphysics_tracer_names` and `sgs_tracer_names`.
+    None of them is among the top 80 frames of the untagged point or of
+    either half, whose 80th frame holds at most 0.012 ms. So they cost time
+    only with both families on. They also allocate 1.0 MB of the 2.2 MB of
+    excess per step.
+  - **The rest of the allocation:** `advection.jl:124` holds 0.49 MB, and
+    the water and energy tags' sedimentation blocks of the Jacobian 0.23 MB
+    each.
+  - **Unresolved:** about 51% of the samples at every point of both jobs have
+    no frame in `src/` (`other`), in proportion to the step time. Section 8's
+    profile had 1% to 7% there. So these are most likely a second thread's
+    samples, not the stepper's time, but the profile does not show it. If
+    they are, every ms above is about half the stepper's, and the walks hold
+    nearly all of the excess. The shares quoted are against the whole timed
+    excess, the less favourable reading.
+
+This locates the excess. It does not say why these walks cost time only at
+8 + 8. A threshold in the length of the tracer-name tuples would fit, but no
+point here tests it. The profile's timed blocks are single blocks and give
+8 + 8 at 2.92× and 3.19×, not section 11's cost measure (4.16×).
+
+*Jobs `14125920` (`prof88_a`, `hpdar07c05s08`) and `14125921` (`prof88_b`,
+`hpdar09c05s05`), at `d3c5e42f` from record `84d03ff68`. Data are in
+`output/wp9_profile_d3c5/`, with `excess.md` from
+`analysis/wp9_excess.py --frames`.*
 
 ## 11. Method
 

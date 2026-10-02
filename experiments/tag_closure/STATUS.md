@@ -86,8 +86,10 @@ not checked, it says so.
     alone on D4 they cost 1.44× and 1.53×. **The 8 + 8 step time exceeds
     OD3's ceiling of 2×, approved 2026-09-24.** *Decided 2026-10-02 (the
     owner): profile first, then decide. OD3's 2× stays for now, so criterion
-    10 is recorded as failing.* The profile of the 8 + 8 excess and OD3's
-    copies row run under `design/WP9_COST.md` section 12.
+    10 is recorded as failing.* Under `design/WP9_COST.md` section 12 (drafts,
+    waiting for the review): E90 locates the 8 + 8 excess in the parent's
+    walks over tracer names, at least 51% of it, not in the tag code. OD3's
+    copies row fails: both families' copies at 8 built in 4 h 16 min.
 
   - **The session goal of 2026-09-28** (the owner). It is met when:
 

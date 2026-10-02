@@ -29,20 +29,20 @@ Marks: `[ ]` open, `[~]` under way, `[x]` done, `[!]` waiting for a decision.
 
 The twelve criteria of the plan, section 2, in short:
 
-| #  | Criterion                                                                                      | Status                                                                            |
-|:-- |:---------------------------------------------------------------------------------------------- |:--------------------------------------------------------------------------------- |
-| 1  | Evidence: every headline number goes through the verifier and a manifest                       | tools built; review open                                                          |
-| 2  | Refusals with tests, known issues settled, a file-based start, restart round trips             | open                                                                              |
-| 3  | Parity in both modes: 1M and 0M EDMF columns, explicit microphysics, two MPI ranks             | open                                                                              |
-| 4  | Closure on D4-W, including the copies' own residual and the rain and snow parts                | open                                                                              |
-| 5  | Per-tag accuracy against the copies, at 24 h and in the first hour                             | open                                                                              |
-| 6  | Convergence of the default's error and of the copies                                           | open                                                                              |
-| 7  | Precipitation provenance: the 0M split, rain and snow tags, `Σ pr_tag = pr`, the audit         | open                                                                              |
-| 8  | Held-out columns: RICO, BOMEX, ARM SGP, GCM-driven 0M                                          | open                                                                              |
-| 9  | Float32 twin                                                                                   | open                                                                              |
-| 10 | Cost, both modes and both families                                                             | failing against OD3's 2× pending the profile (8 + 8 step 4.16×; owner 2026-10-02) |
-| 11 | Ten days on the sphere (superseded 2026-09-24: 90 days at 60 levels), a copies twin, a restart | open                                                                              |
-| 12 | Reviews, CI, draft PRs, docs                                                                   | open                                                                              |
+| #  | Criterion                                                                                      | Status                                                                                                                 |
+|:-- |:---------------------------------------------------------------------------------------------- |:---------------------------------------------------------------------------------------------------------------------- |
+| 1  | Evidence: every headline number goes through the verifier and a manifest                       | tools built; review open                                                                                               |
+| 2  | Refusals with tests, known issues settled, a file-based start, restart round trips             | open                                                                                                                   |
+| 3  | Parity in both modes: 1M and 0M EDMF columns, explicit microphysics, two MPI ranks             | open                                                                                                                   |
+| 4  | Closure on D4-W, including the copies' own residual and the rain and snow parts                | open                                                                                                                   |
+| 5  | Per-tag accuracy against the copies, at 24 h and in the first hour                             | open                                                                                                                   |
+| 6  | Convergence of the default's error and of the copies                                           | open                                                                                                                   |
+| 7  | Precipitation provenance: the 0M split, rain and snow tags, `Σ pr_tag = pr`, the audit         | open                                                                                                                   |
+| 8  | Held-out columns: RICO, BOMEX, ARM SGP, GCM-driven 0M                                          | open                                                                                                                   |
+| 9  | Float32 twin                                                                                   | open                                                                                                                   |
+| 10 | Cost, both modes and both families                                                             | failing against OD3's 2× pending the profile (8 + 8 step 4.16×; owner 2026-10-02); copies row fails (4 h 16 min build) |
+| 11 | Ten days on the sphere (superseded 2026-09-24: 90 days at 60 levels), a copies twin, a restart | open                                                                                                                   |
+| 12 | Reviews, CI, draft PRs, docs                                                                   | open                                                                                                                   |
 
 ## Decisions
 
@@ -1126,6 +1126,11 @@ owner's points in the note's section 8.
         that locates where the 8 + 8 point's excess over its halves sits, and
         OD3's copies row (both families' copies in one model, built within
         4 h). The proposal below stays open until the profile is read.
+        *Measured 2026-10-02 (drafts on `claude/rec-wp9`):* E90 locates the
+        8 + 8 excess in the parent's walks over tracer names
+        (`src/utils/`), at least 51% of it, and at most 3.5% in the tag
+        code. The cause is not isolated. OD3's copies row fails: 8 + 8
+        copies built in 4 h 16 min (E88 addendum). Both wait for the owner.
 
       + [ ] **The cost budget: proposal, waiting for the owner.** OD3's
         approved row (2026-09-24) caps the default mode at 8 + 8 tags at 2×

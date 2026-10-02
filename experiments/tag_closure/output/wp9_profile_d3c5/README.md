@@ -38,8 +38,8 @@ ratios (8 + 8: 2.92 and 3.19) differ from it.
   - **Tag code:** at most 3.5% of the excess is in a frame under
     `tagged_tracers/`. 96.5% and 97.5% is not.
   - **By innermost frame (post hoc):** six frames in `src/utils/` that walk
-    or filter tuples of tracer names hold 3.20 and 5.16 ms of excess, 52% and
-    64% of the timed excess: `sedimenting_tracer_names` and
+    or filter tuples of tracer names hold 3.21 and 5.13 ms of excess, 51% and
+    63% of the timed excess: `sedimenting_tracer_names` and
     `sedimenting_mass_names` (`tracer_processes.jl:138`, `:153`), the
     closure in `foreach_gs_tracer` (`variable_manipulations.jl:242`),
     `gs_tracer_names`, `microphysics_tracer_names` and `sgs_tracer_names`.
