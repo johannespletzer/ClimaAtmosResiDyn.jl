@@ -416,7 +416,7 @@ function edmfx_sgs_vertical_advection_tendency!(
             MatrixFields.unrolled_foreach(
                 sgs_microphysics_tracers,
             ) do (qʲ_name, name, wʲ_name, w_gs_name)
-                MatrixFields.has_field(Y, qʲ_name) || return
+                static_has_field(Y, qʲ_name) || return
 
                 ᶜqʲ = MatrixFields.get_field(Y, qʲ_name)
                 ᶜqʲₜ = MatrixFields.get_field(Yₜ, qʲ_name)
@@ -482,7 +482,7 @@ function edmfx_sgs_vertical_advection_tendency!(
             MatrixFields.unrolled_foreach(
                 sgs_microphysics_tracers,
             ) do (χʲ_name, name, wʲ_name, w_gs_name)
-                MatrixFields.has_field(Y, χʲ_name) || return
+                static_has_field(Y, χʲ_name) || return
 
                 ᶜχʲ = MatrixFields.get_field(Y, χʲ_name)
                 ᶜχʲₜ = MatrixFields.get_field(Yₜ, χʲ_name)

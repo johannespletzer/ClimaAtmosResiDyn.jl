@@ -132,13 +132,13 @@ function vertical_diffusion_boundary_layer_tendency!(
         ᶜratio = p.scratch.ᶜtemp_scalar_4
         for (ρq_name, ρn_name) in
             ((@name(c.ρq_lcl), @name(c.ρn_lcl)), (@name(c.ρq_icl), @name(c.ρn_ice)))
-            MatrixFields.has_field(Y, ρq_name) || continue
+            static_has_field(Y, ρq_name) || continue
             ᶜρq = MatrixFields.get_field(Y, ρq_name)
             ᶜρqₜ = MatrixFields.get_field(Yₜ, ρq_name)
             @. ᶜratio =
                 max(FT(0), min(FT(1), specific(ᶜρq, Y.c.ρ) / max(ᶜq_tot_eff, ϵ_FT)))
             @. ᶜρqₜ -= ᶜratio * ᶜρq_tot_diff
-            if MatrixFields.has_field(Y, ρn_name)
+            if static_has_field(Y, ρn_name)
                 ᶜρn = MatrixFields.get_field(Y, ρn_name)
                 ᶜρnₜ = MatrixFields.get_field(Yₜ, ρn_name)
                 @. ᶜρnₜ -= ᶜratio * max(FT(0), ᶜρn) / max(ᶜρq, ϵ_FT) * ᶜρq_tot_diff

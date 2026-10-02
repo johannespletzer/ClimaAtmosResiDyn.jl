@@ -340,7 +340,7 @@ function edmfx_sgs_diffusive_flux_tendency!(
             )
                 ρq_name = get_ρχ_name(q_name)
                 ρn_name = get_ρχ_name(n_name)
-                MatrixFields.has_field(Y.c, ρq_name) || continue
+                static_has_field(Y.c, ρq_name) || continue
                 ᶜρq = MatrixFields.get_field(Y.c, ρq_name)
                 ᶜρqₜ = MatrixFields.get_field(Yₜ.c, ρq_name)
                 @. ᶜratio =
@@ -348,13 +348,13 @@ function edmfx_sgs_diffusive_flux_tendency!(
                 @. ᶜρqₜ -= ᶜratio * ᶜρχₜ_diffusion
                 if apply_sgs_updraft
                     for j in 1:n
-                        if MatrixFields.has_field(Y.c.sgsʲs.:($j), q_name)
+                        if static_has_field(Y.c.sgsʲs.:($j), q_name)
                             ᶜqⱼₜ = MatrixFields.get_field(Yₜ.c.sgsʲs.:($j), q_name)
                             @. ᶜqⱼₜ -= ᶜratio * ᶜρχₜ_diffusion / Y.c.ρ
                         end
                     end
                 end
-                if MatrixFields.has_field(Y.c, ρn_name)
+                if static_has_field(Y.c, ρn_name)
                     ᶜρn = MatrixFields.get_field(Y.c, ρn_name)
                     ᶜρnₜ = MatrixFields.get_field(Yₜ.c, ρn_name)
                     @. ᶜρnₜ -= ᶜratio * max(FT(0), ᶜρn) / max(ᶜρq, ϵ_FT) * ᶜρχₜ_diffusion
@@ -409,7 +409,7 @@ function edmfx_sgs_diffusive_flux_tendency!(
             if apply_sgs_updraft
                 χ_name = specific_tracer_name(ρχ_name)
                 for j in 1:n
-                    if MatrixFields.has_field(Y.c.sgsʲs.:($j), χ_name)
+                    if static_has_field(Y.c.sgsʲs.:($j), χ_name)
                         ᶜχⱼₜ = MatrixFields.get_field(Yₜ.c.sgsʲs.:($j), χ_name)
                         @. ᶜχⱼₜ -= ᶜρχₜ_diffusion / Y.c.ρ
                     end
@@ -515,7 +515,7 @@ function edmfx_sgs_horizontal_diffusive_flux_tendency!(
             (@name(q_lcl), @name(n_lcl), @name(c.ρq_lcl), @name(c.ρn_lcl)),
             (@name(q_icl), @name(n_ice), @name(c.ρq_icl), @name(c.ρn_ice)),
         )
-            MatrixFields.has_field(Y, ρq_name) || continue
+            static_has_field(Y, ρq_name) || continue
             ᶜρq = MatrixFields.get_field(Y, ρq_name)
             ᶜρqₜ = MatrixFields.get_field(Yₜ, ρq_name)
             @. ᶜratio =
@@ -523,13 +523,13 @@ function edmfx_sgs_horizontal_diffusive_flux_tendency!(
             @. ᶜρqₜ += ᶜratio * ᶜρχₜ_diffusion
             if apply_sgs_updraft
                 for j in 1:n
-                    if MatrixFields.has_field(Y.c.sgsʲs.:($j), q_name)
+                    if static_has_field(Y.c.sgsʲs.:($j), q_name)
                         ᶜqⱼₜ = MatrixFields.get_field(Yₜ.c.sgsʲs.:($j), q_name)
                         @. ᶜqⱼₜ += ᶜratio * ᶜρχₜ_diffusion / ᶜρ
                     end
                 end
             end
-            if MatrixFields.has_field(Y, ρn_name)
+            if static_has_field(Y, ρn_name)
                 ᶜρn = MatrixFields.get_field(Y, ρn_name)
                 ᶜρnₜ = MatrixFields.get_field(Yₜ, ρn_name)
                 @. ᶜρnₜ +=
@@ -567,7 +567,7 @@ function edmfx_sgs_horizontal_diffusive_flux_tendency!(
         if apply_sgs_updraft
             χ_name = specific_tracer_name(ρχ_name)
             for j in 1:n
-                if MatrixFields.has_field(Y.c.sgsʲs.:($j), χ_name)
+                if static_has_field(Y.c.sgsʲs.:($j), χ_name)
                     ᶜχⱼₜ = MatrixFields.get_field(Yₜ.c.sgsʲs.:($j), χ_name)
                     @. ᶜχⱼₜ += ᶜρχₜ_diffusion / ᶜρ
                 end

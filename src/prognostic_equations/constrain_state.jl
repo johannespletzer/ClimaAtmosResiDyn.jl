@@ -129,7 +129,7 @@ function tracer_nonnegativity_constraint!(Y, p, t,
     )
 
     for name in tracer_mass_names
-        MatrixFields.has_field(Y.c, name) || continue
+        static_has_field(Y.c, name) || continue
         name == @name(ρq_tot) && !constrain_qtot && continue
         # Compute clipped version of ᶜρq
         ᶜρq = MatrixFields.get_field(Y.c, name)

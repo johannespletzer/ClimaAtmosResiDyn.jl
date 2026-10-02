@@ -75,9 +75,9 @@ function vertical_advection_of_water_tendency!(Yₜ, Y, p, t)
     # step. A species gated here but not there would move no tag at all.
     has_subdomain_corrections(ρq_name) =
         p.atmos.turbconv_model isa PrognosticEDMFX &&
-        MatrixFields.has_field(Y.c.sgsʲs.:(1), specific_tracer_name(ρq_name))
+        static_has_field(Y.c.sgsʲs.:(1), specific_tracer_name(ρq_name))
     MatrixFields.unrolled_foreach(microphysics_tracers) do (ρq_name, w_name)
-        MatrixFields.has_field(Y.c, ρq_name) || return
+        static_has_field(Y.c, ρq_name) || return
 
         ᶜρq = MatrixFields.get_field(Y.c, ρq_name)
         ᶜw = MatrixFields.get_field(p.precomputed, w_name)
@@ -151,7 +151,7 @@ function vertical_advection_of_water_tendency!(Yₜ, Y, p, t)
             (@name(q_sno), @name(ᶜwₛʲs.:(1)), @name(ᶜwₛ)),
         )
         MatrixFields.unrolled_foreach(sgs_microphysics_tracers) do (q_name, wʲ_name, w_name)
-            MatrixFields.has_field(Y.c.sgsʲs.:(1), q_name) || return
+            static_has_field(Y.c.sgsʲs.:(1), q_name) || return
 
             ᶜqʲ = MatrixFields.get_field(Y.c.sgsʲs.:(1), q_name)
             ᶜwʲ = MatrixFields.get_field(p.precomputed, wʲ_name)

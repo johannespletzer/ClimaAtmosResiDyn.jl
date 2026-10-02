@@ -213,7 +213,7 @@ function diffusion_jacobian_blocks(Y, atmos, diffusion_flag)
     use_derivative(diffusion_flag) || return ()
     FT = Spaces.undertype(axes(Y.c))
     (; TridiagonalRow) = jacobian_row_types(FT)
-    is_in_Y(name) = MatrixFields.has_field(Y, name)
+    is_in_Y(name) = static_has_field(Y, name)
     diffused_scalar_names =
         unrolled_map(center_state_name, diffused_gs_scalar_names(Y))
     mass_names = unrolled_map(center_state_name, sedimenting_mass_names(Y))
@@ -608,26 +608,26 @@ function jacobian_diagonal_names(Y)
         center_state_name,
         unrolled_filter(
             name -> name != @name(sgsʲs),
-            MatrixFields.top_level_names(Y.c),
+            static_top_level_names(Y.c),
         ),
     )
     face_names = unrolled_map(
         name -> MatrixFields.append_internal_name(@name(f), name),
         unrolled_filter(
             name -> name != @name(sgsʲs),
-            MatrixFields.top_level_names(Y.f),
+            static_top_level_names(Y.f),
         ),
     )
     sgs_names =
-        hasproperty(Y.c, :sgsʲs) ?
+        static_has_field(Y.c, @name(sgsʲs)) ?
         (
             unrolled_map(
                 sgs_state_name,
-                MatrixFields.top_level_names(Y.c.sgsʲs.:(1)),
+                static_top_level_names(Y.c.sgsʲs.:(1)),
             )...,
             @name(f.sgsʲs.:(1).u₃),
         ) : ()
-    sfc_names = MatrixFields.has_field(Y, @name(sfc)) ? (@name(sfc),) : ()
+    sfc_names = static_has_field(Y, @name(sfc)) ? (@name(sfc),) : ()
     return (center_names..., face_names..., sgs_names..., sfc_names...)
 end
 
@@ -676,7 +676,7 @@ function jacobian_solver_algorithm(
     diffusion_flag,
     approximate_solve_iters,
 )
-    is_in_Y(name) = MatrixFields.has_field(Y, name)
+    is_in_Y(name) = static_has_field(Y, name)
     sfc_if_available = is_in_Y(@name(sfc)) ? (@name(sfc),) : ()
     ρtke_if_available = is_in_Y(@name(c.ρtke)) ? (@name(c.ρtke),) : ()
     sgs_ρa_if_available =
@@ -1322,7 +1322,7 @@ function update_advection_jacobian!(matrix, Y, p, dtγ, topography_flag)
     tracer_info = (@name(c.ρe_tot), @name(c.ρq_tot))
 
     MatrixFields.unrolled_foreach(tracer_info) do ρχ_name
-        MatrixFields.has_field(Y, ρχ_name) || return
+        static_has_field(Y, ρχ_name) || return
         ᶜχ = ρχ_name === @name(c.ρe_tot) ? ᶜh_tot : (@. lazy(specific(Y.c.ρq_tot, Y.c.ρ)))
 
         if use_derivative(topography_flag)
@@ -1376,7 +1376,7 @@ function update_advection_jacobian!(matrix, Y, p, dtγ, topography_flag)
         )
     @. ∂ᶠu₃_err_∂ᶜρe_tot = dtγ * ᶠp_grad_matrix * DiagonalMatrixRow(ᶜkappa_m)
 
-    if MatrixFields.has_field(Y, @name(c.ρq_tot))
+    if static_has_field(Y, @name(c.ρq_tot))
         ∂ᶠu₃_err_∂ᶜρq_tot = matrix[@name(f.u₃), @name(c.ρq_tot)]
         @. ∂ᶠu₃_err_∂ᶜρq_tot =
             dtγ * ᶠp_grad_matrix * DiagonalMatrixRow(ᶜ∂p∂ρq_tot)
@@ -1928,7 +1928,7 @@ function update_diffusion_jacobian!(
     end
     @. ᶜdiffusion_h_matrix = ᶜadvdivᵥ_matrix() * ∂ᶠρχ_dif_flux_∂ᶜχ
     if (
-        MatrixFields.has_field(Y, @name(c.ρtke)) ||
+        static_has_field(Y, @name(c.ρtke)) ||
         !isnothing(p.atmos.turbconv_model) ||
         !disable_momentum_vertical_diffusion(p.atmos.vertical_diffusion)
     )
@@ -1981,7 +1981,7 @@ function update_diffusion_jacobian!(
     @. ∂ᶜρe_tot_err_∂ᶜρe_tot +=
         dtγ * ᶜdiffusion_h_matrix * DiagonalMatrixRow(cp_d / (ᶜcv_m * ᶜρ))
 
-    if MatrixFields.has_field(Y, @name(c.ρq_tot))
+    if static_has_field(Y, @name(c.ρq_tot))
         ∂ᶜρe_tot_err_∂ᶜρq_tot = matrix[@name(c.ρe_tot), @name(c.ρq_tot)]
         ∂ᶜρq_tot_err_∂ᶜρ = matrix[@name(c.ρq_tot), @name(c.ρ)]
         ∂ᶜρq_tot_err_∂ᶜρq_tot = matrix[@name(c.ρq_tot), @name(c.ρq_tot)]
@@ -2047,7 +2047,7 @@ function update_diffusion_jacobian!(
         ᶜρ,
     )
 
-    if MatrixFields.has_field(Y, @name(c.ρtke))
+    if static_has_field(Y, @name(c.ρtke))
         turbconv_params = CAP.turbconv_params(params)
         c_d = tke_dissipation_coefficient(turbconv_params)
         (; dt) = p
@@ -2830,7 +2830,7 @@ function update_sgs_massflux_jacobian!(matrix, Y, p, dtγ, diffusion_flag)
         ) do ρχ_name
             ρχ_state_name = center_state_name(ρχ_name)
             χʲ_name = get_χʲ_name_from_ρχ_name(ρχ_state_name)
-            MatrixFields.has_field(Y, χʲ_name) || return
+            static_has_field(Y, χʲ_name) || return
             ᶜρχ = MatrixFields.get_field(Y, ρχ_state_name)
             ᶜχʲ = MatrixFields.get_field(Y, χʲ_name)
 

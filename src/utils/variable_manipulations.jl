@@ -119,9 +119,17 @@ end
 Return the same `Bool` as `MatrixFields.has_field(x, name)`.
 
 For a `Field`, the answer comes from its element type and is known at compile
-time. Any other `x` falls back to `MatrixFields.has_field`.
+time. Any other `x`, such as the state `Y`, is followed one name at a time, as
+`MatrixFields.has_field` follows it, until the name reaches a `Field`. So
+`static_has_field(Y, @name(c.ρq_tot))` is known at compile time too.
 """
-static_has_field(x, name) = MatrixFields.has_field(x, name)
+static_has_field(x, ::MatrixFields.FieldName{()}) = true
+static_has_field(x, name::MatrixFields.FieldName) =
+    MatrixFields.extract_first(name) in propertynames(x) && static_has_field(
+        getproperty(x, MatrixFields.extract_first(name)),
+        MatrixFields.drop_first(name),
+    )
+static_has_field(::Fields.Field, ::MatrixFields.FieldName{()}) = true
 static_has_field(field::Fields.Field, name::MatrixFields.FieldName) =
     _static_has_field(eltype(field), name)
 @generated function _static_has_field(

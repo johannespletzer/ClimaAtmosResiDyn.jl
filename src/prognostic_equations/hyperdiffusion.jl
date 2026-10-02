@@ -148,7 +148,7 @@ NVTX.@annotate function prep_hyperdiffusion_tendency!(Yₜ, Y, p, t)
             sd_r(thermo_params, ᶜp),
         ),
     )
-    if MatrixFields.has_field(Y, @name(c.ρq_tot))
+    if static_has_field(Y, @name(c.ρq_tot))
         if p.atmos.microphysics_model isa Union{NonEquilibriumMicrophysics1M,
             NonEquilibriumMicrophysics2M}
             @. ᶜ∇²q_tot_eff = wdivₕ(
@@ -294,7 +294,7 @@ NVTX.@annotate function apply_hyperdiffusion_tendency!(Yₜ, Y, p, t)
     @. ᶜh_flux_div = wdivₕ(ᶜρ * gradₕ(ᶜ∇²s_d))
     # Water enthalpy contribution — only when ρq_tot is prognostic (dry
     # configurations skip this entirely).
-    if MatrixFields.has_field(Y, @name(c.ρq_tot))
+    if static_has_field(Y, @name(c.ρq_tot))
         ᶜq_vap, ᶜq_lcl, ᶜq_icl = ᶜsuspended_water(Y, p)
         ᶜh_eff_plus_Φ = ᶜh_eff_plus_Φ!(
             p.scratch.ᶜtemp_scalar_2,
@@ -315,7 +315,7 @@ NVTX.@annotate function apply_hyperdiffusion_tendency!(Yₜ, Y, p, t)
         Y,
         p,
         ν₄_scalar,
-        MatrixFields.has_field(Y, @name(c.ρq_tot)) ? p.scratch.ᶜtemp_scalar_2 :
+        static_has_field(Y, @name(c.ρq_tot)) ? p.scratch.ᶜtemp_scalar_2 :
         nothing,
     )
 
@@ -500,7 +500,7 @@ NVTX.@annotate function apply_tracer_hyperdiffusion_tendency!(Yₜ, Y, p, t)
     # per-species divergence form — the alternative flux distribution
     # implies advecting each species at ν₀·∇³q_t/q_t, which explodes in
     # dry regions. Rain, snow and n_rai do not hyperdiffuse.
-    if MatrixFields.has_field(Y, @name(c.ρq_tot))
+    if static_has_field(Y, @name(c.ρq_tot))
         (; ᶜ∇²q_tot_eff) = p.hyperdiff
         ᶜρ = Y.c.ρ
         ᶜρq_tot_hyperdiff = p.scratch.ᶜtemp_scalar
@@ -525,14 +525,14 @@ NVTX.@annotate function apply_tracer_hyperdiffusion_tendency!(Yₜ, Y, p, t)
             (@name(c.ρq_lcl), (@name(c.ρn_lcl),)),
             (@name(c.ρq_icl), (@name(c.ρn_ice), @name(c.ρq_rim), @name(c.ρb_rim))),
         )
-            MatrixFields.has_field(Y, ρq_name) || continue
+            static_has_field(Y, ρq_name) || continue
             ᶜρq = MatrixFields.get_field(Y, ρq_name)
             ᶜρqₜ = MatrixFields.get_field(Yₜ, ρq_name)
             @. ᶜratio =
                 max(FT(0), min(FT(1), ᶜρq / max(ᶜρq_tot_eff, ϵ_FT)))
             @. ᶜρqₜ -= ᶜratio * ᶜρq_tot_hyperdiff
             for ρχ_name in attached_names
-                MatrixFields.has_field(Y, ρχ_name) || continue
+                static_has_field(Y, ρχ_name) || continue
                 ᶜρχ = MatrixFields.get_field(Y, ρχ_name)
                 ᶜρχₜ = MatrixFields.get_field(Yₜ, ρχ_name)
                 @. ᶜρχₜ -=
@@ -584,13 +584,13 @@ NVTX.@annotate function apply_tracer_hyperdiffusion_tendency!(Yₜ, Y, p, t)
                 (@name(q_lcl), @name(n_lcl)),
                 (@name(q_icl), @name(n_ice)),
             )
-                MatrixFields.has_field(Y.c.sgsʲs.:($j), χⱼ_name) || continue
+                static_has_field(Y.c.sgsʲs.:($j), χⱼ_name) || continue
                 ᶜχⱼ = MatrixFields.get_field(Y.c.sgsʲs.:($j), χⱼ_name)
                 ᶜχⱼₜ = MatrixFields.get_field(Yₜ.c.sgsʲs.:($j), χⱼ_name)
                 @. ᶜratioⱼ =
                     max(FT(0), min(FT(1), ᶜχⱼ / max(ᶜq_tot_effⱼ, ϵ_FT)))
                 @. ᶜχⱼₜ -= ᶜratioⱼ * ᶜq_totʲ_hyperdiff
-                if MatrixFields.has_field(Y.c.sgsʲs.:($j), nⱼ_name)
+                if static_has_field(Y.c.sgsʲs.:($j), nⱼ_name)
                     ᶜnⱼ = MatrixFields.get_field(Y.c.sgsʲs.:($j), nⱼ_name)
                     ᶜnⱼₜ = MatrixFields.get_field(Yₜ.c.sgsʲs.:($j), nⱼ_name)
                     @. ᶜnⱼₜ -=

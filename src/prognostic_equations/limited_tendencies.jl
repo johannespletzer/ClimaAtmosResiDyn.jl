@@ -90,10 +90,11 @@ NVTX.@annotate function limiters_func!(Y, p, t, ref_Y)
     # Apply general (SEM quasimonotone) limiter if configured.
     # When ρq_tot is limited, update ρ and ρe_tot for mass and energy consistency.
     if !isnothing(sem_quasimonotone_limiter)
-        if hasproperty(Y.c, :ρq_tot)
+        if static_has_field(Y.c, @name(ρq_tot))
             p.scratch.ᶜtemp_scalar_2 .= Y.c.ρq_tot
         end
-        for ρχ_name in filter(is_tracer_var, propertynames(Y.c))
+        # `gs_tracer_names` applies the rule of `is_tracer_var` at compile time.
+        for ρχ_name in unrolled_map(MatrixFields.extract_first, gs_tracer_names(Y))
             # Tagged energy tracers are left unlimited so that they receive
             # the same treatment as ρe_tot, which is not limited either. A
             # shape-preserving adjustment applied to the tags but not to
@@ -112,7 +113,7 @@ NVTX.@annotate function limiters_func!(Y, p, t, ref_Y)
             )
             Limiters.apply_limiter!(Y.c.:($ρχ_name), Y.c.ρ, sem_quasimonotone_limiter)
         end
-        if hasproperty(Y.c, :ρq_tot)
+        if static_has_field(Y.c, @name(ρq_tot))
             # `ᶜtemp_scalar_2` still holds the pre-limiter ρq_tot here
             rescale_water_tags!(Y, p, p.scratch.ᶜtemp_scalar_2)
             @. p.scratch.ᶜtemp_scalar_2 = Y.c.ρq_tot - p.scratch.ᶜtemp_scalar_2
@@ -134,11 +135,12 @@ NVTX.@annotate function limiters_func!(Y, p, t, ref_Y)
             :ρq_tot,
             vertical_water_borrowing_species,
         ) &&
-           hasproperty(Y.c, :ρq_tot)
+           static_has_field(Y.c, @name(ρq_tot))
             p.scratch.ᶜtemp_scalar_2 .= Y.c.ρq_tot
         end
         ᶜχ = p.scratch.ᶜtemp_scalar
-        for ρχ_name in filter(is_tracer_var, propertynames(Y.c))
+        # `gs_tracer_names` applies the rule of `is_tracer_var` at compile time.
+        for ρχ_name in unrolled_map(MatrixFields.extract_first, gs_tracer_names(Y))
             if _should_apply_limiter_to_tracer(ρχ_name, vertical_water_borrowing_species)
                 ρχ = getproperty(Y.c, ρχ_name)
                 ᶜχ .= specific.(ρχ, Y.c.ρ)
@@ -151,7 +153,7 @@ NVTX.@annotate function limiters_func!(Y, p, t, ref_Y)
             :ρq_tot,
             vertical_water_borrowing_species,
         ) &&
-           hasproperty(Y.c, :ρq_tot)
+           static_has_field(Y.c, @name(ρq_tot))
             # `ᶜtemp_scalar_2` still holds the pre-limiter ρq_tot here
             rescale_water_tags!(Y, p, p.scratch.ᶜtemp_scalar_2)
             @. p.scratch.ᶜtemp_scalar_2 = Y.c.ρq_tot - p.scratch.ᶜtemp_scalar_2

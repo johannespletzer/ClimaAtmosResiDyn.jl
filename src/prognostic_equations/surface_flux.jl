@@ -138,7 +138,7 @@ function surface_flux_tendency!(Yₜ, Y, p, t)
             # assuming one updraft; grid-scale tracers without an SGS
             # counterpart (e.g. tagged energy tracers) are skipped
             χʲ_name = get_χʲ_name_from_ρχ_name(ρχ_name)
-            if MatrixFields.has_field(Yₜ.c, χʲ_name)
+            if static_has_field(Yₜ.c, χʲ_name)
                 ᶜχʲₜ = MatrixFields.get_field(Yₜ.c, χʲ_name)
                 @. ᶜχʲₜ -= specific(btt, p.precomputed.ᶜρʲs.:(1))
             end

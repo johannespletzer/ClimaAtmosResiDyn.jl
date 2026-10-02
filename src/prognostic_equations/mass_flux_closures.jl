@@ -324,7 +324,7 @@ function enforce_edmf_updraft_constraints!(Y, p, t, turbconv_model)
         # negligible; enforce mass conservation bound ρaχʲ < ρχ.
         for χ_name in sgs_tracer_names(Y)
             ρχ_name = get_ρχ_name(χ_name)
-            MatrixFields.has_field(Y.c, ρχ_name) || continue
+            static_has_field(Y.c, ρχ_name) || continue
             ᶜχʲ = MatrixFields.get_field(Y.c.sgsʲs.:($j), χ_name)
             ᶜρχ = MatrixFields.get_field(Y.c, ρχ_name)
             @. ᶜχʲ = ifelse(

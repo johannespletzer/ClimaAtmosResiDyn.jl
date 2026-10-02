@@ -136,7 +136,7 @@ function set_precipitation_velocities!(
         (@name(q_sno), @name(ᶜwₛ)),
     )
     MatrixFields.unrolled_foreach(microphysics_tracers) do (χ_name, w_name)
-        MatrixFields.has_field(Y.c, get_ρχ_name(χ_name)) || return
+        static_has_field(Y.c, get_ρχ_name(χ_name)) || return
 
         e_int_func = internal_energy_func(χ_name)
 
@@ -215,7 +215,7 @@ function set_precipitation_velocities!(
         (@name(q_sno), @name(ᶜwₛʲs), @name(ᶜwₛ)),
     )
     MatrixFields.unrolled_foreach(microphysics_tracers) do (χ_name, wʲs_name, w_name)
-        MatrixFields.has_field(Y.c.sgsʲs.:(1), χ_name) || return
+        static_has_field(Y.c.sgsʲs.:(1), χ_name) || return
 
         e_int_func = internal_energy_func(χ_name)
         ᶜw = MatrixFields.get_field(p.precomputed, w_name)

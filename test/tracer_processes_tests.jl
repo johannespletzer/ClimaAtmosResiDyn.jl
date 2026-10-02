@@ -247,6 +247,32 @@ foreach_gs_tracer_one(Y) = CA.foreach_gs_tracer((x, name) -> nothing, Y)
 # to its size at 12 fields.
 foreach_gs_tracer_two(Y) = CA.foreach_gs_tracer((x, y, name) -> nothing, Y, Y)
 
+# The lookups the per-step code makes: on the state, on `Y.c`, and on one
+# updraft. Picking the updraft by a run-time index, as the loops over `j` do,
+# allocates at any number of fields, so the test passes the updraft in.
+state_lookups(Y) = (
+    CA.static_has_field(Y, @name(c.ρq_tot)),
+    CA.static_has_field(Y, @name(c.ρtke)),
+    CA.static_has_field(Y, @name(c.ρq_rai)),
+    CA.static_has_field(Y, @name(sfc)),
+    CA.static_has_field(Y.c, @name(ρq_tot)),
+    CA.static_has_field(Y.c, @name(sgsʲs)),
+)
+updraft_lookups(updraft) = (
+    CA.static_has_field(updraft, @name(q_rai)),
+    CA.static_has_field(updraft, @name(n_rai)),
+)
+matrix_fields_lookups(Y, updraft) = (
+    MatrixFields.has_field(Y, @name(c.ρq_tot)),
+    MatrixFields.has_field(Y, @name(c.ρtke)),
+    MatrixFields.has_field(Y, @name(c.ρq_rai)),
+    MatrixFields.has_field(Y, @name(sfc)),
+    MatrixFields.has_field(Y.c, @name(ρq_tot)),
+    MatrixFields.has_field(Y.c, @name(sgsʲs)),
+    MatrixFields.has_field(updraft, @name(q_rai)),
+    MatrixFields.has_field(updraft, @name(n_rai)),
+)
+
 @testset "Name walks resolve at compile time at 31 and 38 fields" begin
     two_values_at_12 = walk_allocations(foreach_gs_tracer_two, name_walk_state(12))
     for n in (31, 38)
@@ -315,5 +341,46 @@ foreach_gs_tracer_two(Y) = CA.foreach_gs_tracer((x, y, name) -> nothing, Y, Y)
             @test walk_allocations(walk, Y) == 0
         end
         @test walk_allocations(foreach_gs_tracer_two, Y) <= two_values_at_12
+
+        # The per-step lookups, on the state as a `FieldVector` too.
+        updraft = Y.c.sgsʲs.:(1)
+        for state in (Y, Fields.FieldVector(; c = Y.c))
+            @test (state_lookups(state)..., updraft_lookups(updraft)...) ==
+                  matrix_fields_lookups(state, updraft)
+            @test walk_allocations(state_lookups, state) == 0
+        end
+        @test walk_allocations(updraft_lookups, updraft) == 0
     end
+end
+
+# The per-step code must not look names up through `propertynames`, which
+# `MatrixFields.has_field`, `MatrixFields.top_level_names` and `hasproperty`
+# call. From 32 fields of `Y.c` on, each such call allocates. The static
+# helpers give the same answers at compile time. The test reads the source, so
+# it also covers lookups inside tendencies that no unit test reaches.
+@testset "Per-step code looks names up at compile time" begin
+    src = joinpath(pkgdir(CA), "src")
+    files = [
+        [
+            joinpath(dir, file) for
+            (dir, _, names) in walkdir(joinpath(src, "prognostic_equations")) for
+            file in names if endswith(file, ".jl")
+        ]
+        joinpath(src, "cache", "microphysics_cache.jl")
+        joinpath(src, "parameterized_tendencies", "sponge", "viscous_sponge.jl")
+        joinpath(src, "utils", "tracer_processes.jl")
+    ]
+    patterns = (
+        r"MatrixFields\.has_field\(",
+        r"MatrixFields\.top_level_names\(",
+        r"hasproperty\(Y",
+        r"filter\(is_tracer_var, propertynames\(",
+    )
+    offenders = String[]
+    for file in files, (i, line) in enumerate(eachline(file))
+        startswith(lstrip(line), "#") && continue
+        any(p -> occursin(p, line), patterns) &&
+            push!(offenders, "$(relpath(file, src)):$i")
+    end
+    @test isempty(offenders)
 end
