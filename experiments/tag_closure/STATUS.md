@@ -91,8 +91,9 @@ not checked, it says so.
       + **W55:** the D4-W default day closes to 6.5e-6. Over the whole day
         the partition repair is 1.2e-2 a day.
       + **W56:** the surface pulse's copies at 30 levels pass R5 in the
-        window, 1.36e-3 a day. Over the day they reach 2.39e-3. R7 waits for a
-        P2 probe at 30 levels.
+        window, 1.36e-3 a day. Over the day they reach 2.39e-3. Run 12 (P2 at
+        30 levels) passes R6, so R7 is a verdict: it fails on `sfc` at 1 h,
+        L1 12.6% against 1%. Every tag passes at 24 h.
       + **W57:** the parent's Newton error is 4.1e-3 at two iterations and
         1.4e-3 at four.
       + **W58:** TRMM 0M closes to 3.8e-15 in both modes.
@@ -103,7 +104,6 @@ not checked, it says so.
           * why the follower drains `free` more under the rule, which is not
             isolated;
           * V5's 2% limit, since `main` is at 2.7% and 2.3%;
-          * one P2 probe at 30 levels for W56's R7;
           * OD2's windows, which do not mark a startup on the new twins
             (their peak tendency comes at 3.2 to 3.3 h).
 
