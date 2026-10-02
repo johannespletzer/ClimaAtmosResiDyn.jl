@@ -90,11 +90,14 @@ not checked, it says so.
     draft).** After W60's addendum the owner set the floor
     `max(10 × Float64, 3 · eps32 · √n_steps)`. On fresh runs at ten Newton
     iterations (`design/F32_TWIN.md`, section 10) every judged measure
-    passes in both modes. The least margin is the default's `q_tag_inc_left`, 4.35e-6 of the
-    water against 9.60e-6. The default's fresh pair repeats the addendum's
-    runs byte for byte, so it is not an independent sample. W60's registered
-    verdict at ten iterations stays "fails". The rain and snow tags' Float32
-    closure waits for T3's stage 2.
+    passes in both modes. The least margin is the default's
+    `q_tag_inc_left`, 4.35e-6 of the water against 9.60e-6. The floor
+    decides only the default's rows. The default's fresh pair repeats the
+    addendum's runs bit for bit, so there the pass shows consistency with
+    Float32's rounding, not an independent test. The copies are new data
+    and pass the plain 10× rule. W60's registered verdict at ten iterations
+    stays "fails". Criterion 9 stays partial: the rain and snow tags'
+    Float32 closure waits for T3's stage 2.
 
   - **Update, 2026-10-02: V-W7's named parts (W60 addendum, draft).** In
     Float64 the named parts leave 4.1e-7 of the water at 24 h with one Newton

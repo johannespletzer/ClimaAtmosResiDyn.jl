@@ -2879,8 +2879,11 @@ eps·√n come from the review's `analysis/water/f32_named_floor.py`
 Newton iterations: every judged measure passes, in both modes. The least
 favourable is the default's `q_tag_inc_left`, 4.35e-6 of the water at 24 h
 against the floor of 9.60e-6 (45% of it), where Float64 has 2.5e-12. The
-default pair repeats W60's addendum runs byte for byte, so for that mode
-the floor is judged on data already seen; the copies' pair is new.**
+floor decides only the default's rows. That pair repeats W60's addendum
+runs bit for bit, so there the pass shows consistency with Float32's
+rounding on the data the floor was set after, not an independent test. The
+copies' pair is new data, and it passes the plain 10× rule: the floor
+decides none of its rows. Criterion 9 stays partial.**
 *Draft, 2026-10-02, for the Opus review.* Pre-registered in
 `design/F32_TWIN.md`, section 10 (`6a234934`), before runs 7 to 10. The rule
 (DECISIONS.md, 2026-10-02): a Float32 measure passes if it is at most
@@ -2906,12 +2909,27 @@ W60's registered verdict at ten iterations stays "fails".
   - **Where the floor decides.** At ten iterations every Float64 state of
     the default's partition is below 3e-12, so its threshold is the floor.
     There Float32 sits at 23% to 45% of it. Every other measure is judged by
-    10 times Float64, and uses at most 18% of it.
+    10 times Float64, and uses at most 18% of it. So on the copies, the only
+    new data, the floor decides no row. Their `evap` rows read 0 in both
+    precisions and test nothing.
   - **Not an independent test for the default.** Runs 7 and 8 differ from
     runs 5 and 6 only in the `job_id` and the removed seed key, which DYCOMS's
-    radiation does not use. Their closure tables are byte for byte the same.
-    So the default's verdict rests on the values that the floor was set
-    after. Section 10.2 said so before the runs.
+    radiation does not use. Their closure tables are byte for byte the same,
+    and the review found every variable of all 72 NetCDF files bit for bit
+    the same. So the default's verdict rests on the values that the floor
+    was set after. Section 10.2 said so before the runs.
+  - **The least margin shrinks with time.** `q_tag_inc_left` grows faster
+    than √n. It reads 0.28 of its floor at 3 h, 0.33 at 12 h and 0.45 at
+    24 h, as W60's addendum found. The residual and `N` stay between 0.27
+    and 0.45 from 1 h on. So the margin is shown for this day only, and a
+    longer run needs its own check.
+  - **The 10× rule bounds Float32 from above only.** Float32 repairs less.
+    The copies' repair fires 3,355 times in Float32 against 34,198 in
+    Float64 (13,259 against 36,628 at one iteration). The partition repair
+    of the copies fires 9 times in Float32, all in the first hour, against
+    24 by 2 h in Float64, so its window reads 0. These rows show that
+    Float32 repairs no more than 10 times Float64, not that it repeats
+    Float64's repair.
   - **Criterion 4 in Float64 at ten iterations, reported.** Every row is
     within its budget except the partition repair over the whole day (1.33e-2
     default, 6.7e-3 copies, against 5e-3; the window's rows pass). The
@@ -2920,16 +2938,29 @@ W60's registered verdict at ten iterations stays "fails".
     production setting, one iteration, so this changes no criterion-4
     verdict. The copies' partition repair and `led_fix` in Float32 read 0
     in the window and 4.0e-3 over the whole day.
+  - **What criterion 9 can claim.** At the production setting, one
+    iteration, Float32 parity holds in both modes and every criterion-4
+    measure read meets the plain 10× rule (W60 and its addendum). At ten
+    iterations the registered verdict fails and stands. Under the floor the
+    copies pass on new data, and the default is consistent with Float32's
+    rounding. Criterion 9 is not met while the rain and snow tags' Float32
+    closure waits for T3's stage 2.
   - **What this does not show.** Parity at ten iterations: no untagged twin
-    ran, and criterion 3 is W60's at one iteration. The rain and snow tags,
-    which wait for T3's stage 2. A cause. One case, one day.
+    ran. Criterion 9 asks criterion 3 of the Float32 twin of D4-W, which
+    runs at one iteration, where W60's R1 holds. So it does not require
+    parity at ten iterations, and this does not show it. The rain and snow
+    tags. A cause. One case, one day.
 
 *`hpda2_compute`, 2026-10-02, jobs `14126807` and `14126808` (default,
 Float64 and Float32, 37 and 33 minutes), `14126809` and `14126810` (copies,
 56 and 52 minutes), model `d3c5e42f` from `../ClimaAtmosResiDyn-f32-run`,
 record `6a234934`. No separate check job (section 10.2).
 `analysis/water/f32_floor_score.py`; `output/f32/` (`f32_floor_scores.csv`,
-`data/`, `logs/`).*
+`data/`, `logs/`). Opus review, 2026-10-02: the jobs started 7 to 19 s
+after `6a234934` was pushed. The scorer reproduces `f32_floor_scores.csv`
+byte for byte from the scratch output, whose 696 files match
+`SHA256SUMS_scratch_inputs`; the 48 copied files match theirs. The floors
+and shares were recomputed apart from the scorer.*
 
 ## 2. Energy source tags: closure by transport
 
