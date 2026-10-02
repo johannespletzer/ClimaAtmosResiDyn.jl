@@ -1,0 +1,79 @@
+# W59 amendment (2026-10-02), the moist pair (design/MPI_PARITY.md, section 7).
+# Mode: default, 2 rank(s): submit with --ntasks=2. W59's config with two
+# changes: a moist start, MoistBaroclinicWaveWithEDMF, and no topography,
+# since that start is balanced over a flat surface. The six W59m configs
+# differ only in job_id and in the tag keys.
+job_id: "w59m_mpi_default_r2"
+
+config: "sphere"
+h_elem: 2
+nh_poly: 3
+z_elem: 10
+z_max: 30000.0
+dz_bottom: 500.0
+dt: "20secs"
+ode_algo: "ARS222"
+max_newton_iters_ode: 2
+initial_condition: "MoistBaroclinicWaveWithEDMF"
+rayleigh_sponge: true
+viscous_sponge: true
+surface_setup: "DefaultMoninObukhov"
+rad: "clearsky"
+dt_rad: "1hours"
+turbconv: "prognostic_edmfx"
+prognostic_tke: true
+edmfx_entr_model: "Generalized"
+edmfx_detr_model: "Generalized"
+edmfx_nh_pressure: true
+edmfx_vertical_diffusion: true
+edmfx_filter: true
+edmfx_sgs_mass_flux: true
+edmfx_sgs_diffusive_flux: true
+implicit_diffusion: true
+approximate_linear_solve_iters: 2
+microphysics_model: "1M"
+fixed_terminal_velocity_liquid: false
+toml: [toml/prognostic_edmfx_1M.toml]
+t_end: "6hours"
+FLOAT_TYPE: "Float64"
+dt_save_state_to_disk: "30mins"
+
+# The tag set of docs/src/tagged_water.md: a partition by latitude, so the
+# default mode takes the increment transport (default_water_tag_transport),
+# and two surface-flux tags.
+water_tracers:
+  - name: tropics
+    region: tropics
+  - name: extratropics
+    region: extratropics
+  - name: evap
+    source: surface_flux
+  - name: evap_tropics
+    region: tropics
+    source: surface_flux
+water_closure_check:
+  period: "30mins"
+  audit: true
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [ts, ta, thetaa, ha, pfull, rhoa, ua, va, wa, hur, hus, husv]
+    period: "30mins"
+  - short_name: [cl, clw, cli, husra, hussn, lwp, rwp]
+    period: "30mins"
+  - short_name: [hfss, hfls, evspsbl, pr, prra, prsn, rsd, rsu, rld, rlu]
+    period: "30mins"
+  - short_name: [arup, rhoaup, waup, taup, thetaaup, haup, husup, hurup]
+    period: "30mins"
+  - short_name: [clwup, cliup, husraup, hussnup]
+    period: "30mins"
+  - short_name: [aren, rhoaen, waen, husen, husraen, hussnen]
+    period: "30mins"
+  - short_name: [tke, lmix, edt, evu, entr, detr, env_q_tot_variance]
+    period: "30mins"
+  - short_name: [q_tag_res, q_tag_tropics, q_tag_extratropics, q_tag_evap]
+    period: "30mins"
+  - short_name: [q_tag_evap_tropics, q_tag_fix_tropics, q_tag_fix_extratropics]
+    period: "30mins"
+  - short_name: [q_tag_fix_evap, q_tag_fix_evap_tropics]
+    period: "30mins"

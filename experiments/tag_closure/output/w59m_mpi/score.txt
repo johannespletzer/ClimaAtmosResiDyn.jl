@@ -1,0 +1,26 @@
+default_r2: state: PASS parity: 12 checkpoints, 228 field comparisons, 884736 values
+default_r2: netcdf: PASS, RESULT 54 fields compared, 54 bitwise identical over 13 outputs
+copies_r2: state: PASS parity: 12 checkpoints, 228 field comparisons, 884736 values
+copies_r2: netcdf: PASS, RESULT 54 fields compared, 54 bitwise identical over 13 outputs
+default_r1: state: PASS parity: 12 checkpoints, 228 field comparisons, 884736 values
+default_r1: netcdf: PASS, RESULT 54 fields compared, 54 bitwise identical over 13 outputs
+copies_r1: state: PASS parity: 12 checkpoints, 228 field comparisons, 884736 values
+copies_r1: netcdf: PASS, RESULT 54 fields compared, 54 bitwise identical over 13 outputs
+one rank against two, untagged: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-mpi/experiments/tag_closure/output/w59m_mpi/ranks_untagged.txt
+one rank against two, default: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-mpi/experiments/tag_closure/output/w59m_mpi/ranks_default.txt
+one rank against two, copies: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-mpi/experiments/tag_closure/output/w59m_mpi/ranks_copies.txt
+closure default_r1: 13 rows, largest |relative| 1.804e-05, largest |gross_relative| 1.022e-03
+closure default_r2: 13 rows, largest |relative| 1.804e-05, largest |gross_relative| 1.022e-03
+closure copies_r1: 13 rows, largest |relative| 3.153e-05, largest |gross_relative| 1.341e-03
+closure copies_r2: 13 rows, largest |relative| 3.153e-05, largest |gross_relative| 1.341e-03
+coverage hus: largest |value| at 0 h 1.783e-02, at the end 1.788e-02, over the run 1.788e-02
+coverage clw: largest |value| at 0 h 0.000e+00, at the end 4.866e-04, over the run 5.102e-04
+coverage cli: largest |value| at 0 h 0.000e+00, at the end 2.299e-05, over the run 2.529e-05
+coverage husra: largest |value| at 0 h 0.000e+00, at the end 1.354e-05, over the run 2.480e-05
+coverage hussn: largest |value| at 0 h 0.000e+00, at the end 3.325e-05, over the run 3.325e-05
+coverage pr: largest |value| at 0 h 0.000e+00, at the end 6.666e-05, over the run 1.317e-04
+coverage hfls: largest |value| at 0 h 1.304e+01, at the end 2.344e+01, over the run 2.562e+01
+moisture gate clw: largest after 0 h 5.102e-04 against 1e-05
+moisture gate husra: largest after 0 h 2.480e-05 against 1e-06
+moisture gate: MOIST
+W59 two-rank parity (judged), w59m_mpi: PASS

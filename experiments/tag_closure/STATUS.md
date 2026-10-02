@@ -76,6 +76,17 @@ not checked, it says so.
 
 ## Where things stand
 
+  - **Update, 2026-10-02: W59's moist pair (addendum, reviewed).** The owner
+    asked to close W59's dry-start bound. From the moist baroclinic wave
+    with EDMF, on a flat sphere at h_elem 2, cloud, rain, snow and surface
+    precipitation are present at every output after 0 h. The tagged runs
+    are bit for bit their twin on two ranks in both modes (0 of 884,736
+    state values, 0 of 54 diagnostics). Criterion 3 is met without the
+    dry-start bound, on two ranks for 6 h. Opus review 2026-10-02: the
+    numbers reproduce, the moist runs compare the same 19 `Y` fields, and
+    the 1M species are nonzero in them. The moisture gate's thresholds were
+    set after the smoke, so the gate is labelled as not blind.
+
   - **Update, 2026-10-02: W59, criterion 3 on two MPI ranks.** On the G2
     sphere's physics at h_elem 2 for 6 h, the tagged runs are bit for bit
     their untagged twin on two ranks, in both modes (0 of 884,736 state
@@ -86,7 +97,7 @@ not checked, it says so.
     parent's negative water is 0.52 of its net water (0.34 of its positive
     water) at 6 h. Criterion 3 is met for the MPI paths (W59, reviewed).
 
-  - **Update, 2026-10-02: V-W7's named parts (W60 addendum, draft).** In
+  - **Update, 2026-10-02: V-W7's named parts (W60 addendum, reviewed).** In
     Float64 the named parts leave 4.1e-7 of the water at 24 h with one Newton
     iteration and 3.8e-13 with ten, so criterion 4's named-parts clause
     passes (1e-6). Criterion 4 stays partial on the copies' repair and the
@@ -97,8 +108,8 @@ not checked, it says so.
     10× limits lie below the Float32 partition's 1.7e-8 at 0 h. So the
     failure cannot tell a defect from rounding. With one iteration they are
     within 10 times at 24 h (9.1 at most, at the same rounding level; 14.5
-    at 12 h, not judged). Whether criterion 9 needs a rounding floor is the
-    owner's question; the review proposes one for future designs. The rain
+    at 12 h, not judged). The owner set a rounding floor on 2026-10-02,
+    max(10×Float64, 3·eps32·√n), to be judged on a fresh, pre-registered run. The rain
     and snow tags' Float32 closure waits for T3's stage 2.
 
   - **Update, 2026-10-02: V-W7, the Float32 twin (W60, reviewed).** D4-W in
@@ -149,12 +160,14 @@ not checked, it says so.
       + **W53:** the revision's rule alone makes V5's `led_fix` rise at site
         23. Where the repair refills `free`, the follower drained it in the
         same step (share 0.999; 0.591 for `pbl`).
-      + **Open for the owner:**
-          * why the follower drains `free` more under the rule, which is not
-            isolated;
-          * V5's 2% limit, since `main` is at 2.7% and 2.3%;
+      + **Answered by the owner later on 2026-10-02** (DECISIONS):
+          * why the follower drains `free` more under the rule: a probe will
+            be pre-registered;
+          * V5's 2% limit, since `main` is at 2.7% and 2.3%: it stays;
           * OD2's windows, which do not mark a startup on the new twins
-            (their peak tendency comes at 3.2 to 3.3 h).
+            (their peak tendency comes at 3.2 to 3.3 h): the rule stays, and
+            each finding that uses it adds its verdict from 1 h as a
+            sensitivity row.
 
   - **Update, 2026-10-02: physics baseline.** Main is `b34bbd8b` (2026-10-02).
     Its model physics is upstream `a9287b2d`. Nothing was run for this entry.

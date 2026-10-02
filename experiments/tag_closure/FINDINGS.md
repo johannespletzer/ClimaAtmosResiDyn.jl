@@ -2703,6 +2703,71 @@ in `design/MPI_PARITY.md` (`f519462a`), model `d3c5e42f`, six runs.
 `state_*`, `netcdf_*`, `ranks_*`, `water_*`). `mpi_water.jl` was added after
 the pre-registration, at the coordinator's request. It is reported only.*
 
+**W59, addendum (2026-10-02): the moist pair. From a moist start, with
+cloud, rain, snow and surface precipitation in every output after 0 h, the
+tagged runs on two ranks are bit for bit their untagged twin in both modes:
+0 of 884,736 state values and 0 of 54 diagnostics differ. W59's dry-start
+bound is closed for this case.** *Reviewed 2026-10-02 (Opus); wording fixed.*
+The owner's decision of 2026-10-02. Pre-registered in `design/MPI_PARITY.md`,
+section 7 (`6ca86aa7`). W59's configs with the start
+`MoistBaroclinicWaveWithEDMF` and no topography. Model `d3c5e42f`, six runs.
+
+| rule (design section 7)                                         | least favourable result                                                        |
+|:--------------------------------------------------------------- |:------------------------------------------------------------------------------ |
+| moisture gate: largest `clw` ≥ 1e-5 or `husra` ≥ 1e-6 after 0 h | *moist*: `clw` 5.1e-4, `husra` 2.5e-5                                          |
+| default mode, 2 ranks: every untagged `Y` field                 | *pass*: 0 of 884,736 values differ (19 fields × 12 checkpoints, 30 min to 6 h) |
+| default mode, 2 ranks: every untagged diagnostic                | *pass*: 54 of 54 bit for bit at 13 outputs                                     |
+| copies, 2 ranks: every untagged `Y` field                       | *pass*: 0 of 884,736 values differ                                             |
+| copies, 2 ranks: every untagged diagnostic                      | *pass*: 54 of 54 at 13 outputs                                                 |
+| both modes, 1 rank                                              | reported: the same, both checks pass                                           |
+| one rank against two                                            | reported: rounding at 30 min, up to 8.3e-8 of `ρ` (2 h), tags or not (below)   |
+
+  - **How moist.** At 6 h, the untagged two-rank run holds 1.60e16 kg of
+    water, a global mean column of 31.4 kg m⁻². Of it, 1.29e14 kg is cloud
+    liquid, 6.8e12 kg cloud ice, 1.9e12 kg rain and 3.3e12 kg snow. The
+    largest values over the run are `clw` 5.1e-4, `cli` 2.5e-5, `husra`
+    2.5e-5 and `hussn` 3.3e-5 kg/kg, and `pr` 1.3e-4 kg m⁻² s⁻¹ in
+    magnitude. All were 0 at 0 h, and each is nonzero at every later
+    output. So the two-rank runs exercise condensation, the 1M rates,
+    sedimentation and surface precipitation, as well as EDMF, the surface
+    flux and the increment correction. The compared `Y` is the same 19
+    fields as W59's dry run. The dry run carried the 1M species too, at 0
+    everywhere. Here `ρq_lcl`, `ρq_icl`, `ρq_rai`, `ρq_sno` and the
+    updraft's four species are nonzero at 6 h (largest `ρq_lcl` 6.2e-4
+    kg m⁻³), and all are compared.
+  - **The gate was not blind.** Its thresholds were committed after the
+    login-node smoke had shown `clw` 5.1e-4 and `husra` 2.5e-5 at 30 min
+    (smoke log finished 19:18, commit 19:19). So the gate guards against a
+    wrong config, not against a dry outcome. The pass rule and the parity
+    checks were not informed by data.
+  - **Closure, reported.** The partition's largest relative residual over
+    the run is 1.8e-5 in the default mode and 3.2e-5 in the copies. The
+    largest gross residuals are 1.0e-3 and 1.3e-3. The parent's negative
+    water at 6 h is 5.7e-4 of its net water. One rank and two agree on each
+    of these numbers to five digits or better (the copies' relative
+    residual differs by 1.8e-6 of itself).
+  - **One rank against two.** Every model field differs at rounding at
+    30 min (at most 2.1e-12 of its largest value; `ρ` 3.4e-15). Over the
+    run, the grid mean reaches 8.3e-8 of `ρ` (2 h), 4.0e-8 of `ρq_tot`
+    and 4.4e-5 of `ρq_icl`. The updraft reaches 6.5e-3 of `ρa` and 6.0e-3
+    of `mse`, and its 1M species differ by up to their own size (0.96 of
+    `q_sno`). The grid-mean tags differ by up to 6.5e-7 (`ρq_tag_evap`,
+    copies, 2.5 h). The updraft's tag copies differ by up to 4.1e-2
+    (`q_tag_evap`), and the default's accumulator `q_tag_inc_left` by up to
+    3.8e-2, like the updraft's own fields. The tagged and untagged pairs
+    show the same model-field differences. In W59's dry run, one rank
+    against two reached 1.3e-6 of `ρ` at 30 min. This run changes the start
+    and the topography together, so that bounds the change and does not
+    isolate a cause.
+  - **What this does not show.** More than two ranks, Float32, the rain and
+    snow tags (refused under EDMF), runs longer than 6 h, and topography
+    with a moist start.
+
+*Jobs `14126715` to `14126720`, logs in `$SCRATCH/tag_closure/logs/w59_mpi/`.
+`PREFIX=w59m_mpi MOIST_GATE=1 mpi_score.sh`. Scores in `output/w59m_mpi/`
+(`score.txt`, `state_*`, `netcdf_*`, `ranks_*`, `water_untagged_r2.txt`,
+`runs/`).*
+
 **W60. V-W7, the Float32 twin of D4-W on `main` `d3c5e42f`: criterion 9
 passes on every measure read, and stays partial, since the named parts and
 the rain and snow tags are not assessable in either precision. In Float32

@@ -1,0 +1,56 @@
+# W59 amendment (2026-10-02), the moist pair (design/MPI_PARITY.md, section 7).
+# Mode: untagged, 1 rank(s): submit with --ntasks=1. W59's config with two
+# changes: a moist start, MoistBaroclinicWaveWithEDMF, and no topography,
+# since that start is balanced over a flat surface. The six W59m configs
+# differ only in job_id and in the tag keys.
+job_id: "w59m_mpi_untagged_r1"
+
+config: "sphere"
+h_elem: 2
+nh_poly: 3
+z_elem: 10
+z_max: 30000.0
+dz_bottom: 500.0
+dt: "20secs"
+ode_algo: "ARS222"
+max_newton_iters_ode: 2
+initial_condition: "MoistBaroclinicWaveWithEDMF"
+rayleigh_sponge: true
+viscous_sponge: true
+surface_setup: "DefaultMoninObukhov"
+rad: "clearsky"
+dt_rad: "1hours"
+turbconv: "prognostic_edmfx"
+prognostic_tke: true
+edmfx_entr_model: "Generalized"
+edmfx_detr_model: "Generalized"
+edmfx_nh_pressure: true
+edmfx_vertical_diffusion: true
+edmfx_filter: true
+edmfx_sgs_mass_flux: true
+edmfx_sgs_diffusive_flux: true
+implicit_diffusion: true
+approximate_linear_solve_iters: 2
+microphysics_model: "1M"
+fixed_terminal_velocity_liquid: false
+toml: [toml/prognostic_edmfx_1M.toml]
+t_end: "6hours"
+FLOAT_TYPE: "Float64"
+dt_save_state_to_disk: "30mins"
+
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [ts, ta, thetaa, ha, pfull, rhoa, ua, va, wa, hur, hus, husv]
+    period: "30mins"
+  - short_name: [cl, clw, cli, husra, hussn, lwp, rwp]
+    period: "30mins"
+  - short_name: [hfss, hfls, evspsbl, pr, prra, prsn, rsd, rsu, rld, rlu]
+    period: "30mins"
+  - short_name: [arup, rhoaup, waup, taup, thetaaup, haup, husup, hurup]
+    period: "30mins"
+  - short_name: [clwup, cliup, husraup, hussnup]
+    period: "30mins"
+  - short_name: [aren, rhoaen, waen, husen, husraen, hussnen]
+    period: "30mins"
+  - short_name: [tke, lmix, edt, evu, entr, detr, env_q_tot_variance]
+    period: "30mins"

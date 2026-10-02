@@ -15,14 +15,23 @@
 # for every run (mpi_parity.jl report).
 #
 # Each comparison's output goes to OUT_DIR (default
-# experiments/tag_closure/output/w59_mpi). The last line says PASS or FAIL.
+# experiments/tag_closure/output/${PREFIX}). The last line says PASS or FAIL.
+#
+# PREFIX names the runs, `${PREFIX}_<mode>_r<ranks>` (default w59_mpi). The
+# moist pair of the amendment (design section 7) sets PREFIX=w59m_mpi and
+# MOIST_GATE=1. The gate then also requires the untagged two-rank run to be
+# moist: its largest `clw` at least 1e-5 or its largest `husra` at least 1e-6
+# (kg/kg) at some output after 0 h. If it is not, the verdict is
+# UNINFORMATIVE, whatever the parity says.
 
 set -uo pipefail
 
 REC="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
 : "${RUN_TREE:?set RUN_TREE to the run tree at the model commit}"
 RUN_TREE="$(cd "${RUN_TREE}" && pwd)"
-OUT="${1:-${REC}/experiments/tag_closure/output/w59_mpi}"
+PREFIX="${PREFIX:-w59_mpi}"
+MOIST_GATE="${MOIST_GATE:-0}"
+OUT="${1:-${REC}/experiments/tag_closure/output/${PREFIX}}"
 RUNS="${RUNS:-/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output}"
 SCRIPTS="${REC}/experiments/tag_closure/analysis/water"
 mkdir -p "${OUT}"
@@ -32,7 +41,7 @@ module load gcc/13.2.0 openmpi/4.1.8-gcc13
 module load python/3.12
 export JULIA_DEPOT_PATH=/dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
 
-dir() { echo "${RUNS}/w59_mpi_$1/output_active"; }
+dir() { echo "${RUNS}/${PREFIX}_$1/output_active"; }
 
 julia_cmp() {
     julia +1.11 --startup-file=no --project="${RUN_TREE}/.buildkite" \
@@ -110,4 +119,24 @@ for var in ("hus", "clw", "cli", "husra", "hussn", "pr", "hfls"):
         print(f"coverage {var}: not read ({error})")
 EOF
 
-echo "W59 two-rank parity (judged): ${verdict}"
+if [[ "${MOIST_GATE}" == 1 ]]; then
+    python3 - "$(dir untagged_r2)" <<'EOF'
+import sys
+import netCDF4 as nc, numpy as np
+d = sys.argv[1]
+moist = False
+for var, level in (("clw", 1e-5), ("husra", 1e-6)):
+    with nc.Dataset(f"{d}/{var}_30m_inst.nc") as f:
+        a = np.moveaxis(np.asarray(f[var][:]), f[var].dimensions.index("time"), 0)
+    peak = float(np.max(a[1:]))
+    print(f"moisture gate {var}: largest after 0 h {peak:.3e} against {level:.0e}")
+    moist |= peak >= level
+print("moisture gate:", "MOIST" if moist else "NOT MOIST")
+sys.exit(0 if moist else 1)
+EOF
+    if [[ $? -ne 0 ]]; then
+        verdict=UNINFORMATIVE
+    fi
+fi
+
+echo "W59 two-rank parity (judged), ${PREFIX}: ${verdict}"

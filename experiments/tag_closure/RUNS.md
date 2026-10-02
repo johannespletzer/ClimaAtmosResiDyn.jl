@@ -665,6 +665,19 @@ third run used `transport1_sphere_regime.jl` through
 | `t1_passive`      | none   | in the driver | 81884d5b | 2026-10-02 | `14125085` | W61: the passive form, the same; 1 h 18 min                             | W61      | `output/w61/passive/`      | `claude_work/wp4bfix_run/t1_passive/`      | not synced |
 | `t1_cross_regime` | none   | in the driver | d3c5e42f | 2026-10-02 | `14126689` | W61: `t1_cross` again with the regime's fractions; ledgers identical    | W61      | `output/w61/cross_regime/` | `claude_work/wp4bfix_run/t1_cross_regime/` | not synced |
 
+### W59 addendum: the moist two-rank pair
+
+Pre-registered in `design/MPI_PARITY.md`, section 7 (`6ca86aa7`). As W59, with the start `MoistBaroclinicWaveWithEDMF` and no topography. Model `d3c5e42f` from `../ClimaAtmosResiDyn-mpi-run`.
+
+| Run                    | Output | Config | Commit                     | Date       | Job        | Purpose                                                       | Findings | Repo                                                             | Scratch        | Archive    |
+|:---------------------- |:------ |:------ |:-------------------------- |:---------- |:---------- |:------------------------------------------------------------- |:-------- |:---------------------------------------------------------------- |:-------------- |:---------- |
+| `w59m_mpi_untagged_r2` | 0000   | same   | d3c5e42f (record 6ca86aa7) | 2026-10-02 | `14126715` | W59 addendum, moist: 2 ranks, no tags; the twin               | W59      | `output/w59m_mpi/` (scores, `runs/`: provenance, manifest, CSVs) | 54 nc, 12 hdf5 | not synced |
+| `w59m_mpi_default_r2`  | 0000   | same   | d3c5e42f (record 6ca86aa7) | 2026-10-02 | `14126716` | W59 addendum, moist: 2 ranks, default mode (increment chosen) | W59      | `output/w59m_mpi/` (scores, `runs/`: provenance, manifest, CSVs) | 63 nc, 12 hdf5 | not synced |
+| `w59m_mpi_copies_r2`   | 0000   | same   | d3c5e42f (record 6ca86aa7) | 2026-10-02 | `14126717` | W59 addendum, moist: 2 ranks, the copies                      | W59      | `output/w59m_mpi/` (scores, `runs/`: provenance, manifest, CSVs) | 64 nc, 12 hdf5 | not synced |
+| `w59m_mpi_untagged_r1` | 0000   | same   | d3c5e42f (record 6ca86aa7) | 2026-10-02 | `14126718` | W59 addendum, moist: 1 rank, no tags; reported only           | W59      | `output/w59m_mpi/` (scores, `runs/`: provenance, manifest, CSVs) | 54 nc, 12 hdf5 | not synced |
+| `w59m_mpi_default_r1`  | 0000   | same   | d3c5e42f (record 6ca86aa7) | 2026-10-02 | `14126719` | W59 addendum, moist: 1 rank, default mode; reported only      | W59      | `output/w59m_mpi/` (scores, `runs/`: provenance, manifest, CSVs) | 63 nc, 12 hdf5 | not synced |
+| `w59m_mpi_copies_r1`   | 0000   | same   | d3c5e42f (record 6ca86aa7) | 2026-10-02 | `14126720` | W59 addendum, moist: 1 rank, the copies; reported only        | W59      | `output/w59m_mpi/` (scores, `runs/`: provenance, manifest, CSVs) | 64 nc, 12 hdf5 | not synced |
+
 ### Analysis outputs, not model runs
 
 | Run                       | Output | Config | Commit   | Date | Job | Purpose                                                                                                                           | Findings       | Repo | Scratch  | Archive  |
