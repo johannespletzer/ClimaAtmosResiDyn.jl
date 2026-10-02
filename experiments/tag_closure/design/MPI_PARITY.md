@@ -145,3 +145,48 @@ reads for its matrix:
 
 None of them runs on two ranks. CI has no MPI job for the tags. This run is
 the two-rank evidence.
+
+## 7. Amendment, 2026-10-02: the moist pair
+
+Pre-registered after W59 (reviewed in `3caacd8e`, merged in `3740a028`) and
+before any job of this amendment. The owner decided on 2026-10-02 to close
+W59's bound: W59 started dry and held no cloud or rain by 6 h. Same model,
+run tree, driver, scripts and mode definitions as sections 2 to 4.
+
+**Configuration.** `configs/w59m_mpi_{untagged,default,copies}_r{1,2}.yml`
+are W59's configs with two changes:
+
+  - `initial_condition: MoistBaroclinicWaveWithEDMF`, the moist baroclinic
+    wave with a draft area of 0.2 and no TKE at the start. It is the moist
+    start the model supports under prognostic EDMF on a sphere
+    (`src/setups/MoistBaroclinicWave.jl`). `DecayingProfile` carries no
+    moisture.
+  - No topography (`NoWarp`, the default), since the wave is balanced over a
+    flat surface.
+
+**Feasibility check before the jobs.** One untagged process on the login
+node, 1 h of the `_r1` config, judges nothing. It shows that the start builds
+and runs at h_elem 2. If it fails, nothing is submitted, and the amendment
+is reported as not run. *Done before the push:* it returned `success` after
+28 min on the login node, with every field finite. At 30 min its largest
+`clw` was 5.1e-4, `cli` 2.5e-5, `husra` 2.5e-5 and `pr` 1.3e-4 (all 0 at
+0 h), and `hus` was 1.8e-2. Output in
+`$SCRATCH/claude_work/mpi/smoke_moist/` (not a record).
+
+**Runs.** Six jobs, as in section 3: untagged, default and copies, each on two
+ranks and on one. Prefix `w59m_mpi`, logs in
+`$SCRATCH/tag_closure/logs/w59_mpi/`. No reruns: six jobs is the cap.
+
+**Pass rule.** Section 4's rule, unchanged, on the two-rank runs, for each
+mode. One rank, and one rank against two, are reported only. Scored by
+`PREFIX=w59m_mpi MOIST_GATE=1 mpi_score.sh`.
+
+**Moisture gate.** The untagged two-rank run must be moist. Its largest
+`clw` must reach 1e-5 kg/kg, or its largest `husra` 1e-6 kg/kg, at some
+30-min output after 0 h. If neither does, the amendment fails as
+uninformative, whatever the parity says. `mpi_score.sh` checks the gate and
+prints the two peaks. Its smoke on W59's dry runs reads NOT MOIST, as it
+must (both peaks 0).
+
+Reported beside the gate: the largest `cli`, `hussn` and `pr`, and the global
+integrals of `ρq_lcl`, `ρq_rai` and `ρq_tot` at 6 h (`mpi_water.jl`).
