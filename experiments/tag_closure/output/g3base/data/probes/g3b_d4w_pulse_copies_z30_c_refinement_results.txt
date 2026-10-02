@@ -1,0 +1,55 @@
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=1 ledger=q_tag_led_rescale per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=1 ledger=q_tag_led_empty per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=1 ledger=q_tag_led_repair per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=1 ledger=q_tag_led_repairnet per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=1 ledger=q_tag_led_uprepair per_hour=4.112081987457818e-5
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=1 ledger=q_tag_led_upfilter per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=1 ledger=q_tag_exp_negative per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=1 ledger=q_tag_led_fix_sfc per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=1 ledger=q_tag_led_fix_air per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=1 ledger=q_tag_led_fix_evap per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=1 parent_hus_change=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=2 ledger=q_tag_led_rescale per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=2 ledger=q_tag_led_empty per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=2 ledger=q_tag_led_repair per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=2 ledger=q_tag_led_repairnet per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=2 ledger=q_tag_led_uprepair per_hour=2.872104523148209e-5
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=2 ledger=q_tag_led_upfilter per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=2 ledger=q_tag_exp_negative per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=2 ledger=q_tag_led_fix_sfc per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=2 ledger=q_tag_led_fix_air per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=2 ledger=q_tag_led_fix_evap per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=2 parent_hus_change=0.0038445173960463402
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=10 ledger=q_tag_led_rescale per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=10 ledger=q_tag_led_empty per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=10 ledger=q_tag_led_repair per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=10 ledger=q_tag_led_repairnet per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=10 ledger=q_tag_led_uprepair per_hour=2.7460373007572798e-5
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=10 ledger=q_tag_led_upfilter per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=10 ledger=q_tag_exp_negative per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=10 ledger=q_tag_led_fix_sfc per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=10 ledger=q_tag_led_fix_air per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=10 ledger=q_tag_led_fix_evap per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=120 newton=10 parent_hus_change=0.004619449516698106
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=60 newton=1 ledger=q_tag_led_rescale per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=60 newton=1 ledger=q_tag_led_empty per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=60 newton=1 ledger=q_tag_led_repair per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=60 newton=1 ledger=q_tag_led_repairnet per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=60 newton=1 ledger=q_tag_led_uprepair per_hour=3.534520848046795e-5
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=60 newton=1 ledger=q_tag_led_upfilter per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=60 newton=1 ledger=q_tag_exp_negative per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=60 newton=1 ledger=q_tag_led_fix_sfc per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=60 newton=1 ledger=q_tag_led_fix_air per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=60 newton=1 ledger=q_tag_led_fix_evap per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=60 newton=1 parent_hus_change=0.0031627726908797825
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=30 newton=1 ledger=q_tag_led_rescale per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=30 newton=1 ledger=q_tag_led_empty per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=30 newton=1 ledger=q_tag_led_repair per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=30 newton=1 ledger=q_tag_led_repairnet per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=30 newton=1 ledger=q_tag_led_uprepair per_hour=3.348534797563414e-5
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=30 newton=1 ledger=q_tag_led_upfilter per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=30 newton=1 ledger=q_tag_exp_negative per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=30 newton=1 ledger=q_tag_led_fix_sfc per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=30 newton=1 ledger=q_tag_led_fix_air per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=30 newton=1 ledger=q_tag_led_fix_evap per_hour=0.0
+RESULT run=g3b_d4w_pulse_copies_z30_c probe=refinement dt=30 newton=1 parent_hus_change=0.005425612013379821

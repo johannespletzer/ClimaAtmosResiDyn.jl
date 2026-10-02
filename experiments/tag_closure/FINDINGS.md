@@ -2507,14 +2507,14 @@ from its budget, L1 12.6% against 1%, so R7 waits for R6 and would fail if it
 were scored.** *Draft, 2026-10-02, for the Opus review.* Updates W21's pulse
 (14.4%) and W50's pulse (R5 3.69e-3; `sfc` 13.1% and 14.3%). Runs 4 to 6.
 
-| rule                              | least favourable result                                                  |
-|:--------------------------------- |:------------------------------------------------------------------------ |
-| R1 parity, 37 hourly files        | *pass*, both modes                                                       |
-| R4 closure at 24 h, 2e-3          | *pass*: default 8.4e-5, copies 8.3e-4; each second 12 h below its first  |
-| R5 the copies' own residual       | *pass*, at most 3.2e-6                                                   |
-| R5 the copies' repair a day, 2e-3 | *pass*, 1.36e-3 (1.37e-3 on the mean water); whole day 2.39e-3, reported |
-| R8                                | *pass*: zero in the window; whole day 1.6e-3 a day, `led_fix` 0.57%      |
-| R7 provenance                     | *waits for R6*: no P2 runs at 30 levels in this design                   |
+| rule                              | least favourable result                                                      |
+|:--------------------------------- |:---------------------------------------------------------------------------- |
+| R1 parity, 37 hourly files        | *pass*, both modes                                                           |
+| R4 closure at 24 h, 2e-3          | *pass*: default 8.4e-5, copies 8.3e-4; each second 12 h below its first      |
+| R5 the copies' own residual       | *pass*, at most 3.2e-6                                                       |
+| R5 the copies' repair a day, 2e-3 | *pass*, 1.36e-3 (1.37e-3 on the mean water); whole day 2.39e-3, reported     |
+| R8                                | *pass*: zero in the window; whole day 1.6e-3 a day, `led_fix` 0.57%          |
+| R7 provenance                     | ~~*waits for R6*~~ *fail*, `sfc` at 1 h, L1 12.6% against 1% (run 12, below) |
 
   - **The window.** OD2's rule on the 30-level twin ends the startup at
     8.5 h, against 1.8 h in W50. The hourly audit then reads the repair from
@@ -2532,9 +2532,33 @@ were scored.** *Draft, 2026-10-02, for the Opus review.* Updates W21's pulse
     was not rerun. W50's plain 30 levels failed at 3.93e-3.
   - **What follows.** By W50's design, R7 becomes a verdict here only after a
     P2 probe at 30 levels on the pulse's copies (R6). That probe is not in
-    this design. Whether to run it is for the review.
+    this design. Whether to run it is for the review. *Done:* the owner
+    approved it on 2026-10-02 as run 12, below.
 
-*Jobs `14119360` to `14119362`, as W54.*
+*Update, 2026-10-02: run 12, R6 on the pulse's copies, so R7 is a verdict and
+fails.* Pre-registered in `design/G3_BASELINE_RERUN.md`, section 7a, before
+the job. P2 from the 6 h state of `g3b_d4w_pulse_copies_z30_c`, run 7's rungs.
+
+  - **R6 passes** on all four ratios, at most 0.95 (`dt` 30 against 60 s).
+    The repair per hour of the water is 4.11e-5 at `dt` 120 s, 3.54e-5 at
+    60 s and 3.35e-5 at 30 s with one iteration, and 2.87e-5 and 2.75e-5 with
+    two and ten. So it falls under refinement, and the parent moved by less
+    than 1% between variants.
+  - **R7 is a verdict: *fail*.** With R5 and R6 passing, the copies are an
+    eligible comparator for the pulse at 30 levels. Five of the six rows pass.
+    `sfc` at 1 h fails, L1 12.6% and L∞ 17.0% against 1% and 25%, so 12.6
+    times its L1 budget. The nearest pass is `air` at 1 h, L1 0.84% against
+    1%. At 24 h every tag passes, at most 0.29% in L1 and 0.51% in L∞.
+  - **So on this case the default mode's first hour misses provenance on the
+    surface-layer tag, against an eligible comparator.** This bounds the
+    default's error there by the modes' difference. It does not say which
+    mode is nearer the truth: the comparator has its own rules, and a
+    passive-tracer reference is PX13's. One case, one grid, one window.
+    Plain D4-W at 60 levels stays not assessable (W54).
+
+*Jobs `14119360` to `14119362`, as W54. Run 12: job `14121357`, the same run
+tree at `b34bbd8b`, record `1c7556fe`; `output/g3base/` (`g3base_scores.csv`,
+`data/probes/`).*
 
 **W57. The probes at 60 levels on the new physics: the parent's one-step
 Newton error stays above OD3's 1e-3 at every count tried, 4.1e-3 with two
