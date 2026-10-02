@@ -552,6 +552,11 @@ end
 
 Solve `(∂R/∂Y) ΔY = R` for `ΔY` with the linear solver of
 `alg.sparse_jacobian_alg`. Mutates `ΔY`.
+
+The solver is the one `cache.matrix` carries, a `FieldMatrixWithSolver` built
+without the split of tags and records. The method does not forward to the
+`ManualSparseJacobian` method. That method solves with `cache.solver`, which
+only the manual cache has.
 """
-invert_jacobian!(alg::AutoSparseJacobian, cache, ΔY, R) =
-    invert_jacobian!(alg.sparse_jacobian_alg, cache, ΔY, R)
+invert_jacobian!(::AutoSparseJacobian, cache, ΔY, R) =
+    LinearAlgebra.ldiv!(ΔY, cache.matrix, R)
