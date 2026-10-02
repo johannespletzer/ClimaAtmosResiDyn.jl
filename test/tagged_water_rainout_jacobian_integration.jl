@@ -12,7 +12,9 @@ once with it, and asserts:
  3. the split solver gives the model's fields the same increments, and each
     tag solves its own row, the block to `ρq_tot` included;
  4. the entries add no allocation to the update or the solve;
- 5. a checkpoint written without the key restarts with it.
+ 5. a checkpoint written without the key restarts with it;
+ 6. the sparse autodiff Jacobian (`use_auto_jacobian`) of the same model
+    solves with its own matrix.
 
 The unit tests of the entries are in `tagged_water_rainout_jacobian_tests.jl`.
 
@@ -220,5 +222,49 @@ simulation(extra, job_id) =
             restarted.integrator.p.atmos.water_tagging_model,
         )
         @test CA.solve_atmos!(restarted).ret_code == :success
+    end
+
+    # `use_auto_jacobian` once crashed in its first linear solve. The solve
+    # forwarded to the manual Jacobian's, which reads a `solver` field that
+    # only the manual cache has. The check builds the autodiff Jacobian of the
+    # run's model, with its tags, and updates it once.
+    #
+    # On this column the autodiff Jacobian does not write the entries of the
+    # blocks to `u₃`, at upstream d331fe30 too. They keep leftover memory,
+    # which can be NaN. So the solve is checked on a matrix the test sets
+    # itself. Every block of `∂Yₜ/∂Y` is zeroed, and the cache's own formula
+    # `dtγ ∂Yₜ/∂Y - I` with `dtγ = 0` makes the matrix `-I`. Then the
+    # increment of a finite `R` must be `-R`, finite in every field.
+    @testset "The sparse autodiff Jacobian solves" begin
+        auto_alg = CA.AutoSparseJacobian()
+        p_off = off.integrator.p
+        auto_cache = CA.jacobian_cache(auto_alg, Y_off, p_off.atmos; verbose = false)
+        @test auto_cache.matrix isa MF.FieldMatrixWithSolver
+        # The old forwarding read `cache.solver`. Without that field it fails.
+        @test !hasproperty(auto_cache, :solver)
+        CA.update_jacobian!(auto_alg, auto_cache, Y_off, p_off, dtγ, t)
+
+        (; matrix, tendency_matrix) = auto_cache
+        for key in keys(tendency_matrix)
+            block = tendency_matrix[key]
+            block isa CA.ClimaCore.Fields.Field && fill!(parent(block), 0)
+        end
+        matrix .= 0 .* tendency_matrix .- one(matrix)
+        for key in keys(matrix)
+            block = matrix[key]
+            block isa CA.ClimaCore.Fields.Field && @test all(isfinite, parent(block))
+        end
+
+        R = copy(Y_off)
+        @test all(isfinite, parent(R.c)) && all(isfinite, parent(R.f))
+        ΔY_auto = zero(Y_off)
+        CA.invert_jacobian!(auto_alg, auto_cache, ΔY_auto, R)
+        for name in propertynames(Y_off.c)
+            Δ = parent(getproperty(ΔY_auto.c, name))
+            @test all(isfinite, Δ)
+            @test Δ ≈ -parent(getproperty(R.c, name)) rtol = 1e-12
+        end
+        @test all(isfinite, parent(ΔY_auto.f))
+        @test parent(ΔY_auto.f) ≈ -parent(R.f) rtol = 1e-12
     end
 end
