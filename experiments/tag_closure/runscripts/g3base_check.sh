@@ -8,7 +8,9 @@
 # outside both trees, under $SCRATCH/claude_work/g3base/check/, each with its
 # own job_id, so nothing a real run writes is touched. Submit it through
 # g3base_submit.sh with KIND=check and CONFIG set to any one of the check
-# configs (submit_g3.sh names the manifest after it).
+# configs (submit_g3.sh names the manifest after it). With
+# CHECK_PROBE_CONFIG=none the probes are skipped, as V-W7's check does
+# (design/F32_TWIN.md).
 set -uo pipefail
 
 : "${PROJECT:?}" "${DRIVER:?}" "${CHECK_RUNS:?}" "${CHECK_PROBE_CONFIG:?}"
@@ -36,6 +38,11 @@ for config in ${CHECK_RUNS//,/ }; do
     echo "RESULT check=${name} exit=${status}"
     [[ "${status}" -eq 0 ]] || overall="${status}"
 done
+
+if [[ "${CHECK_PROBE_CONFIG}" == none ]]; then
+    echo "check finished $(date --iso-8601=seconds), exit ${overall} (no probes)"
+    exit "${overall}"
+fi
 
 work="${SCRATCH}/tag_closure/g3base_probe_work/check"
 mkdir -p "${work}"
