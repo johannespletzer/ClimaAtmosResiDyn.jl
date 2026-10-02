@@ -76,13 +76,16 @@ not checked, it says so.
 
 ## Where things stand
 
-  - **Update, 2026-10-02: W59's moist pair (addendum, draft).** The owner
+  - **Update, 2026-10-02: W59's moist pair (addendum, reviewed).** The owner
     asked to close W59's dry-start bound. From the moist baroclinic wave
     with EDMF, on a flat sphere at h_elem 2, cloud, rain, snow and surface
     precipitation are present at every output after 0 h. The tagged runs
     are bit for bit their twin on two ranks in both modes (0 of 884,736
     state values, 0 of 54 diagnostics). Criterion 3 is met without the
-    bound, pending the Opus review of the addendum.
+    dry-start bound, on two ranks for 6 h. Opus review 2026-10-02: the
+    numbers reproduce, the moist runs compare the same 19 `Y` fields, and
+    the 1M species are nonzero in them. The moisture gate's thresholds were
+    set after the smoke, so the gate is labelled as not blind.
 
   - **Update, 2026-10-02: W59, criterion 3 on two MPI ranks.** On the G2
     sphere's physics at h_elem 2 for 6 h, the tagged runs are bit for bit

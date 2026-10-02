@@ -191,5 +191,11 @@ must (both peaks 0).
 Reported beside the gate: the largest `cli`, `hussn` and `pr`, and the global
 integrals of `ρq_lcl`, `ρq_rai` and `ρq_tot` at 6 h (`mpi_water.jl`).
 
-**Result.** FINDINGS, W59 addendum (draft, 2026-10-02): moist (`clw`
+**Result.** FINDINGS, W59 addendum (reviewed 2026-10-02): moist (`clw`
 5.1e-4, `husra` 2.5e-5), and both modes pass on two ranks.
+
+**Label, added at the review.** The gate's two thresholds were written into
+`6ca86aa7` after the smoke above had reported its values. They sit 25 to 50
+times below what the smoke saw at 30 min. So the gate guards against a wrong
+config and is not a blind test. The pass rule of section 4 was set before
+any moist data.
