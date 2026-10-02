@@ -76,6 +76,32 @@ not checked, it says so.
 
 ## Where things stand
 
+  - **Update, 2026-10-02: the G3 baselines on the new physics, and W53.**
+    Five findings rerun the baselines at `b34bbd8b`. Each names the old one it
+    updates.
+
+      + **W54 (W50's C):** the copies' repair still fails R5, 3.98e-3 of the
+        water a day against 2e-3. PX5 finds no eligible D4-like comparator at
+        production cost. PX12 (W50's B) comes next.
+      + **W55:** the D4-W default day closes to 6.5e-6. Over the whole day
+        the partition repair is 1.2e-2 a day.
+      + **W56:** the surface pulse's copies at 30 levels pass R5 in the
+        window, 1.36e-3 a day. Over the day they reach 2.39e-3. R7 waits for a
+        P2 probe at 30 levels.
+      + **W57:** the parent's Newton error is 4.1e-3 at two iterations and
+        1.4e-3 at four.
+      + **W58:** TRMM 0M closes to 3.8e-15 in both modes.
+      + **W53:** the revision's rule alone makes V5's `led_fix` rise at site
+        23. Where the repair refills `free`, the follower drained it in the
+        same step (share 0.999; 0.591 for `pbl`).
+      + **Open for the owner:**
+          * why the follower drains `free` more under the rule, which is not
+            isolated;
+          * V5's 2% limit, since `main` is at 2.7% and 2.3%;
+          * one P2 probe at 30 levels for W56's R7;
+          * OD2's windows, which do not mark a startup on the new twins
+            (their peak tendency comes at 3.2 to 3.3 h).
+
   - **Update, 2026-10-02: physics baseline.** Main is `b34bbd8b` (2026-10-02).
     Its model physics is upstream `a9287b2d`. Nothing was run for this entry.
     The record was changed only.

@@ -276,7 +276,7 @@ Restated 2026-09-30 from the findings; the plan's section 2 holds the criteria's
       + [ ] **W50's copies repair, C then B (decided 2026-10-02,
         DECISIONS.md).** The repair fails 2e-3 a day in every measurement so
         far (W21 to W50), on the old physics.
-          * [ ] C: rerun W50's 60-level copies day and its twin on post-#139
+          * [x] *Done 2026-10-02 (W54).* C: rerun W50's 60-level copies day and its twin on post-#139
             `main` (two jobs), then score PX5's rule on it (the filter share
             at least 0.7, growing at least 1.5 times per halving). Not
             submitted.
@@ -1145,19 +1145,19 @@ jobs.
     design amendment before any job, exclusive rerun jobs that pass the
     spread rule, then W52 for water with a budget proposal for the owner.
     Replaces the first pass at `43b01ca1` and W34's allocation figures.
-  - [ ] **W50's C** (task 7). The 60-level D4-W copies day and its twin, two
+  - [x] **W50's C** (task 7). *Done 2026-10-02: W54. R5 still fails, 3.98e-3 a day against 2e-3; PX5 finds no eligible comparator, so PX12 comes next.* The 60-level D4-W copies day and its twin, two
     jobs, scored by PX5's rule. Replaces W50's R5 and first-hour numbers. PX12
     (W50's B) waits for this result.
-  - [ ] **The D4-W day and the copies day** (task 7). Closure, the copies'
+  - [x] **The D4-W day and the copies day** (task 7). *Done 2026-10-02: W54, W55.* Closure, the copies'
     repair and the per-tag budgets. Replaces W21, W24, W28, W38 and R5.
-  - [ ] **The D4-W ladder rungs** (task 7), only those its design takes.
+  - [x] **The D4-W ladder rungs** (task 7), only those its design takes. *Done 2026-10-02: W57 (Newton count 1 to 4 at 60 levels); W56 for the pulse at 30 levels.*
     Replaces W25 and W41's Newton error.
-  - [ ] **TRMM 0M, 6 h** (task 7), if its design keeps criterion 7's run.
+  - [x] **TRMM 0M, 6 h** (task 7), *done 2026-10-02: W58,* if its design keeps criterion 7's run.
     Replaces W26 and W28's TRMM figures.
-  - [ ] **The design subsection** (task 7), pushed before any job. It names
+  - [x] **The design subsection** (task 7), pushed before any job. *`design/G3_BASELINE_RERUN.md`, `cb166788`; amendment `e2f9c6e3` after the check job.* It names
     the baseline set, the old finding each run replaces, the score script and
     the pass reading. Over 12 jobs or 24 hours, it goes to the owner first.
-  - [ ] **The drafts** (task 7). Each result is a new W finding that names
+  - [x] **The drafts** (task 7). *W54 to W58, reviewed by Opus (`f551f0c7`, wording and least favourable numbers; no verdict changed).* Each result is a new W finding that names
     the old one it updates and quotes the least favourable number. An Opus
     review checks them before they are recorded.
 
