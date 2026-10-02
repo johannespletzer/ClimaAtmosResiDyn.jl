@@ -183,8 +183,8 @@ check_water_tagging_supported(::DryModel, key = "water_tracers") = error(
 check_water_tagging_supported(model, key = "water_tracers") = error(
     "`$key` supports `microphysics_model: 0M` and `1M` only (got " *
     "$(nameof(typeof(model)))). 2-moment and P3 schemes additionally carry " *
-    "prognostic number concentrations, whose provenance is a separate question " *
-    "from the water mass provenance these tags partition; mirroring only the " *
+    "prognostic number concentrations, whose origin is a separate question " *
+    "from the origin of the water mass these tags partition. Mirroring only the " *
     "mass flux would leave the number field untagged and the two inconsistent.",
 )
 

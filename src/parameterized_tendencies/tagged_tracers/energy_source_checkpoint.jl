@@ -353,7 +353,7 @@ function check_restart_tags(restart_file, recorded, tags)
             was defined as `$old_region`, with sources `$old_sources`. This \
             run defines it as `$(tag_region_text(tag.region))`, with sources \
             `$(energy_source_tag_sources_text(tag))`. The tag holds energy by \
-            its old definition, so under a new one its provenance would mix \
+            its old definition, so under a new one its origin would mix \
             the two. Keep the definition, or start a new run.",
         )
     end

@@ -1247,17 +1247,17 @@ function open_parent_budget_event!(adapter::ParentBudgetAdapter, Yₜ, event::Sy
     adapter.evaluation === :none && return nothing
     event in REGISTRY_EVENTS || error(
         "The applied-update event $event is not one the coverage registry " *
-        "names. Add the process to the registry before bracketing it.",
+        "names. Add the process to the registry before opening its event.",
     )
     adapter.open_event === :none || error(
         "The applied-update event $event was opened while " *
-        "$(adapter.open_event) is open. Events do not nest: what a nested " *
-        "bracket measured would be counted by both.",
+        "$(adapter.open_event) is open. Events do not nest, because what a " *
+        "nested event measured would be counted by both.",
     )
     event in adapter.seen && error(
         "The applied-update event $event was opened twice in one " *
-        "$(adapter.evaluation) tendency evaluation. A process is bracketed " *
-        "once per evaluation; a second bracket would book its update twice.",
+        "$(adapter.evaluation) tendency evaluation. A process opens its event " *
+        "once per evaluation. Opening it again would book its update twice.",
     )
     adapter.open_event = event
     push!(adapter.seen, event)

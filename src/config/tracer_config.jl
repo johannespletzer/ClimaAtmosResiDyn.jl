@@ -813,8 +813,8 @@ _warn_unbracketed_energy_source_constraints(
     ::TracerNonnegativityElementConstraint{true},
 ) = @warn(
     "`energy_source_tags` with a `tracer_nonnegativity_method` that clips \
-    `ρq_tot`: the clip changes `ρ` and `ρe_tot` outside every bracket, so no \
-    tag takes the change, and it goes to `e_src_res`.",
+    `ρq_tot`: the clip changes `ρ` and `ρe_tot` outside every applied-update \
+    event, so no tag takes the change, and it goes to `e_src_res`.",
 )
 
 # The two limiters that clip `ρq_tot`. A dry model has no `ρq_tot` to clip.
@@ -828,7 +828,8 @@ function _warn_unbracketed_energy_source_limiters(
     atmos.numerics.limiter isa QuasiMonotoneLimiter && @warn(
         "`energy_source_tags` with `apply_sem_quasimonotone_limiter: true`: the \
         limiter clips `ρq_tot` and changes `ρ` and `ρe_tot` to match, outside \
-        every bracket, so no tag takes the change, and it goes to `e_src_res`.",
+        every applied-update event, so no tag takes the change, and it goes \
+        to `e_src_res`.",
     )
     atmos.water.tracer_nonnegativity_method isa
     TracerNonnegativityVerticalWaterBorrowing &&
@@ -836,8 +837,8 @@ function _warn_unbracketed_energy_source_limiters(
         @warn(
             "`energy_source_tags` with `tracer_nonnegativity_method: \
             vertical_water_borrowing` on `ρq_tot`: the borrowing changes `ρ` \
-            and `ρe_tot` to match, outside every bracket, so no tag takes the \
-            change, and it goes to `e_src_res`.",
+            and `ρe_tot` to match, outside every applied-update event, so no tag \
+            takes the change, and it goes to `e_src_res`.",
         )
     return nothing
 end
@@ -1443,12 +1444,14 @@ run with these tags states its offset. `0` is accepted, and keeps the tags on
 function check_energy_source_offset_given(value)
     isnothing(value) && error(
         "`energy_source_tags` needs `energy_source_tag_offset`, an energy per \
-        kilogram of air in J/kg that the tags add to `ρe_tot`. Without one the \
-        donor share is undefined wherever `ρe_tot` is not positive, which is \
-        much of a typical domain. The tag-closure experiments used 110495 J/kg. \
-        The smallest offsets that made the total positive there were \
-        45.4 kJ/kg on the DYCOMS RF02 column and 100.4 kJ/kg on the moist \
-        baroclinic wave sphere. Set `energy_source_tag_offset: 0` to keep the \
+        kilogram of air in J/kg that the tags add to `ρe_tot`. Without one each \
+        tag's share is undefined wherever `ρe_tot` is not positive, which is \
+        much of a typical domain. The shipped baroclinic-wave configuration \
+        uses 110495 J/kg. In earlier validation runs the smallest offsets that \
+        made the total positive were 45.4 kJ/kg on a DYCOMS RF02 column and \
+        100.4 kJ/kg on the moist baroclinic wave sphere. The offset a run needs \
+        depends on its state and energy reference, so neither value guarantees \
+        a positive total in another run. Set `energy_source_tag_offset: 0` to keep the \
         tags on `ρe_tot` itself.",
     )
     return nothing
@@ -1623,15 +1626,15 @@ function check_energy_source_increment_microphysics_supported(
     end
     measured =
         one_moment ?
-        "On a DYCOMS RF02 EDMF column with one Newton iteration and without \
-        the blocks, the closure residual after an hour was 2.1e-4 of the \
-        partitioned energy, against 1.5e-6 with the microphysics implicit \
-        (FINDINGS E80 on the record branch). With the blocks the gross \
-        residual was 1.4e-15 (PR #113's validation)." :
-        "With 1M stepped explicitly on a DYCOMS RF02 EDMF column, the closure \
-        residual after an hour was 2.1e-4 of the partitioned energy without \
-        the blocks (FINDINGS E80 on the record branch), and the gross \
-        residual 1.4e-15 with them (PR #113's validation)."
+        "An earlier validation run on a DYCOMS RF02 EDMF column, with one \
+        Newton iteration and without the blocks, measured a closure residual \
+        after an hour of 2.1e-4 of the partitioned energy, against 1.5e-6 with \
+        the microphysics implicit. With the blocks the gross residual was \
+        1.4e-15. The values depend on the configuration and model version." :
+        "An earlier validation run with 1M stepped explicitly on a DYCOMS RF02 \
+        EDMF column measured a closure residual after an hour of 2.1e-4 of the \
+        partitioned energy without the blocks, and a gross residual of 1.4e-15 \
+        with them. The values depend on the configuration and model version."
     remedy =
         one_moment ?
         "Use the manual Jacobian, the default, step the microphysics \
@@ -1738,8 +1741,7 @@ function check_water_tracers_transport_supported(
         each tracer with a diffusivity taken from that tracer's own gradient, \
         so in general the tags' diffusion does not add up to that of \
         `ρq_tot`, and the partition breaks. `smagorinsky_lilly` and \
-        `constant_horizontal_diffusion` share one diffusivity and keep it. \
-        See docs/known_issues.md, issue 3.",
+        `constant_horizontal_diffusion` share one diffusivity and keep it.",
     )
     return nothing
 end
@@ -1799,11 +1801,13 @@ const _EXPLICIT_ONE_MOMENT_INCREMENT_MESSAGE = "`water_tag_transport: \
     increment` is refused with 1M microphysics stepped explicitly \
     (`implicit_microphysics: false`) under `use_auto_jacobian: true`. That \
     Jacobian does not carry the tags' sedimentation cross blocks, so the tags \
-    lag the parent's sedimentation by about 0.8% of the water an hour with \
-    one Newton iteration (FINDINGS W23 on the record branch). The lag changes \
-    the column's total, which the follower cannot move. Use the manual \
-    Jacobian, the default, step the microphysics implicitly, or set \
-    `water_tag_transport: tracer`, which lags alike."
+    lag the parent's sedimentation. An earlier validation run on a DYCOMS \
+    RF02 EDMF column with one Newton iteration measured about 0.8% of the \
+    column's water an hour. The value depends on the configuration and model \
+    version. The lag changes the column's total, which the correction after \
+    each solve cannot move. Use the manual Jacobian, the default, step the \
+    microphysics implicitly, or set `water_tag_transport: tracer`, which lags \
+    alike."
 
 """
     water_tag_updraft_copy_from_config(value)
@@ -1949,9 +1953,9 @@ function check_water_tag_leak_correction_supported(parsed_args, microphysics_mod
     get(parsed_args, "turbconv", nothing) in ("prognostic_edmfx", "edonly_edmfx") ||
         error(
             "`water_tag_leak_correction: true` needs `turbconv: \
-            prognostic_edmfx` or `edonly_edmfx`. It corrects the EDMF vertical \
-            diffusive flux and its updrafts' mirror, the paths WP4c's gate \
-            measured, and nothing else. Drop the key.",
+            prognostic_edmfx` or `edonly_edmfx`. It corrects only the EDMF \
+            vertical diffusive flux and, with updraft copies, the copies' part \
+            of that diffusion. Drop the key.",
         )
     isnothing(get(parsed_args, "vert_diff", nothing)) || error(
         "`water_tag_leak_correction: true` is refused with `vert_diff: \

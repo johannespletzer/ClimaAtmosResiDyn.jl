@@ -41,20 +41,20 @@ const _TAG_MECHANISM_TEXT = (;
                         "the partition's tags, the net of their changes: " *
                         "minus the leak q_tag_leak_vdiff times ρ, where " *
                         "the partition holds water " *
-                        "(correct_water_tag_diffusion_leak!, WP4c)",
+                        "(correct_water_tag_diffusion_leak!)",
     q_tag_led_upleaknet = "the water the diffusion leak's correction gave " *
                           "the partition's copies, times ρaʲ, the net of " *
                           "their changes (correct_water_tag_diffusion_leak!)",
-    q_tag_exp_negative = "the gain the brackets withheld from the tags " *
+    q_tag_exp_negative = "the gain the attributed processes withheld from the tags " *
                          "where the partition's parent was below zero, " *
                          "whatever the tags held: it filled the parent's " *
-                         "negative part (known issue 7). Under " *
+                         "negative part. Under " *
                          "water_tag_precipitation: true also the net inflow " *
                          "into the non-precipitating water while negative",
     q_tag_exp_negative_precip = "the net inflow the microphysics and the " *
-                                "vapour bracket gave rain and snow while " *
-                                "negative, which no tag's part took " *
-                                "(known issue 7)",
+                                "vapour nonnegativity tendency " *
+                                "(tracer_nonnegativity_method: vapor_tendency) gave " *
+                                "rain and snow while negative, which no tag's part took",
     e_src_led_repair = "the energy the partition repair moved between the " *
                        "tags, half the sum of the tags' changes less their " *
                        "net (repair_energy_source_tags!)",
@@ -110,12 +110,12 @@ function _per_tag_ledger_writer(name)
     any(prefix -> startswith(long, prefix), ("q_tag_led_fix_", "e_src_led_fix_")) &&
         return "limiters' rescale and the partition repair "
     startswith(long, "e_src_led_src_") &&
-        return "sources' attribution brackets (OD4's throughput) "
+        return "sources' attribution "
     any(prefix -> startswith(long, prefix), ("q_tag_led_inc_", "e_src_led_inc_")) &&
         return "correction after each implicit solve "
     startswith(long, "q_tag_led_upleak_") &&
         return "diffusion leak's correction of the tag's copies, times ρaʲ, "
-    return "diffusion leak's correction (WP4c) "
+    return "diffusion leak's correction "
 end
 
 # The name of a diagnostic of kind `kind` (`gross`, `colgross`, `attempted`) of
@@ -188,7 +188,7 @@ function register_tag_ledger_diagnostics!(model::AtmosModel)
                        "the run and carried through a restart. Its volume " *
                        "integral, in kg s, is the water audit's " *
                        "negative_water_integral. Zero wherever q_tot was " *
-                       "never negative at the end of a step (known issue 7).",
+                       "never negative at the end of a step.",
             compute! = (out, u, p, t) ->
                 compute_negative_water_accumulator!(out, u, p, :ᶜamount),
         )
@@ -198,7 +198,7 @@ function register_tag_ledger_diagnostics!(model::AtmosModel)
             long_name = "Steps with Negative Parent Water",
             comments = "The number of accepted steps whose end state had " *
                        "ρq_tot < 0 in this cell, since the start of the run " *
-                       "and carried through a restart (known issue 7).",
+                       "and carried through a restart.",
             compute! = (out, u, p, t) ->
                 compute_negative_water_accumulator!(out, u, p, :ᶜevents),
         )
@@ -226,13 +226,13 @@ function register_tag_ledger_diagnostics!(model::AtmosModel)
                 short_name = string(name),
                 units,
                 long_name = "Change of the Energy Source Tags' Residual by the Sources",
-                comments = "What the sources' attribution brackets did to " *
+                comments = "What the sources' attribution did to " *
                            "e_src_res, the energy the partition's tags did not " *
                            "take: the net residual source attribution. Only " *
                            "where the region masks sum to one is it the loss " *
                            "rule's flush of the residual. The stepper weights " *
                            "this state field as it weights the tags. Per unit " *
-                           "mass, cumulative since the start of the run (G4.4).",
+                           "mass, cumulative since the start of the run.",
                 compute! = (out, u, p, t) ->
                     compute_tag_state_ledger!(out, u, name),
             )
@@ -248,7 +248,7 @@ function register_tag_ledger_diagnostics!(model::AtmosModel)
                            "changed this tag by, as the steps retained it: " *
                            "the stepper weights this state field as it " *
                            "weights the tag. Per unit mass, cumulative since " *
-                           "the start of the run (WP6, step 3).",
+                           "the start of the run.",
                 compute! = (out, u, p, t) ->
                     compute_tag_state_ledger!(out, u, name),
             )
@@ -262,7 +262,7 @@ function register_tag_ledger_diagnostics!(model::AtmosModel)
                            "of what the writers of $name added, including " *
                            "calls on stage values the stepper discards, per " *
                            "unit mass at the current density. Carried " *
-                           "through a restart (WP6, step 3).",
+                           "through a restart.",
                 compute! = (out, u, p, t) ->
                     compute_tag_ledger_attempted!(out, u, p, name),
             )

@@ -1091,12 +1091,12 @@ end
     )
     @test isnothing(check(written, increment_model, with_ledger))
     @test_throws r"water_tag_transport" check(written, increment_model)
-    # A checkpoint written under `increment` before option C (#116) holds the
-    # follower's ledger without `q_tag_inc_negative`. The error names #116,
-    # not a changed `water_tag_transport`.
+    # A checkpoint whose increment ledger lacks `q_tag_inc_negative` holds tags
+    # that partition `ρq_tot` itself. The error names that cause, not a changed
+    # `water_tag_transport`.
     before_option_c =
         (; c = (; tagged.c..., q_tag_inc_left = 0.0, q_tag_inc_moved = 0.0))
-    @test_throws r"without `q_tag_inc_negative`.*option C \(#116\)" check(
+    @test_throws r"without `q_tag_inc_negative`.*partition\s+`ρq_tot` itself" check(
         written,
         increment_model,
         before_option_c,

@@ -128,7 +128,7 @@ function register_energy_source_tagging_diagnostics!(
                            "carried through a restart. It counts what was " *
                            "attempted, every call, including changes inside a " *
                            "step that the stepper discards. A transfer between " *
-                           "partition tags counts once out and once in.",
+                           "region tags counts once out and once in.",
                 compute! = (out, u, p, t) -> compute_tag_throughput!(
                     out,
                     u,
