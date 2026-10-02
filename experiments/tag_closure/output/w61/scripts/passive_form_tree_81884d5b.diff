@@ -1,0 +1,247 @@
+diff --git a/src/parameterized_tendencies/tagged_tracers/tagged_water_leaks.jl b/src/parameterized_tendencies/tagged_tracers/tagged_water_leaks.jl
+index d22537b25..36a5b68d4 100644
+--- a/src/parameterized_tendencies/tagged_tracers/tagged_water_leaks.jl
++++ b/src/parameterized_tendencies/tagged_tracers/tagged_water_leaks.jl
+@@ -51,9 +51,9 @@ values are those of a partition that sums to its parent, bit for bit.
+ 
+ The hyperdiffusion takes the parent as a perturbation from the reference
+ profile `q_tot_r`, and the tags not. So its leak also holds the reference
+-profile's hyperdiffusion: `q_tot_r` without the key, and `(1 - Σφ) q_tot_r`
+-under the key, with `Σφ` the partition's shares of the water that is neither
+-rain nor snow.
++profile's hyperdiffusion: that of `q_tot_r` without the key, and `1 - Σφ`
++times it under the key, with `Σφ` the partition's shares of the water that is
++neither rain nor snow.
+ 
+ For the updrafts' paths, the tendency is the copies' `Σᵢ χᵢʲ` minus `q_totʲ`,
+ times `ρaʲ / ρ`, summed over the updrafts. `diffusion_up` gives each copy its
+@@ -82,12 +82,13 @@ function water_tag_leak!(ᶜleak, Y, p, path::Val)
+     return ᶜleak
+ end
+ 
+-# Under `water_tag_precipitation: true`. The tags hyperdiffuse on
+-# `∇²(N_tag/ρ - φ q_tot_r)` and the parent on `∇²(N/ρ - q_tot_r)`, with `φ` the
+-# tag's share of `N`. A closed partition's parts sum to `max(N, 0)`.
+-# So their difference is `∇²((1 - Σφ) q_tot_r - min(N, 0)/ρ)`, with `Σφ` summed
+-# over the partition's tags. `Σφ` is one, to rounding, where the partition holds
+-# water, and zero where it holds none.
++# Under `water_tag_precipitation: true`. Each tag hyperdiffuses `N_tag/ρ` as a
++# passive tracer and takes its share `φ` of the reference profile's term,
++# `φ H(q_tot_r)` (`apply_water_tag_hyperdiffusion!`). The parent hyperdiffuses
++# `N/ρ - q_tot_r`. A closed partition's parts sum to `max(N, 0)`. So their
++# difference is `-H(-min(N, 0)/ρ) - (1 - Σφ) H(q_tot_r)`, with `H` the
++# operator and `Σφ` summed over the partition's tags. `Σφ` is one, to rounding,
++# where the partition holds water, and zero where it holds none.
+ _water_tag_parts_leak!(ᶜleak, Y, p, path) = nothing
+ function _water_tag_parts_leak!(ᶜleak, Y, p, ::Val{:hyperdiff})
+     hyperdiff = p.atmos.hyperdiff
+@@ -97,21 +98,24 @@ function _water_tag_parts_leak!(ᶜleak, Y, p, ::Val{:hyperdiff})
+     (; ν₄_scalar) = ν₄(hyperdiff, Y)
+     (; ᶜp) = p.precomputed
+     water_tag_share_norm!(p, Y)
+-    # `ᶜleak` first holds `(1 - Σφ) q_tot_r - min(N, 0)/ρ`, then the rate.
+-    @. ᶜleak = q_tot_r(thermo_params, ᶜp)
++    (ᶜ∇², ᶜfield) = (p.scratch.ᶜtemp_scalar, p.scratch.ᶜtemp_scalar_2)
++    # The reference profile's rate, per unit mass, times `1 - Σφ`.
++    @. ᶜ∇² = wdivₕ(gradₕ(q_tot_r(thermo_params, ᶜp)))
++    do_dss(axes(Y.c)) && Spaces.weighted_dss!(ᶜ∇²)
++    @. ᶜfield = 1
+     MatrixFields.unrolled_foreach(model.tags) do tag
+         _is_partition_tag(tag) || return nothing
+         ᶜshare =
+             water_tag_part_share(Y.c, p.scratch, tag, NonPrecipitatingPart())
+-        @. ᶜleak -= ᶜshare * q_tot_r(thermo_params, ᶜp)
++        @. ᶜfield -= ᶜshare
+         return nothing
+     end
+-    ᶜN = water_tag_part_parent(Y.c, NonPrecipitatingPart())
+-    @. ᶜleak -= water_tag_negative_part(ᶜN) / Y.c.ρ
+-    ᶜ∇² = p.scratch.ᶜtemp_scalar
+-    @. ᶜ∇² = wdivₕ(gradₕ(ᶜleak))
++    @. ᶜleak = -(ᶜfield) * ν₄_scalar * wdivₕ(Y.c.ρ * gradₕ(ᶜ∇²)) / Y.c.ρ
++    # The negative part of `N`, which the parts do not hold.
++    ᶜfield .= _negative_nonprecipitating_water(Y)
++    @. ᶜ∇² = wdivₕ(gradₕ(ᶜfield))
+     do_dss(axes(Y.c)) && Spaces.weighted_dss!(ᶜ∇²)
+-    @. ᶜleak = -ν₄_scalar * wdivₕ(Y.c.ρ * gradₕ(ᶜ∇²)) / Y.c.ρ
++    @. ᶜleak -= ν₄_scalar * wdivₕ(Y.c.ρ * gradₕ(ᶜ∇²)) / Y.c.ρ
+     return nothing
+ end
+ 
+diff --git a/src/parameterized_tendencies/tagged_tracers/tagged_water_precipitation.jl b/src/parameterized_tendencies/tagged_tracers/tagged_water_precipitation.jl
+index 2a5d61a2a..a8d7df00a 100644
+--- a/src/parameterized_tendencies/tagged_tracers/tagged_water_precipitation.jl
++++ b/src/parameterized_tendencies/tagged_tracers/tagged_water_precipitation.jl
+@@ -1976,47 +1976,78 @@ end
+ # Hyperdiffusion
+ # ============================================================================
+ 
+-# The Laplacian's field of a tag's non-precipitating part, keyed by its
+-# specific name, as `allocate_ᶜspecific_gs_tracers` keys them.
+-@generated _laplacian_tag_field(obj, ::WaterTag{name}) where {name} =
+-    :(obj.$(Symbol(:q_tag_, name)))
++"""
++    water_tag_hyperdiffusion_quantities(Y, model)
++
++The hyperdiffusion's field for the water tags under `water_tag_precipitation: true`: `ᶜ∇²q_tot_r`, the horizontal Laplacian of the reference profile, which is
++DSSed with the others. An empty `NamedTuple` without the key, so the cache is
++then as without tags.
++"""
++water_tag_hyperdiffusion_quantities(Y, model) =
++    has_water_tag_precipitation(model) ? (; ᶜ∇²q_tot_r = similar(Y.c, eltype(Y))) :
++    (;)
++
++"""
++    prep_water_tag_hyperdiffusion!(Y, p)
+ 
++Under `water_tag_precipitation: true`, set `p.hyperdiff.ᶜ∇²q_tot_r` to the
++horizontal Laplacian of `q_tot_r`, the reference profile the parent's water is
++hyperdiffused against. Each tag's non-precipitating part keeps the Laplacian of
++its own `N/ρ`, as a passive tracer does. Called after the tracer Laplacians are
++computed, before their DSS. A no-op without the key. See
++[`apply_water_tag_hyperdiffusion!`](@ref).
+ """
+-    prep_water_tag_hyperdiffusion!(ᶜ∇²specific_tracers, Y, p)
++function prep_water_tag_hyperdiffusion!(Y, p)
++    has_water_tag_precipitation(p.atmos.water_tagging_model) || return nothing
++    thermo_params = CAP.thermodynamics_params(p.params)
++    (; ᶜp) = p.precomputed
++    (; ᶜ∇²q_tot_r) = p.hyperdiff
++    @. ᶜ∇²q_tot_r = wdivₕ(gradₕ(q_tot_r(thermo_params, ᶜp)))
++    return nothing
++end
+ 
+-Under `water_tag_precipitation: true`, set the Laplacian that each tag's
+-non-precipitating part is hyperdiffused on to `∇²(N/ρ - φ q_tot_r)`, with `φ`
+-the tag's share of its compartment ([`water_tag_part_share`](@ref)) and
+-`q_tot_r` the reference profile the parent's water is hyperdiffused against.
+-The parent hyperdiffuses `q_tot_eff - q_tot_r`, and the partition's shares sum
+-to one, so the partition's non-precipitating parts then move as the parent's
+-diffusing water. Called after the tracer
+-Laplacians are computed, before their DSS. A no-op without the key.
+ """
+-function prep_water_tag_hyperdiffusion!(ᶜ∇²specific_tracers, Y, p)
++    apply_water_tag_hyperdiffusion!(Yₜ, Y, p, ν₄_scalar)
++
++Under `water_tag_precipitation: true`, give each tag's non-precipitating part
++its share `φ` of the reference profile's hyperdiffusion,
++`φ ν₄ ∇⋅(ρ ∇∇²q_tot_r)`. The part has already taken its own hyperdiffusion as a
++passive tracer, `-ν₄ ∇⋅(ρ ∇∇²(N_tag/ρ))`. The parent hyperdiffuses
++`q_tot_eff - q_tot_r`, and the partition's shares sum to one, so the partition's
++non-precipitating parts sum to the parent's tendency of its diffusing water.
++
++The share is taken outside the operator. Inside it, as
++`∇²(N_tag/ρ - φ q_tot_r)`, a tag's composition would mix against its gradient
++where `q_tot_eff` is below `q_tot_r`. With `q` uniform on a level and the
++reference flat there, that form is `(1 - q_tot_r/q)` times the passive one,
++which is negative below `q_tot_r`. Called after the tracers' hyperdiffusion. A
++no-op without the key.
++"""
++function apply_water_tag_hyperdiffusion!(Yₜ, Y, p, ν₄_scalar)
+     model = p.atmos.water_tagging_model
+     has_water_tag_precipitation(model) || return nothing
+     water_tag_share_norm!(p, Y)
+-    thermo_params = CAP.thermodynamics_params(p.params)
+-    (; ᶜp) = p.precomputed
++    (; ᶜ∇²q_tot_r) = p.hyperdiff
++    ᶜreference = p.scratch.ᶜtemp_scalar
++    @. ᶜreference = ν₄_scalar * wdivₕ(Y.c.ρ * gradₕ(ᶜ∇²q_tot_r))
+     MatrixFields.unrolled_foreach(model.tags) do tag
+-        ᶜ∇²χ = _laplacian_tag_field(ᶜ∇²specific_tracers, tag)
+-        ᶜρq_tag = tag_field(Y.c, tag)
++        ᶜρq_tagₜ = tag_field(Yₜ.c, tag)
+         ᶜshare = water_tag_part_share(
+             Y.c,
+             p.scratch,
+             tag,
+             NonPrecipitatingPart(),
+         )
+-        @. ᶜ∇²χ = wdivₕ(
+-            gradₕ(
+-                specific(ᶜρq_tag, Y.c.ρ) - ᶜshare * q_tot_r(thermo_params, ᶜp),
+-            ),
+-        )
++        @. ᶜρq_tagₜ += ᶜshare * ᶜreference
+     end
+     return nothing
+ end
+ 
++# The DSS pair of the reference profile's Laplacian, under the key only.
++water_tag_hyperdiffusion_dss_pairs(hyperdiff_cache, buffer, model) =
++    has_water_tag_precipitation(model) ?
++    (hyperdiff_cache.ᶜ∇²q_tot_r => buffer.ᶜ∇²q_tot_r,) : ()
++
+ # ============================================================================
+ # Surface precipitation of each tag
+ # ============================================================================
+diff --git a/src/prognostic_equations/hyperdiffusion.jl b/src/prognostic_equations/hyperdiffusion.jl
+index 6e344f3f7..9e679e363 100644
+--- a/src/prognostic_equations/hyperdiffusion.jl
++++ b/src/prognostic_equations/hyperdiffusion.jl
+@@ -46,10 +46,15 @@ ghost buffers when the space requires DSS.
+ function hyperdiffusion_cache(Y, atmos)
+     (; hyperdiff, turbconv_model) = atmos
+     isnothing(hyperdiff) && return (;)  # No hyperdiffiusion
+-    hyperdiffusion_cache(Y, hyperdiff, turbconv_model)
++    hyperdiffusion_cache(Y, hyperdiff, turbconv_model, atmos.water_tagging_model)
+ end
+ 
+-function hyperdiffusion_cache(Y, ::Hyperdiffusion, turbconv_model)
++function hyperdiffusion_cache(
++    Y,
++    ::Hyperdiffusion,
++    turbconv_model,
++    water_tagging_model = nothing,
++)
+     FT = eltype(Y)
+     n = n_mass_flux_subdomains(turbconv_model)
+ 
+@@ -66,6 +71,9 @@ function hyperdiffusion_cache(Y, ::Hyperdiffusion, turbconv_model)
+         # does not compile on a GPU once there are more than about 32 tracers.
+         # `prep_tracer_hyperdiffusion_tendency!` fills this one tracer at a time.
+         ᶜ∇²specific_tracers = allocate_ᶜspecific_gs_tracers(Y, FT),
++        # The water tags' reference profile, under `water_tag_precipitation`
++        # only.
++        water_tag_hyperdiffusion_quantities(Y, water_tagging_model)...,
+     )
+ 
+     # Sub-grid scale quantities. `ᶜ∇²uʲs` is DSSed as a full C123 vector
+@@ -414,7 +422,14 @@ function dss_hyperdiffusion_tendency_pairs(p)
+     core_tracer_pairs =
+         !isempty(propertynames(ᶜ∇²specific_tracers)) ?
+         (ᶜ∇²specific_tracers => buffer.ᶜ∇²specific_tracers,) : ()
+-    tracer_pairs = core_tracer_pairs
++    tracer_pairs = (
++        core_tracer_pairs...,
++        water_tag_hyperdiffusion_dss_pairs(
++            p.hyperdiff,
++            buffer,
++            p.atmos.water_tagging_model,
++        )...,
++    )
+     return (dynamics_pairs..., tracer_pairs...)
+ end
+ 
+@@ -443,9 +458,9 @@ NVTX.@annotate function prep_tracer_hyperdiffusion_tendency!(Yₜ, Y, p, t)
+         @. ᶜ∇²χ = wdivₕ(gradₕ(specific(ᶜρχ, Y.c.ρ)))
+     end
+     # Under `water_tag_precipitation: true` the water tags' non-precipitating
+-    # parts are hyperdiffused against their share of the reference profile, as
+-    # the parent's diffusing water is.
+-    prep_water_tag_hyperdiffusion!(ᶜ∇²specific_tracers, Y, p)
++    # parts also take their share of the reference profile's hyperdiffusion,
++    # as the parent's diffusing water does. Its Laplacian is set here.
++    prep_water_tag_hyperdiffusion!(Y, p)
+     return nothing
+ end
+ 
+@@ -558,6 +573,9 @@ NVTX.@annotate function apply_tracer_hyperdiffusion_tendency!(Yₜ, Y, p, t)
+         energy_source_tag_moves_as_enthalpy(p, ρχ_name) && return
+         @. ᶜρχₜ -= ν₄_scalar * wdivₕ(Y.c.ρ * gradₕ(ᶜ∇²χ))
+     end
++    # Under `water_tag_precipitation: true` each water tag's non-precipitating
++    # part takes its share of the reference profile's term.
++    apply_water_tag_hyperdiffusion!(Yₜ, Y, p, ν₄_scalar)
+ 
+     if turbconv_model isa PrognosticEDMFX
+         (; ᶜ∇²q_tot_effʲs) = p.hyperdiff

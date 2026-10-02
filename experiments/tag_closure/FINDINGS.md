@@ -89,7 +89,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                                   | section                                             |
 |:----------------------------------------------------- |:--------------------------------------------------- |
-| W1–W60 (W46 for PX7; W52, W53 for WP9 and `led_fix`)  | 1. Water tags                                       |
+| W1–W61 (W46 for PX7; W52, W53 for WP9 and `led_fix`)  | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48, E85 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11                 | 3. The energy reference and the offset              |
 | E40, E53                                              | 4. EDMF and the updrafts                            |
@@ -2778,6 +2778,80 @@ recomputed from the tables. P0 and R1 were rechecked over every variable. R1
 also holds on the three hourly precipitation averages, which the scorer
 skips. In P0, 12 files differ only in their `comments` attribute, text that
 `d3c5e42f` changed.*
+
+**W61. transport-1 on a sphere, the water tags' hyperdiffusion under
+`water_tag_precipitation: true`: with the share of `q_tot_r` inside the
+operator (`main` `d3c5e42f`), the tags' composition mixes against its gradient
+in the regime `0 < q_tot_eff < q_tot_r`, and the passive form (the WP4b fix
+PR) lowers the repair and emptying ledgers 15 to 43 times and the
+non-precipitating parts' residual 55 times over 3 days. The least favourable
+ledger, `q_tag_led_rescale`, does not change (ratio 0.98).
+Measured after the fact, not pre-registered. One configuration, 3 days.**
+*Drafted 2026-10-02 (Opus); for the coordinator's review.* The stage-1
+review's transport-1 (2026-09-30) and P4: the hyperdiffusion correction had
+no run. The owner's option A (2026-10-02) asked to measure on the sphere
+before switching. The runs were set up in the WP4b fix PR's work, without a
+design subsection or a score script on a record branch, so this is a
+measurement, not a pre-registered test.
+
+The moist baroclinic wave, `h_elem` 6, 10 levels to 30 km, 1M, `dt` 400 s,
+ARS343, 3 days, two region tags (`tropics`, `extratropics`) with the key. Two
+runs differ only in the tags' hyperdiffusion: `main` `d3c5e42f` (cross form)
+and `main` plus the passive form alone (`81884d5b`, a detached tree, not for
+merge). The model's fields do not depend on the tags, so both runs share one
+atmosphere. Every 6 h the driver evaluates both forms by hand, with the
+model's operators and DSS, on the run's own state, and the model's own tag
+tendency equals its form to 0.0 in L1 in both runs.
+
+The run's own ledgers after 3 days (domain integrals, kg):
+
+| ledger                                 | cross (main)                    | passive          | cross / passive |
+|:-------------------------------------- |:------------------------------- |:---------------- |:--------------- |
+| `q_tag_led_rescale` (least favourable) | 3.32e10                         | 3.38e10          | 0.98            |
+| `q_tag_led_empty`                      | 3.03e13                         | 2.08e12          | 14.6            |
+| `q_tag_led_repairnet`                  | 6.20e12                         | 1.77e11          | 35.0            |
+| `q_tag_led_repair`                     | 2.07e16                         | 4.80e14          | 43.1            |
+| L1 residual of `N`'s parts             | 4.80e13 (3.0e-3 of `∫max(N,0)`) | 8.77e11 (5.5e-5) | 54.7            |
+
+On the cross run's states, at 1 and 3 days:
+
+| quantity                                                            | 1 day           | 3 days          |
+|:------------------------------------------------------------------- |:--------------- |:--------------- |
+| volume with `0 < q_tot_eff < q_tot_r` (the regime)                  | 5.6%            | 4.8%            |
+| water `max(N,0)` in the regime                                      | 2.1%            | 2.5%            |
+| volume where `q_tot_r` is zero (above 250 hPa)                      | 70%             | 70%             |
+| variance rate `∫ χ T dV`, tropics, cross / passive                  | +3.5e7 / −8.7e7 | +3.6e7 / −1.2e8 |
+| water one step would take below zero, tropics, cross / passive (kg) | 1.9e13 / 6.7e11 | 1.5e13 / 6.9e11 |
+
+  - **What it shows.** On the same atmosphere, the cross form raises each
+    tag's variance in total, where the passive form lowers it. The regime
+    where the cross form mixes against the gradient is small: 5% of the
+    volume and 2 to 2.5% of the water.
+    The two runs differ only by the form, so the ledgers' change is the
+    form's, on this configuration and over 3 days. The rescale's ledger does
+    not move, so the switch acts on the repair and the emptying, not on the
+    limiters' rescale.
+  - **The flat-state test.** On a state with `q` at 0.3 `q_tot_r` on each
+    level and a flat pressure, the passive form's variance rate is −7060 and
+    the cross form's +16473, a ratio of −2.33, as `1 − q_tot_r/q` predicts
+    (`tagged_water_precipitation_sphere_integration.jl`, the PR's mutant).
+  - **What it does not show.** Another grid, resolution, length or physics.
+    That the passive form is right for provenance: its share term is not in
+    flux form, so each tag's global inventory changes by its share of the
+    reference profile's term, while the partition's sum is kept. Before the
+    regime's fractions were measured, the PR body quoted 43 to 44% of the
+    volume below `q_tot_r`. That also counted the 39% of the volume where `q`
+    is at or below zero. Where `q_tot_r` is zero there, as above 250 hPa,
+    both forms agree.
+  - **Cost.** Two productive runs of 1 h 17 min each, a third of 1 h 17 min
+    for the regime's fractions (its ledgers equal the first cross run's,
+    byte for byte), and three failed starts of about 15 min in all.
+
+*`hpda2_compute`, 2026-10-02, jobs `14125084` (cross), `14125085`
+(passive), `14126689` (cross with the regime's fractions). Model `d3c5e42f`
+from the shared detached tree `../ClimaAtmosResiDyn-main`, and `81884d5b`
+from `../ClimaAtmosResiDyn-wp4bfix-t1`. `output/w61/` (`forms.csv`,
+`ledgers.csv` per run, the driver, the passive-form diff, log tails).*
 
 ## 2. Energy source tags: closure by transport
 
