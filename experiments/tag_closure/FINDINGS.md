@@ -2345,16 +2345,20 @@ W21's repair, and R5 in G3_PLAN section 10. Pre-registered in
   - **The repair under refinement** (P2, per hour of the water): 1.53e-4 at
     `dt` 120 s, 1.62e-4 at 60 s and 1.42e-4 at 30 s with one iteration;
     1.28e-4 and 1.25e-4 with two and ten. Ten iterations take 18% off it, and
-    the step does not. So it does not shrink to the tolerance at any rung
-    tried, which is PT10's second branch. The parent moved by more than 1%
-    between variants, as R6's note marks.
+    the step does not. So the repair dominates and falls with iterations,
+    which is PT10's "if false" branch. It stays above the tolerance at every
+    rung tried: 1.25e-4 an hour is about 3.0e-3 a day. The parent moved by
+    more than 1% between variants, as R6's note marks.
   - **Against W50.** The repair is 11% lower than W50's 4.48e-3 on the same
     pre-registered reading, and the window starts an hour earlier. The
     physics and the code between `43b01ca1` and `b34bbd8b` both changed, so
     the difference is not isolated.
-  - **What follows, by DECISIONS.md (2026-10-02).** C does not confirm a
-    per-step cause, so D is not chosen and B (PX12) comes next. D4-W's
-    provenance at 60 levels stays not assessable (R7, W55).
+  - **What follows.** DECISIONS.md (2026-10-02) set C, then B, so B (PX12)
+    comes next. The brief's option D, to declare that D4-W has no eligible
+    comparator and restate criteria 5 and 6, was to be chosen only if C
+    confirmed a per-step cause (G3_TODO). C does not, so that condition is
+    not met. The phrase above is PX5's record for this branch, not option
+    D. D4-W's provenance at 60 levels stays not assessable (R7, W55).
   - **What this does not show.** Why the repair is 0.4% a day. One uniform
     column at 60 levels, one Newton iteration, one day. The modes are compared
     with each other, not with an independent reference (PX13).
@@ -2367,11 +2371,12 @@ W21's repair, and R5 in G3_PLAN section 10. Pre-registered in
 
 **W55. The D4-W day at 60 levels on the new physics, default mode: bit for
 bit the untagged twin, the partition closes to 6.5e-6 of the water at 24 h,
-and every intervention row passes. Provenance stays not assessable, since the
-copies fail R5 (W54).** *Draft, 2026-10-02, for the Opus review.* Updates
-W38 and W50 at 60 levels, and W24's and W28's D4-W closure (both at 30
-levels, so as the main case's reading only). Runs 1 and 3, the follower,
-W50's config.
+and every intervention row passes in the established window. Over the whole
+day the partition repair is 1.2e-2 a day and `strat`'s `led_fix` 5.2%.
+Provenance stays not assessable, since the copies fail R5 (W54).** *Draft,
+2026-10-02, for the Opus review.* Updates W38 and W50 at 60 levels, and W24's
+and W28's D4-W closure (both at 30 levels, so as the main case's reading
+only). Runs 1 and 3, the follower, W50's config.
 
 | rule                                                 | least favourable result                                                                       |
 |:---------------------------------------------------- |:--------------------------------------------------------------------------------------------- |
@@ -2383,6 +2388,11 @@ W50's config.
 | R8 each tag's `led_fix`, 2%                          | *pass*, at most 0.88% (`strat`)                                                               |
 | R7 provenance                                        | *not assessable* (R5 fails, W54)                                                              |
 
+  - **The whole day, reported.** The R8 rows read OD2's window, from 1 h, as
+    `w25_score.py` did for W38. With the first hour in, the partition repair
+    is 1.2e-2 of the water a day, 2.4 times the row's 5e-3. `strat`'s
+    `led_fix` is 5.2% of its inventory and `tropo`'s 1.6%, against 2%. These
+    are not verdicts, but they are the least favourable numbers.
   - **`led_inc`, reported:** 7.6% of `tropo`'s inventory, 4.4% of `strat`'s
     and of `evap`'s. The row judges it only through refinement (W57).
   - **R7's numbers, not verdicts:** the largest at 24 h is `strat`, L1 1.40%
@@ -2411,15 +2421,17 @@ were scored.** *Draft, 2026-10-02, for the Opus review.* Updates W21's pulse
 | R4 closure at 24 h, 2e-3          | *pass*: default 8.4e-5, copies 8.3e-4; each second 12 h below its first  |
 | R5 the copies' own residual       | *pass*, at most 3.2e-6                                                   |
 | R5 the copies' repair a day, 2e-3 | *pass*, 1.36e-3 (1.37e-3 on the mean water); whole day 2.39e-3, reported |
-| R8                                | *pass*: the partition repair and `led_fix` near zero                     |
+| R8                                | *pass*: zero in the window; whole day 1.6e-3 a day, `led_fix` 0.57%      |
 | R7 provenance                     | *waits for R6*: no P2 runs at 30 levels in this design                   |
 
   - **The window.** OD2's rule on the 30-level twin ends the startup at
-    8.5 h, against 1.8 h in W50. The parent's water tendency returns above
-    10% of its first-6 h peak between about 2 and 4 h, so the rule finds its
-    three quiet outputs only later. The verdict does not rest on it: from
-    1.8 h or 2 h the repair is 1.31e-3 a day. It rests on dropping the first
-    two hours, where most of the day's repair falls.
+    8.5 h, against 1.8 h in W50. The hourly audit then reads the repair from
+    9 h. The twin's largest water tendency in the first 6 h comes at about
+    3.2 h, not at the start. The tendency stays above 10% of it, with short
+    dips, until 8.5 h, so the rule finds its three quiet outputs only then.
+    The verdict does not rest on the window's start: from 1 h the repair is
+    1.26e-3 a day, and from 1.8 h or 2 h 1.31e-3. It rests on dropping the
+    first hour, which holds half of the day's repair.
   - **R7's numbers, not verdicts.** `sfc` at 1 h: L1 12.6%, L∞ 17.0%
     (budgets 1%, 25%). `evap` at 1 h: 5.7%, L∞ 13.5%. At 24 h every tag is
     below 0.3% in L1 and 0.6% in L∞. W50's main arm had `sfc` at 14.3%.
@@ -2449,9 +2461,11 @@ iterations against ten, to 6 h; then P2 from the 6 h state.
 
   - **The parent's `E` against the count:** 1.03e-2, 4.10e-3, 1.93e-3 and
     1.43e-3 with 1 to 4 iterations, in established flow (from 1 h). W41 had
-    1.2e-2, 4.1e-3, 2.3e-3 and 1.9e-3. From 3 to 4 iterations it gains 26%,
-    against W41's 17%. No count up to four meets the row, which since
-    2026-09-25 gates only verdicts between different parents.
+    1.2e-2, 4.1e-3, 2.3e-3 and 1.9e-3, in a window from 2 h, since OD2's
+    rule on W41's twin ended the startup an hour later. So the two windows
+    differ as well as the physics and the code. From 3 to 4 iterations it
+    gains 26%, against W41's 17%. No count up to four meets the row, which
+    since 2026-09-25 gates only verdicts between different parents.
   - **R6** (the copies' repair under the same refinement) is in W54.
   - **What this does not show.** Why `E` levels off. The variants'
     atmospheres drift more than 1% apart within P2's hour, as in W38.
@@ -2480,13 +2494,18 @@ below 1e-5 over 3 h). Runs 9 to 11; the twin is new.
 
   - **R7 is reported, not judged.** No refinement probe runs on TRMM in this
     design, and PX12 is TRMM's. Against the 24 h row's 2%, `pbl`'s 2.06% at
-    6 h would be just outside. `evap`, about 6% of the column's rain, is at
+    6 h would be just outside. `evap`, 6% to 7% of the column's rain, is at
     7.4% in the first hour.
   - **Against W26.** W26's default used the tracer transport, and its
     `pbl`, `free` and `evap` stood at 1.54%, 0.82% and 1.72% from the copies.
     Here the default is the follower, so mode and physics both changed. The
     follower closes the partition, and with it `Σ pr_tag`, to rounding. The
     copies' 3.1e-4 is of the order of their own closure.
+  - **Against W21's TRMM copies.** W21 ran 3 h on 2026-09-23, before the
+    gross repair ledger existed, so its "below 1e-5" was the signed repair.
+    On that reading this run gives 9.7e-6 at 3 h and 3.5e-5 at 6 h. The
+    gross ledger gives 4.2e-5 at 3 h and 1.3e-4 at 6 h. The case length,
+    the reading, the code and the physics all differ.
   - **The second 3 h.** The copies add 2.2e-4 of the water after 3 h against
     1.4e-4 before, as the rain starts. This is reported only.
   - **What this does not show.** The net-flow audit (PX14), snow, or any
