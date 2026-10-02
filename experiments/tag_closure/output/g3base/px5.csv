@@ -1,0 +1,11 @@
+reading,value,note
+"share, day, established",0.2147952274281838,"filter 1.2718e-02, repair 4.6492e-02"
+"share, whole day (reported)",0.28269446513687546,"filter 2.2215e-02, repair 5.6369e-02, filter events 49"
+"P2 per hour, dt 120 s, 1 iterations",0.0,"filter 0.0000e+00, repair 1.5256e-04 (share of the two)"
+"P2 per hour, dt 120 s, 2 iterations",0.0,"filter 0.0000e+00, repair 1.2790e-04 (share of the two)"
+"P2 per hour, dt 120 s, 10 iterations",0.0,"filter 0.0000e+00, repair 1.2514e-04 (share of the two)"
+"P2 per hour, dt 60 s, 1 iterations",0.0,"filter 0.0000e+00, repair 1.6150e-04 (share of the two)"
+"P2 per hour, dt 30 s, 1 iterations",0.0,"filter 0.0000e+00, repair 1.4221e-04 (share of the two)"
+"filter growth, (60, 1) over (120, 1)",,0.0000e+00 over 0.0000e+00
+"filter growth, (30, 1) over (60, 1)",,0.0000e+00 over 0.0000e+00
+filter gross within 50 m of the mean cloud top,0.0,cloud top 879 m (clw > 1e-5); largest level 788 m

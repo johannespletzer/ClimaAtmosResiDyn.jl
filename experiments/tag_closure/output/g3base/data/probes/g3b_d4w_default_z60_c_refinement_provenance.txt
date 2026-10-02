@@ -1,0 +1,16 @@
+run: g3b_d4w_default_z60_c
+probe: refinement
+config: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-g3base/experiments/tag_closure/configs/g3b_d4w_default_z60_c.yml
+script: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-g3base/experiments/tag_closure/analysis/water/w25_probes.jl
+model_commit: b34bbd8b81483d1b5b52890cea2b7cada774ee9a
+model_tree: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g3base-run
+record_commit: e2f9c6e3b16a91971e23a4816e3a8f8cb3758cda
+project: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-g3base-run/.buildkite
+trials: 1,2,3,4
+julia: 1.11.9
+slurm_job_id: 14119364
+nodelist: hpdar07c05s09
+started: 2026-10-02T02:38:55+02:00
+finished: 2026-10-02T03:10:28+02:00
+exit_status: 0
+manifest_path: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/manifests/g3b_d4w_default_z60_c.20261002T000656Z.json

@@ -89,7 +89,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                                   | section                                             |
 |:----------------------------------------------------- |:--------------------------------------------------- |
-| W1–W51 (W46 reserved for PX7)                         | 1. Water tags                                       |
+| W1–W58 (W46 for PX7; W52, W53 for WP9 and `led_fix`)  | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48, E85 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11                 | 3. The energy reference and the offset              |
 | E40, E53                                              | 4. EDMF and the updrafts                            |
@@ -2310,6 +2310,189 @@ numbers and was discarded.
 `analysis/water/wp4aj_score.py` on the verifier; `output/wp4aj/`, with
 `wp4aj_score.txt` and `.json`, the verifier's reports in `verifier/`, and each
 run's tables, manifest and provenance.*
+
+**W54. W50's C on the new physics: the D4-W copies at 60 levels are bit for
+bit the untagged twin and close their own partition, but their repair still
+fails its tolerance, 3.98e-3 of the water a day (4.10e-3 on the window's mean
+water) against 2e-3. PX5 reads "no eligible D4-like comparator at production
+cost": the filter's share of the copies' two corrections is 0.21 in the
+established window, against 0.7.** *Draft, 2026-10-02, for the Opus review.*
+Updates W50's R5 at 60 levels (4.48e-3, 4.58e-3 on the mean water), W38's and
+W21's repair, and R5 in G3_PLAN section 10. Pre-registered in
+`design/G3_BASELINE_RERUN.md` before any job: runs 1, 2 and 7 on `main`
+`b34bbd8b` (upstream `a9287b2d`), W50's config with one arm, since #136 is in
+`main`.
+
+| rule                                           | least favourable result                                                |
+|:---------------------------------------------- |:---------------------------------------------------------------------- |
+| R1 parity, 37 hourly files                     | *pass*, 0 differences                                                  |
+| R4 the copies' closure at 24 h, 2e-3           | *pass*, 1.12e-3 (56% of it); the second 12 h add 5.2e-4 against 6.0e-4 |
+| R5 the copies' own residual, 2e-4              | *pass*, at most 7.1e-5                                                 |
+| R5 the copies' repair a day, 2e-3              | *fail*, 3.98e-3; 4.10e-3 on the mean water; 4.62e-3 over the whole day |
+| R6 the repair under refinement, 1.1            | *pass*, at most 1.06 (`dt` 60 against 120 s)                           |
+| PX5 filter share ≥ 0.7, growth ≥ 1.5 a halving | share 0.21: *no eligible D4-like comparator at production cost*        |
+
+  - **The window.** OD2's rule on the new twin ends the startup at 1 h, where
+    W50's twin gave 2 h. From 2 h the repair is 3.50e-3 a day, still 1.75
+    times the tolerance. Every reading fails.
+  - **PX5's readings.** Over the established window the filter retains
+    1.27e-2 kg/m² and the repair 4.65e-2. Over the whole day the share is
+    0.28, in 49 filter events. In P2's hour (6 to 7 h) the filter does not act
+    in any of the five variants, so its growth per halving is not defined.
+    None of the window's filter gross lies within 50 m of the mean cloud top
+    (879 m). Its largest level is 788 m. So PT10's first branch, a filter
+    that dominates at cloud top and grows per halving, is not seen here.
+  - **The repair under refinement** (P2, per hour of the water): 1.53e-4 at
+    `dt` 120 s, 1.62e-4 at 60 s and 1.42e-4 at 30 s with one iteration;
+    1.28e-4 and 1.25e-4 with two and ten. Ten iterations take 18% off it, and
+    the step does not. So it does not shrink to the tolerance at any rung
+    tried, which is PT10's second branch. The parent moved by more than 1%
+    between variants, as R6's note marks.
+  - **Against W50.** The repair is 11% lower than W50's 4.48e-3 on the same
+    pre-registered reading, and the window starts an hour earlier. The
+    physics and the code between `43b01ca1` and `b34bbd8b` both changed, so
+    the difference is not isolated.
+  - **What follows, by DECISIONS.md (2026-10-02).** C does not confirm a
+    per-step cause, so D is not chosen and B (PX12) comes next. D4-W's
+    provenance at 60 levels stays not assessable (R7, W55).
+  - **What this does not show.** Why the repair is 0.4% a day. One uniform
+    column at 60 levels, one Newton iteration, one day. The modes are compared
+    with each other, not with an independent reference (PX13).
+
+*`hpda2_compute`, 2026-10-02, jobs `14119357` (twin), `14119358` (copies) and
+`14119363` (P2), model `b34bbd8b` from the clean run tree
+`../ClimaAtmosResiDyn-g3base-run`, record `e2f9c6e3`. Check job `14103866`.
+`analysis/water/g3base_score.py`; `output/g3base/` (`g3base_scores.csv`,
+`px5.csv`, `windows.csv`, `data/`).*
+
+**W55. The D4-W day at 60 levels on the new physics, default mode: bit for
+bit the untagged twin, the partition closes to 6.5e-6 of the water at 24 h,
+and every intervention row passes. Provenance stays not assessable, since the
+copies fail R5 (W54).** *Draft, 2026-10-02, for the Opus review.* Updates
+W38 and W50 at 60 levels, and W24's and W28's D4-W closure (both at 30
+levels, so as the main case's reading only). Runs 1 and 3, the follower,
+W50's config.
+
+| rule                                                 | least favourable result                                                                       |
+|:---------------------------------------------------- |:--------------------------------------------------------------------------------------------- |
+| R1 parity, 37 hourly files                           | *pass*                                                                                        |
+| R3 the 150 K floor, top level, negative water        | *pass*: no point at the floor, the top level moves 2.2 K, no negative water                   |
+| R4 closure at 24 h, 2e-3                             | *pass*, 6.5e-6 (W50: 1.04e-5)                                                                 |
+| R4 the second 12 h against the first                 | *pass*: 2.7e-6 against 3.8e-6 of the water; 3.40e-5 against 4.51e-5 kg/m² in absolute amounts |
+| R8 the partition repair's retained gross, 5e-3 a day | *pass*, 2.1e-3                                                                                |
+| R8 each tag's `led_fix`, 2%                          | *pass*, at most 0.88% (`strat`)                                                               |
+| R7 provenance                                        | *not assessable* (R5 fails, W54)                                                              |
+
+  - **`led_inc`, reported:** 7.6% of `tropo`'s inventory, 4.4% of `strat`'s
+    and of `evap`'s. The row judges it only through refinement (W57).
+  - **R7's numbers, not verdicts:** the largest at 24 h is `strat`, L1 1.40%
+    and L∞ 8.3% against 2% and 5%. In the first hour, `evap` L1 7.2% and L∞
+    10.7% against 10% and 25%, and `strat` 0.85% against 1%. W50 had
+    `strat` at 1.72% at 24 h and `evap` 11.8% at 1 h (main arm).
+  - **The absolute second half.** W50 noted the default's second 12 h adding
+    1% more than the first in absolute amounts. Here it adds 25% to 30% less,
+    in both readings.
+  - **What this does not show.** One case and one grid. The change from W50
+    mixes physics and code and is not isolated.
+
+*Jobs `14119357` and `14119359`, as W54.*
+
+**W56. The surface pulse at 30 levels on the new physics: both modes bit for
+bit the twin and closed, and here the copies pass R5 for the first time on
+D4-W, 1.36e-3 of the water a day against 2e-3. Over the whole day, startup
+included, the repair is 2.39e-3 and would fail. `sfc`'s first hour stays far
+from its budget, L1 12.6% against 1%, so R7 waits for R6 and would fail if it
+were scored.** *Draft, 2026-10-02, for the Opus review.* Updates W21's pulse
+(14.4%) and W50's pulse (R5 3.69e-3; `sfc` 13.1% and 14.3%). Runs 4 to 6.
+
+| rule                              | least favourable result                                                  |
+|:--------------------------------- |:------------------------------------------------------------------------ |
+| R1 parity, 37 hourly files        | *pass*, both modes                                                       |
+| R4 closure at 24 h, 2e-3          | *pass*: default 8.4e-5, copies 8.3e-4; each second 12 h below its first  |
+| R5 the copies' own residual       | *pass*, at most 3.2e-6                                                   |
+| R5 the copies' repair a day, 2e-3 | *pass*, 1.36e-3 (1.37e-3 on the mean water); whole day 2.39e-3, reported |
+| R8                                | *pass*: the partition repair and `led_fix` near zero                     |
+| R7 provenance                     | *waits for R6*: no P2 runs at 30 levels in this design                   |
+
+  - **The window.** OD2's rule on the 30-level twin ends the startup at
+    8.5 h, against 1.8 h in W50. The parent's water tendency returns above
+    10% of its first-6 h peak between about 2 and 4 h, so the rule finds its
+    three quiet outputs only later. The verdict does not rest on it: from
+    1.8 h or 2 h the repair is 1.31e-3 a day. It rests on dropping the first
+    two hours, where most of the day's repair falls.
+  - **R7's numbers, not verdicts.** `sfc` at 1 h: L1 12.6%, L∞ 17.0%
+    (budgets 1%, 25%). `evap` at 1 h: 5.7%, L∞ 13.5%. At 24 h every tag is
+    below 0.3% in L1 and 0.6% in L∞. W50's main arm had `sfc` at 14.3%.
+  - **Why the copies pass here and fail at 60 levels (W54) is not isolated.**
+    The pulse's tags and the grid both differ, and the plain 30-level day
+    was not rerun. W50's plain 30 levels failed at 3.93e-3.
+  - **What follows.** By W50's design, R7 becomes a verdict here only after a
+    P2 probe at 30 levels on the pulse's copies (R6). That probe is not in
+    this design. Whether to run it is for the review.
+
+*Jobs `14119360` to `14119362`, as W54.*
+
+**W57. The probes at 60 levels on the new physics: the parent's one-step
+Newton error stays above OD3's 1e-3 at every count tried, 4.1e-3 with two
+iterations and 1.4e-3 with four; the tags' error falls with the iterations,
+and `inc_left` falls with the step and the iterations.** *Draft, 2026-10-02,
+for the Opus review.* Updates W41, W38's R2, R9 and R10, and W25's and W24's
+refinement figures at 60 levels. Job 8 on run 3's config: P1 with 1 to 4
+iterations against ten, to 6 h; then P2 from the 6 h state.
+
+| rule                                    | least favourable result                                                                     |
+|:--------------------------------------- |:------------------------------------------------------------------------------------------- |
+| R2 the parent's `E`, 2 iterations, 1e-3 | *fail*, 4.10e-3 in established flow (W41: 4.1e-3)                                           |
+| R10 each tag's `E` n2 over n1, 0.75     | *pass*, at most 0.22 (`tropo`); the others 0.09 to 0.15                                     |
+| R9 `inc_left` per hour, 0.75            | *pass*: 0.32 (`dt` 60 against 120 s), 0.33 (30 against 60 s), 0.027 and 1.5e-6 (iterations) |
+| R9 the partition repair per hour        | *vacuous*: zero on every variant in the hour                                                |
+
+  - **The parent's `E` against the count:** 1.03e-2, 4.10e-3, 1.93e-3 and
+    1.43e-3 with 1 to 4 iterations, in established flow (from 1 h). W41 had
+    1.2e-2, 4.1e-3, 2.3e-3 and 1.9e-3. From 3 to 4 iterations it gains 26%,
+    against W41's 17%. No count up to four meets the row, which since
+    2026-09-25 gates only verdicts between different parents.
+  - **R6** (the copies' repair under the same refinement) is in W54.
+  - **What this does not show.** Why `E` levels off. The variants'
+    atmospheres drift more than 1% apart within P2's hour, as in W38.
+
+*Job `14119364`, as W54; P1 and P2 in one job.*
+
+**W58. TRMM 0M for 6 h on the new physics: both modes bit for bit the
+untagged twin; under the follower the partition closes to 3.8e-15 and the
+partition's surface precipitation by tag is `pr` to 4.3e-15. The copies close
+to 3.5e-4, repair 5.1e-4 of the water a day, and give `pr` to 3.1e-4. Default
+against copies, `pbl` reaches L1 2.06% at 6 h.** *Draft, 2026-10-02, for the
+Opus review.* Updates W26 (`Σ pr_tag` within 1.8e-3, measured under the
+tracer transport), W28's TRMM closure (4e-15) and W21's TRMM copies (repair
+below 1e-5 over 3 h). Runs 9 to 11; the twin is new.
+
+| rule                                       | least favourable result                                              |
+|:------------------------------------------ |:-------------------------------------------------------------------- |
+| R1 parity, 24 half-hourly files            | *pass*, both modes                                                   |
+| R3                                         | *pass*: the top level moves 0.3 K; no negative water                 |
+| R4 closure at 6 h, 2e-3                    | *pass*: default 3.8e-15, copies 3.5e-4                               |
+| R5 the copies' own residual, 2e-4          | *pass*, at most 2.3e-6                                               |
+| R5 the copies' repair a day, 2e-3          | *pass*, 5.1e-4 over the whole 6 h, scaled to a day                   |
+| R8                                         | *pass*: at most 8.6e-7 a day and 6.3e-7 of a tag's inventory         |
+| C7 `pr_tag_pbl + pr_tag_free` against `pr` | reported: default 4.3e-15, copies 3.1e-4, at the 7 outputs with rain |
+| R7 default against copies at 6 h           | reported: `pbl` L1 2.06%, L∞ 2.05%; `free` 1.11%; `evap` 4.14%       |
+
+  - **R7 is reported, not judged.** No refinement probe runs on TRMM in this
+    design, and PX12 is TRMM's. Against the 24 h row's 2%, `pbl`'s 2.06% at
+    6 h would be just outside. `evap`, about 6% of the column's rain, is at
+    7.4% in the first hour.
+  - **Against W26.** W26's default used the tracer transport, and its
+    `pbl`, `free` and `evap` stood at 1.54%, 0.82% and 1.72% from the copies.
+    Here the default is the follower, so mode and physics both changed. The
+    follower closes the partition, and with it `Σ pr_tag`, to rounding. The
+    copies' 3.1e-4 is of the order of their own closure.
+  - **The second 3 h.** The copies add 2.2e-4 of the water after 3 h against
+    1.4e-4 before, as the rain starts. This is reported only.
+  - **What this does not show.** The net-flow audit (PX14), snow, or any
+    1M case. One column, 6 h.
+
+*Jobs `14119365` to `14119367`, as W54.*
 
 ## 2. Energy source tags: closure by transport
 
