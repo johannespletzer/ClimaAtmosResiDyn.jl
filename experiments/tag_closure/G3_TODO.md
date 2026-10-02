@@ -924,16 +924,17 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     in PR #135 (open, its tests running). No fix is recorded for the others. The
     walk-through with the owner was held on 2026-10-02: one fix PR, below.*
 
-  - [ ] **The WP4b fix PR** (decided 2026-10-02, option A, two to three days;
+  - [~] **The WP4b fix PR** (decided 2026-10-02, option A, two to three days;
     DECISIONS.md). It covers P1 to P5 and the review's four open should-fix
     findings. No model field changes, and the tags change under the key.
-    Not built. It holds:
+    Open as #146 (head `9dc512f1`), not merged. It holds:
 
       + [ ] a per-compartment closing step after the follow, booked in the
         rescale's ledgers (micro-1 on every path, and P2's revision);
       + [ ] the rescale ordered so that the steps raising N come first
         (state-1);
-      + [ ] transport-1 measured on the sphere, then the passive-tracer form;
+      + [~] transport-1 measured on the sphere (FINDINGS W61, reviewed
+        2026-10-02, after the fact), then the passive-tracer form (in #146);
       + [ ] state-2 stays raw, with its docstring corrected;
       + [ ] P1 stands (no change);
       + [ ] P3: an audit sub-key, on by default;
@@ -953,6 +954,10 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     #121):* the review's item 6, a horizontally varying operator test for
     it, was added to #121 in `00b4ecf`. #121's `835ff9a` reports its sphere
     passing. It is not in FINDINGS.md, so it is a test, not a result.
+    *2026-10-02:* W61 runs it on a sphere for 3 days at `h_elem` 6, against
+    the passive form, measured after the fact. On its own states it raises
+    the tags' variance, and the passive form lowers the repair and emptying
+    ledgers 14.6 to 43 times. #146 replaces it with the passive form.
 
   - [ ] *Found 2026-09-28:* follow-ups of #121 that were written in the
     worktree `-wp4b` on 2026-09-27 and never committed. #121 merged into

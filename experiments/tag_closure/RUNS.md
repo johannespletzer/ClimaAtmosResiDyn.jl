@@ -649,6 +649,22 @@ Pre-registered in `design/F32_TWIN.md` (`211fedc1`, the check noted in `abe8f9ed
 | `f32_d4w_default_z60_c_n10_f64` | 0000   | same         | d3c5e42f (record a423c8b6) | 2026-10-02 | `14126670` | V-W7 named parts: the default, ten Newton iterations, Float64; 33 min                        | W60 addendum               | `output/f32/data/`              | 72 nc                              | not synced |
 | `f32_d4w_default_z60_c_n10_f32` | 0000   | same         | d3c5e42f (record a423c8b6) | 2026-10-02 | `14126671` | V-W7 named parts: the default, ten Newton iterations, Float32; 32 min                        | W60 addendum               | `output/f32/data/`              | 72 nc                              | not synced |
 
+### W61: transport-1 on a sphere, for the WP4b fix PR (T3 step 1)
+
+Measured after the fact, not pre-registered. The driver
+`output/w61/scripts/transport1_sphere.jl` ran from `$SCRATCH/claude_work/wp4bfix_run/`
+in CI's 1.11 test environments: `main_ci111_env` (`d3c5e42f`, the shared
+tree `../ClimaAtmosResiDyn-main`) and `wp4bfix_t1_ci111_env` (`81884d5b`,
+`../ClimaAtmosResiDyn-wp4bfix-t1`, main plus the passive form only). The
+third run used `transport1_sphere_regime.jl` through
+`transport1_regime_job.sh`, both in `output/w61/scripts/`.
+
+| Run               | Output | Config        | Commit   | Date       | Job        | Purpose                                                                 | Findings | Repo                       | Scratch                                    | Archive    |
+|:----------------- |:------ |:------------- |:-------- |:---------- |:---------- |:----------------------------------------------------------------------- |:-------- |:-------------------------- |:------------------------------------------ |:---------- |
+| `t1_cross`        | none   | in the driver | d3c5e42f | 2026-10-02 | `14125084` | W61: the cross form, 3 days, both forms evaluated every 6 h; 1 h 17 min | W61      | `output/w61/cross/`        | `claude_work/wp4bfix_run/t1_cross/`        | not synced |
+| `t1_passive`      | none   | in the driver | 81884d5b | 2026-10-02 | `14125085` | W61: the passive form, the same; 1 h 18 min                             | W61      | `output/w61/passive/`      | `claude_work/wp4bfix_run/t1_passive/`      | not synced |
+| `t1_cross_regime` | none   | in the driver | d3c5e42f | 2026-10-02 | `14126689` | W61: `t1_cross` again with the regime's fractions; ledgers identical    | W61      | `output/w61/cross_regime/` | `claude_work/wp4bfix_run/t1_cross_regime/` | not synced |
+
 ### Analysis outputs, not model runs
 
 | Run                       | Output | Config | Commit   | Date | Job | Purpose                                                                                                                           | Findings       | Repo | Scratch  | Archive  |

@@ -89,7 +89,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                                   | section                                             |
 |:----------------------------------------------------- |:--------------------------------------------------- |
-| W1–W60 (W46 for PX7; W52, W53 for WP9 and `led_fix`)  | 1. Water tags                                       |
+| W1–W61 (W46 for PX7; W52, W53 for WP9 and `led_fix`)  | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48, E85 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11                 | 3. The energy reference and the offset              |
 | E40, E53                                              | 4. EDMF and the updrafts                            |
@@ -2874,6 +2874,121 @@ scorer reproduces `f32_named_scores.csv` byte for byte from the scratch
 output, whose 408 files match `SHA256SUMS_scratch_inputs`. The ratios to
 eps·√n come from the review's `analysis/water/f32_named_floor.py`
 (`output/f32/f32_named_floor.csv`), not from the scorer.*
+
+**W61. transport-1 on a sphere, the water tags' hyperdiffusion under
+`water_tag_precipitation: true`: `main`'s form (`d3c5e42f`, the share of
+`q_tot_r` inside the operator) raises each tag's variance in total on the
+states it makes, and the passive form (the WP4b fix PR's) lowers the repair and
+emptying ledgers 14.6 to 43 times and the non-precipitating parts' residual
+54.7 times over 3 days. The least favourable ledger, `q_tag_led_rescale`,
+hardly moves (ratio 0.98 at 3 days, 0.98 to 1.11 over the samples). That
+`main`'s form mixes the tags against their gradient where
+`0 < q_tot_eff < q_tot_r` is inferred from a flat state, not located by the
+runs. Measured after the fact, not pre-registered. One configuration, 3
+days.** *Drafted 2026-10-02 (Opus); reviewed 2026-10-02 (Opus).* The stage-1
+review's transport-1 (2026-09-30) and P4: the hyperdiffusion correction had
+no run. The owner's option A (2026-10-02) asked to measure on the sphere
+before switching. The runs were set up in the WP4b fix PR's work, without a
+design subsection or a score script on a record branch, so this is a
+measurement, not a pre-registered test.
+
+The moist baroclinic wave, `h_elem` 6, 10 levels to 30 km, 1M, `dt` 400 s,
+ARS343, 3 days, two region tags (`tropics`, `extratropics`) with the key. Two
+runs differ only in the tags' hyperdiffusion: `main` `d3c5e42f` (cross form)
+and `main` plus the passive form alone (`81884d5b`, a detached tree, not for
+merge). The model's fields do not depend on the tags, so both runs share one
+atmosphere; their `∫max(N, 0)` agree bit for bit at all 13 samples. Every 6 h
+the driver evaluates both forms by hand, with the model's operators and DSS,
+on the run's own state, and the model's own tag tendency equals its form to
+0.0 in L1 in both runs. The PR's hyperdiffusion code at `9dc512f1` is that
+tree's. The PR's other changes, the closing step and the rescale's order,
+were not in the passive run, so the PR's own ledgers on this configuration
+were not measured.
+
+The run's own ledgers after 3 days (domain integrals, kg):
+
+| ledger                                 | cross (main)                    | passive          | cross / passive |
+|:-------------------------------------- |:------------------------------- |:---------------- |:--------------- |
+| `q_tag_led_rescale` (least favourable) | 3.32e10                         | 3.38e10          | 0.98            |
+| `q_tag_led_empty`                      | 3.03e13                         | 2.08e12          | 14.6            |
+| `q_tag_led_repairnet`                  | 6.20e12                         | 1.77e11          | 35.0            |
+| `q_tag_led_repair`                     | 2.07e16                         | 4.80e14          | 43.1            |
+| L1 residual of `N`'s parts             | 4.80e13 (3.0e-3 of `∫max(N,0)`) | 8.77e11 (5.5e-5) | 54.7            |
+
+The ratios are of the 3-day totals, and they move with time. The emptying
+ledger's ratio falls from 49 at 1 day to 14.6 at 3 days. Over days 1 to 3 the
+emptying grows 7.4 times less under the passive form (7.2 in the last 6 h).
+The residual's ratio falls from 83 at 1 day to 54.7, and the repair's rises
+from 26 to 43. The rescale's ratio is 0.98 to 1.11 at the twelve samples, and
+over days 1 to 3 the rescale grows 9% more under the passive form (ratio
+0.92). A longer run need not keep the 3-day ratios.
+
+On the cross run's states, at 1 and 3 days:
+
+| quantity                                                            | 1 day           | 3 days          |
+|:------------------------------------------------------------------- |:--------------- |:--------------- |
+| volume with `0 < q_tot_eff < q_tot_r` (the regime)                  | 5.6%            | 4.8%            |
+| water `max(N,0)` in the regime                                      | 2.1%            | 2.5%            |
+| volume where `q_tot_r` is zero (above the 250 hPa level)            | 70%             | 70%             |
+| variance rate `∫ χ T dV`, tropics, cross / passive                  | +3.5e7 / −8.7e7 | +3.6e7 / −1.2e8 |
+| water one step would take below zero, tropics, cross / passive (kg) | 1.9e13 / 6.7e11 | 1.5e13 / 6.9e11 |
+
+The volume is the geometric volume: the driver integrates 1 over the domain.
+`q_tot_r` is zero where `p` is below 250 hPa, which holds 70% of the volume to
+30 km but about a quarter of the mass. Over the twelve samples from 6 h, the
+regime held 4.8 to 6.3% of the volume and 1.6 to 2.5% of the water, and 7.3%
+and 1.2% at the start. The regime is the same in both runs, since they share
+the atmosphere. On the passive run's states the cross form lowers each tag's
+variance at every sample: for `tropics` −6.6e6 at 1 day and −3.0e6 at 3 days,
+against the passive form's −7.9e6 and −3.5e6. On the cross run's states the
+passive form's rate is 9.7 to 11 times (1 day) and 29 to 34 times (3 days)
+larger than on the passive run's own states, so the cross run's tags hold far
+more small-scale variance.
+
+  - **What it shows.** On one atmosphere, the cross form raises each tag's
+    variance in total on the states it makes, at every sample from 6 h (at
+    0 h it lowers it), and lowers it on the passive run's states. The two
+    runs differ only by the form, so the ledgers' change is the form's, on
+    this configuration and over 3 days. The rescale's ledger moves by at most
+    11%, so the switch acts on the repair and the emptying, not on the
+    limiters' rescale.
+  - **The mechanism, inferred.** With `q` uniform on each level and a flat
+    pressure, the cross form is `1 − q_tot_r/q` times the passive one, which
+    mixes against the gradient where `0 < q < q_tot_r`. The test below checks
+    that. The sphere runs measured the regime's size and each form's variance
+    rate over the whole domain, not where the variance rises. The regime is
+    the same in both runs, but the cross form raises the variance only on its
+    own run's states. At 0 h the regime held 7.3% of the volume and the cross
+    form lowered the variance. In
+    one dimension, a `q` that varies along the level lets the cross form
+    raise the variance with `q` above `q_tot_r` everywhere. A regime over a
+    third of the domain need not make its total rate positive either
+    (`output/w61/scripts/review_1d_check.py`). So the regime is where the
+    flat-state analysis puts the anti-diffusion. That the sphere's variance
+    rises there is not shown.
+  - **The flat-state test.** On a state with `q` at 0.3 `q_tot_r` on each
+    level and a flat pressure, the passive form's variance rate is −7060 and
+    the cross form's +16473, a ratio of −2.33, as `1 − q_tot_r/q` predicts
+    (`tagged_water_precipitation_sphere_integration.jl`, the PR's mutant).
+  - **What it does not show.** Another grid, resolution, length or physics.
+    That the passive form is right for provenance: its share term is not in
+    flux form, so each tag's global inventory changes by its share of the
+    reference profile's term, while the partition's sum is kept. The size of
+    that exchange between the tags was not measured, and no ledger holds it.
+    Before the regime's fractions were measured, the PR body quoted 43 to 44%
+    of the volume below `q_tot_r`. That also counted the 36 to 40% of the
+    volume where `q` is at or below zero from 6 h on (none at the start).
+    Where `q_tot_r` is zero, above the 250 hPa level, both forms agree.
+  - **Cost.** Two productive runs of 1 h 17 min and 1 h 18 min, a third of
+    1 h 17 min for the regime's fractions (its ledgers, and the columns it
+    shares with the first cross run's `forms.csv`, equal that run's byte for
+    byte), and three failed starts of about 15 min in all.
+
+*`hpda2_compute`, 2026-10-02, jobs `14125084` (cross), `14125085`
+(passive), `14126689` (cross with the regime's fractions). Model `d3c5e42f`
+from the shared detached tree `../ClimaAtmosResiDyn-main`, and `81884d5b`
+from `../ClimaAtmosResiDyn-wp4bfix-t1`. `output/w61/` (`forms.csv`,
+`ledgers.csv` per run, the driver, the passive-form diff, log tails).*
 
 ## 2. Energy source tags: closure by transport
 

@@ -113,6 +113,18 @@ not checked, it says so.
     reproduces W55's default run bit for bit on `d3c5e42f`. W54's twin and
     copies were not rerun, since their code changed only in text.
 
+  - **Update, 2026-10-02: transport-1 on a sphere (W61, reviewed).** Measured
+    after the fact for the WP4b fix PR (#146, open), one configuration: the
+    moist baroclinic wave at `h_elem` 6 with two region tags under the key, 3
+    days. `main`'s form of the tags' hyperdiffusion raises their variance on
+    the states it makes. The passive form lowers the repair and emptying
+    ledgers 14.6 to 43 times and the parts' residual 54.7 times. The
+    emptying's ratio falls with time (49 at 1 day). The rescale's ledger
+    hardly moves (0.98 at 3 days). The anti-diffusive regime
+    `0 < q_tot_eff < q_tot_r` is inferred from a flat state, not located on
+    the sphere. The passive form's exchange of inventory between tags was not
+    measured.
+
   - **Update, 2026-10-02: option D accepted.** D4-W has no eligible comparator
     at production cost (W54, PX5). Criteria 5 and 6 are not judged on D4-W.
     Per-tag accuracy moves to TRMM 0M (after PX12) and the Soares air twin
