@@ -94,7 +94,12 @@ reference profile's term, ``\varphi_i \nu_4 \nabla\cdot(\rho \nabla\nabla^2 q_\m
 hyperdiffuses ``q_\mathrm{tot,eff} - q_\mathrm{tot,r}``, so the partition's
 parts sum to its tendency. The share stays outside the operator. Inside it, a
 tag's composition would mix against its gradient wherever
-``q_\mathrm{tot,eff}`` is below ``q_\mathrm{tot,r}``, about above 250 hPa.
+``q_\mathrm{tot,eff}`` is below ``q_\mathrm{tot,r}``. ``q_\mathrm{tot,r}`` is
+zero above the 250 hPa level, so that happens below it, in air drier than the
+reference profile. The share's term is not in flux form. So the hyperdiffusion
+does not keep each tag's global inventory. Tag ``i`` gains
+``\int \varphi_i \nu_4 \nabla\cdot(\rho \nabla\nabla^2 q_\mathrm{tot,r})\,dV``,
+and these gains sum to zero over the partition where it holds water.
 The tags' sum does not follow the parent's hyperdiffusion in two cases. One is where the partition holds none of the non-precipitating water,
 so every share is zero and the tags take no part of the reference profile. The
 other is where the non-precipitating water is negative, so its parts partition
