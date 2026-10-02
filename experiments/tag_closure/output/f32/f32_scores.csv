@@ -1,0 +1,56 @@
+rule,mode,metric,window,f64,f32,ratio,threshold,verdict,note
+P0,default,"Float64 on d3c5e42f against b34bbd8b, bit for bit",whole run,,0.0,,0,pass,72 NetCDF files and 2 tables
+R1,default,Float32 model fields bit for bit with the Float32 twin,whole run,,0.0,,0,pass,37 fields compared
+R1,copies,Float32 model fields bit for bit with the Float32 twin,whole run,,0.0,,0,pass,37 fields compared
+M,default,"R4 gross residual at 24 h, of the water",24 h,6.491390071584929e-06,7.727969e-06,1.1904952428953555,6.491390071584928e-05,pass,the row's own budget 0.002: within
+M,default,"R4 the second 12 h's addition, of the water",12-24 h,2.6696440685626637e-06,3.2378409999999994e-06,1.2128362121858638,2.669644068562664e-05,pass,
+M,default,"R4 second minus first 12 h, of the water (rule as written: <= 0)",0-12-24 h,-1.1521019344193762e-06,-1.2348752400000006e-06,1.0718454705332472,0.0,reported,
+M,default,"R4 the second 12 h's addition, kg/m2",12-24 h,3.402250548919725e-05,4.081230000000001e-05,1.1995677394470152,,reported,
+M,default,R8 partition repair retained gross per day,established,0.002098635202858844,0.0018971125481663724,0.9039744237502785,0.02098635202858844,pass,the row's own budget 0.005: within
+M,default,"R8 partition repair retained gross per day, whole day",whole day,0.011952447224498723,0.010793465108966876,0.9030339064659243,0.005,reported,
+M,default,"R8 led_fix inventory fraction, tropo",established,0.0026083908806654767,0.0023573627277552285,0.9037612979055487,0.026083908806654767,pass,the row's own budget 0.02: within
+M,default,"R8 led_fix inventory fraction, tropo, whole day",whole day,0.015501579792535535,0.013995151806500438,0.9028210023625795,0.02,reported,
+M,default,"R8 led_inc inventory fraction, tropo",whole day,0.07639832660339398,0.07306223559484812,0.9563329308786502,,reported,
+M,default,"R8 led_fix inventory fraction, strat",established,0.008784063695636255,0.00794684274155765,0.9046886517347865,0.08784063695636254,pass,the row's own budget 0.02: within
+M,default,"R8 led_fix inventory fraction, strat, whole day",whole day,0.052203396848972294,0.04717873351619872,0.9037483452023201,0.02,reported,
+M,default,"R8 led_inc inventory fraction, strat",whole day,0.044342756297127854,0.03879700466211734,0.8749344402984323,,reported,
+M,default,"R8 led_fix inventory fraction, evap",established,0.0,0.0,,0.02,pass,Float64 value is zero: judged on the row's own budget
+M,default,"R8 led_fix inventory fraction, evap, whole day",whole day,0.0,0.0,,0.02,reported,
+M,default,"R8 led_inc inventory fraction, evap",whole day,0.04397855625244574,0.04050989478829559,0.9211283461821863,,reported,
+M,default,"R8 led_fix inventory fraction, evap_tropo",established,0.0,0.0,,0.02,pass,Float64 value is zero: judged on the row's own budget
+M,default,"R8 led_fix inventory fraction, evap_tropo, whole day",whole day,0.0,0.0,,0.02,reported,
+M,default,"R8 led_inc inventory fraction, evap_tropo",whole day,0.04397855625244578,0.04050989643313286,0.9211283835830781,,reported,
+M,default,"R8 led_fix inventory fraction, evap_strat",established,0.0,0.0,,0.02,pass,Float64 value is zero: judged on the row's own budget
+M,default,"R8 led_fix inventory fraction, evap_strat, whole day",whole day,0.0,0.0,,0.02,reported,
+M,default,"R8 led_inc inventory fraction, evap_strat",whole day,0.043978556252445816,0.04050989418016195,0.9211283323542264,,reported,
+M,copies,"R4 gross residual at 24 h, of the water",24 h,0.0011242965253471543,0.00046447138,0.4131217783996824,0.011242965253471543,pass,the row's own budget 0.002: within
+M,copies,"R4 the second 12 h's addition, of the water",12-24 h,0.000521114277625859,-0.00035847167000000005,-0.6878945471100095,0.00521114277625859,pass,
+M,copies,"R4 second minus first 12 h, of the water (rule as written: <= 0)",0-12-24 h,-8.206797009539617e-05,-0.0011813973082400002,14.395351887791776,0.0,reported,
+M,copies,"R4 the second 12 h's addition, kg/m2",12-24 h,0.00658594262878966,-0.0040701274,-0.618002255623656,,reported,
+M,copies,R8 partition repair retained gross per day,established,0.001307921769526348,0.001144606875269027,0.875134050015496,0.01307921769526348,pass,the row's own budget 0.005: within
+M,copies,"R8 partition repair retained gross per day, whole day",whole day,0.009191715657816998,0.008562911161175803,0.9315900839353711,0.005,reported,
+M,copies,"R8 led_fix inventory fraction, tropo",established,0.0016206006325824908,0.0014189448197344644,0.8755672379772678,0.016206006325824907,pass,the row's own budget 0.02: within
+M,copies,"R8 led_fix inventory fraction, tropo, whole day",whole day,0.011884316862511434,0.011076796844077795,0.9320516250302172,0.02,reported,
+M,copies,"R8 led_fix inventory fraction, strat",established,0.005536650563990684,0.0048377539875978665,0.8737690651928971,0.05536650563990684,pass,the row's own budget 0.02: within
+M,copies,"R8 led_fix inventory fraction, strat, whole day",whole day,0.040601804254891585,0.03776525440090772,0.9301373447303853,0.02,reported,
+M,copies,"R8 led_fix inventory fraction, evap",established,0.0,0.0,,0.02,pass,Float64 value is zero: judged on the row's own budget
+M,copies,"R8 led_fix inventory fraction, evap, whole day",whole day,0.0,0.0,,0.02,reported,
+M,copies,"R8 led_fix inventory fraction, evap_tropo",established,0.0,0.0,,0.02,pass,Float64 value is zero: judged on the row's own budget
+M,copies,"R8 led_fix inventory fraction, evap_tropo, whole day",whole day,0.0,0.0,,0.02,reported,
+M,copies,"R8 led_fix inventory fraction, evap_strat",established,0.0,0.0,,0.02,pass,Float64 value is zero: judged on the row's own budget
+M,copies,"R8 led_fix inventory fraction, evap_strat, whole day",whole day,0.0,0.0,,0.02,reported,
+M,copies,"R5 copies' own residual, max over outputs",whole run,7.0970847678424e-05,5.3508276e-05,0.7539472579283728,0.00070970847678424,pass,the row's own budget 0.0002: within
+M,copies,"R5 copies' repair, gross, per day",established,0.003979611061594436,0.003288803194743657,0.8264132207497669,0.03979611061594436,pass,the row's own budget 0.002: above
+M,copies,"R5 copies' repair, gross, per day, over the window's mean water",established,0.004098548771243813,0.0033765446313604596,0.8238390756872115,0.002,reported,
+M,copies,"R5 copies' repair, gross, per day, whole day",whole day,0.004624004013272615,0.003843349538513821,0.8311734867621169,0.002,reported,
+R3,untagged,points at the 150 K floor,whole run,,0.0,,0,reported,
+R3,untagged,"top level's temperature change, K",whole run,,2.148162841796875,,5.0,reported,
+R3,untagged,"negative water over the water, max over outputs",whole run,,0.0,,0.0001,reported,
+R3,default,points at the 150 K floor,whole run,,0.0,,0,reported,
+R3,default,"top level's temperature change, K",whole run,,2.148162841796875,,5.0,reported,
+R3,default,"negative water over the water, max over outputs",whole run,,0.0,,0.0001,reported,
+R3,copies,points at the 150 K floor,whole run,,0.0,,0,reported,
+R3,copies,"top level's temperature change, K",whole run,,2.148162841796875,,5.0,reported,
+R3,copies,"negative water over the water, max over outputs",whole run,,0.0,,0.0001,reported,
+PREC,untagged,"parent's column water, Float32 against Float64, relative",24 h,12.190447319889572,12.133800141257224,0.9953531501227256,,reported,at 24 h 4.647e-03; largest over the 10-minute outputs 4.647e-03
+C9,both,criterion 9: R1 in both modes and every judged measure,,,,,,pass,

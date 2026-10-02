@@ -84,8 +84,18 @@ not checked, it says so.
     covers the MPI paths, not the moist physics on two ranks. One rank and
     two differ in every model field from 30 min, with or without tags. The
     parent's negative water is 0.52 of its net water (0.34 of its positive
-    water) at 6 h. Criterion 3 is met for the MPI paths, pending the Opus
-    review of W59.
+    water) at 6 h. Criterion 3 is met for the MPI paths (W59, reviewed).
+  - **Update, 2026-10-02: V-W7, the Float32 twin (W60, reviewed).** D4-W in
+    Float32 on `main` `d3c5e42f` (`design/F32_TWIN.md`). Both modes are bit
+    for bit the Float32 twin. Each judged criterion-4 measure is at most 1.21
+    times its Float64 value (the default's second 12 h), against criterion
+    9's 10. So criterion 9 passes on what was measured, and stays partial:
+    the named parts and the rain and snow tags are not assessable in either
+    precision. The default's residual is 85 times Float64's at 1 h, which no
+    rule judges; Float64's value there is below Float32's rounding level.
+    The copies' repair still fails criterion 4's own row (3.29e-3 a day). P0
+    reproduces W55's default run bit for bit on `d3c5e42f`. W54's twin and
+    copies were not rerun, since their code changed only in text.
 
   - **Update, 2026-10-02: option D accepted.** D4-W has no eligible comparator
     at production cost (W54, PX5). Criteria 5 and 6 are not judged on D4-W.

@@ -89,7 +89,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                                   | section                                             |
 |:----------------------------------------------------- |:--------------------------------------------------- |
-| W1–W59 (W46 for PX7; W52, W53 for WP9 and `led_fix`)  | 1. Water tags                                       |
+| W1–W60 (W46 for PX7; W52, W53 for WP9 and `led_fix`)  | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48, E85 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11                 | 3. The energy reference and the offset              |
 | E40, E53                                              | 4. EDMF and the updrafts                            |
@@ -2408,7 +2408,7 @@ bit the untagged twin and close their own partition, but their repair still
 fails its tolerance, 3.98e-3 of the water a day (4.10e-3 on the window's mean
 water) against 2e-3. PX5 reads "no eligible D4-like comparator at production
 cost": the filter's share of the copies' two corrections is 0.21 in the
-established window, against 0.7.** *Draft, 2026-10-02, for the Opus review.*
+established window, against 0.7.** *Reviewed 2026-10-02 (Opus).*
 Updates W50's R5 at 60 levels (4.48e-3, 4.58e-3 on the mean water), W38's and
 W21's repair, and R5 in G3_PLAN section 10. Pre-registered in
 `design/G3_BASELINE_RERUN.md` before any job: runs 1, 2 and 7 on `main`
@@ -2465,8 +2465,8 @@ W21's repair, and R5 in G3_PLAN section 10. Pre-registered in
 bit the untagged twin, the partition closes to 6.5e-6 of the water at 24 h,
 and every intervention row passes in the established window. Over the whole
 day the partition repair is 1.2e-2 a day and `strat`'s `led_fix` 5.2%.
-Provenance stays not assessable, since the copies fail R5 (W54).** *Draft,
-2026-10-02, for the Opus review.* Updates W38 and W50 at 60 levels, and W24's
+Provenance stays not assessable, since the copies fail R5 (W54).** *Reviewed
+2026-10-02 (Opus).* Updates W38 and W50 at 60 levels, and W24's
 and W28's D4-W closure (both at 30 levels, so as the main case's reading
 only). Runs 1 and 3, the follower, W50's config.
 
@@ -2504,7 +2504,7 @@ bit the twin and closed, and here the copies pass R5 for the first time on
 D4-W, 1.36e-3 of the water a day against 2e-3. Over the whole day, startup
 included, the repair is 2.39e-3 and would fail. `sfc`'s first hour stays far
 from its budget, L1 12.6% against 1%, so R7 waits for R6 and would fail if it
-were scored.** *Draft, 2026-10-02, for the Opus review.* Updates W21's pulse
+were scored.** *Reviewed 2026-10-02 (Opus).* Updates W21's pulse
 (14.4%) and W50's pulse (R5 3.69e-3; `sfc` 13.1% and 14.3%). Runs 4 to 6.
 
 | rule                              | least favourable result                                                      |
@@ -2563,8 +2563,8 @@ tree at `b34bbd8b`, record `1c7556fe`; `output/g3base/` (`g3base_scores.csv`,
 **W57. The probes at 60 levels on the new physics: the parent's one-step
 Newton error stays above OD3's 1e-3 at every count tried, 4.1e-3 with two
 iterations and 1.4e-3 with four; the tags' error falls with the iterations,
-and `inc_left` falls with the step and the iterations.** *Draft, 2026-10-02,
-for the Opus review.* Updates W41, W38's R2, R9 and R10, and W25's and W24's
+and `inc_left` falls with the step and the iterations.** *Reviewed 2026-10-02
+(Opus).* Updates W41, W38's R2, R9 and R10, and W25's and W24's
 refinement figures at 60 levels. Job 8 on run 3's config: P1 with 1 to 4
 iterations against ten, to 6 h; then P2 from the 6 h state.
 
@@ -2635,7 +2635,7 @@ of the untagged twin, in both modes, at all 12 checkpoints and in all 54
 diagnostics at all 13 outputs. The atmosphere starts dry, and by 6 h the
 surface flux has put in 0.17 kg m⁻² of water, global mean, with no cloud and
 no precipitation. So the check covers the MPI paths, not the moist physics.**
-*Draft, 2026-10-02, for the Opus review.* Closes the two-rank part of
+*Reviewed 2026-10-02 (Opus).* Closes the two-rank part of
 criterion 3 (G3_PLAN section 2). The column parts are W17–W51. Pre-registered
 in `design/MPI_PARITY.md` (`f519462a`), model `d3c5e42f`, six runs.
 
@@ -2702,6 +2702,82 @@ in `design/MPI_PARITY.md` (`f519462a`), model `d3c5e42f`, six runs.
 *Jobs `14125044` to `14125049`. Scores in `output/w59_mpi/` (`score.txt`,
 `state_*`, `netcdf_*`, `ranks_*`, `water_*`). `mpi_water.jl` was added after
 the pre-registration, at the coordinator's request. It is reported only.*
+
+**W60. V-W7, the Float32 twin of D4-W on `main` `d3c5e42f`: criterion 9
+passes on every measure read, and stays partial, since the named parts and
+the rain and snow tags are not assessable in either precision. In Float32
+both modes are bit for bit their untagged twin, and every judged
+criterion-4 measure is within 10 times its Float64 value. The least
+favourable is the default's second 12 h, 1.21 times (3.24e-6 of the water
+against 2.67e-6). At 1 h the default's residual is 85 times its Float64
+value, which no rule judges. That Float64 value is below Float32's rounding
+level.** *Reviewed 2026-10-02 (Opus).* Pre-registered in
+`design/F32_TWIN.md` (`211fedc1`; the check noted in `abe8f9ed`) before the
+real jobs. The Float64 reference is W54's and W55's runs on `b34bbd8b`. P0
+reproduces W55's default run bit for bit on `d3c5e42f`. W54's twin and
+copies were not rerun, since their code changed only in text between the two
+commits (the design, section 2).
+
+| rule (Float32 against Float64, limit 10×)               | least favourable result                                                                   |
+|:------------------------------------------------------- |:----------------------------------------------------------------------------------------- |
+| P0 the Float64 default on `d3c5e42f` against `b34bbd8b` | *pass*: 72 NetCDF files bit for bit, both tables byte for byte                            |
+| R1 parity within Float32, 37 hourly files               | *pass*, both modes, 0 differences                                                         |
+| R4 default, gross residual at 24 h                      | *pass*, 7.73e-6 against 6.49e-6 (1.19×)                                                   |
+| R4 default, the second 12 h's addition                  | *pass*, 3.24e-6 against 2.67e-6 (1.21×)                                                   |
+| R8 default, partition repair a day; `led_fix`           | *pass*, 1.90e-3 against 2.10e-3 (0.90×); `strat` 0.79% against 0.88%; `evap` tags 0, 0    |
+| R4 copies, gross residual at 24 h                       | *pass*, 4.64e-4 against 1.12e-3 (0.41×)                                                   |
+| R4 copies, the second 12 h's addition                   | *pass*, −3.58e-4 against 5.21e-4                                                          |
+| R5 copies, own residual                                 | *pass*, 5.35e-5 against 7.10e-5 (0.75×)                                                   |
+| R5 copies, repair a day                                 | *pass* of the 10× rule, 3.29e-3 against 3.98e-3 (0.83×); above criterion 4's 2e-3 in both |
+| R8 copies, partition repair a day; `led_fix`            | *pass*, 1.14e-3 against 1.31e-3 (0.88×); `strat` 0.48% against 0.55%                      |
+| C9, the design's rule: R1 and every row above           | *pass*; criterion 9 stays partial (see "Not assessed")                                    |
+
+  - **The first hours, reported.** They were read after the runs; the design
+    does not list them. Float32 starts at 1.7e-8 of the water, 0.29 of its
+    unit roundoff (2⁻²⁴). Float64 starts at 4e-17, 0.36 of its own. At 1 h
+    the default reads 5.6e-7 against 6.6e-9 (85 times), at 2 h 1.06e-6
+    against 1.31e-7 (8.1 times), and from 3 h on 1.05 to 1.99 times. A
+    partition that closes exactly reads about 2e-8 in Float32 from rounding
+    alone (the review's estimate on these profiles). Float64's value at 1 h
+    is about a third of that, so ten times it is about three times that. The
+    1 h ratio therefore says little about precision. Criterion 4 reads 24 h,
+    so no rule judges these hours, and every value there is far below the
+    2e-3 budget. The copies stay within 0.41 to 1.66 times from 1 h on. Over the
+    first hour the repairs and the copies' own residual read 0.75 to 0.94
+    times their Float64 values.
+  - **Not an ordering by precision.** The copies' residual and repair are
+    smaller in Float32. The two precisions give two atmospheres: the parent's
+    column water differs by 0.46% at 24 h, and the Float32 twin's startup
+    ends at 70 min against 60. So each ratio mixes rounding with another
+    trajectory. A ratio below 1 does not show Float32 is better.
+  - **What criterion 9 leaves as it was.** The copies' repair fails criterion
+    4's own row in both precisions (3.29e-3 a day in Float32). Criteria 5 and
+    6 are not judged on D4-W (option D).
+  - **The whole day, reported.** The default's partition repair is 1.08e-2
+    a day (Float64 1.20e-2) and `strat`'s `led_fix` 4.7% (5.2%). The copies'
+    repair is 3.84e-3 (4.62e-3). The default's two readings are above R8's
+    0.5% and 2% in both precisions, as W55 reads in Float64. The second-half
+    rule as written passes in both modes and both precisions.
+  - **Not assessed.** What the named parts leave: the reference has no
+    10-Newton split on the new physics. The rain and snow tags: refused under
+    EDMF until WP4b's stage 2, and 6.1 gives their Float32 closure to
+    criterion 9. So criterion 9 cannot be met on D4-W before both can be
+    read. R3 is reported: no point at the floor, the top level moves 2.15 K,
+    no negative water.
+  - **What this does not show.** A cause: that needs tagged and untagged
+    pairs at each precision, and refinement. One case, one grid, one day, one
+    Newton iteration. R1 checks the written diagnostics, not the prognostic
+    state.
+
+*`hpda2_compute`, 2026-10-02, jobs `14125565` (twin), `14125569` (default),
+`14125570` (copies) and `14125571` (P0), model `d3c5e42f` from the clean run
+tree `../ClimaAtmosResiDyn-f32-run`, record `abe8f9ed`. Check job `14125010`.
+`analysis/water/f32_score.py`; `output/f32/` (`f32_scores.csv`,
+`windows.csv`, `data/`, `logs/`). Opus review, 2026-10-02: every number
+recomputed from the tables. P0 and R1 were rechecked over every variable. R1
+also holds on the three hourly precipitation averages, which the scorer
+skips. In P0, 12 files differ only in their `comments` attribute, text that
+`d3c5e42f` changed.*
 
 ## 2. Energy source tags: closure by transport
 
