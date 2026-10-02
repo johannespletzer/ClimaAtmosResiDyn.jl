@@ -107,6 +107,7 @@ import ..water_tag_precipitation_residual!
 # energy_source_tagging_model
 import ..EnergySourceTaggingModel
 import ..WATER_TAG_ALL_MECHANISM_NAMES
+import ..WATER_TAG_PRECIP_MECHANISM_NAMES
 import ..WATER_TAG_LEAK_MECHANISM_NAMES
 import ..WATER_TAG_EXP_LEDGER_NAMES
 import ..WATER_TAG_COPY_LEAK_MECHANISM_NAMES

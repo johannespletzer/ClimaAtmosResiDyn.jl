@@ -1404,6 +1404,7 @@ function correction_setup(FT, rng, n; ledger_per_tag = false)
         q_tag_led_empty = zeros(FT, n),
         q_tag_led_repair = zeros(FT, n),
         q_tag_led_repairnet = zeros(FT, n),
+        q_tag_led_close = zeros(FT, n),
     )
     if ledger_per_tag
         ᶜY = merge(
@@ -1597,6 +1598,28 @@ end
         for (name, total) in zip((:low, :high), totals)
             @test near(tag_total(ᶜY, name)[1], total)
         end
+
+        # 3. `N` below zero before and above it after: `ρq_tot` from 2e-5 to
+        # 3e-5 and rain from 2.5e-5 to 1.5e-5. `N` goes from -5e-6 to 1.5e-5.
+        # Its parts hold nothing at the start, its target being zero. The
+        # fall of rain goes first and gives them water, so the rise of
+        # `ρq_tot` finds parts to go to. Taken the other way round, the rise
+        # would find none, and 5e-6 would end in no tag.
+        (; Y, p, model) = one_cell_setup(
+            FT,
+            (2e-5, 2.5e-5, 0),
+            (0, 0, 0),
+            (0.75e-5, 1.75e-5, 0),
+            (0, 0, 0),
+        )
+        ᶜY = Y.c
+        ᶜρq_tot_before = copy(ᶜY.ρq_tot)
+        ᶜY.ρq_tot[1] = FT(3e-5)
+        ᶜY.ρq_rai[1] = FT(1.5e-5)
+        CA._rescale_water_tags!(Y, p, ᶜρq_tot_before, model)
+        @test near(partition_sum(ᶜY, :ρq_tag_)[1], FT(1.5e-5))
+        @test near(partition_sum(ᶜY, :ρq_rtag_)[1], FT(1.5e-5))
+        @test iszero(partition_sum(ᶜY, :ρq_stag_)[1])
     end
 end
 
@@ -1604,7 +1627,7 @@ end
 # paths can leave the partition's rain or snow parts apart from the
 # compartment's non-negative part: the microphysics, the sedimentation and the
 # advection. The closing step after the follow brings each back, and books the
-# water in the rescale's ledgers. The cells are the review's one-cell case and
+# water in a ledger of its own. The cells are the review's one-cell case and
 # its snow twin: one Euler step of the 1-moment microphysics from a compartment
 # at -1e-6, with two tags that split `N` 0.3 to 0.7 and hold no rain or snow.
 @testset "The closing step after the follow" begin
@@ -1679,7 +1702,10 @@ end
             end
             @test near(p.tagging.ᶜwater_fix.ρq_tag_low[1], added[1])
             @test near(p.tagging.ᶜwater_fix.ρq_tag_high[1], added[2])
-            @test near(ᶜY.q_tag_led_rescale[1], sum(added))
+            # The closing step has a ledger of its own. The rescale's is
+            # left alone, since the follow moved nothing here.
+            @test near(ᶜY.q_tag_led_close[1], sum(added))
+            @test iszero(ᶜY.q_tag_led_rescale[1])
             @test tag_total(ᶜY, :evap)[1] == totals[3]
             for name in propertynames(ᶜY)
                 CA.is_tagged_tracer_name(name) || continue
@@ -1705,6 +1731,27 @@ end
               FT(0.5)
         @test CA.water_tag_part_closing_shift(FT(0), FT(0), FT(1), FT(0), FT(0), FT(0)) ===
               -zero(FT)
+        # A compartment at zero empties its parts exactly, not to a rounding
+        # unit off zero.
+        rng = Random.MersenneTwister(29)
+        for _ in 1:1000
+            parts = FT.(rand(rng, 4))
+            pos = sum(parts)
+            @test all(
+                part -> iszero(
+                    part + CA.water_tag_part_closing_shift(
+                        part, FT(1), FT(0), pos, FT(0), FT(1),
+                    ),
+                ),
+                parts,
+            )
+        end
+        # Small parts and a small rest do not underflow in Float32. The share
+        # is taken first.
+        tiny = FT(1e-25)
+        shift =
+            CA.water_tag_part_closing_shift(tiny, FT(1), FT(2e-20), 3 * tiny, FT(0), FT(1))
+        @test shift ≈ FT(2e-20) / 3 - tiny rtol = 8 * eps(FT)
     end
 end
 
@@ -2883,13 +2930,19 @@ end
             _ -> 0.0,
             NamedTuple{CA.WATER_TAG_MECHANISM_NAMES}(CA.WATER_TAG_MECHANISM_NAMES),
         )
+    # The key adds the closing step's ledger to the ledgers per mechanism.
+    @test CA.water_tag_mechanism_names(keyed) ==
+          (CA.WATER_TAG_MECHANISM_NAMES..., :q_tag_led_close)
+    @test CA.water_tag_mechanism_names(plain) == CA.WATER_TAG_MECHANISM_NAMES
+    @test CA.is_tag_mechanism_ledger_name(:q_tag_led_close)
+    keyed_ledgers = (; ledgers..., q_tag_led_close = 0.0)
     # A state written with the ledger of the withheld gain holds one ledger
     # without the key and two with it.
-    state(names; exp = (:q_tag_exp_negative,)) = (;
+    state(names; exp = (:q_tag_exp_negative,), mechanisms = ledgers) = (;
         c = (;
             NamedTuple{(:ρ, :ρq_tot, names...)}(Tuple(zeros(2 + length(names))))...,
             NamedTuple{exp}(Tuple(zeros(length(exp))))...,
-            ledgers...,
+            mechanisms...,
         ),
     )
     tag_names = CA.water_tag_state_names(keyed)
@@ -2898,7 +2951,7 @@ end
     @test keyed_exp == (:q_tag_exp_negative, :q_tag_exp_negative_precip)
     keyed_state = (;
         c = (;
-            state(keyed_names; exp = keyed_exp).c...,
+            state(keyed_names; exp = keyed_exp, mechanisms = keyed_ledgers).c...,
             map(
                 _ -> 0.0,
                 NamedTuple{CA.water_tag_audit_state_names(keyed)}(
@@ -2936,11 +2989,20 @@ end
         plain_state,
     )
     # The audit's records come with the parts.
-    no_audit = state(keyed_names; exp = keyed_exp)
+    no_audit = state(keyed_names; exp = keyed_exp, mechanisms = keyed_ledgers)
     @test_throws r"microphysics audit.*`water_tag_precipitation`" check(
         written,
         keyed,
         no_audit,
+    )
+    # So does the closing step's ledger. A checkpoint from before it is refused.
+    no_close = (;
+        c = Base.structdiff(keyed_state.c, NamedTuple{(:q_tag_led_close,)}),
+    )
+    @test_throws r"ledgers per mechanism.*`water_tag_precipitation`" check(
+        written,
+        keyed,
+        no_close,
     )
     # The attribute is checked too.
     flipped = checkpoint(

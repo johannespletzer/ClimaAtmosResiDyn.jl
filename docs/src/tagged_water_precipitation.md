@@ -63,10 +63,12 @@ with it, and one written without it only without it.
     keep every part non-negative. The non-precipitating parts take the change
     of ``\rho q_\mathrm{tot}`` by the rule of
     [`ClimaAtmos.rescale_water_tags!`](@ref). The changes that raise the
-    non-precipitating water ``N`` go first: a rise of ``\rho q_\mathrm{tot}``
-    and a fall of rain or snow. Those that lower it go last. So where ``N`` is
-    positive before and after, it stays positive in between, and its parts
-    keep their water. The grid-mean constraint of 1-moment microphysics clips
+    non-precipitating water ``N`` go first and those that lower it last: rain
+    falls, snow falls, ``\rho q_\mathrm{tot}`` rises, rain rises, snow rises,
+    ``\rho q_\mathrm{tot}`` falls. So where ``N`` is positive before and
+    after, it stays positive in between, and its parts keep their water. Where
+    ``N`` starts below zero, the falls of rain and snow can give its parts
+    water before a rise of ``\rho q_\mathrm{tot}`` reaches them. The grid-mean constraint of 1-moment microphysics clips
     the condensates each time the state is constrained, so this runs every
     step.
   - **Closing step.** After each follow, the partition's rain parts are brought
@@ -77,10 +79,11 @@ with it, and one written without it only without it.
     non-precipitating composition. Other paths can leave the parts apart from
     their compartment where it is negative: the microphysics, the
     sedimentation, and the advection, which can take a compartment below zero
-    on a sphere. The closing step changes the tags' totals, and the rescale's
-    ledgers take what it moves: `q_tag_fix_<name>` and `q_tag_led_rescale`.
-    So `q_rtag_res` and `q_stag_res` stay at rounding after each constrained
-    state, and the closing step's work shows in those ledgers instead.
+    on a sphere. The closing step changes the tags' totals. Its own ledger,
+    `q_tag_led_close`, takes what it moves, beside each tag's
+    `q_tag_fix_<name>`. So `q_rtag_res` and `q_stag_res` stay at rounding
+    after each constrained state, and the closing step's work shows in that
+    ledger instead. A compartment at zero empties its parts exactly.
   - **Repair.** The partition repair runs on each compartment's parts, among
     themselves.
   - **Vapour nonnegativity tendency.** When it is configured, it lifts negative

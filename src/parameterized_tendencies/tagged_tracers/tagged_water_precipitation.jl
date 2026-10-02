@@ -1608,8 +1608,8 @@ part of `ρq_rai`, and its snow parts to that of `ρq_sno`
 ([`water_tag_part_closing_shift`](@ref)). Other paths can leave them apart:
 the microphysics and the sedimentation where a compartment is negative, and
 the advection, which can take a compartment below zero. Nothing else would
-bring them back. The closing step books what it adds or removes in the
-rescale's ledgers.
+bring them back. The closing step books what it adds or removes in a ledger
+of its own, `q_tag_led_close`, and in each tag's `q_tag_fix_<name>`.
 
 Called last in `limiters_func!`, and in `constrain_state!` before the partition
 repair. A no-op without the key.
@@ -1624,9 +1624,9 @@ function _follow_water_tag_precipitation!(Y, p, model::WaterTaggingModel)
     has_water_tag_precipitation(model) || return nothing
     # Where rain or snow crosses zero, the non-precipitating parts take the
     # rest of their compartment's change by the rescale's rule, into its
-    # ledgers per mechanism. The closing step writes the same ledgers. So the
-    # call opens and closes the ledgers as the rescale does.
-    mechanisms = Val((:q_tag_led_rescale, :q_tag_led_empty))
+    # ledgers per mechanism. The closing step writes its own. So the call
+    # opens and closes all three.
+    mechanisms = Val((:q_tag_led_rescale, :q_tag_led_empty, :q_tag_led_close))
     before_tag_ledgers!(p, Y, mechanisms)
     _rescale_water_tag_parts!(Y, p, Y.c.ρq_tot, model, Val(false))
     _close_water_tag_precip_parts!(Y, p, model)
@@ -1645,9 +1645,13 @@ that compartment in the cell, and `pos_nonprecip` the sum of its non-negative
 non-precipitating parts. The rest to close is `target - (pos + neg)`. The rules
 are:
 
-  - the parts take the rest by their own composition,
-    `rest · ρq_part⁺ / pos`, with the rest floored at `-pos`, so no part goes
-    below zero;
+  - the parts take the rest by their own composition. Each part becomes
+    `(ρq_part⁺ / pos) · (target - neg)`, and the shift is that less
+    `ρq_part⁺`. That is `rest · ρq_part⁺ / pos`. The rest is never below
+    `-pos`, so no part goes below zero. Written so, a part whose compartment
+    is zero ends at zero exactly, not at a rounding unit off it, and the share
+    is taken before the product, which keeps a Float32 product of two small
+    numbers from underflowing;
   - where the parts hold nothing and the rest is positive, they take it by
     the non-precipitating composition, `rest · ρq_nonprecip⁺ / pos_nonprecip`,
     as a compartment that grows does in the follow;
@@ -1667,11 +1671,13 @@ leaves the part as it was, bit for bit.
 )
     rest = target - (pos + neg)
     iszero(rest) && return -zero(ρq_part)
-    pos > zero(pos) &&
-        return max(rest, -pos) * max(ρq_part, zero(ρq_part)) / pos
+    if pos > zero(pos)
+        held = max(ρq_part, zero(ρq_part))
+        return held / pos * (target - neg) - held
+    end
     (rest > zero(rest) && pos_nonprecip > zero(pos_nonprecip)) ||
         return -zero(ρq_part)
-    return rest * max(ρq_nonprecip, zero(ρq_nonprecip)) / pos_nonprecip
+    return rest * (max(ρq_nonprecip, zero(ρq_nonprecip)) / pos_nonprecip)
 end
 
 # The closing step: each compartment of rain and snow on its own. The sums are
@@ -1717,10 +1723,11 @@ function _apply_part_closing!(ᶜY, ledger, sums, ᶜshift, ᶜtarget, tags::Tup
             ᶜpos_nonprecip,
         )
         # The water enters or leaves the tag, as in the rescale, so its
-        # signed ledger takes it.
-        @. ᶜY.q_tag_led_rescale += ᶜshift
+        # signed ledger takes it. The closing step has a ledger per mechanism
+        # of its own, so its work stays apart from the rescale's.
+        @. ᶜY.q_tag_led_close += ᶜshift
         @. ᶜgross += abs(ᶜshift)
-        @. ᶜcount += tag_event(ᶜshift, ᶜtarget)
+        @. ᶜcount += tag_event(ᶜshift, ᶜY.ρq_tot)
         add_to_tag_ledger!(ledger.state, tag, ᶜshift)
         @. ᶜfix += ᶜshift
         @. ᶜρq_part += ᶜshift
@@ -1804,14 +1811,18 @@ end
 # snapshots move on, so a later call moves only what changed since.
 #
 # The changes that raise the non-precipitating water `N = ρq_tot - ρq_rai -
-# ρq_sno` go first: a rise of `ρq_tot` and a fall of rain or snow. The changes
-# that lower `N` go last. Each change is split at its middle value, `max` of
-# before and after for `ρq_tot` and `min` for rain and snow, so the order holds
-# in every cell. Then `N` rises and then falls, and every value it takes in
-# between lies above the smaller of its values before and after. A cell whose
-# `N` is positive before and after never passes through zero on the way. A
-# fixed order could take `N` below zero in between. The non-precipitating parts
-# would then empty, and the water would end in no tag.
+# ρq_sno` go first, and those that lower it last. Each change is split at its
+# middle value, `max` of before and after for `ρq_tot` and `min` for rain and
+# snow, so the order holds in every cell. The order is: rain falls, snow falls,
+# `ρq_tot` rises, rain rises, snow rises, `ρq_tot` falls. So `N` rises and then
+# falls, and every value it takes in between lies above the smaller of its
+# values before and after. A cell whose `N` is positive before and after never
+# passes through zero on the way. A fixed order could take `N` below zero in
+# between. The non-precipitating parts would then empty, and the water would
+# end in no tag. The falls of rain and snow come before the rise of `ρq_tot`.
+# Where `N` starts at or below zero, they can lift it above zero first, so the
+# parts are not empty when the rise of `ρq_tot` reaches them. The other way
+# round, the rescale would find no parts to give the rise to.
 function _rescale_water_tag_parts!(Y, p, ᶜρq_tot_before, model, ::Val{total}) where {total}
     ledger = _water_tag_fix_ledger(Y, p, model)
     (; ᶜwater_pos, ᶜwater_pos_2, ᶜwater_shift, ᶜwater_shift_sum) = p.tagging
@@ -1829,20 +1840,20 @@ function _rescale_water_tag_parts!(Y, p, ᶜρq_tot_before, model, ::Val{total})
     # `N` at each point of the sequence. The index of each name gives the
     # values of `ρq_tot`, rain and snow there.
     ᶜN₀₀₀ = @. lazy(ᶜT₀ - ᶜR₀ - ᶜS₀)
-    ᶜN₁₀₀ = @. lazy(ᶜT₁ - ᶜR₀ - ᶜS₀)
-    ᶜN₁₁₀ = @. lazy(ᶜT₁ - ᶜR₁ - ᶜS₀)
+    ᶜN₀₁₀ = @. lazy(ᶜT₀ - ᶜR₁ - ᶜS₀)
+    ᶜN₀₁₁ = @. lazy(ᶜT₀ - ᶜR₁ - ᶜS₁)
     ᶜN₁₁₁ = @. lazy(ᶜT₁ - ᶜR₁ - ᶜS₁)
     ᶜN₁₂₁ = @. lazy(ᶜT₁ - ᶜR₂ - ᶜS₁)
     ᶜN₁₂₂ = @. lazy(ᶜT₁ - ᶜR₂ - ᶜS₂)
     ᶜN₂₂₂ = @. lazy(ᶜT₂ - ᶜR₂ - ᶜS₂)
     # The changes that raise `N`.
-    total && _rescale_nonprecip_parts!(ᶜY, ledger, ᶜwater_pos, ᶜN₀₀₀, ᶜN₁₀₀, model)
     _follow_water_tag_part!(
-        ᶜY, ledger, scratch, ᶜR₀, ᶜR₁, ᶜN₁₀₀, ᶜN₁₁₀, model.tags, RainPart(),
+        ᶜY, ledger, scratch, ᶜR₀, ᶜR₁, ᶜN₀₀₀, ᶜN₀₁₀, model.tags, RainPart(),
     )
     _follow_water_tag_part!(
-        ᶜY, ledger, scratch, ᶜS₀, ᶜS₁, ᶜN₁₁₀, ᶜN₁₁₁, model.tags, SnowPart(),
+        ᶜY, ledger, scratch, ᶜS₀, ᶜS₁, ᶜN₀₁₀, ᶜN₀₁₁, model.tags, SnowPart(),
     )
+    total && _rescale_nonprecip_parts!(ᶜY, ledger, ᶜwater_pos, ᶜN₀₁₁, ᶜN₁₁₁, model)
     # The changes that lower it.
     _follow_water_tag_part!(
         ᶜY, ledger, scratch, ᶜR₁, ᶜR₂, ᶜN₁₁₁, ᶜN₁₂₁, model.tags, RainPart(),
