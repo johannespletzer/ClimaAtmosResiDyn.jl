@@ -46,7 +46,7 @@ and 560 kB are allocated per step.
     agree within 0.9%. A node effect on a ratio is not measured directly.
   - Section 10's `both_default` at `b34bbd8b`, on another node, gave 4.189
     and 9.037 at the minimum, 4.167 and 8.991 at the median. The two runs
-    agree within 2.7% at the minimum and 0.9% at the median. Section 10's
+    agree within 2.8% at the minimum and 0.8% at the median. Section 10's
     `energy_default` at 8 tags gave 1.579 on a node whose untagged step was
     30% shorter (3.18 ms); here 1.526. So the energy ratio at 8 moved by 3.5%
     between those two nodes and commits.

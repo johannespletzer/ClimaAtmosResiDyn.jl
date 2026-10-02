@@ -79,3 +79,9 @@ whose untagged steps differ by 41%), that mixes the nodes. W52 and E88 quote
 exponents fitted on `ratio - 1` instead: water 1.37 (1.95 from 8 to 32),
 energy 1.40 (1.81), 1M without rain and snow 1.51 (2.09), with them 2.08
 (2.24).
+
+The node-to-node figure above, 45%, uses the failed `water_copies` arm's
+baseline, which counts for nothing. Over the arms that are read, nodes differ
+by up to 43% (D4: 3.176 against 4.528 ms, the second from section 11's
+`energy_d4` at `d3c5e42f`), and by 42% within this run (3.176 against
+4.505 ms). W52 and E88 quote 43%.

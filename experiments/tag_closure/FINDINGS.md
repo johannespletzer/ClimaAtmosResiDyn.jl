@@ -3537,21 +3537,25 @@ The bounds hold for both findings:
   - They hold at `main` `b34bbd8b` (section 10) and `d3c5e42f` (section 11):
     one column per base config, CPU, one rank, one thread, `hpda2_compute`.
     The two commits differ in message strings, a Jacobian these configs do
-    not use and a compat cap. Their 8 + 8 points agree within 2.7%.
+    not use and a compat cap. Their 8 + 8 points agree within 0.8% in the
+    ratio quoted, and within 2.8% at the minimum.
   - They hold for these tag layouts. Water uses two region tags plus `N - 2`
     surface-flux sources. Energy uses G4.15's eight, and 32 repeats the four
     sources.
-  - Nodes of one type differed by up to 45% in the untagged step time. So
-    times in ms are the node's, and only ratios are quoted. Where points of
-    one count series ran on two nodes, the added cost is given in untagged
-    steps, not in ms. A node's effect on a ratio is not measured directly.
-    The one pair that bounds it is energy at 8 tags: 1.579 on a node with a
-    3.18 ms untagged step and 1.526 on one with 4.53 ms, at the two commits.
-  - The ratios of section 9's run, read on blocks 2 to 5 on other nodes,
-    agree with section 10's within 4.4% at every point, and within 0.5% at
-    the median. That run failed its rule, so it is a cross-check only.
-  - The numbers at `43b01ca1` (sections 4 and 7) are prior evidence under the
-    old physics. They are not pooled.
+  - Nodes of one type differed by up to 43% in the untagged step time (D4:
+    3.18 against 4.53 ms). So times in ms are the node's, and only ratios
+    are quoted. Where points of one count series ran on two nodes, the added
+    cost is given in untagged steps, not in ms. A node's effect on a ratio
+    is not measured directly. The one pair that bounds it is energy at 8
+    tags: 1.579 on a node with a 3.18 ms untagged step and 1.526 on one with
+    4.53 ms, at the two commits.
+  - Section 9's run and the first `water_copies` arm of section 10 failed
+    their rule. They count for nothing here.
+  - W52 and E88 update WP9's first pass and its exclusive rerun at
+    `43b01ca1` (sections 4 and 7, `output/wp9_cost/` and
+    `output/wp9_cost_excl/`, never recorded as a finding). Those numbers are
+    prior evidence under the old physics, and they are not pooled. W34's
+    "32 water copies not built in 8 h" is carried over, not retried.
 
 **W52. On TRMM's 0M EDMF column the water tags' default mode costs 1.43× the
 untagged step at 8 tags and 7.38× at 32. The cost per tag grows past 8.** The
@@ -3565,7 +3569,7 @@ ratios at 2, 4, 8 and 32 tags are 1.155, 1.232, 1.426 and 7.381. At 8 tags:
 
 The default follower at 8 is the increment's. Other measures:
 
-  - **Added step time per tag,** in untagged steps: 0.078, 0.058, 0.053 and
+  - **Added step time per tag,** in untagged steps: 0.077, 0.058, 0.053 and
     0.199. Fitted on `ratio - 1`, the exponent over the four points is 1.37,
     and between 8 and 32 tags it is 1.95.
   - **Allocation per step:** from 43 kB untagged to 239 kB at 8 and 3.3 MB at
@@ -3590,9 +3594,9 @@ On the 1M column without EDMF:
     peak.
 
 The cause of the growth past 8 is not isolated here. A profile at
-`43b01ca1` recorded most of the growth in allocation from 2 to 32 tags in the
-frames that walk the tuple of tracer names (`output/wp9_profile/`). That is
-prior evidence at the old commit.
+`43b01ca1` recorded 45% of the growth in allocation from 2 to 32 tags in
+three frames that walk the tuple of tracer names (`output/wp9_profile/`).
+That is prior evidence at the old commit.
 
 *Jobs `14121227` (water_default), `14121228` (water_default_32), `14122295`
 (water_copies_r2), `14121230` (water_1m_off) and `14121231` (water_1m_on), at
@@ -3608,8 +3612,8 @@ the added ms, which mixes nodes where a series ran on two.*
 
 **E88. On D4's 1M EDMF column the energy source tags' default mode costs
 1.58× the untagged step at 8 tags and 8.09× at 32. Eight water and eight
-energy tags together cost 4.16×, and 9.10× with both families' ledgers. That
-is about three times the sum of the two halves' added costs.** The energy
+energy tags together cost 4.16×, and 9.10× with both families' ledgers. Their
+added cost is about 3.3 times the sum of the two halves' alone.** The energy
 ratios at 2, 4, 8 and 32 tags are 1.157, 1.269, 1.579 and 8.091. At 8 tags:
 
 | Variant at 8 tags    | Ratio |
@@ -3622,27 +3626,28 @@ Other measures:
   - **Added step time per tag,** in untagged steps: 0.079, 0.067, 0.072 and
     0.222. Fitted on `ratio - 1`, the exponent is 1.40, and between 8 and 32
     tags it is 1.81. The points at 2 to 8 ran on a node whose untagged step
-    was 30% shorter than that of the point at 32.
+    was 29% shorter than that of the point at 32 (3.18 against 4.47 ms).
   - **Allocation per step:** from 560 kB untagged to 741 kB at 8 and 5.5 MB
     at 32.
   - **Build:** 1.20× the untagged column's at 8 tags and 1.93× at 32.
   - **Peak memory:** at most 14 GB at 8 tags with ledgers and 15.9 GB at 32.
 
 The copies cost 1.189, 1.349 and 1.668 at 2, 4 and 8 tags, and 3.736 with
-ledgers at 8. Their build grows fastest of all the arms: 1.37×, 1.81× and
-3.80× the untagged build (2446 s at 8 tags). Energy copies at 32 tags did not build in
-8 h (job `14121236`, exit 124). The cache was built in 168 s, and the build
-had not finished when it was stopped. At `43b01ca1` they did not finish in 4 h,
-twice.
+ledgers at 8. At 8 tags their build is the longest of all the arms
+relative to its baseline: 1.37×, 1.81× and 3.80× the untagged build at 2, 4
+and 8 tags (2446 s at 8), and 4.16× with ledgers. Energy copies at 32 tags
+did not build in 8 h (job `14121236`, exit 124). The cache was built in
+168 s, and the build had not finished when it was stopped. At `43b01ca1` they
+did not finish in 4 h, twice.
 
 **The 8 + 8 point** (section 11, `d3c5e42f`). Eight water and eight energy
 tags on D4, in the default mode, as the budget's intended count:
 
-| Arm, at 8 tags     | Ratio | With ledgers | Build ×untagged | Peak GB |
-|:------------------ | -----:| ------------:| ---------------:| -------:|
-| 8 water + 8 energy | 4.158 | 9.098        | 1.51 (2.14)     | 14.5    |
-| 8 water alone      | 1.441 | 3.154        | 1.22 (1.39)     | 12.8    |
-| 8 energy alone     | 1.526 | 3.564        | 1.23 (1.51)     | 13.2    |
+| Arm, at 8 tags     | Ratio | With ledgers | Build ×untagged | Peak GB, no ledgers |
+|:------------------ | -----:| ------------:| ---------------:| -------------------:|
+| 8 water + 8 energy | 4.158 | 9.098        | 1.51 (2.14)     | 14.5                |
+| 8 water alone      | 1.441 | 3.154        | 1.22 (1.39)     | 12.8                |
+| 8 energy alone     | 1.526 | 3.564        | 1.23 (1.51)     | 13.2                |
 
 The combined point adds 3.16 untagged steps per step, and its halves alone
 add 0.44 and 0.53. With ledgers it adds 8.10, against 2.15 and 2.56. The
@@ -3653,7 +3658,8 @@ nodes than the joint point, whose untagged steps agree within 0.9%. The cause
 is not isolated. It is consistent with W52's and this finding's growth past 8
 tags, if that growth follows the total number of tagged tracers, but no point
 here tests that. Section 10's 8 + 8 point at `b34bbd8b`, on another node, gave
-4.189 and 9.037.
+4.189 and 9.037. The 8 + 8 step is above the 2× of OD3's approved cost row
+(ROADMAP.md, 2026-09-24). The build, 1.51×, is within its 2×.
 
 The profile at `43b01ca1` read P2 (`_energy_source_share_norm!`, 0.19% of the
 samples at 2 tags) and P3 (`is_energy_source_tag_name`, at most 1 kB per
