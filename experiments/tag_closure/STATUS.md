@@ -86,6 +86,16 @@ not checked, it says so.
     parent's negative water is 0.52 of its net water (0.34 of its positive
     water) at 6 h. Criterion 3 is met for the MPI paths (W59, reviewed).
 
+  - **Update, 2026-10-02: criterion 9 under the rounding floor (W62,
+    draft).** After W60's addendum the owner set the floor
+    `max(10 × Float64, 3 · eps32 · √n_steps)`. On fresh runs at ten Newton
+    iterations (`design/F32_TWIN.md`, section 10) every judged measure
+    passes in both modes. The least margin is the default's `q_tag_inc_left`, 4.35e-6 of the
+    water against 9.60e-6. The default's fresh pair repeats the addendum's
+    runs byte for byte, so it is not an independent sample. W60's registered
+    verdict at ten iterations stays "fails". The rain and snow tags' Float32
+    closure waits for T3's stage 2.
+
   - **Update, 2026-10-02: V-W7's named parts (W60 addendum, draft).** In
     Float64 the named parts leave 4.1e-7 of the water at 24 h with one Newton
     iteration and 3.8e-13 with ten, so criterion 4's named-parts clause

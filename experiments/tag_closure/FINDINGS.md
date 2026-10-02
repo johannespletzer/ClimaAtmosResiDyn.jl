@@ -89,7 +89,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                                   | section                                             |
 |:----------------------------------------------------- |:--------------------------------------------------- |
-| W1–W60 (W46 for PX7; W52, W53 for WP9 and `led_fix`)  | 1. Water tags                                       |
+| W1–W60, W62 (W46 PX7; W52, W53 WP9 and `led_fix`)     | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48, E85 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11                 | 3. The energy reference and the offset              |
 | E40, E53                                              | 4. EDMF and the updrafts                            |
@@ -2874,6 +2874,62 @@ scorer reproduces `f32_named_scores.csv` byte for byte from the scratch
 output, whose 408 files match `SHA256SUMS_scratch_inputs`. The ratios to
 eps·√n come from the review's `analysis/water/f32_named_floor.py`
 (`output/f32/f32_named_floor.csv`), not from the scorer.*
+
+**W62. Criterion 9 under the owner's rounding floor, on fresh runs at ten
+Newton iterations: every judged measure passes, in both modes. The least
+favourable is the default's `q_tag_inc_left`, 4.35e-6 of the water at 24 h
+against the floor of 9.60e-6 (45% of it), where Float64 has 2.5e-12. The
+default pair repeats W60's addendum runs byte for byte, so for that mode
+the floor is judged on data already seen; the copies' pair is new.**
+*Draft, 2026-10-02, for the Opus review.* Pre-registered in
+`design/F32_TWIN.md`, section 10 (`6a234934`), before runs 7 to 10. The rule
+(DECISIONS.md, 2026-10-02): a Float32 measure passes if it is at most
+`max(10 × Float64, 3 · 2^-23 · √n_steps)`, with `n_steps` 720 for a state at
+24 h, 360 for the second 12 h and 690 for a rate over the window from 1 h.
+W60's registered verdict at ten iterations stays "fails".
+
+| measure, 24 h, of the water         | Float64 | Float32 | threshold (which) | share of it | verdict |
+|:----------------------------------- | -------:| -------:|:----------------- | -----------:|:------- |
+| default: gross residual             | 2.1e-12 | 3.88e-6 | 9.60e-6 (floor)   | 0.40        | *pass*  |
+| default: the second 12 h's addition | 6.1e-13 | 1.56e-6 | 6.79e-6 (floor)   | 0.23        | *pass*  |
+| default: `q_tag_inc_left`           | 2.5e-12 | 4.35e-6 | 9.60e-6 (floor)   | 0.45        | *pass*  |
+| default: what the named parts leave | 3.8e-13 | 3.21e-6 | 9.60e-6 (floor)   | 0.33        | *pass*  |
+| default: partition repair a day     | 3.10e-3 | 1.32e-3 | 3.10e-2 (10×)     | 0.04        | *pass*  |
+| default: `led_fix`, `strat`         | 1.28%   | 0.56%   | 12.8% (10×)       | 0.04        | *pass*  |
+| copies: gross residual              | 2.22e-4 | 2.23e-4 | 2.22e-3 (10×)     | 0.10        | *pass*  |
+| copies: the second 12 h's addition  | 3.09e-5 | 5.44e-5 | 3.09e-4 (10×)     | 0.18        | *pass*  |
+| copies: own residual, largest       | 6.3e-5  | 5.2e-5  | 6.3e-4 (10×)      | 0.08        | *pass*  |
+| copies: their repair a day          | 1.26e-3 | 5.6e-4  | 1.26e-2 (10×)     | 0.04        | *pass*  |
+| copies: partition repair a day      | 9.2e-4  | 0       | 9.2e-3 (10×)      | 0           | *pass*  |
+| `evap` tags' `led_fix`, both modes  | 0       | 0       | 9.39e-6 (floor)   | 0           | *pass*  |
+
+  - **Where the floor decides.** At ten iterations every Float64 state of
+    the default's partition is below 3e-12, so its threshold is the floor.
+    There Float32 sits at 23% to 45% of it. Every other measure is judged by
+    10 times Float64, and uses at most 18% of it.
+  - **Not an independent test for the default.** Runs 7 and 8 differ from
+    runs 5 and 6 only in the `job_id` and the removed seed key, which DYCOMS's
+    radiation does not use. Their closure tables are byte for byte the same.
+    So the default's verdict rests on the values that the floor was set
+    after. Section 10.2 said so before the runs.
+  - **Criterion 4 in Float64 at ten iterations, reported.** Every row is
+    within its budget except the partition repair over the whole day (1.33e-2
+    default, 6.7e-3 copies, against 5e-3; the window's rows pass). The
+    copies' repair is 1.26e-3 a day in the window, within 2e-3. At one
+    iteration it fails (3.98e-3, W54). Criterion 4 is judged at the
+    production setting, one iteration, so this changes no criterion-4
+    verdict. The copies' partition repair and `led_fix` in Float32 read 0
+    in the window and 4.0e-3 over the whole day.
+  - **What this does not show.** Parity at ten iterations: no untagged twin
+    ran, and criterion 3 is W60's at one iteration. The rain and snow tags,
+    which wait for T3's stage 2. A cause. One case, one day.
+
+*`hpda2_compute`, 2026-10-02, jobs `14126807` and `14126808` (default,
+Float64 and Float32, 37 and 33 minutes), `14126809` and `14126810` (copies,
+56 and 52 minutes), model `d3c5e42f` from `../ClimaAtmosResiDyn-f32-run`,
+record `6a234934`. No separate check job (section 10.2).
+`analysis/water/f32_floor_score.py`; `output/f32/` (`f32_floor_scores.csv`,
+`data/`, `logs/`).*
 
 ## 2. Energy source tags: closure by transport
 

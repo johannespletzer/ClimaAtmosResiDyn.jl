@@ -1,0 +1,51 @@
+rule,mode,metric,f64,f32,ratio,threshold,verdict,note
+C4,default,"R4 gross residual at 24 h, Float64 against criterion 4",2.1423318443394485e-12,3.8810267e-06,1811589.8852246432,0.002,reported (within),
+C9,default,R4 gross residual at 24 h,2.1423318443394485e-12,3.8810267e-06,1811589.8852246432,9.596162699460081e-06,pass,"n_steps 720, floor 9.596e-06, the threshold is the floor"
+C9,default,R4 the second 12 h's addition,6.149012989998062e-13,1.5634461999999996e-06,2542597.003036242,6.785511718157629e-06,pass,"n_steps 360, floor 6.786e-06, the threshold is the floor"
+C4,default,"R4 second minus first 12 h (criterion 4: <= 0), Float64 against criterion 4",-9.124890207163688e-13,-7.367225400000005e-07,807376.8815559237,0.0,reported (within),
+C9,default,R4 second minus first 12 h (criterion 4: <= 0),-9.124890207163688e-13,-7.367225400000005e-07,807376.8815559237,,reported,
+C4,default,"R8 partition repair retained gross per day, Float64 against criterion 4",0.0030976089067889204,0.0013191256052911117,0.4258528577962281,0.005,reported (within),
+C9,default,R8 partition repair retained gross per day,0.0030976089067889204,0.0013191256052911117,0.4258528577962281,0.030976089067889203,pass,"n_steps 690, floor 9.394e-06, the threshold is the 10x"
+C4,default,"R8 partition repair, whole day, Float64 against criterion 4",0.013313632992418714,0.009768296647823208,0.7337063184320647,0.005,reported (above),
+C9,default,"R8 partition repair, whole day",0.013313632992418714,0.009768296647823208,0.7337063184320647,,reported,
+C4,default,"R8 led_fix inventory fraction, tropo, Float64 against criterion 4",0.0038605071201538903,0.0016352603119025428,0.423586917730476,0.02,reported (within),
+C9,default,"R8 led_fix inventory fraction, tropo",0.0038605071201538903,0.0016352603119025428,0.423586917730476,0.0386050712015389,pass,"n_steps 690, floor 9.394e-06, the threshold is the 10x"
+C4,default,"R8 led_fix inventory fraction, strat, Float64 against criterion 4",0.01284812049242775,0.005570583438414433,0.43357185525287895,0.02,reported (within),
+C9,default,"R8 led_fix inventory fraction, strat",0.01284812049242775,0.005570583438414433,0.43357185525287895,0.1284812049242775,pass,"n_steps 690, floor 9.394e-06, the threshold is the 10x"
+C4,default,"R8 led_fix inventory fraction, evap, Float64 against criterion 4",0.0,0.0,,0.02,reported (within),
+C9,default,"R8 led_fix inventory fraction, evap",0.0,0.0,,9.394115593359732e-06,pass,"n_steps 690, floor 9.394e-06, the threshold is the floor"
+C4,default,"R8 led_fix inventory fraction, evap_tropo, Float64 against criterion 4",0.0,0.0,,0.02,reported (within),
+C9,default,"R8 led_fix inventory fraction, evap_tropo",0.0,0.0,,9.394115593359732e-06,pass,"n_steps 690, floor 9.394e-06, the threshold is the floor"
+C4,default,"R8 led_fix inventory fraction, evap_strat, Float64 against criterion 4",0.0,0.0,,0.02,reported (within),
+C9,default,"R8 led_fix inventory fraction, evap_strat",0.0,0.0,,9.394115593359732e-06,pass,"n_steps 690, floor 9.394e-06, the threshold is the floor"
+C9,default,"named: the one-iteration part, q_tag_inc_left, gross",2.497510676693619e-12,4.346921336014466e-06,1740501.602887731,9.596162699460081e-06,pass,"n_steps 720, floor 9.596e-06, the threshold is the floor"
+C4,default,"named: what the named parts leave, gross, Float64 against criterion 4",3.7730272493871e-13,3.2138514389338035e-06,8517965.088791419,1e-06,reported (within),
+C9,default,"named: what the named parts leave, gross",3.7730272493871e-13,3.2138514389338035e-06,8517965.088791419,9.596162699460081e-06,pass,"n_steps 720, floor 9.596e-06, the threshold is the floor"
+C4,copies,"R4 gross residual at 24 h, Float64 against criterion 4",0.00022162393402652312,0.00022275365,1.0050974457178514,0.002,reported (within),
+C9,copies,R4 gross residual at 24 h,0.00022162393402652312,0.00022275365,1.0050974457178514,0.002216239340265231,pass,"n_steps 720, floor 9.596e-06, the threshold is the 10x"
+C9,copies,R4 the second 12 h's addition,3.087428776609976e-05,5.437058999999998e-05,1.761031393239114,0.00030874287766099757,pass,"n_steps 360, floor 6.786e-06, the threshold is the 10x"
+C4,copies,"R4 second minus first 12 h (criterion 4: <= 0), Float64 against criterion 4",-0.00015987535849428338,-0.00011399505824000002,0.7130245668476553,0.0,reported (within),
+C9,copies,R4 second minus first 12 h (criterion 4: <= 0),-0.00015987535849428338,-0.00011399505824000002,0.7130245668476553,,reported,
+C4,copies,"R8 partition repair retained gross per day, Float64 against criterion 4",0.0009242629539861234,0.0,0.0,0.005,reported (within),
+C9,copies,R8 partition repair retained gross per day,0.0009242629539861234,0.0,0.0,0.009242629539861234,pass,"n_steps 690, floor 9.394e-06, the threshold is the 10x"
+C4,copies,"R8 partition repair, whole day, Float64 against criterion 4",0.006694567739501311,0.00402753701790105,0.6016127066930042,0.005,reported (above),
+C9,copies,"R8 partition repair, whole day",0.006694567739501311,0.00402753701790105,0.6016127066930042,,reported,
+C4,copies,"R8 led_fix inventory fraction, tropo, Float64 against criterion 4",0.001143595257755437,0.0,0.0,0.02,reported (within),
+C9,copies,"R8 led_fix inventory fraction, tropo",0.001143595257755437,0.0,0.0,0.011435952577554372,pass,"n_steps 690, floor 9.394e-06, the threshold is the 10x"
+C4,copies,"R8 led_fix inventory fraction, strat, Float64 against criterion 4",0.003929298621919346,0.0,0.0,0.02,reported (within),
+C9,copies,"R8 led_fix inventory fraction, strat",0.003929298621919346,0.0,0.0,0.039292986219193464,pass,"n_steps 690, floor 9.394e-06, the threshold is the 10x"
+C4,copies,"R8 led_fix inventory fraction, evap, Float64 against criterion 4",0.0,0.0,,0.02,reported (within),
+C9,copies,"R8 led_fix inventory fraction, evap",0.0,0.0,,9.394115593359732e-06,pass,"n_steps 690, floor 9.394e-06, the threshold is the floor"
+C4,copies,"R8 led_fix inventory fraction, evap_tropo, Float64 against criterion 4",0.0,0.0,,0.02,reported (within),
+C9,copies,"R8 led_fix inventory fraction, evap_tropo",0.0,0.0,,9.394115593359732e-06,pass,"n_steps 690, floor 9.394e-06, the threshold is the floor"
+C4,copies,"R8 led_fix inventory fraction, evap_strat, Float64 against criterion 4",0.0,0.0,,0.02,reported (within),
+C9,copies,"R8 led_fix inventory fraction, evap_strat",0.0,0.0,,9.394115593359732e-06,pass,"n_steps 690, floor 9.394e-06, the threshold is the floor"
+C4,copies,"R5 copies' own residual, max over outputs, Float64 against criterion 4",6.300672413623367e-05,5.2428903e-05,0.8321159958520901,0.0002,reported (within),
+C9,copies,"R5 copies' own residual, max over outputs",6.300672413623367e-05,5.2428903e-05,0.8321159958520901,0.0006300672413623367,pass,"n_steps 720, floor 9.596e-06, the threshold is the 10x"
+C4,copies,"R5 copies' repair, gross, per day, Float64 against criterion 4",0.0012603564665265615,0.0005649766013515696,0.4482673087786017,0.002,reported (within),
+C9,copies,"R5 copies' repair, gross, per day",0.0012603564665265615,0.0005649766013515696,0.4482673087786017,0.012603564665265615,pass,"n_steps 690, floor 9.394e-06, the threshold is the 10x"
+C4,copies,"R5 copies' repair, whole day, Float64 against criterion 4",0.0017895106015800102,0.0010851541223871307,0.6063971464762583,0.002,reported (within),
+C9,copies,"R5 copies' repair, whole day",0.0017895106015800102,0.0010851541223871307,0.6063971464762583,,reported,
+REP,default,closure table byte for byte with run 5 (f64),,,,,reported,same
+REP,default,closure table byte for byte with run 6 (f32),,,,,reported,same
+C9,both,"criterion 9 under the rounding floor, every judged measure",,,,,pass,
