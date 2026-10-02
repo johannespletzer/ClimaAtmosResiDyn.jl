@@ -2779,6 +2779,58 @@ also holds on the three hourly precipitation averages, which the scorer
 skips. In P0, 12 files differ only in their `comments` attribute, text that
 `d3c5e42f` changed.*
 
+*Addendum, 2026-10-02: the named parts (design/F32_TWIN.md, section 9).*
+**In Float64, what the named parts leave at 24 h is 4.1e-7 of the water with
+one Newton iteration and 3.8e-13 with ten, so criterion 4's named-parts
+clause passes (1e-6). Criterion 9 fails on the named parts at ten
+iterations: there Float32 leaves 3.2e-6 against 3.8e-13, about 8.5 million
+times, and its residual 3.9e-6 against 2.1e-12. With one iteration every
+named-part measure is within 10 times, the least margin `N` at 9.1 times.**
+*Draft, for the Opus review.* Pre-registered in section 9 (`2f8a2287`; the
+check and a 12 h cap noted in `a423c8b6`) before runs 5 and 6. The parts:
+`q_tag_inc_left` is the one-iteration part; what they leave is
+`N = q_tag_res − q_tag_inc_left`, gross over the cells. The leak is absorbed
+by the follower and only reported, and the water has no loss rule
+(section 9.2).
+
+| rule (24 h, of the water)         | 1 iteration: Float64, Float32 (ratio) | 10 iterations: Float64, Float32 (ratio) | verdict                   |
+|:--------------------------------- |:------------------------------------- |:--------------------------------------- |:------------------------- |
+| C4 `N` in Float64, against 1e-6   | 4.1e-7                                | 3.8e-13                                 | *pass* at both            |
+| C9 the residual `G`               | 6.49e-6, 7.73e-6 (1.19×)              | 2.1e-12, 3.88e-6 (1.8e6×)               | *pass* at 1, *fail* at 10 |
+| C9 the one-iteration part `P_inc` | 6.87e-6, 8.23e-6 (1.20×)              | 2.5e-12, 4.35e-6 (1.7e6×)               | *pass* at 1, *fail* at 10 |
+| C9 what the parts leave `N`       | 4.07e-7, 3.71e-6 (9.1×)               | 3.8e-13, 3.21e-6 (8.5e6×)               | *pass* at 1, *fail* at 10 |
+
+  - **Criterion 4 in Float64.** The one-iteration reading was known before
+    the jobs, from the smoke run on W55's run (section 9.3). Ten iterations
+    take the residual from 6.5e-6 to 2.1e-12 and `q_tag_inc_left` with it,
+    so the one-iteration part is the residual's main part, as W24 found on
+    the old physics (5.6e-10 there).
+  - **Float32 does not converge with the iterations.** Ten iterations take
+    its residual only from 7.7e-6 to 3.9e-6, and `q_tag_inc_left` stays at
+    4.3e-6. Both are 220 to 250 times the 1.7e-8 the Float32 partition
+    starts with, so this is not the initial rounding alone. Section 9.5
+    expected a failure of this kind at ten iterations. Which part of the
+    Float32 solve leaves it (the increment's rounding, the Newton update or
+    the tags' own solve) is not separated.
+  - **In Float32, `N` exceeds criterion 4's own 1e-6** at both iteration
+    counts (3.7e-6 and 3.2e-6). Criterion 9 judges it against Float64 only,
+    so this is reported.
+  - **Reported.** The leak's sum over the day is 4.3e-3 to 6.6e-3 of the
+    water, gross, in all four runs, and `q_tag_res` does not hold it. `G`
+    from NetCDF equals the closure table's in all four runs.
+  - **Criterion 9 now reads:** parity and every other criterion-4 measure
+    pass (W60); the named parts pass with one iteration and fail with ten;
+    the rain and snow tags wait for T3's stage 2 (rain and snow under EDMF).
+    Whether criterion 9 needs a rounding floor for a converged Float64
+    reference is the owner's question. Section 9 set none.
+  - **What this does not show.** A cause. One case, one day; the copies
+    were not run at ten iterations.
+
+*Jobs `14126670` (Float64) and `14126671` (Float32), 33 and 32 minutes,
+check `14126446`, model `d3c5e42f` from `../ClimaAtmosResiDyn-f32-run`,
+record `a423c8b6`. `analysis/water/f32_named_score.py`; `output/f32/`
+(`f32_named_scores.csv`, `data/`, `logs/`).*
+
 ## 2. Energy source tags: closure by transport
 
 Under the default `tracer` transport the tags move as passive tracers while the

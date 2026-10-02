@@ -1,0 +1,30 @@
+run: f32_d4w_default_z60_c_n10_f32
+machine: terrabyte
+config: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-f32/experiments/tag_closure/configs/f32_d4w_default_z60_c_n10_f32.yml
+driver: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-f32/experiments/tag_closure/analysis/water/d4w_driver.jl
+commit: a423c8b6e65709d0979c987196aae7ce32c46c54
+model_commit: d3c5e42f54515729f53216ae6b8ba268bea8262f
+model_tree: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-f32-run
+commit_source: git-files
+commit_dirty: unknown
+branch: claude/rec-f32
+commit_error: git is not on PATH
+julia: 1.11.9
+julia_depot: /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+project: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-f32-run/.buildkite
+started: 2026-10-02T18:46:51+02:00
+finished: 2026-10-02T19:18:34+02:00
+exit_status: 0
+slurm_job_id: 14126671
+slurm_job_name: f32_d4w_default_z60_c_n10_f32
+partition: hpda2_compute
+nodelist: hpdar03c02s12
+cpus_per_task: 2
+ntasks: 1
+launch: direct
+node_type: Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30GHz
+climacomms_context: SINGLETON
+climacomms_device: CPU
+output_dir: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/f32_d4w_default_z60_c_n10_f32/output_0000
+netcdf_and_checkpoints: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/f32_d4w_default_z60_c_n10_f32/output_0000 (left on scratch, not committed)
+manifest_path: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/manifests/f32_d4w_default_z60_c_n10_f32.20261002T164645Z.json

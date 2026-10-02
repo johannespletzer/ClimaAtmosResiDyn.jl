@@ -1,0 +1,35 @@
+rule,newton,metric,hour,f64,f32,ratio,threshold,verdict,note
+CHECK,1,"G from NetCDF against the closure table, f64",12,3.821746003022265e-06,3.821746003022265e-06,1.0,,reported,
+CHECK,1,"G from NetCDF against the closure table, f32",12,4.490128e-06,4.490128683780171e-06,1.000000152285229,,reported,
+REP,1,"the one-iteration part, net over the column",12,-3.351257526230564e-06,-3.3398650482878187e-06,0.9966005364095193,,reported,
+C9,1,gross residual,12,3.821746003022265e-06,4.490128683780171e-06,1.1748893516809709,,reported,
+C9,1,"the one-iteration part (inc_left), gross",12,3.929422227902522e-06,4.3049409442850574e-06,1.095565885924909,,reported,
+C9,1,"the vertical diffusion's leak, gross",12,0.0033900879895496496,0.004686325877955478,1.382361134106736,,reported,
+C9,1,"what the named parts leave, gross",12,1.4494396541552219e-07,2.1022365849455697e-06,14.503788266858326,,reported,
+C4,1,"what the named parts leave, Float64, against criterion 4",12,1.4494396541552219e-07,2.1022365849455697e-06,14.503788266858326,1e-06,reported,the Float32 value is reported
+CHECK,1,"G from NetCDF against the closure table, f64",24,6.491390071584929e-06,6.491390071584929e-06,1.0,,reported,
+CHECK,1,"G from NetCDF against the closure table, f32",24,7.727969e-06,7.727969045555007e-06,1.0000000058948226,,reported,
+REP,1,"the one-iteration part, net over the column",24,-6.5744661277348044e-06,-7.3899798966761266e-06,1.1240425843097777,,reported,
+C9,1,gross residual,24,6.491390071584929e-06,7.727969045555007e-06,1.190495249913114,6.491390071584928e-05,pass,Float32 rounding level 1.74e-08: above
+C9,1,"the one-iteration part (inc_left), gross",24,6.8718867090439375e-06,8.231204366962038e-06,1.197808508124724,6.871886709043938e-05,pass,Float32 rounding level 1.74e-08: above
+C9,1,"the vertical diffusion's leak, gross",24,0.004566087308334981,0.006580557537120648,1.4411808388132294,,reported,
+C9,1,"what the named parts leave, gross",24,4.0735850429611233e-07,3.7123667153403195e-06,9.113266756895221,4.073585042961123e-06,pass,Float32 rounding level 1.74e-08: above
+C4,1,"what the named parts leave, Float64, against criterion 4",24,4.0735850429611233e-07,3.7123667153403195e-06,9.113266756895221,1e-06,pass,the Float32 value is reported
+CHECK,10,"G from NetCDF against the closure table, f64",12,1.5274305453396422e-12,1.5274305453396414e-12,0.9999999999999994,,reported,
+CHECK,10,"G from NetCDF against the closure table, f32",12,2.3175805e-06,2.31758073981706e-06,1.0000001034773376,,reported,
+REP,10,"the one-iteration part, net over the column",12,3.2908425211606884e-13,5.525534443719833e-07,1679063.7680744939,,reported,
+C9,10,gross residual,12,1.5274305453396414e-12,2.31758073981706e-06,1517306.7913878334,,reported,
+C9,10,"the one-iteration part (inc_left), gross",12,1.6878825024612776e-12,2.243930503776204e-06,1329435.254233689,,reported,
+C9,10,"the vertical diffusion's leak, gross",12,0.0027652242937571086,0.0031392916568887676,1.1352755955371034,,reported,
+C9,10,"what the named parts leave, gross",12,1.6519173226176992e-13,2.0358534190009177e-06,12324184.698147101,,reported,
+C4,10,"what the named parts leave, Float64, against criterion 4",12,1.6519173226176992e-13,2.0358534190009177e-06,12324184.698147101,1e-06,reported,the Float32 value is reported
+CHECK,10,"G from NetCDF against the closure table, f64",24,2.1423318443394485e-12,2.142331844339447e-12,0.9999999999999992,,reported,
+CHECK,10,"G from NetCDF against the closure table, f32",24,3.8810267e-06,3.8810260735626245e-06,0.9999998385897796,,reported,
+REP,10,"the one-iteration part, net over the column",24,1.0023794818681652e-12,8.808032707747032e-07,878712.3905740003,,reported,
+C9,10,gross residual,24,2.142331844339447e-12,3.8810260735626245e-06,1811589.5928155219,2.142331844339447e-11,fail,Float32 rounding level 1.74e-08: above
+C9,10,"the one-iteration part (inc_left), gross",24,2.497510676693619e-12,4.346921336014466e-06,1740501.602887731,2.4975106766936192e-11,fail,Float32 rounding level 1.74e-08: above
+C9,10,"the vertical diffusion's leak, gross",24,0.0047010152023621715,0.004321234536666586,0.9192130530646332,,reported,
+C9,10,"what the named parts leave, gross",24,3.7730272493871e-13,3.2138514389338035e-06,8517965.088791419,3.7730272493871e-12,fail,Float32 rounding level 1.74e-08: above
+C4,10,"what the named parts leave, Float64, against criterion 4",24,3.7730272493871e-13,3.2138514389338035e-06,8517965.088791419,1e-06,pass,the Float32 value is reported
+C4,both,"criterion 4's named-parts clause, Float64",24,,,,,pass,
+C9,both,criterion 9's named-parts measures,24,,,,,fail,

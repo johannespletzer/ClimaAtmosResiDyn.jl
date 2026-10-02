@@ -300,7 +300,7 @@ In Float64, `N` at ten iterations falls with the residual, toward W24's
 5.6e-10. In Float32 the residual cannot fall below rounding: its floor is
 near the 1.7e-8 the partition starts with, and the Float64 ten-iteration
 values may be far below it. If so, the C9 rows at ten iterations fail by
-orders of magnitude, from rounding alone. W61 would then say so, and the
+orders of magnitude, from rounding alone. The finding would then say so, and the
 owner decides whether criterion 9 needs a rounding floor. This section sets
 none.
 
@@ -308,7 +308,8 @@ none.
 
 It does not run the copies at ten iterations, or read the rain and snow tags,
 which are refused under EDMF until WP4b's stage 2 (T3). It decides no cause.
-Finding: W61.
+Finding: an addendum to W60. *Renumbered before scoring, 2026-10-02: W61
+went to WP4b's transport-1 measurement.*
 
 *The check's result, 2026-10-02, before runs 5 and 6.* Job `14126446` (1 h
 1 min) passed. Both runs exited 0 and wrote `q_tag_res`, `q_tag_inc_left` and

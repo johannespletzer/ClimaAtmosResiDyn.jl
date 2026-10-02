@@ -85,6 +85,18 @@ not checked, it says so.
     two differ in every model field from 30 min, with or without tags. The
     parent's negative water is 0.52 of its net water (0.34 of its positive
     water) at 6 h. Criterion 3 is met for the MPI paths (W59, reviewed).
+
+  - **Update, 2026-10-02: V-W7's named parts (W60 addendum, draft).** In
+    Float64 the named parts leave 4.1e-7 of the water at 24 h with one Newton
+    iteration and 3.8e-13 with ten, so criterion 4's named-parts clause
+    passes (1e-6). Criterion 4 stays partial on the copies' repair and the
+    rain and snow tags. In Float32 ten iterations leave 3.2e-6 and a
+    residual of 3.9e-6, about a million times Float64's, so criterion 9
+    fails on the named parts at ten iterations. With one iteration they are
+    within 10 times (9.1 at most). Whether criterion 9 needs a rounding
+    floor is the owner's question. The rain and snow tags' Float32 closure
+    waits for T3's stage 2.
+
   - **Update, 2026-10-02: V-W7, the Float32 twin (W60, reviewed).** D4-W in
     Float32 on `main` `d3c5e42f` (`design/F32_TWIN.md`). Both modes are bit
     for bit the Float32 twin. Each judged criterion-4 measure is at most 1.21
