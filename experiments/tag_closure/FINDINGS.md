@@ -87,21 +87,21 @@ changes, which [RUNS.md](RUNS.md) records.
 
 ## Index
 
-| IDs                                                   | section                                             |
-|:----------------------------------------------------- |:--------------------------------------------------- |
-| W1–W61 (W46 for PX7; W52, W53 for WP9 and `led_fix`)  | 1. Water tags                                       |
-| E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48, E85 | 2. Energy source tags: closure by transport         |
-| E1–E6, E9b, E9c, E10–E19, E71, R1–R11                 | 3. The energy reference and the offset              |
-| E40, E53                                              | 4. EDMF and the updrafts                            |
-| E39, E39b, E43, E59, E61, E62, E64–E67, E79, E80, E82 | 5. The implicit channel and the increment prototype |
-| E45, E47, E51, E54, E55, E57, E58                     | 6. Parity, Float32, MPI and restarts                |
-| E7–E9, E20–E24, E26, E28, E30, E38, E49, E63, E87     | 7. The process records and the per-process checks   |
-| E50, E60, E69, E70, E74, E75, E81                     | 8. The sphere and long runs                         |
-| E68, E72, E73, E76, E83, E84, E86, E89                | 9. Mixing: V3 and the updraft gap                   |
-| T1–T10, E44, E44b–E44e, E52, E56, E77, E78, W52, E88  | 10. Cost                                            |
-| M1–M8                                                 | 11. Method                                          |
-| old claims, errata, conflicts                         | 12. Superseded and falsified claims                 |
-| FQ-1 to FQ-24                                         | 13. What is not established                         |
+| IDs                                                       | section                                             |
+|:--------------------------------------------------------- |:--------------------------------------------------- |
+| W1–W61 (W46 for PX7; W52, W53 for WP9 and `led_fix`)      | 1. Water tags                                       |
+| E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48, E85     | 2. Energy source tags: closure by transport         |
+| E1–E6, E9b, E9c, E10–E19, E71, R1–R11                     | 3. The energy reference and the offset              |
+| E40, E53                                                  | 4. EDMF and the updrafts                            |
+| E39, E39b, E43, E59, E61, E62, E64–E67, E79, E80, E82     | 5. The implicit channel and the increment prototype |
+| E45, E47, E51, E54, E55, E57, E58                         | 6. Parity, Float32, MPI and restarts                |
+| E7–E9, E20–E24, E26, E28, E30, E38, E49, E63, E87         | 7. The process records and the per-process checks   |
+| E50, E60, E69, E70, E74, E75, E81                         | 8. The sphere and long runs                         |
+| E68, E72, E73, E76, E83, E84, E86, E89                    | 9. Mixing: V3 and the updraft gap                   |
+| T1–T10, E44, E44b–E44e, E52, E56, E77, E78, W52, E88, E90 | 10. Cost                                            |
+| M1–M8                                                     | 11. Method                                          |
+| old claims, errata, conflicts                             | 12. Superseded and falsified claims                 |
+| FQ-1 to FQ-24                                             | 13. What is not established                         |
 
 ## 1. Water tags
 
@@ -4982,6 +4982,121 @@ at 32 tags, and the closure audit was off.
 at `b34bbd8b` from record `ed9db0b10`, and `14125001` (both_d3c5) and
 `14125003` (energy_d4) at `d3c5e42f` from record `e149c2382`. Data are in
 `output/wp9_cost_b34d/` and `output/wp9_cost_d3c5/`, read as for W52.*
+
+*Addendum to E88, 2026-10-02: OD3's copies row fails by 16 minutes.* OD3
+asks that both families' copies at 8 tags build in one model within 4 h. At
+`d3c5e42f` on D4 (design section 12.2), 8 water and 8 energy tags in copies
+mode built in 15,377 s (4 h 16 min), 977 s over the limit and 23.6 times the
+untagged build on the same node. The first step compiled for another 996 s,
+and the peak was 21.4 GB. The point then stepped at 4.88× the untagged step
+(the median; 4.85× at the minimum), within section 10's spread rule (2.9%,
+3.3%). OD3 sets no step ceiling for the copies. Alone, each family's copies at
+8 built in 2446 s (energy, D4) and 485 s (water, TRMM's column) at
+`b34bbd8b`, on other nodes. One build is one sample, and it is 6.8% over.
+That margin is smaller than the spread between nodes: the untagged D4 point
+built in 460 s, 640 s and 652 s on the three nodes of section 12 that day,
+and this job's node was the slowest. So on another node the same build might
+pass. The row is read as registered, so it fails. *Job `14125922`
+(`copies88`, `hpdar09c05s06`) from record `84d03ff68`; data in
+`output/wp9_copies_d3c5/`.*
+
+**E90. The 8 + 8 point's excess over its halves is recorded in the parent
+model's walks over tracer names, not in the tag code.** Drafted on 2026-10-02
+from design/WP9_COST.md section 12.1, reviewed by Opus the same day. E88's
+8 + 8 point adds about 3.3 times the sum of its halves' added step time. Two
+exclusive jobs profiled the untagged point, 8 water, 8 energy and 8 + 8 on
+D4, all four on one node per job, at `d3c5e42f`. The excess is
+`(8 + 8) - (8 water) - (8 energy) + (untagged)`: 6.28 and 8.11 ms per step
+of the two jobs' timed blocks, and 2.2 MB allocated per step in both.
+
+  - **Half of every point's samples are a second thread's** (checked by the
+    review, post hoc). In the run tree's environment, `import ClimaAtmos`
+    leaves a second Julia thread (`Threads.maxthreadid()` is 2 with one
+    thread asked for), and `Profile` samples both threads at every tick,
+    exactly half each (`analysis/wp9_profile_threads.jl`, run on a login
+    node, not in the jobs). In the jobs, `other` holds 51% to 52% of the
+    samples at every point, and job `a` records 2.2 to 2.9 samples per timed
+    ms at a 1 ms delay, which one thread cannot give. Section 8's profile, in
+    an older environment, had 1.0 sample per ms and 1% to 7% in `other`. Its
+    origin is not identified. So the pre-registered conversion (share of
+    all samples times the timed step) gives every key about half its ms.
+    Below, each pre-registered number is followed by the stepper's reading,
+    with half of each point's samples taken as the stepper's
+    (`analysis/wp9_excess_stepper.py`, post hoc). Shares are the robust
+    part. The ms are approximate, since the profiled steps ran at another
+    rate than the timed blocks (job `b` records 0.8 to 1.0 samples per
+    timed ms).
+  - **Not the tag code.** At most 3.5% of the excess (2.5% in the other job)
+    is in a frame under `src/parameterized_tendencies/tagged_tracers/`; for
+    the stepper, at most 7.0% (5.0%). The largest tag-code key,
+    `water_tag_sedimenting_mass_names` (7.5% and 12.6%), calls the parent's
+    `sedimenting_mass_names`, one of the walks below.
+  - **By hook** (pre-registered): the implicit tendency holds 20.7% and
+    23.7%, the explicit tendency 16.6% and 15.5%, and `other` 49.6% and
+    49.9%, which is the second thread. For the stepper: implicit tendency
+    41% and 47%, explicit tendency 33% and 31%, Jacobian update 29% and 30%,
+    and `other` about 0. The per-call table did not resolve below the hook,
+    since the first frame inside each hook is a `macro expansion` frame.
+  - **By innermost frame** (post hoc, from section 8's top-80 frame tables):
+    six frames in `src/utils/` that filter or walk tuples of tracer names by
+    `MatrixFields.has_field` hold 3.21 and 5.13 ms, at least 51% of the
+    excess (63% in the other job). For the stepper they hold 6.4 and
+    10.3 ms, 102% and 126% of the timed excess, so about all of it. They are
+    `sedimenting_tracer_names` and `sedimenting_mass_names`
+    (`tracer_processes.jl:138`, `:153`), the closure of `foreach_gs_tracer`
+    (`variable_manipulations.jl:242`), `gs_tracer_names`,
+    `microphysics_tracer_names` and `sgs_tracer_names`. All six are upstream
+    code (present at `a9287b2d`). None of them is among the top 80 frames of
+    the untagged point or of either half, whose 80th frame holds at most
+    0.012 ms. So they cost time only with both families on. They also
+    allocate 1.0 MB of the 2.2 MB of excess per step.
+  - **The rest of the allocation:** `advection.jl:124` holds 0.49 MB, and
+    the water and energy tags' sedimentation blocks of the Jacobian 0.23 MB
+    each. The 8 + 8 point alone allocates `Memory{Symbol}` (0.73 MB per
+    step), `NTuple{38, Symbol}` (0.35 MB) and `Vector{Symbol}` (0.07 MB). No
+    other point allocates any of the three.
+
+*The likely mechanism (inferred from the code and a check outside the
+model, not from the profile).* `ClimaCore`'s `propertynames` of a field's
+data layout (`DataLayouts.jl:305`, ClimaCore 1.0.1) is
+`filter(name -> sizeof(fieldtype(T, name)) > 0, fieldnames(T))`. Julia 1.11's
+`filter` on a tuple recurses at compile time below 32 entries and otherwise
+collects into a `Vector` and builds the tuple at run time
+(`base/tuple.jl:529`). `MatrixFields.has_field` and `top_level_names` call
+`propertynames(Y.c)`, so with 32 or more top-level fields in `Y.c` every
+walk above runs at run time, allocates `Symbol` arrays, and dispatches on a
+`Val` of a run-time tuple. `advection.jl:124` filters `propertynames(Y.c)`
+too. The 8 + 8 point's `Y.c` has 38 top-level fields (the `NTuple{38,
+Symbol}`), and each half has fewer than 32 (no `Symbol` allocation). On a
+login node, the pattern of `sedimenting_tracer_names` costs 0 B and 0.1 μs per
+call on a field of 31 entries, and 3.6 kB and 24 μs at 32, 4.3 kB and 33 μs
+at 38. This would explain why the excess is not additive: it appears when
+`Y.c` crosses 32 fields, not in proportion to the tags. No point here varies
+the field count across 32 inside the model, so this is not shown in the
+model.
+
+*What a fix could gain (proposed reading, for the owner).* The names the
+walks return do not depend on how they are computed, so a fix is expected
+to change no model result. The root fix is upstream in ClimaCore: compute
+`propertynames(::DataLayout)` at compile time for any length. A ClimaAtmos
+fix, upstream or in the fork, would avoid `propertynames(Y.c)` in the walks
+and in `advection.jl:124`, for example by reading the names from the
+element type. Either removes at most the walks' share: at least 3.2 and
+5.1 ms per step (pre-registered conversion), about all of the excess for the
+stepper. A fork-side change edits upstream files, and its parity must still
+be checked bit for bit. An upstream fix needs a release and a compat bump.
+The growth past 8 tags (W52: 1.43× at 8 water tags, 7.38× at 32) crosses
+the same limit and may share this cause, which is not tested.
+
+The profile's timed blocks are single blocks and give 8 + 8 at 2.92× and
+3.19×, not section 11's cost measure (4.16×).
+
+*Jobs `14125920` (`prof88_a`, `hpdar07c05s08`) and `14125921` (`prof88_b`,
+`hpdar09c05s05`), at `d3c5e42f` from record `84d03ff68`. Data are in
+`output/wp9_profile_d3c5/`, with `excess.md` from
+`analysis/wp9_excess.py --frames`, `excess_stepper.md` from
+`analysis/wp9_excess_stepper.py` and `threads_check.txt` from
+`analysis/wp9_profile_threads.jl`.*
 
 ## 11. Method
 

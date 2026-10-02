@@ -1,0 +1,30 @@
+key,samples,share,ms_per_step,bytes_per_step
+"(not tag code)",17605.0,0.925021017234132,20.6651569342686,2.973590700001009e6
+"water_tag_sedimenting_mass_names (tagged_water_precipitation.jl)",434.0,0.02280369903320723,0.5094392564312736,80639.99999999735
+"sediment_energy_source_tags_with_corrections! (energy_source_tags.jl)",207.0,0.010876418663303909,0.24298139650063053,0.0
+"sgs_mass_flux_of_energy_source_tags! (energy_source_tags.jl)",173.0,0.00908995376208491,0.2030714086696091,47.99999999999996
+"sgs_mass_flux_of_water_tags! (tagged_water_edmf.jl)",141.0,0.007408575031525851,0.1655090671815889,32.000000000000014
+"sediment_water_tags! (tagged_water.jl)",129.0,0.006778058007566205,0.15142318912358135,0.0
+"WaterTagIncrementCorrection (tagged_water_increment.jl)",94.0,0.004939050021017234,0.11033937812105928,0.0
+"sedimenting_water_tag_names (tagged_water.jl)",50.0,0.002627154266498529,0.05869115857503153,10546.00000000003
+"sedimenting_energy_source_tag_names (energy_source_tags.jl)",46.0,0.0024169819251786467,0.05399586588902901,10546.00000000003
+"attribute_tags! (tagged_water.jl)",42.0,0.0022068095838587644,0.049300573203026485,0.0
+"enthalpy_hyperdiffusion_of_energy_source_tags! (energy_source_tags.jl)",32.0,0.0016813787305590584,0.03756234148802018,0.0
+"enthalpy_horizontal_advection_of_energy_source_tags! (energy_source_tags.jl)",30.0,0.0015762925598991173,0.03521469514501892,0.0
+"repair_water_tag_partition! (tagged_water.jl)",7.0,0.00036780159730979403,0.008216762200504414,0.0
+"repair_energy_source_tags! (energy_source_tags.jl)",6.0,0.00031525851197982345,0.0070429390290037835,0.0
+"attribute_energy_source_tags! (energy_source_tags.jl)",5.0,0.0002627154266498529,0.005869115857503153,0.0
+"accumulate_tag_ledger_gross! (tag_throughput.jl)",4.0,0.0002101723413198823,0.004695292686002522,0.0
+"attribute_tagged_ρq_tot! (tagged_water.jl)",4.0,0.0002101723413198823,0.004695292686002522,0.0
+"energy_source_tag_moves_as_enthalpy (energy_source_tags.jl)",3.0,0.00015762925598991173,0.0035214695145018918,1314.0000000000132
+"snapshot_tags! (tagged_water.jl)",3.0,0.00015762925598991173,0.0035214695145018918,0.0
+"keep_water_tag_exp_rate! (tagged_water_increment.jl)",3.0,0.00015762925598991173,0.0035214695145018918,0.0
+"energy_source_source_sediment_share (energy_source_tags.jl)",3.0,0.00015762925598991173,0.0035214695145018918,0.0
+"keep_energy_source_sediment_correction! (energy_source_tags.jl)",3.0,0.00015762925598991173,0.0035214695145018918,0.0
+"water_tag_sediment_dshare_field (tagged_water.jl)",2.0,0.00010508617065994115,0.002347646343001261,0.0
+"snapshot_energy_source_increment! (energy_source_tags.jl)",1.0,5.2543085329970576e-5,0.0011738231715006306,0.0
+"getidx (tagged_water.jl)",1.0,5.2543085329970576e-5,0.0011738231715006306,0.0
+"water_tag_sediment_share (tagged_water.jl)",1.0,5.2543085329970576e-5,0.0011738231715006306,0.0
+"water_tag_sediment_dshare (tagged_water.jl)",1.0,5.2543085329970576e-5,0.0011738231715006306,0.0
+"energy_source_sediment_share (energy_source_tags.jl)",1.0,5.2543085329970576e-5,0.0011738231715006306,0.0
+"energy_source_share_norm! (energy_source_tags.jl)",1.0,5.2543085329970576e-5,0.0011738231715006306,0.0

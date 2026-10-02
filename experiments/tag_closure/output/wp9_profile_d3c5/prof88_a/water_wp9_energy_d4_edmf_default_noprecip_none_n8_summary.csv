@@ -1,0 +1,2 @@
+label,family,base,ntags,precip,commit,host,loadavg1,build_s,step_ms,bytes_per_step,allocs_per_step,time_steps,samples,tag_code_time_share,alloc_steps,alloc_rate,alloc_recorded,alloc_bytes_per_step_est,tag_code_alloc_share
+"water_wp9_energy_d4_edmf_default_noprecip_none_n8","water","wp9_energy_d4_edmf",8,0,"d3c5e42f54515729f53216ae6b8ba268bea8262f","hpdar07c05s08","1.00",561.462986805,7.036416900000001,784942.0,3677.0,2843,44747,0.059333586609158155,10,1.0,37886,775062.8999999953,0.0007122002614239464

@@ -1,0 +1,2 @@
+label,family,base,ntags,precip,commit,host,loadavg1,build_s,step_ms,bytes_per_step,allocs_per_step,time_steps,samples,tag_code_time_share,alloc_steps,alloc_rate,alloc_recorded,alloc_bytes_per_step_est,tag_code_alloc_share
+"both_wp9_energy_d4_edmf_untagged_noprecip_none_n0","both","wp9_energy_d4_edmf",0,0,"d3c5e42f54515729f53216ae6b8ba268bea8262f","hpdar09c05s05","1.00",639.847738234,6.992914799999999,562591.6,2833.0,2861,20848,0.00023983115886415962,10,1.0,28330,550781.9999999937,0.00025418405104016067

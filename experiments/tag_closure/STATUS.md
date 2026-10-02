@@ -310,9 +310,16 @@ not checked, it says so.
     mode costs 1.43× at 8 water tags (TRMM), 1.58× at 8 energy tags (D4) and
     4.16× at 8 + 8 on D4, 9.10× with ledgers. The two families do not add:
     alone on D4 they cost 1.44× and 1.53×. **The 8 + 8 step time exceeds
-    OD3's ceiling of 2×, approved 2026-09-24.** Unless the owner revises that
-    row, criterion 10 fails. A budget is proposed in G3_TODO (WP9) and waits
-    for the owner.
+    OD3's ceiling of 2×, approved 2026-09-24.** *Decided 2026-10-02 (the
+    owner): profile first, then decide. OD3's 2× stays for now, so criterion
+    10 is recorded as failing.* Under `design/WP9_COST.md` section 12 (drafts,
+    reviewed 2026-10-02): E90 locates the 8 + 8 excess in the parent's
+    walks over tracer names, at least 51% of it and about all of it for the
+    stepper, not in the tag code. Inferred from the code: `propertynames`
+    of `Y.c` runs at run time once `Y.c` has 32 fields or more (8 + 8 has
+    38). A fix would be pure performance, best in ClimaCore. OD3's copies
+    row fails: both families' copies at 8 built in 4 h 16 min, 6.8% over,
+    on the slowest of three nodes.
 
   - **The session goal of 2026-09-28** (the owner). It is met when:
 

@@ -1,0 +1,5 @@
+point,ntags,variant,exit_status,seconds,slurm_job
+0,0,none,0,1469,14125921
+8@water,8,none,0,1906,14125921
+8@energy,8,none,0,1870,14125921
+8@both,8,none,0,3322,14125921

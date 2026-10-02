@@ -1,0 +1,18 @@
+key,samples,share,ms_per_step,bytes_per_step
+"other",25734.0,0.5098062522286937,7.185162901051942,0.0
+"implicit tendency > macro expansion (implicit_tendency.jl)",9103.0,0.18033598795514877,2.5416389946481637,1.0360159999997835e6
+"jacobian > macro expansion (jacobian.jl)",6641.0,0.13156226474899957,1.8542265806281943,834339.999999968
+"explicit tendency > macro expansion (remaining_tendency.jl)",5702.0,0.11296010143032609,1.5920493845417805,1.1457239999997965e6
+"cache! > macro expansion (precomputed_quantities.jl)",1794.0,0.03554023535005349,0.5009008410852253,16303.999999999894
+"cache_imp! > macro expansion (precomputed_quantities.jl)",565.0,0.011192994968104917,0.15775305195827885,25679.999999998734
+"linear solve > macro expansion (jacobian.jl)",512.0,0.010143032608264987,0.14295497805776775,0.0
+"callbacks",235.0,0.004655493482309125,0.06561410125698323,1388.0000000000011
+"constrain_state! > macro expansion (constrain_state.jl)",119.0,0.0023574626569990887,0.033225864040770235,13216.000000000138
+"initialize_imp! > solve_sgs_ρa_implicit_stage_analytic! (initialize_implicit_problem.jl)",40.0,0.000792424422520702,0.011168357660763104,0.0
+"initialize_imp! > solve_sgs_u₃_implicit_stage_analytic! (initialize_implicit_problem.jl)",13.0,0.00025753793731922816,0.003629716239748009,0.0
+"initialize_imp! > snapshot_water_tag_increment! (tagged_water_increment.jl)",6.0,0.00011886366337810531,0.0016752536491144655,0.0
+"initialize_imp! > snapshot_energy_source_increment! (energy_source_tags.jl)",5.0,9.905305281508775e-5,0.001396044707595388,0.0
+"initialize_imp! > (no src frame)",4.0,7.924244225207021e-5,0.0011168357660763105,0.0
+"cache! > (no src frame)",3.0,5.943183168905266e-5,0.0008376268245572328,0.0
+"cache_imp! > (no src frame)",1.0,1.9810610563017552e-5,0.00027920894151907763,0.0
+"implicit tendency > (no src frame)",1.0,1.9810610563017552e-5,0.00027920894151907763,0.0

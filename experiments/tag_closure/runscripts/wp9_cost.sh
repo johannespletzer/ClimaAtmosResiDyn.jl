@@ -70,9 +70,13 @@ echo "julia $("${JULIA}" --version), build limit ${BUILD_LIMIT}"
 
 cd "${OUT}"
 for point in ${POINTS}; do
-    n="${point%%:*}"
+    # A point may name its own family as `<n>[:variant]@<family>`, so that one
+    # job runs the 8 + 8 point and both its halves on one node (section 12).
+    point_family="${FAMILY}" p="${point}"
+    if [[ "${p}" == *@* ]]; then point_family="${p#*@}"; p="${p%@*}"; fi
+    n="${p%%:*}"
     variant="none"
-    [[ "${point}" == *:* ]] && variant="${point#*:}"
+    [[ "${p}" == *:* ]] && variant="${p#*:}"
     # Point 0 is the untagged baseline, run in every arm since the amendment of
     # 2026-10-02 so that it shares the arm's node. It has no mode and no rain
     # and snow tags.
@@ -83,7 +87,7 @@ for point in ${POINTS}; do
     echo "== point ${point} start $(date -Is)"
     start=$SECONDS
     set +e
-    FAMILY="${FAMILY}" MODE="${point_mode}" PRECIP="${point_precip}" NTAGS="${n}" VARIANT="${variant}" \
+    FAMILY="${point_family}" MODE="${point_mode}" PRECIP="${point_precip}" NTAGS="${n}" VARIANT="${variant}" \
         OUTDIR="${OUT}" \
         timeout "${BUILD_LIMIT}" "${JULIA}" --startup-file=no \
         --project="${RUN_TREE}/.buildkite" "${DRIVER}" "${CONFIG_FILE}" \

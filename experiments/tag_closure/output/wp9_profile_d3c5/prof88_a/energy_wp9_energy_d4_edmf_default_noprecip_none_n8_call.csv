@@ -1,0 +1,26 @@
+key,samples,share,ms_per_step,bytes_per_step
+"other",29752.0,0.5162409772348695,2.895781875242921,0.0
+"implicit tendency > macro expansion (implicit_tendency.jl)",8619.0,0.1495523320377568,0.8388929814035606,412015.9999999696
+"jacobian > macro expansion (jacobian.jl)",6117.0,0.10613895058300944,0.5953716634465228,32552.000000000233
+"cache! > macro expansion (precomputed_quantities.jl)",5182.0,0.0899153248195447,0.5043674938662549,16303.999999999894
+"explicit tendency > macro expansion (remaining_tendency.jl)",4034.0,0.06999583564686285,0.3926318931409634,232332.00000002387
+"cache_imp! > macro expansion (precomputed_quantities.jl)",1729.0,0.030000694058856192,0.16828471572650613,25679.999999998734
+"linear solve > macro expansion (jacobian.jl)",1356.0,0.02352859522487507,0.13198037855705164,0.0
+"callbacks",438.0,0.007599944475291505,0.04263083024187952,1388.0000000000011
+"initialize_imp! > solve_sgs_ρa_implicit_stage_analytic! (initialize_implicit_problem.jl)",163.0,0.0028282898389783455,0.01586489801238895,0.0
+"constrain_state! > macro expansion (constrain_state.jl)",132.0,0.0022903942254303166,0.01284764747015547,8176.000000000054
+"initialize_imp! > solve_sgs_u₃_implicit_stage_analytic! (initialize_implicit_problem.jl)",58.0,0.0010063853414769572,0.005645178433856192,0.0
+"cache! > (no src frame)",19.0,0.00032967795669072735,0.001849282590401166,0.0
+"initialize_imp! > (no src frame)",9.0,0.00015616324264297612,0.0008759759638742366,0.0
+"cache_imp! > (no src frame)",6.0,0.00010410882842865075,0.0005839839759161577,0.0
+"initialize_imp! > snapshot_energy_source_increment! (energy_source_tags.jl)",4.0,6.94058856191005e-5,0.00038932265061077185,0.0
+"dss! > (no src frame)",3.0,5.2054414214325376e-5,0.00029199198795807886,0.0
+"explicit tendency > (no src frame)",2.0,3.470294280955025e-5,0.00019466132530538593,0.0
+"linear solve > (no src frame)",2.0,3.470294280955025e-5,0.00019466132530538593,0.0
+"cache! > set_precipitation_velocities! (microphysics_cache.jl)",1.0,1.7351471404775126e-5,9.733066265269296e-5,0.0
+"jacobian > (no src frame)",1.0,1.7351471404775126e-5,9.733066265269296e-5,0.0
+"cache! > set_precipitation_surface_fluxes! (microphysics_cache.jl)",1.0,1.7351471404775126e-5,9.733066265269296e-5,0.0
+"cache! > set_velocity_quantities! (precomputed_quantities.jl)",1.0,1.7351471404775126e-5,9.733066265269296e-5,0.0
+"lim! > macro expansion (limited_tendencies.jl)",1.0,1.7351471404775126e-5,9.733066265269296e-5,0.0
+"constrain_state! > (no src frame)",1.0,1.7351471404775126e-5,9.733066265269296e-5,0.0
+"implicit tendency > (no src frame)",1.0,1.7351471404775126e-5,9.733066265269296e-5,0.0

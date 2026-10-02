@@ -1,0 +1,24 @@
+key,samples,share,ms_per_step,bytes_per_step
+"(not tag code)",14411.0,0.922304,10.3335390244352,727103.9999998331
+"sediment_energy_source_tags_with_corrections! (energy_source_tags.jl)",503.0,0.032192,0.36068073896959996,0.0
+"sgs_mass_flux_of_energy_source_tags! (energy_source_tags.jl)",370.0,0.02368,0.265311875584,47.99999999999996
+"EnergySourceIncrementCorrection (energy_source_tags.jl)",87.0,0.005568,0.062384143718399995,0.0
+"enthalpy_hyperdiffusion_of_energy_source_tags! (energy_source_tags.jl)",74.0,0.004736,0.053062375116799995,0.0
+"attribute_tags! (tagged_water.jl)",53.0,0.003392,0.0380041335296,0.0
+"enthalpy_horizontal_advection_of_energy_source_tags! (energy_source_tags.jl)",44.0,0.002816,0.0315506014208,0.0
+"repair_energy_source_tags! (energy_source_tags.jl)",18.0,0.001152,0.012907064217599998,0.0
+"attribute_energy_source_tags! (energy_source_tags.jl)",11.0,0.000704,0.0078876503552,0.0
+"keep_energy_source_sediment_correction! (energy_source_tags.jl)",9.0,0.000576,0.006453532108799999,0.0
+"snapshot_tags! (tagged_water.jl)",6.0,0.000384,0.0043023547392,0.0
+"energy_source_sediment_share (energy_source_tags.jl)",6.0,0.000384,0.0043023547392,0.0
+"energy_source_share_norm! (energy_source_tags.jl)",6.0,0.000384,0.0043023547392,0.0
+"accumulate_tag_ledger_gross! (tag_throughput.jl)",5.0,0.00032,0.0035852956159999993,0.0
+"energy_source_tag_moves_as_enthalpy (energy_source_tags.jl)",4.0,0.000256,0.0028682364927999997,744.0000000000039
+"sedimenting_water_tag_names (tagged_water.jl)",4.0,0.000256,0.0028682364927999997,275.99999999999943
+"energy_source_source_sediment_share (energy_source_tags.jl)",4.0,0.000256,0.0028682364927999997,0.0
+"sedimenting_energy_source_tag_names (energy_source_tags.jl)",3.0,0.000192,0.0021511773696,275.99999999999943
+"snapshot_energy_source_tags! (energy_source_tags.jl)",3.0,0.000192,0.0021511773696,0.0
+"close_applied_update! (energy_source_tags.jl)",1.0,6.4e-5,0.0007170591231999999,0.0
+"snapshot_energy_source_increment! (energy_source_tags.jl)",1.0,6.4e-5,0.0007170591231999999,0.0
+"_energy_source_parent_field (energy_source_tags.jl)",1.0,6.4e-5,0.0007170591231999999,0.0
+"_accumulate_energy_source_tags! (energy_source_tags.jl)",1.0,6.4e-5,0.0007170591231999999,0.0

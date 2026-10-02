@@ -1,0 +1,5 @@
+maxthreadid after import ClimaAtmos: 2, nthreads: 1
+profile samples by thread id: Dict(2 => 6323, 1 => 6323)
+31 fields: 0 B and 0.095 μs per call
+32 fields: 3648 B and 24.113 μs per call
+38 fields: 4288 B and 32.686 μs per call

@@ -40,7 +40,7 @@ The twelve criteria of the plan, section 2, in short:
 | 7  | Precipitation provenance: the 0M split, rain and snow tags, `Σ pr_tag = pr`, the audit         | partial: 0M split validated (W26); WP4a-V passes (W32); rain/snow stage 1 without EDMF (W43); stages 2 and 3, V-W5 and the audit's acceptance open                                                                                                                                                                                                                                                                                         |
 | 8  | Held-out columns: RICO, BOMEX, ARM SGP, GCM-driven 0M                                          | not started: waits on V-W5 (OD14 accepted 2026-10-02)                                                                                                                                                                                                                                                                                                                                                                                      |
 | 9  | Float32 twin                                                                                   | partial, one registered clause failing: the named parts at ten iterations (W60 addendum: Float32 3.2e-6 against 3.8e-13), at Float32's rounding level (eps·√n, 3.2e-6 at 24 h; the 10× limits are below its 1.7e-8 at 0 h), so not a shown defect; parity and every other criterion-4 measure pass (W60, at most 1.21×; the named parts at one iteration 9.1×, at the same rounding level); rain/snow Float32 closure waits for T3 stage 2 |
-| 10 | Cost, both modes and both families                                                             | measured; 8 + 8 step 4.16× fails OD3's 2× unless revised; budget waits for the owner                                                                                                                                                                                                                                                                                                                                                       |
+| 10 | Cost, both modes and both families                                                             | failing against OD3's 2× pending the profile (8 + 8 step 4.16×; owner 2026-10-02); copies row fails (4 h 16 min build) |
 | 11 | Ten days on the sphere (superseded 2026-09-24: 90 days at 60 levels), a copies twin, a restart | not started: waits on step 8a (crev) and step 8 (WP9)                                                                                                                                                                                                                                                                                                                                                                                      |
 | 12 | Reviews, CI, draft PRs, docs                                                                   | partial: reviews WP1–WP6 on file; WP4b stage-1 review done (12 findings, none moving a model field; transport-2 in #135); CI green on main; water claim contract (WP8) and final docs pass open                                                                                                                                                                                                                                            |
 
@@ -1356,6 +1356,23 @@ owner's points in the note's section 8.
 
       + [x] P2 and P3: profiled at `43b01ca1` (`output/wp9_profile/`). Neither
         shows where read. P2 was not read at 32 tags (E88).
+
+      + [ ] **Decided 2026-10-02 (the owner): profile first, then decide.**
+        OD3's 2× stays for now, so criterion 10 is recorded as failing. Two
+        runs are pre-registered in `design/WP9_COST.md` section 12: a profile
+        that locates where the 8 + 8 point's excess over its halves sits, and
+        OD3's copies row (both families' copies in one model, built within
+        4 h). The proposal below stays open until the profile is read.
+        *Measured 2026-10-02 (drafts on `claude/rec-wp9`):* E90 locates the
+        8 + 8 excess in the parent's walks over tracer names
+        (`src/utils/`), at least 51% of it and about all of it for the
+        stepper, and at most 3.5% in the tag code (7.0% for the stepper).
+        Inferred from the code, not shown in the model: ClimaCore's
+        `propertynames` of `Y.c` runs at run time from 32 fields on, and
+        8 + 8 has 38. A fix would change no result: in ClimaCore upstream,
+        or in the walks (ClimaAtmos upstream or the fork). OD3's copies row
+        fails: 8 + 8 copies built in 4 h 16 min (E88 addendum), 6.8% over,
+        less than the node spread. Both wait for the owner.
 
       + [ ] **The cost budget: proposal, waiting for the owner.** OD3's
         approved row (2026-09-24) caps the default mode at 8 + 8 tags at 2×
