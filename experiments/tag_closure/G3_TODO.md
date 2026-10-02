@@ -29,20 +29,20 @@ Marks: `[ ]` open, `[~]` under way, `[x]` done, `[!]` waiting for a decision.
 
 The twelve criteria of the plan, section 2, in short:
 
-| #  | Criterion                                                                                      | Status                                                                                                                                                                                                                                            |
-|:-- |:---------------------------------------------------------------------------------------------- |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1  | Evidence: every headline number goes through the verifier and a manifest                       | partial: verifier, manifest, inventory and tools review done (WP0); R8, R9 and S6 not built                                                                                                                                                       |
-| 2  | Refusals with tests, known issues settled, a file-based start, restart round trips             | partial: refusals merged (#100); KI1 closed (W19); KI4 closed for the grid rule (W51, #130); file-based start passes (W22); restart only for ledgers (W27) and a rain/snow column (W43); KI7 open                                                 |
-| 3  | Parity in both modes: 1M and 0M EDMF columns, explicit microphysics, two MPI ranks             | partial: every tagged column run is bit for bit its twin (W17–W51); two MPI ranks not run                                                                                                                                                         |
-| 4  | Closure on D4-W, including the copies' own residual and the rain and snow parts                | partial: default passes (W24 1.5e-4; W38 at most 3.0e-5); second-half rule fails on 4 W38 rungs (up to 1.7e-5); copies' repair fails (0.66%/day, W38); rain/snow shown only on 1M without EDMF (W43)                                              |
-| 5  | Per-tag accuracy against the copies, at 24 h and in the first hour                             | not assessable: copies ineligible on D4-W (W21, W38 R5, R7); first hour 13.1% (W50 rule) against 14.3% (main), budget 1%; R5 fails on all rungs (W50)                                                                                             |
-| 6  | Convergence of the default's error and of the copies                                           | not assessable: no eligible comparator (W38); centred rows R6, R9, R10 pass; first-order breaks the copies (R4, R6)                                                                                                                               |
-| 7  | Precipitation provenance: the 0M split, rain and snow tags, `Σ pr_tag = pr`, the audit         | partial: 0M split validated (W26); WP4a-V passes (W32); rain/snow stage 1 without EDMF (W43); stages 2 and 3, V-W5 and the audit's acceptance open                                                                                                |
-| 8  | Held-out columns: RICO, BOMEX, ARM SGP, GCM-driven 0M                                          | not started: waits on V-W5 (OD14 accepted 2026-10-02)                                                                                                                                                                                             |
-| 9  | Float32 twin                                                                                   | not started: the Float64-twin helper exists                                                                                                                                                                                                       |
-| 10 | Cost, both modes and both families                                                             | in progress: WP9 first pass noisy (19 of 30 points spread over 10%; W52 to follow); exclusive-node rerun pending (jobs 14005213–21); 32 water copies not built in 8 h; rain/snow under EDMF not buildable at 43b01ca1; budget waits for the owner |
-| 11 | Ten days on the sphere (superseded 2026-09-24: 90 days at 60 levels), a copies twin, a restart | not started: waits on step 8a (crev) and step 8 (WP9)                                                                                                                                                                                             |
-| 12 | Reviews, CI, draft PRs, docs                                                                   | partial: reviews WP1–WP6 on file; WP4b stage-1 review done (12 findings, none moving a model field; transport-2 in #135); CI green on main; water claim contract (WP8) and final docs pass open                                                   |
+| #  | Criterion                                                                                      | Status                                                                                                                                                                                               |
+|:-- |:---------------------------------------------------------------------------------------------- |:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1  | Evidence: every headline number goes through the verifier and a manifest                       | partial: verifier, manifest, inventory and tools review done (WP0); R8, R9 and S6 not built                                                                                                          |
+| 2  | Refusals with tests, known issues settled, a file-based start, restart round trips             | partial: refusals merged (#100); KI1 closed (W19); KI4 closed for the grid rule (W51, #130); file-based start passes (W22); restart only for ledgers (W27) and a rain/snow column (W43); KI7 open    |
+| 3  | Parity in both modes: 1M and 0M EDMF columns, explicit microphysics, two MPI ranks             | partial: every tagged column run is bit for bit its twin (W17–W51); two MPI ranks not run                                                                                                            |
+| 4  | Closure on D4-W, including the copies' own residual and the rain and snow parts                | partial: default passes (W24 1.5e-4; W38 at most 3.0e-5); second-half rule fails on 4 W38 rungs (up to 1.7e-5); copies' repair fails (0.66%/day, W38); rain/snow shown only on 1M without EDMF (W43) |
+| 5  | Per-tag accuracy against the copies, at 24 h and in the first hour                             | not assessable: copies ineligible on D4-W (W21, W38 R5, R7); first hour 13.1% (W50 rule) against 14.3% (main), budget 1%; R5 fails on all rungs (W50)                                                |
+| 6  | Convergence of the default's error and of the copies                                           | not assessable: no eligible comparator (W38); centred rows R6, R9, R10 pass; first-order breaks the copies (R4, R6)                                                                                  |
+| 7  | Precipitation provenance: the 0M split, rain and snow tags, `Σ pr_tag = pr`, the audit         | partial: 0M split validated (W26); WP4a-V passes (W32); rain/snow stage 1 without EDMF (W43); stages 2 and 3, V-W5 and the audit's acceptance open                                                   |
+| 8  | Held-out columns: RICO, BOMEX, ARM SGP, GCM-driven 0M                                          | not started: waits on V-W5 (OD14 accepted 2026-10-02)                                                                                                                                                |
+| 9  | Float32 twin                                                                                   | not started: the Float64-twin helper exists                                                                                                                                                          |
+| 10 | Cost, both modes and both families                                                             | measured; 8 + 8 step 4.16× fails OD3's 2× unless revised; budget waits for the owner                                                                                                                 |
+| 11 | Ten days on the sphere (superseded 2026-09-24: 90 days at 60 levels), a copies twin, a restart | not started: waits on step 8a (crev) and step 8 (WP9)                                                                                                                                                |
+| 12 | Reviews, CI, draft PRs, docs                                                                   | partial: reviews WP1–WP6 on file; WP4b stage-1 review done (12 findings, none moving a model field; transport-2 in #135); CI green on main; water claim contract (WP8) and final docs pass open      |
 
 Restated 2026-09-30 from the findings; the plan's section 2 holds the criteria's full text.
 
@@ -1148,7 +1148,7 @@ evidence. The tasks are in `agent-progress/goals-2026-10-02.md` (outside the
 repository). Task 7's design decides which of the task 7 items fit its 12
 jobs.
 
-  - [ ] **WP9's cost on `b34bbd8b`** (task 5). The P2 and P3 profile table, a
+  - [x] **WP9's cost on `b34bbd8b`** (task 5). *Done 2026-10-02: W52 and E88 (sections 10 and 11; Opus review `b73df5ec`). The budget waits for the owner.* The P2 and P3 profile table, a
     design amendment before any job, exclusive rerun jobs that pass the
     spread rule, then W52 for water with a budget proposal for the owner.
     Replaces the first pass at `43b01ca1` and W34's allocation figures.
@@ -1304,11 +1304,13 @@ owner's points in the note's section 8.
         assumed to exist at 32 tags. From 8 to 16 copies the build grew as
         about N^1.8, which projects 2.3 h at 32; the 4 h attempt did not
         build (W30, W34), so the growth steepens past that trend.
+
       + The cost qualification (step 8) covers build time, peak memory and
         per-step scaling at the intended tag count, for the default and the
         comparator; the aggregation test (Insight 10); and the sphere's
         run-length budget. Its ceilings are OD3's, set before the held-out and
         default-selection runs.
+
       + *Decided 2026-09-24 (OD8):* 8 water and 8 energy tags; copies at 8 are
         the direct audit where they pass eligibility; no aggregation bridge
         for qualification, so the aggregation test is reported, not required.
@@ -1317,6 +1319,50 @@ owner's points in the note's section 8.
         *Scope added (provenance pathway, 2026-09-26, pending OD9):*
         the aggregation row stays reported. PP-BAND (PX18) is deferred
         until a measured result needs it.
+
+      + [x] **V-W10 measured on the new physics (2026-10-02, drafts on
+        `claude/rec-wp9`, awaiting the Opus review):** FINDINGS W52 (water)
+        and E88 (energy). Design `design/WP9_COST.md` sections 9 to 11, data
+        `output/wp9_cost_b34d/` (`b34bbd8b`) and `output/wp9_cost_d3c5/`
+        (`d3c5e42f`, the 8 + 8 point). The default mode costs 1.43× at 8
+        water tags (TRMM), 1.58× at 8 energy tags (D4), and 4.16× at 8 + 8
+        on D4, 9.10× with ledgers. Alone on D4 the halves cost 1.44× and
+        1.53×, so the families do not add. The cost per tag grows past 8
+        tags (exponent 1.8 to 2.2 from 8 to 32). The runs at `43b01ca1`
+        (sections 4 and 7) stay as prior evidence. The earlier reruns failed
+        the spread rule, and the owner chose each next design (2026-09-29,
+        2026-10-01, 2026-10-02).
+
+      + [x] P2 and P3: profiled at `43b01ca1` (`output/wp9_profile/`). Neither
+        shows where read. P2 was not read at 32 tags (E88).
+
+      + [ ] **The cost budget: proposal, waiting for the owner.** OD3's
+        approved row (2026-09-24) caps the default mode at 8 + 8 tags at 2×
+        the untagged step and 2× the untagged build. The step measures 4.16×,
+        so against that row criterion 10 fails. The build, 1.51×, meets it.
+        Two ways on:
+
+          * **Keep OD3's 2×.** Then criterion 10 fails, and the step cost
+            must come down before V-W11. The joint excess over the halves
+            (E88) and the growth past 8 tags (W52) are where to look. Neither
+            cause is isolated.
+          * **Revise OD3's step row (proposed).** For the default mode at 8
+            water + 8 energy tags, one column, one CPU rank:
+              - step time at most 4.5× the untagged step (measured 4.16×);
+              - with the per-tag ledgers of validation runs, at most 9.5×
+                (measured 9.10×);
+              - build at most 2× the untagged build as approved, or 2.5×
+                with ledgers (measured 1.51× and 2.14×);
+              - peak at most 16 GB per rank (measured 14.5 GB);
+              - per family at 8 tags on D4, as a guard against regressions:
+                water at most 1.6× (1.44×), energy at most 1.75× (1.58×).
+
+        The margins are 4% to 32% over the least favourable measured value.
+        The sphere's run-length budget (OD6) and the GPU are not covered;
+        T5 checks the sphere against this budget. OD3's row for the copies,
+        both families' copies in one model built within 4 h, is not
+        measured: each family's copies at 8 were measured alone (energy
+        2446 s, water 485 s).
 
 ## The sphere
 

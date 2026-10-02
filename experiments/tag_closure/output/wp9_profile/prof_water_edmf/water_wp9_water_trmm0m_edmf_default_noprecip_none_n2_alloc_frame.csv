@@ -1,0 +1,58 @@
+frame,bytes_per_step,allocs_per_step
+"utils/variable_manipulations.jl:238 foreach_gs_tracer",53183.99999999997,4.000000000000002
+"prognostic_equations/hyperdiffusion.jl:542 macro expansion",52592.00000000004,5.999999999999995
+"prognostic_equations/edmfx_sgs_flux.jl:394 #867",13824.000000000002,11.999999999999973
+"prognostic_equations/surface_flux.jl:134 #874",12384.00000000002,24.00000000000007
+"prognostic_equations/edmfx_sgs_flux.jl:395 #867",11615.999999999985,11.999999999999973
+"cache/precomputed_quantities.jl:582 set_sgs_ᶠu₃!",10656.000000000033,48.00000000000041
+"prognostic_equations/remaining_tendency.jl:51 macro expansion",10176.000000000027,24.00000000000007
+"prognostic_equations/advection.jl:126 macro expansion",8352.000000000018,36.00000000000024
+"prognostic_equations/surface_flux.jl:145 #874",7775.99999999999,11.999999999999973
+"prognostic_equations/surface_flux.jl:133 #874",7488.000000000007,5.999999999999995
+"prognostic_equations/edmfx_sgs_flux.jl:393 #867",7392.000000000029,36.00000000000024
+"prognostic_equations/surface_flux.jl:122 surface_flux_tendency!",6207.999999999995,11.999999999999973
+"prognostic_equations/advection.jl:302 macro expansion",6079.999999999992,7.999999999999988
+"prognostic_equations/advection.jl:301 macro expansion",4576.000000000002,2.0000000000000004
+"prognostic_equations/eddy_diffusion_closures.jl:684 macro expansion",4320.0,9.99999999999998
+"prognostic_equations/surface_flux.jl:136 #874",4127.999999999997,7.999999999999988
+"prognostic_equations/surface_flux.jl:113 surface_flux_tendency!",4127.999999999997,7.999999999999988
+"prognostic_equations/edmfx_sgs_flux.jl:396 #867",4127.9999999999945,17.999999999999986
+"callbacks/get_callbacks.jl:312 #951",3780.3999999999987,103.09999999999842
+"prognostic_equations/surface_flux.jl:118 surface_flux_tendency!",3327.999999999998,7.999999999999988
+"prognostic_equations/edmfx_sgs_flux.jl:325 edmfx_sgs_diffusive_flux_tendency!",3232.0000000000023,4.000000000000002
+"prognostic_equations/edmfx_sgs_flux.jl:330 edmfx_sgs_diffusive_flux_tendency!",2751.9999999999986,9.99999999999998
+"prognostic_equations/edmfx_sgs_flux.jl:415 #867",2751.9999999999986,9.99999999999998
+"prognostic_equations/surface_flux.jl:131 #874",2591.999999999988,52.00000000000047
+"prognostic_equations/surface_flux.jl:112 surface_flux_tendency!",2496.0,2.0000000000000004
+"prognostic_equations/surface_flux.jl:117 surface_flux_tendency!",1791.9999999999993,2.0000000000000004
+"prognostic_equations/edmfx_sgs_flux.jl:326 edmfx_sgs_diffusive_flux_tendency!",1376.0000000000011,5.999999999999995
+"prognostic_equations/edmfx_sgs_flux.jl:327 edmfx_sgs_diffusive_flux_tendency!",1376.0000000000011,5.999999999999995
+"prognostic_equations/edmfx_sgs_flux.jl:399 #867",1376.0000000000011,5.999999999999995
+"callbacks/callbacks.jl:396 maybe_graceful_exit",1046.9999999999995,15.99999999999996
+"prognostic_equations/edmfx_sgs_flux.jl:413 #867",960.0,11.999999999999973
+"prognostic_equations/advection.jl:125 macro expansion",576.0000000000007,11.999999999999973
+"utils/utilities.jl:63 is_tracer_var",335.99999999999955,30.000000000000156
+"prognostic_equations/edmfx_sgs_flux.jl:414 #867",320.0,4.000000000000002
+"prognostic_equations/edmfx_sgs_flux.jl:389 edmfx_sgs_diffusive_flux_tendency!",256.00000000000006,2.0000000000000004
+"prognostic_equations/edmfx_sgs_flux.jl:323 edmfx_sgs_diffusive_flux_tendency!",256.00000000000006,2.0000000000000004
+"utils/variable_manipulations.jl:364 ᶜenv_value",224.00000000000102,28.000000000000128
+"callbacks/callbacks.jl:395 maybe_graceful_exit",207.99999999999997,2.0000000000000004
+"prognostic_equations/advection.jl:121 macro expansion",191.99999999999986,11.999999999999973
+"callbacks/callbacks.jl:394 maybe_graceful_exit",139.00000000000003,2.0000000000000004
+"prognostic_equations/edmfx_sgs_flux.jl:391 #867",95.99999999999991,5.999999999999995
+"parameterized_tendencies/microphysics/cloud_fraction.jl:63 picard_step!",64.00000000000003,4.000000000000002
+"parameterized_tendencies/radiation/radiation.jl:724 radiation_tendency!",64.00000000000001,2.0000000000000004
+"prognostic_equations/surface_flux.jl:103 surface_flux_tendency!",32.00000000000001,2.0000000000000004
+"surface_conditions/surface_conditions.jl:52 update_surface_conditions!",32.00000000000001,2.0000000000000004
+"prognostic_equations/remaining_tendency.jl:55 macro expansion",32.00000000000001,2.0000000000000004
+"prognostic_equations/edmfx_sgs_flux.jl:221 edmfx_sgs_diffusive_flux_tendency!",32.00000000000001,2.0000000000000004
+"parameterized_tendencies/microphysics/cloud_fraction.jl:99 set_covariance_cache_and_cloud_fraction!",32.00000000000001,2.0000000000000004
+"prognostic_equations/eddy_diffusion_closures.jl:832 #ᶜmixing_length#862",24.00000000000001,3.0000000000000013
+"prognostic_equations/mass_flux_closures.jl:279 enforce_edmf_updraft_constraints!",15.999999999999998,0.9999999999999999
+"prognostic_equations/eddy_diffusion_closures.jl:477 macro expansion",15.999999999999998,0.9999999999999999
+"prognostic_equations/edmfx_boundary_condition.jl:83 set_edmfx_surface_conditions!",15.999999999999998,0.9999999999999999
+"prognostic_equations/mass_flux_closures.jl:286 enforce_edmf_updraft_constraints!",15.999999999999998,0.9999999999999999
+"prognostic_equations/edmfx_boundary_condition.jl:81 set_edmfx_surface_conditions!",15.999999999999998,0.9999999999999999
+"prognostic_equations/mass_flux_closures.jl:291 enforce_edmf_updraft_constraints!",15.999999999999998,0.9999999999999999
+"prognostic_equations/eddy_diffusion_closures.jl:476 macro expansion",15.999999999999998,0.9999999999999999
+"prognostic_equations/eddy_diffusion_closures.jl:670 macro expansion",7.999999999999999,0.9999999999999999

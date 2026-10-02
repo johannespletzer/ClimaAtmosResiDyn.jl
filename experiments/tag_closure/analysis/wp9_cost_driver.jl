@@ -7,12 +7,13 @@ nothing. The budget is the owner's, and design/WP9_COST.md says how the numbers
 are read. It adds no model code: the tags come from the environment and the
 model is built by `CA.get_simulation`, as for any run.
 
-    FAMILY=water|energy MODE=default|copies NTAGS=<n> [PRECIP=1] \
+    FAMILY=water|energy|both MODE=default|copies NTAGS=<n> [PRECIP=1] \
     [VARIANT=none|ledgers|records|tracer|increment] [OUTDIR=<dir>] \
         julia +1.11 --project=<run tree>/.buildkite \
         experiments/tag_closure/analysis/wp9_cost_driver.jl <base config.yml>
 
-NTAGS=0 is the untagged baseline of the same base config. Every other setting
+NTAGS=0 is the untagged baseline of the same base config. FAMILY=both puts
+NTAGS water tags and NTAGS energy tags on one column (amendment of 2026-10-02). Every other setting
 that a tag needs comes from the tag builders below, so the base config carries
 no tag key. The driver refuses a base config that does.
 
@@ -86,6 +87,9 @@ const TAG_KEYS = (
 function water_tags(ntags, base_name)
     regions = if occursin("trmm0m", base_name)
         (("pbl", 1000.0, 200.0), ("free", 1000.0, 200.0))
+    elseif occursin("energy_d4", base_name)
+        # The combined arm. D4's inversion is near 750 m, as the energy regions have it.
+        (("pbl", 750.0, 100.0), ("free", 750.0, 100.0))
     elseif occursin("1m_column", base_name)
         (("lower", 3000.0, 300.0), ("upper", 3000.0, 300.0))
     else
@@ -147,7 +151,10 @@ end
 
 function tagged_config(dict, family, mode, ntags, precip, variant, base_name)
     ntags == 0 && return dict
-    if family == "water"
+    if family == "both"
+        tagged_config(dict, "water", mode, ntags, precip, variant, base_name)
+        return tagged_config(dict, "energy", mode, ntags, precip, variant, base_name)
+    elseif family == "water"
         dict["water_tracers"] = water_tags(ntags, base_name)
         mode == "copies" && (dict["water_tag_updraft_copy"] = true)
         precip && (dict["water_tag_precipitation"] = true)
@@ -174,7 +181,7 @@ function tagged_config(dict, family, mode, ntags, precip, variant, base_name)
         variant in ("tracer", "increment") &&
             error("The transport variants are for the water family.")
     else
-        error("FAMILY must be water or energy, not $family.")
+        error("FAMILY must be water, energy or both, not $family.")
     end
     return dict
 end
@@ -237,7 +244,7 @@ function main(base_path)
 
     integrator = simulation.integrator
     p = integrator.p
-    follower = if ntags > 0 && family == "water"
+    follower = if ntags > 0 && family in ("water", "both")
         string(CA.follows_water_increment(p.atmos.water_tagging_model))
     else
         "na"
@@ -273,7 +280,7 @@ function main(base_path)
     header = [
         "label", "family", "base", "mode", "ntags", "precip", "variant", "follower",
         "commit", "host", "loadavg1", "load_s", "build_s", "build_compile_s",
-        "build_gc_s", "build_gb", "first_step_s", "first_step_compile_s",
+        "build_gc_s", "build_gb", "first_step_s", "first_step_compile_s", "warmup",
         "steps_per_block",
         "repeats", "step_ms_min", "step_ms_median", "step_ms_max", "bytes_per_step_min",
         "bytes_per_step_max", "gc_fraction_max", "block_compile_s_max",
@@ -285,8 +292,8 @@ function main(base_path)
         variant, follower, model_commit, gethostname(),
         split(read("/proc/loadavg", String))[1], load_seconds, build.time,
         build.compile_time + build.recompile_time, build.gctime, build.bytes / 1024^3,
-        first_step.time, first_step.compile_time + first_step.recompile_time, STEPS,
-        REPEATS,
+        first_step.time, first_step.compile_time + first_step.recompile_time, WARMUP,
+        STEPS, REPEATS,
         minimum(step_ms), median(step_ms), maximum(step_ms), minimum(bytes_per_step),
         maximum(bytes_per_step), maximum(gc_fraction),
         maximum(b.compile_time + b.recompile_time for b in blocks), build_rss, warm_rss,

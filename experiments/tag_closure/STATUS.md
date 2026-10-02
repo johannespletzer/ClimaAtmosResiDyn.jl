@@ -239,6 +239,21 @@ not checked, it says so.
     #129 merged).* **The session goal of 2026-09-28** (the owner). It is met
     when:
 
+  - **Update, 2026-10-02: WP9's cost measured on the new physics.** W52 and E88
+    are recorded, after an Opus review (`b73df5ec`, numbers and wording; no
+    verdict changed). Every arm ran with its own untagged
+    baseline on the same exclusive node, and the first timed block was
+    discarded (`design/WP9_COST.md` sections 10 and 11, at `b34bbd8b` and
+    `d3c5e42f`). Every point quoted passes the 10% spread rule. The default
+    mode costs 1.43× at 8 water tags (TRMM), 1.58× at 8 energy tags (D4) and
+    4.16× at 8 + 8 on D4, 9.10× with ledgers. The two families do not add:
+    alone on D4 they cost 1.44× and 1.53×. **The 8 + 8 step time exceeds
+    OD3's ceiling of 2×, approved 2026-09-24.** Unless the owner revises that
+    row, criterion 10 fails. A budget is proposed in G3_TODO (WP9) and waits
+    for the owner.
+
+  - **The session goal of 2026-09-28** (the owner). It is met when:
+
      1. the extended probe of section 9.7 has run and is scored and
         recorded as W48;
      2. the owner has a decision brief on C's revision, drawn from W47 and

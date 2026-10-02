@@ -604,6 +604,23 @@ Pre-registered in `design/G3_BASELINE_RERUN.md` (`cb166788`, amended `e2f9c6e3` 
 | `g3b_trmm0m_default_6h`                             | 0000   | same                         | b34bbd8b (record e2f9c6e3) | 2026-10-02 | `14119366` | Task 7: TRMM 0M 6 h, the follower, per-tag ledgers                                                                                                                              | W58                      | `output/g3base/` (scores, `data/`: CSVs) | 52 nc                                 | not synced |
 | `g3b_trmm0m_copies_6h`                              | 0000   | same                         | b34bbd8b (record e2f9c6e3) | 2026-10-02 | `14119367` | Task 7: TRMM 0M 6 h, the copies, per-tag ledgers                                                                                                                                | W58                      | `output/g3base/` (scores, `data/`: CSVs) | 52 nc                                 | not synced |
 
+### WP9 / V-W10: the cost runs (2026-09-29 to 2026-10-02)
+
+Each row is one results root with one directory per arm, from
+`runscripts/submit_wp9.sh`. The jobs, nodes and spreads are in the README of
+each `output/` directory. Only `wp9_cost_b34d` and `wp9_cost_d3c5` are quoted
+in a finding.
+
+| Run             | Output  | Config                                                 | Commit   | Date       | Job                                       | Purpose                                                                                                                        | Findings | Repo | Scratch | Archive |
+|:--------------- |:------- |:------------------------------------------------------ |:-------- |:---------- |:----------------------------------------- |:------------------------------------------------------------------------------------------------------------------------------ |:-------- |:---- |:------- |:------- |
+| `wp9_cost`      | per arm | `configs/wp9_*.yml`                                    | 43b01ca1 | 2026-09-29 | `13999627`–`13999635`                     | V-W10 first pass, shared nodes; spread over 10% at most points                                                                 | none     | CSVs | yes     | no      |
+| `wp9_cost_excl` | per arm | same                                                   | 43b01ca1 | 2026-10-01 | `14005213`–`14005221`                     | exclusive rerun (design section 7); spread rule fails, block 1                                                                 | none     | CSVs | yes     | no      |
+| `wp9_profile`   | per arm | same                                                   | 43b01ca1 | 2026-10-01 | `14055213`–`14055215`                     | P2/P3 time and allocation profile (section 8)                                                                                  | E88, W52 | CSVs | yes     | no      |
+| `wp9_check_b34` | per arm | same                                                   | b34bbd8b | 2026-10-02 | `14103199`–`14103201`                     | check jobs before section 9's run                                                                                              | none     | CSVs | yes     | no      |
+| `wp9_cost_b34`  | per arm | same                                                   | b34bbd8b | 2026-10-02 | `14112139`–`14112147`                     | section 9: same-node baselines, 50 warm-up steps; spread rule fails at 39 of 40, block 1                                       | none     | CSVs | yes     | no      |
+| `wp9_cost_b34d` | per arm | same, with `FAMILY=both` on D4                         | b34bbd8b | 2026-10-02 | `14121227`–`14121236`, `14122295` (rerun) | section 10: first block discarded; all points pass except `water_copies`, rerun as `_r2`; energy copies at 32 timed out at 8 h | W52, E88 | CSVs | yes     | no      |
+| `wp9_cost_d3c5` | per arm | `wp9_energy_d4_edmf`, `FAMILY=both`, `water`, `energy` | d3c5e42f | 2026-10-02 | `14125001`–`14125003`                     | section 11: the 8 + 8 point and its halves on D4; all 9 points pass                                                            | E88, W52 | CSVs | yes     | no      |
+
 ### Analysis outputs, not model runs
 
 | Run                       | Output | Config | Commit   | Date | Job | Purpose                                                                                                                           | Findings       | Repo | Scratch  | Archive  |

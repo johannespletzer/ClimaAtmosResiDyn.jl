@@ -1,0 +1,50 @@
+frame,bytes_per_step,allocs_per_step
+"utils/variable_manipulations.jl:238 foreach_gs_tracer",255055.99999999974,38.00000000000027
+"prognostic_equations/advection.jl:263 #888",121599.99999999675,159.9999999999952
+"prognostic_equations/advection.jl:262 #888",91520.00000000067,40.0000000000003
+"prognostic_equations/surface_flux.jl:134 #874",90815.99999999852,175.9999999999943
+"prognostic_equations/advection.jl:253 macro expansion",81312.00000000006,11.999999999999973
+"prognostic_equations/surface_flux.jl:126 surface_flux_tendency!",80735.99999999999,11.999999999999973
+"prognostic_equations/hyperdiffusion.jl:542 macro expansion",78784.00000000012,11.999999999999973
+"prognostic_equations/remaining_tendency.jl:51 macro expansion",74623.99999999991,131.9999999999968
+"prognostic_equations/implicit/manual_sparse_jacobian.jl:1314 update_advection_jacobian!",61632.00000000026,24.00000000000007
+"prognostic_equations/surface_flux.jl:133 #874",54912.000000000386,44.000000000000355
+"prognostic_equations/implicit/manual_sparse_jacobian.jl:1894 update_diffusion_jacobian!",32687.99999999992,21.00000000000003
+"prognostic_equations/surface_flux.jl:131 #874",25919.999999999287,520.0000000000497
+"prognostic_equations/advection.jl:126 macro expansion",16896.00000000032,219.9999999999918
+"parameterized_tendencies/tagged_tracers/tagged_water_precipitation.jl:1199 _microphysics_of_water_tag_parts!",9408.000000000002,11.999999999999973
+"parameterized_tendencies/tagged_tracers/tagged_water_precipitation.jl:1203 _microphysics_of_water_tag_parts!",9408.000000000002,11.999999999999973
+"parameterized_tendencies/tagged_tracers/tagged_water_precipitation.jl:1217 _microphysics_of_water_tag_parts!",9408.000000000002,11.999999999999973
+"parameterized_tendencies/tagged_tracers/tagged_water_precipitation.jl:1207 _microphysics_of_water_tag_parts!",9408.000000000002,11.999999999999973
+"parameterized_tendencies/tagged_tracers/tagged_water_precipitation.jl:1213 _microphysics_of_water_tag_parts!",9408.000000000002,11.999999999999973
+"prognostic_equations/implicit/manual_sparse_jacobian.jl:1320 update_advection_jacobian!",9023.999999999985,24.00000000000007
+"prognostic_equations/surface_flux.jl:136 #874",8255.99999999999,15.99999999999996
+"prognostic_equations/surface_flux.jl:113 surface_flux_tendency!",8255.99999999999,15.99999999999996
+"parameterized_tendencies/tagged_tracers/tagged_water_precipitation.jl:1283 _net_flow_of_water_tag_parts!",7168.00000000001,15.99999999999996
+"parameterized_tendencies/tagged_tracers/tagged_water_precipitation.jl:1284 _net_flow_of_water_tag_parts!",7168.00000000001,15.99999999999996
+"parameterized_tendencies/tagged_tracers/tagged_water_precipitation.jl:1285 _net_flow_of_water_tag_parts!",7168.00000000001,15.99999999999996
+"prognostic_equations/surface_flux.jl:118 surface_flux_tendency!",6655.999999999991,15.99999999999996
+"prognostic_equations/vertical_diffusion_boundary_layer.jl:152 vertical_diffusion_boundary_layer_tendency!",5184.000000000003,8.999999999999984
+"prognostic_equations/surface_flux.jl:112 surface_flux_tendency!",4992.000000000004,4.000000000000002
+"prognostic_equations/advection.jl:125 macro expansion",4223.999999999977,87.99999999999928
+"callbacks/get_callbacks.jl:312 #951",3876.799999999999,106.8999999999982
+"prognostic_equations/surface_flux.jl:117 surface_flux_tendency!",3583.9999999999977,4.000000000000002
+"prognostic_equations/advection.jl:121 macro expansion",2815.999999999978,87.99999999999928
+"prognostic_equations/hyperdiffusion.jl:442 macro expansion",2432.0,11.999999999999973
+"parameterized_tendencies/tagged_tracers/tagged_water.jl:1179 _apply_water_tag_rescale!",2240.0000000000027,20.000000000000014
+"callbacks/callbacks.jl:396 maybe_graceful_exit",1048.9999999999998,15.99999999999996
+"utils/utilities.jl:63 is_tracer_var",1044.0000000000039,87.99999999999928
+"parameterized_tendencies/tagged_tracers/tagged_tracers.jl:1421 is_water_tag_name",701.9999999999981,66.00000000000053
+"utils/tracer_processes.jl:389 center_state_name",480.0,24.00000000000007
+"parameterized_tendencies/tagged_tracers/energy_source_tags.jl:200 is_energy_source_tag_name",350.99999999999903,33.0000000000002
+"callbacks/callbacks.jl:395 maybe_graceful_exit",207.99999999999997,2.0000000000000004
+"callbacks/callbacks.jl:394 maybe_graceful_exit",140.0,2.0000000000000004
+"prognostic_equations/gm_sgs_closures.jl:85 macro expansion",95.99999999999991,5.999999999999995
+"parameterized_tendencies/microphysics/cloud_fraction.jl:63 picard_step!",64.00000000000003,4.000000000000002
+"prognostic_equations/surface_flux.jl:103 surface_flux_tendency!",64.00000000000003,4.000000000000002
+"prognostic_equations/remaining_tendency.jl:55 macro expansion",64.00000000000003,4.000000000000002
+"prognostic_equations/mass_flux_closures.jl:221 enforce_grid_mean_microphysics_constraints!",32.00000000000001,2.0000000000000004
+"surface_conditions/surface_conditions.jl:52 update_surface_conditions!",32.00000000000001,2.0000000000000004
+"parameterized_tendencies/microphysics/cloud_fraction.jl:99 set_covariance_cache_and_cloud_fraction!",32.00000000000001,2.0000000000000004
+"prognostic_equations/eddy_diffusion_closures.jl:477 macro expansion",15.999999999999998,0.9999999999999999
+"prognostic_equations/eddy_diffusion_closures.jl:476 macro expansion",15.999999999999998,0.9999999999999999
