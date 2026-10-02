@@ -1,0 +1,30 @@
+run: w59_mpi_default_r1
+machine: terrabyte
+config: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-mpi/experiments/tag_closure/configs/w59_mpi_default_r1.yml
+driver: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-mpi/experiments/tag_closure/run_tag_closure.jl
+commit: f519462a608eafdf05a2f0400c5c31669b135039
+model_commit: d3c5e42f54515729f53216ae6b8ba268bea8262f
+model_tree: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-mpi-run
+commit_source: git-files
+commit_dirty: unknown
+branch: claude/rec-mpi
+commit_error: git is not on PATH
+julia: 1.11.9
+julia_depot: /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+project: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-mpi-run/.buildkite
+started: 2026-10-02T14:07:38+02:00
+finished: 2026-10-02T14:41:03+02:00
+exit_status: 0
+slurm_job_id: 14125048
+slurm_job_name: w59_mpi_default_r1
+partition: hpda2_compute
+nodelist: hpdar03c03s03
+cpus_per_task: 1
+ntasks: 1
+launch: direct
+node_type: Intel(R) Xeon(R) Platinum 8380 CPU @ 2.30GHz
+climacomms_context: SINGLETON
+climacomms_device: CPU
+output_dir: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w59_mpi_default_r1/output_0000
+netcdf_and_checkpoints: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/w59_mpi_default_r1/output_0000 (left on scratch, not committed)
+manifest_path: /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/manifests/w59_mpi_default_r1.20261002T120734Z.json

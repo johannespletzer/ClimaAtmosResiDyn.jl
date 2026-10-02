@@ -89,7 +89,7 @@ changes, which [RUNS.md](RUNS.md) records.
 
 | IDs                                                   | section                                             |
 |:----------------------------------------------------- |:--------------------------------------------------- |
-| W1–W58 (W46 for PX7; W52, W53 for WP9 and `led_fix`)  | 1. Water tags                                       |
+| W1–W59 (W46 for PX7; W52, W53 for WP9 and `led_fix`)  | 1. Water tags                                       |
 | E25, E27, E29, E31–E37, E41, E42, E42b, E46, E48, E85 | 2. Energy source tags: closure by transport         |
 | E1–E6, E9b, E9c, E10–E19, E71, R1–R11                 | 3. The energy reference and the offset              |
 | E40, E53                                              | 4. EDMF and the updrafts                            |
@@ -2628,6 +2628,80 @@ below 1e-5 over 3 h). Runs 9 to 11; the twin is new.
     1M case. One column, 6 h.
 
 *Jobs `14119365` to `14119367`, as W54.*
+
+**W59. Criterion 3 on two MPI ranks: on the G2 sphere's physics at h_elem 2,
+split over two ranks, every model field of the tagged run is bit for bit that
+of the untagged twin, in both modes, at all 12 checkpoints and in all 54
+diagnostics at all 13 outputs. The atmosphere starts dry, and by 6 h the
+surface flux has put in 0.17 kg m⁻² of water, global mean, with no cloud and
+no precipitation. So the check covers the MPI paths, not the moist physics.**
+*Draft, 2026-10-02, for the Opus review.* Closes the two-rank part of
+criterion 3 (G3_PLAN section 2). The column parts are W17–W51. Pre-registered
+in `design/MPI_PARITY.md` (`f519462a`), model `d3c5e42f`, six runs.
+
+| rule (design section 4)                          | least favourable result                                                            |
+|:------------------------------------------------ |:---------------------------------------------------------------------------------- |
+| default mode, 2 ranks: every untagged `Y` field  | *pass*: 0 of 884,736 values differ (19 fields × 12 checkpoints, 30 min to 6 h)     |
+| default mode, 2 ranks: every untagged diagnostic | *pass*: 54 of 54 NetCDF fields bit for bit at 13 outputs, 0 h to 6 h               |
+| copies, 2 ranks: every untagged `Y` field        | *pass*: 0 of 884,736 values differ                                                 |
+| copies, 2 ranks: every untagged diagnostic       | *pass*: 54 of 54 at 13 outputs                                                     |
+| both modes, 1 rank                               | reported: the same, both checks pass                                               |
+| one rank against two                             | reported: every model field differs from the first checkpoint, tags or not (below) |
+
+  - **The modes.** Default: no copies and `water_tag_transport` unset, so
+    `default_water_tag_transport` chose `increment` (checked on the login
+    node before the jobs). Copies: `water_tag_updraft_copy: true`, with the
+    `tracer` transport. Tags: `tropics` and `extratropics` (a partition),
+    `evap` and `evap_tropics`, and the closure check with its audit, whose
+    sums are global.
+  - **The strength of the check.** The start is `DecayingProfile`, which is
+    dry: `hus` is 0 everywhere at 0 h. At 6 h the domain holds 8.67e13 kg of
+    water, net, which is 0.170 kg m⁻² as a global mean column. The positive
+    part is 1.31e14 kg. `hus` peaks at 1.2e-3, and `hfls` at 73 W m⁻².
+    `clw`, `cli`, `husra`, `hussn` and `pr` are zero at every point and
+    output, and so are the 1M species in the state. The two ranks therefore
+    exchange tags that carry surface water through EDMF and the increment
+    correction. They do not exchange condensate or rain. The moist paths'
+    parity rests on the column checks.
+  - **The parent's negative water.** The untagged run has it too, so it is
+    the model's, not the tags'. The negative part of `ρq_tot`,
+    `∫max(-ρq_tot, 0) dV`, is 1.37 times the net water `∫ρq_tot dV` at
+    30 min and 0.52 at 6 h (`negative_water_relative`). Against the positive
+    part it is 0.58 and 0.34. The closure check sets `negative_water_void`.
+    Half the points hold no positive water (`nonpositive_fraction` 0.50), a
+    count that includes the dry ones. The tags start at `max(ρq_tot, 0)`, so
+    the partition's relative residual is 0.38 at 6 h (0.61 at 30 min) in the
+    default mode, and 0.37 (0.61) in the copies. That residual is reported,
+    not judged. It agrees between one rank and two to four digits. Whether the sphere's dry start belongs in criterion 11 is a
+    question for the owner.
+  - **One rank against two.** Every model field differs between the one-rank
+    and two-rank untagged runs from the first checkpoint. `ρ` differs at
+    every point by up to 1.3e-6 of its largest value at 30 min, and `ρq_tot`
+    by 0.17 at 6 h. The updraft's `ρa` and `u₃` differ by up to the same
+    order as their values. The tagged pairs show the same model-field
+    differences, and their tags differ too: `ρq_tag_tropics` by 0.35 at 6 h
+    in the default mode and by 0.70 in the copies. The cause is not isolated.
+    One candidate is the order of the sums at the ranks' boundary, grown by
+    the dynamics. This run does not test it. So parity holds within a rank
+    count, and the runs are not bit for bit across rank counts, with or
+    without tags.
+  - **The CI column checks.** Six test groups compare a tagged column with
+    its untagged twin bit for bit: `tagging_water_edmf`,
+    `tagging_water_edmf_copies`, `tagging_water_edmf_0m`,
+    `tagging_water_edmf_0m_explicit`, `tagging_water_increment` and
+    `tagging_water_increment_explicit` (design section 6). All twelve
+    `tagging_water*` groups passed on Julia 1.11 in main's CI at `d3c5e42f`
+    (run 37002540312). None runs on two ranks, and CI has no MPI job for the
+    tags.
+  - **What this does not show.** More than two ranks, a split inside a
+    cubed-sphere panel (12 elements per rank here, so the boundary may run
+    along panel edges), cloud, rain, snow, the rain and snow tags
+    (`water_tag_precipitation` is refused under EDMF), runs longer than 6 h,
+    and Float32.
+
+*Jobs `14125044` to `14125049`. Scores in `output/w59_mpi/` (`score.txt`,
+`state_*`, `netcdf_*`, `ranks_*`, `water_*`). `mpi_water.jl` was added after
+the pre-registration, at the coordinator's request. It is reported only.*
 
 ## 2. Energy source tags: closure by transport
 

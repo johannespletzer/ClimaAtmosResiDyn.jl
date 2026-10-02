@@ -1,0 +1,23 @@
+default_r2: state: PASS parity: 12 checkpoints, 228 field comparisons, 884736 values
+default_r2: netcdf: PASS, RESULT 54 fields compared, 54 bitwise identical over 13 outputs
+copies_r2: state: PASS parity: 12 checkpoints, 228 field comparisons, 884736 values
+copies_r2: netcdf: PASS, RESULT 54 fields compared, 54 bitwise identical over 13 outputs
+default_r1: state: PASS parity: 12 checkpoints, 228 field comparisons, 884736 values
+default_r1: netcdf: PASS, RESULT 54 fields compared, 54 bitwise identical over 13 outputs
+copies_r1: state: PASS parity: 12 checkpoints, 228 field comparisons, 884736 values
+copies_r1: netcdf: PASS, RESULT 54 fields compared, 54 bitwise identical over 13 outputs
+one rank against two, untagged: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-mpi/experiments/tag_closure/output/w59_mpi/ranks_untagged.txt
+one rank against two, default: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-mpi/experiments/tag_closure/output/w59_mpi/ranks_default.txt
+one rank against two, copies: /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-mpi/experiments/tag_closure/output/w59_mpi/ranks_copies.txt
+closure default_r1: 13 rows, largest |relative| 6.097e-01, largest |gross_relative| 6.697e-01
+closure default_r2: 13 rows, largest |relative| 6.097e-01, largest |gross_relative| 6.697e-01
+closure copies_r1: 13 rows, largest |relative| 6.050e-01, largest |gross_relative| 6.743e-01
+closure copies_r2: 13 rows, largest |relative| 6.050e-01, largest |gross_relative| 6.742e-01
+coverage hus: largest |value| at 0 h 0.000e+00, at the end 1.202e-03, over the run 1.202e-03
+coverage clw: largest |value| at 0 h 0.000e+00, at the end 0.000e+00, over the run 0.000e+00
+coverage cli: largest |value| at 0 h 0.000e+00, at the end 0.000e+00, over the run 0.000e+00
+coverage husra: largest |value| at 0 h 0.000e+00, at the end 0.000e+00, over the run 0.000e+00
+coverage hussn: largest |value| at 0 h 0.000e+00, at the end 0.000e+00, over the run 0.000e+00
+coverage pr: largest |value| at 0 h 0.000e+00, at the end 0.000e+00, over the run 0.000e+00
+coverage hfls: largest |value| at 0 h 6.382e+01, at the end 7.330e+01, over the run 7.330e+01
+W59 two-rank parity (judged): PASS

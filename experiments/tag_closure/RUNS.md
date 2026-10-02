@@ -621,6 +621,19 @@ in a finding.
 | `wp9_cost_b34d` | per arm | same, with `FAMILY=both` on D4                         | b34bbd8b | 2026-10-02 | `14121227`–`14121236`, `14122295` (rerun) | section 10: first block discarded; all points pass except `water_copies`, rerun as `_r2`; energy copies at 32 timed out at 8 h | W52, E88 | CSVs | yes     | no      |
 | `wp9_cost_d3c5` | per arm | `wp9_energy_d4_edmf`, `FAMILY=both`, `water`, `energy` | d3c5e42f | 2026-10-02 | `14125001`–`14125003`                     | section 11: the 8 + 8 point and its halves on D4; all 9 points pass                                                            | E88, W52 | CSVs | yes     | no      |
 
+### W59: criterion 3 on two MPI ranks (T2)
+
+Pre-registered in `design/MPI_PARITY.md` (`f519462a`). The model ran from the clean detached tree `../ClimaAtmosResiDyn-mpi-run` at `d3c5e42f`, and the driver (`run_tag_closure.jl`), configs and runscripts from `claude/rec-mpi`. The G2 sphere's physics at h_elem 2, Float64, 6 h, from a dry start. Each run also wrote 12 checkpoints (every 30 min), compared by `mpi_parity.jl`.
+
+| Run                   | Output | Config | Commit                     | Date       | Job        | Purpose                                       | Findings | Repo                                                            | Scratch        | Archive    |
+|:--------------------- |:------ |:------ |:-------------------------- |:---------- |:---------- |:--------------------------------------------- |:-------- |:--------------------------------------------------------------- |:-------------- |:---------- |
+| `w59_mpi_untagged_r2` | 0000   | same   | d3c5e42f (record f519462a) | 2026-10-02 | `14125044` | W59: 2 ranks, no tags; the twin               | W59      | `output/w59_mpi/` (scores, `runs/`: provenance, manifest, CSVs) | 54 nc, 12 hdf5 | not synced |
+| `w59_mpi_default_r2`  | 0000   | same   | d3c5e42f (record f519462a) | 2026-10-02 | `14125045` | W59: 2 ranks, default mode (increment chosen) | W59      | `output/w59_mpi/` (scores, `runs/`: provenance, manifest, CSVs) | 63 nc, 12 hdf5 | not synced |
+| `w59_mpi_copies_r2`   | 0000   | same   | d3c5e42f (record f519462a) | 2026-10-02 | `14125046` | W59: 2 ranks, the copies                      | W59      | `output/w59_mpi/` (scores, `runs/`: provenance, manifest, CSVs) | 64 nc, 12 hdf5 | not synced |
+| `w59_mpi_untagged_r1` | 0000   | same   | d3c5e42f (record f519462a) | 2026-10-02 | `14125047` | W59: 1 rank, no tags; reported only           | W59      | `output/w59_mpi/` (scores, `runs/`: provenance, manifest, CSVs) | 54 nc, 12 hdf5 | not synced |
+| `w59_mpi_default_r1`  | 0000   | same   | d3c5e42f (record f519462a) | 2026-10-02 | `14125048` | W59: 1 rank, default mode; reported only      | W59      | `output/w59_mpi/` (scores, `runs/`: provenance, manifest, CSVs) | 63 nc, 12 hdf5 | not synced |
+| `w59_mpi_copies_r1`   | 0000   | same   | d3c5e42f (record f519462a) | 2026-10-02 | `14125049` | W59: 1 rank, the copies; reported only        | W59      | `output/w59_mpi/` (scores, `runs/`: provenance, manifest, CSVs) | 64 nc, 12 hdf5 | not synced |
+
 ### Analysis outputs, not model runs
 
 | Run                       | Output | Config | Commit   | Date | Job | Purpose                                                                                                                           | Findings       | Repo | Scratch  | Archive  |

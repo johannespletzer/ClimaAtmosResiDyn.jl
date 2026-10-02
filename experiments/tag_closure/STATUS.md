@@ -76,6 +76,17 @@ not checked, it says so.
 
 ## Where things stand
 
+  - **Update, 2026-10-02: W59, criterion 3 on two MPI ranks.** On the G2
+    sphere's physics at h_elem 2 for 6 h, the tagged runs are bit for bit
+    their untagged twin on two ranks, in both modes (0 of 884,736 state
+    values and 0 of 54 diagnostics differ). The start is dry, so by 6 h only
+    0.17 kg m⁻² of surface water is in, with no cloud or rain. So the check
+    covers the MPI paths, not the moist physics on two ranks. One rank and
+    two differ in every model field from 30 min, with or without tags. The
+    parent's negative water is 0.52 of its net water (0.34 of its positive
+    water) at 6 h. Criterion 3 is met for the MPI paths, pending the Opus
+    review of W59.
+
   - **Update, 2026-10-02: option D accepted.** D4-W has no eligible comparator
     at production cost (W54, PX5). Criteria 5 and 6 are not judged on D4-W.
     Per-tag accuracy moves to TRMM 0M (after PX12) and the Soares air twin

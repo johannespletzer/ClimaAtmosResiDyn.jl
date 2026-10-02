@@ -1,0 +1,66 @@
+{
+  "branch": "claude/rec-mpi",
+  "buildkite_files": {
+    "LocalPreferences.toml": null,
+    "Manifest-v1.11.toml": "d9653513f0038dddacb701ff096df93e1d2a811d87b6a5e3cb24a878560a2ed9",
+    "Project.toml": "ee8cf81147f2b886dead56c62013acde26222d9230030aa70fe4fdd2d76768b7"
+  },
+  "command": "env CONFIG=/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-mpi/experiments/tag_closure/configs/w59_mpi_copies_r1.yml DRIVER=/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-mpi/experiments/tag_closure/run_tag_closure.jl MANIFEST_PATH=/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/manifests/w59_mpi_copies_r1.20261002T120738Z.json sbatch --account=pn49go-c --partition=hpda2_compute --ntasks=1 --cpus-per-task=1 --time=10:00:00 --mem=48G --job-name=w59_mpi_copies_r1 --output=/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/logs/w59_mpi/%x-%j.out --error=/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/logs/w59_mpi/%x-%j.err /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-mpi/experiments/tag_closure/runscripts/phase_c.sh",
+  "config": {
+    "path": "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-mpi/experiments/tag_closure/configs/w59_mpi_copies_r1.yml",
+    "sha256": "8dbf1bd7b997098cfeee66db7bb8071aa4912959bc0e374ca68c728cd0f35b6d"
+  },
+  "config_paths": [
+    {
+      "exists": true,
+      "key": "toml",
+      "mtime": "2026-10-02T11:47:34.705119+00:00",
+      "raw": "toml/prognostic_edmfx_1M.toml",
+      "resolved": "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-mpi/toml/prognostic_edmfx_1M.toml",
+      "sha256": "39d236b27c8c0a147b28f9f4b03400fc22cacf3f5fd1a8e490b83ea70d93163a",
+      "size": 717
+    }
+  ],
+  "diff": "",
+  "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "driver": {
+    "path": "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-mpi/experiments/tag_closure/run_tag_closure.jl",
+    "sha256": "e0d6c169e45b7e23afda420a65a60ad2e6e775553263c2a3e9740ed120e2726c"
+  },
+  "env_vars": {
+    "CLIMACOMMS_CONTEXT": null,
+    "CLIMACOMMS_DEVICE": null,
+    "JULIA_CPU_TARGET": null,
+    "JULIA_DEPOT_PATH": null,
+    "JULIA_NUM_THREADS": null,
+    "MKL_NUM_THREADS": null,
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": null
+  },
+  "extra": [],
+  "head_on_remote": [
+    "refs/remotes/origin/claude/rec-mpi"
+  ],
+  "head_sha": "f519462a608eafdf05a2f0400c5c31669b135039",
+  "hostname": "dlr-login",
+  "julia_binary": "/dss/dsshome1/0D/di38kez/.juliaup/bin/julia",
+  "julia_channel": "+1.11",
+  "julia_depot_path": "",
+  "julia_version": "julia version 1.11.9",
+  "loaded_modules": [
+    "tempdir/2.0",
+    "stack/24.4.0",
+    "dsstools/1.0",
+    "lrz_setup/1.0",
+    "python/3.12"
+  ],
+  "manifest_tool_sha256": "32a1a595c4004e5fe58e484c76599d263ba494ef563db33fdc7fdb45d75cb440",
+  "repo": "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-mpi",
+  "status_lines": [],
+  "untracked": {
+    "count": 0,
+    "files": [],
+    "sha256": null
+  },
+  "utc_time": "2026-10-02T12:07:40.375927+00:00"
+}
