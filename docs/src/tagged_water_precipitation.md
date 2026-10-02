@@ -81,9 +81,18 @@ with it, and one written without it only without it.
     sedimentation, and the advection, which can take a compartment below zero
     on a sphere. The closing step changes the tags' totals. Its own ledger,
     `q_tag_led_close`, takes what it moves, beside each tag's
-    `q_tag_fix_<name>`. So `q_rtag_res` and `q_stag_res` stay at rounding
-    after each constrained state, and the closing step's work shows in that
-    ledger instead. A compartment at zero empties its parts exactly.
+    `q_tag_fix_<name>`. A compartment at zero empties its parts exactly.
+    Closure needs a composition to give: parts of the compartment, or
+    non-precipitating parts, that hold water. Where neither does, the step
+    moves nothing, and the difference stays in `q_rtag_res` or `q_stag_res`.
+    Elsewhere those residuals stay at rounding after each constrained state,
+    and the closing step's work shows in its ledger instead. A closed
+    compartment is not a correct attribution. The closing step gives the
+    missing water the composition it finds in the cell, not that of the
+    transfer that left the parts short. Each tag's error is at most the
+    water the step moves, so `q_tag_led_close` bounds it. In a cell whose rain
+    came from one tag and whose missing rain came from the other, the step
+    gives all of the missing rain to the first.
   - **Repair.** The partition repair runs on each compartment's parts, among
     themselves.
   - **Vapour nonnegativity tendency.** When it is configured, it lifts negative
@@ -94,8 +103,11 @@ The hyperdiffusion takes each non-precipitating part as a passive tracer, on
 ``\rho q_{\mathrm{tag},i}/\rho``, and gives it its share ``\varphi_i`` of the
 reference profile's term, ``\varphi_i \nu_4 \nabla\cdot(\rho \nabla\nabla^2 q_\mathrm{tot,r})``
 ([`ClimaAtmos.apply_water_tag_hyperdiffusion!`](@ref)). The parent
-hyperdiffuses ``q_\mathrm{tot,eff} - q_\mathrm{tot,r}``, so the partition's
-parts sum to its tendency. The share stays outside the operator. Inside it, a
+hyperdiffuses ``q_\mathrm{tot,eff} - q_\mathrm{tot,r}``, so where the
+partition's non-precipitating parts sum to their compartment, they sum to its
+tendency. Where they do not, the parent also hyperdiffuses the residual
+`q_ntag_res` and the tags do not, so the sums differ by that residual's
+hyperdiffusion. The share stays outside the operator. Inside it, a
 tag's composition would mix against its gradient wherever
 ``q_\mathrm{tot,eff}`` is below ``q_\mathrm{tot,r}``. ``q_\mathrm{tot,r}`` is
 zero above the 250 hPa level, so that happens below it, in air drier than the

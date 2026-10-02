@@ -1755,6 +1755,82 @@ end
     end
 end
 
+# What the closing step attributes, against the composition of the transfer
+# that left the parts short (the owner's review of #146, point 1). The closing
+# step knows only the compartment's total. It gives the missing water the
+# composition of the parts it adds to, or, where they hold none, that of the
+# non-precipitating parts. Where the missing water came from elsewhere, that
+# is wrong for provenance, although the compartment closes. The error of each
+# tag is `rest · (φ_close - ψ_donor)`, so it is at most the closing step's own
+# ledger, `q_tag_led_close`, per cell. One cell, two origins: the region tags
+# `low` (A) and `high` (B) hold different shares of the non-precipitating water
+# (0.7 and 0.3), of rain and of snow (0.2 and 0.8). The source tag holds a
+# little non-precipitating water and nothing else.
+@testset "The closing step's attribution in a two-origin cell" begin
+    for FT in (Float32, Float64)
+        near(a, b, scale) = abs(a - b) <= 64 * eps(FT) * scale
+        (N, S, R₀, ΔR) = (1e-3, 1e-4, 2e-4, 1e-4)
+        S_parts = (0.2 * S, 0.8 * S, 0)
+        N_parts = (0.7 * N, 0.3 * N, 0.05 * N)
+        # Each case: the rain parts before, the missing rain and its donor
+        # composition (A's share), and the error the rule makes, as A's share
+        # of the missing rain under the closing rule less the donor's.
+        cases = (
+            # 1. Rain from A, missing rain from B, as falling into the cell
+            # from above. The closing step gives it all to A.
+            (label = "rain from A, missing rain from B",
+                R = (R₀, 0, 0), R_total = R₀ + ΔR, donor_A = 0.0, close_A = 1.0),
+            # 2. No rain parts, missing rain from B. The closing step takes
+            # `N`'s composition, 0.7 to A.
+            (label = "no rain parts, missing rain from B",
+                R = (0, 0, 0), R_total = ΔR, donor_A = 0.0, close_A = 0.7),
+            # 3. No rain parts, missing rain formed from the cell's own
+            # non-precipitating water, as in micro-1 under #137's rule. The
+            # closing step's composition is the donor's, so it is exact.
+            (label = "no rain parts, missing rain from the cell's N",
+                R = (0, 0, 0), R_total = ΔR, donor_A = 0.7, close_A = 0.7),
+        )
+        for case in cases
+            ρq_tot = N + case.R_total + S
+            (; Y, p, model) =
+                one_cell_setup(FT, (ρq_tot, case.R_total, S), N_parts, case.R, S_parts)
+            ᶜY = Y.c
+            totals = map(name -> tag_total(ᶜY, name)[1], (:low, :high, :evap))
+            CA._follow_water_tag_precipitation!(Y, p, model)
+            rest = FT(case.R_total - sum(case.R))
+            # The compartment closes, and the closing step's ledger holds the
+            # missing rain.
+            @test near(partition_sum(ᶜY, :ρq_rtag_)[1], FT(case.R_total), FT(case.R_total))
+            @test near(ᶜY.q_tag_led_close[1], rest, rest)
+            # The donor's attribution, written out: each tag's rain part takes
+            # the missing rain by the donor's composition.
+            donor_rain_A = FT(case.R[1] + case.donor_A * rest)
+            close_rain_A = ᶜY.ρq_rtag_low[1]
+            error_A = close_rain_A - donor_rain_A
+            @test near(error_A, FT(case.close_A - case.donor_A) * rest, rest)
+            # Bounded by the closing step's ledger.
+            @test abs(error_A) <= abs(ᶜY.q_tag_led_close[1]) * (1 + 64 * eps(FT))
+            # B takes the opposite error, so the partition's total is right.
+            close_rain_B = ᶜY.ρq_rtag_high[1]
+            donor_rain_B = FT(case.R[2] + (1 - case.donor_A) * rest)
+            @test near(close_rain_B - donor_rain_B, -error_A, rest)
+            # Per-tag inventories and the surface precipitation fraction. At
+            # the lowest level a tag's share of the rain's flux is its share
+            # of the rain, since the parts fall with rain's own velocity.
+            inventory_A = tag_total(ᶜY, :low)[1]
+            inventory_error_A = error_A / (inventory_A - error_A)
+            rain_fraction_error_A = error_A / FT(case.R_total)
+            @test near(inventory_A - totals[1], close_rain_A - case.R[1], rest)
+            @test tag_total(ᶜY, :evap)[1] == totals[3]
+            @info "The closing step's attribution error" FT case.label error_A rain_fraction_error_A inventory_error_A q_tag_led_close =
+                ᶜY.q_tag_led_close[1]
+            if case.donor_A == case.close_A
+                @test abs(error_A) <= 64 * eps(FT) * rest
+            end
+        end
+    end
+end
+
 # The audit's own key: off, the microphysics leaves the audit's fields out of
 # the state and does not compute them. Every part moves as with the audit on,
 # bit for bit.
