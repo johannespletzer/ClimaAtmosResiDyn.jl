@@ -76,6 +76,14 @@ not checked, it says so.
 
 ## Where things stand
 
+  - **Update, 2026-10-02: W59's moist pair (addendum, draft).** The owner
+    asked to close W59's dry-start bound. From the moist baroclinic wave
+    with EDMF, on a flat sphere at h_elem 2, cloud, rain, snow and surface
+    precipitation are present at every output after 0 h. The tagged runs
+    are bit for bit their twin on two ranks in both modes (0 of 884,736
+    state values, 0 of 54 diagnostics). Criterion 3 is met without the
+    bound, pending the Opus review of the addendum.
+
   - **Update, 2026-10-02: W59, criterion 3 on two MPI ranks.** On the G2
     sphere's physics at h_elem 2 for 6 h, the tagged runs are bit for bit
     their untagged twin on two ranks, in both modes (0 of 884,736 state

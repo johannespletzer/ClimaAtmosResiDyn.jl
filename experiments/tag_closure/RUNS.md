@@ -646,6 +646,19 @@ Pre-registered in `design/F32_TWIN.md` (`211fedc1`, the check noted in `abe8f9ed
 | `f32_d4w_copies_z60_c`      | 0000   | same         | d3c5e42f (record abe8f9ed) | 2026-10-02 | `14125570` | V-W7: D4-W a day in Float32, the copies; 52 min                                              | W60               | `output/f32/` (scores, `data/`) | 68 nc                              | not synced |
 | `f32_d4w_default_z60_c_f64` | 0000   | same         | d3c5e42f (record abe8f9ed) | 2026-10-02 | `14125571` | V-W7 P0: `g3b_d4w_default_z60_c` rerun in Float64 on `d3c5e42f`, bit for bit with it; 22 min | W60               | `output/f32/data/`              | 72 nc                              | not synced |
 
+### W59 addendum: the moist two-rank pair
+
+Pre-registered in `design/MPI_PARITY.md`, section 7 (`6ca86aa7`). As W59, with the start `MoistBaroclinicWaveWithEDMF` and no topography. Model `d3c5e42f` from `../ClimaAtmosResiDyn-mpi-run`.
+
+| Run                    | Output | Config | Commit                     | Date       | Job        | Purpose                                                       | Findings | Repo                                                             | Scratch        | Archive    |
+|:---------------------- |:------ |:------ |:-------------------------- |:---------- |:---------- |:------------------------------------------------------------- |:-------- |:---------------------------------------------------------------- |:-------------- |:---------- |
+| `w59m_mpi_untagged_r2` | 0000   | same   | d3c5e42f (record 6ca86aa7) | 2026-10-02 | `14126715` | W59 addendum, moist: 2 ranks, no tags; the twin               | W59      | `output/w59m_mpi/` (scores, `runs/`: provenance, manifest, CSVs) | 54 nc, 12 hdf5 | not synced |
+| `w59m_mpi_default_r2`  | 0000   | same   | d3c5e42f (record 6ca86aa7) | 2026-10-02 | `14126716` | W59 addendum, moist: 2 ranks, default mode (increment chosen) | W59      | `output/w59m_mpi/` (scores, `runs/`: provenance, manifest, CSVs) | 63 nc, 12 hdf5 | not synced |
+| `w59m_mpi_copies_r2`   | 0000   | same   | d3c5e42f (record 6ca86aa7) | 2026-10-02 | `14126717` | W59 addendum, moist: 2 ranks, the copies                      | W59      | `output/w59m_mpi/` (scores, `runs/`: provenance, manifest, CSVs) | 64 nc, 12 hdf5 | not synced |
+| `w59m_mpi_untagged_r1` | 0000   | same   | d3c5e42f (record 6ca86aa7) | 2026-10-02 | `14126718` | W59 addendum, moist: 1 rank, no tags; reported only           | W59      | `output/w59m_mpi/` (scores, `runs/`: provenance, manifest, CSVs) | 54 nc, 12 hdf5 | not synced |
+| `w59m_mpi_default_r1`  | 0000   | same   | d3c5e42f (record 6ca86aa7) | 2026-10-02 | `14126719` | W59 addendum, moist: 1 rank, default mode; reported only      | W59      | `output/w59m_mpi/` (scores, `runs/`: provenance, manifest, CSVs) | 63 nc, 12 hdf5 | not synced |
+| `w59m_mpi_copies_r1`   | 0000   | same   | d3c5e42f (record 6ca86aa7) | 2026-10-02 | `14126720` | W59 addendum, moist: 1 rank, the copies; reported only        | W59      | `output/w59m_mpi/` (scores, `runs/`: provenance, manifest, CSVs) | 64 nc, 12 hdf5 | not synced |
+
 ### Analysis outputs, not model runs
 
 | Run                       | Output | Config | Commit   | Date | Job | Purpose                                                                                                                           | Findings       | Repo | Scratch  | Archive  |
