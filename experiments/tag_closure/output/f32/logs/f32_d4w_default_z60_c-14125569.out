@@ -1,0 +1,35 @@
+================================================================
+ClimaAtmos tag-closure run
+================================================================
+Run (job_id):    f32_d4w_default_z60_c
+Machine:         terrabyte
+Configuration:   /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-f32/experiments/tag_closure/configs/f32_d4w_default_z60_c.yml
+SLURM job:       14125569
+Partition:       hpda2_compute
+Nodes:           hpdar03c04s11
+CPUs per task:   2
+Tasks:           1
+Launch:          (direct)
+Repository:      /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-f32
+Commit:          abe8f9edb571f2c0b8a0c8ab7c0bfd922009d4cb (from git-files)
+Model commit:    d3c5e42f54515729f53216ae6b8ba268bea8262f (/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-f32-run)
+Julia:           /dss/dsshome1/0D/di38kez/.juliaup/bin/julia +1.11
+Project:         /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-f32-run/.buildkite
+Driver:          /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-f32/experiments/tag_closure/analysis/water/d4w_driver.jl
+Depot:           /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+Run directory:   /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure
+Output base:     /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/f32_d4w_default_z60_c
+Start time:      2026-10-02T15:40:43+02:00
+
+Loaded modules:
+Currently Loaded Modulefiles:
+ 1) stack/24.4.0{arch=auto}(default) <aL>   3) gcc/13.2.0(default)           
+ 2) python/3.12                             4) openmpi/4.1.8-gcc13(default)  
+
+Key:
+{variant=value}  (symbolic-version)  <module-tag>  <aL>=auto-loaded  
+
+
+Wrote /dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/f32_d4w_default_z60_c/output_0000/provenance.txt
+Driver exit status: 0
+End time:           2026-10-02T16:10:25+02:00

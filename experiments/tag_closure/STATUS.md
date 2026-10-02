@@ -76,6 +76,16 @@ not checked, it says so.
 
 ## Where things stand
 
+  - **Update, 2026-10-02: V-W7, the Float32 twin (W60, draft).** D4-W in
+    Float32 on `main` `d3c5e42f` (`design/F32_TWIN.md`). Both modes are bit
+    for bit the Float32 twin. Each judged criterion-4 measure is at most 1.21
+    times its Float64 value (the default's second 12 h), against criterion
+    9's 10. So criterion 9 passes on what was measured. The default's
+    residual is 85 and 8.1 times Float64's at 1 h and 2 h, which no rule
+    judges. The copies' repair still fails criterion 4's own row (3.29e-3 a
+    day). The named parts were not assessed. P0 shows W54's and W55's runs
+    reproduce bit for bit on `d3c5e42f`.
+
   - **Update, 2026-10-02: option D accepted.** D4-W has no eligible comparator
     at production cost (W54, PX5). Criteria 5 and 6 are not judged on D4-W.
     Per-tag accuracy moves to TRMM 0M (after PX12) and the Soares air twin

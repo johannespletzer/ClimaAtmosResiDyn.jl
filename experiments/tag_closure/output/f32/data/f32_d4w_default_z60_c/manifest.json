@@ -1,0 +1,66 @@
+{
+  "branch": "claude/rec-f32",
+  "buildkite_files": {
+    "LocalPreferences.toml": null,
+    "Manifest-v1.11.toml": "d9653513f0038dddacb701ff096df93e1d2a811d87b6a5e3cb24a878560a2ed9",
+    "Project.toml": "ee8cf81147f2b886dead56c62013acde26222d9230030aa70fe4fdd2d76768b7"
+  },
+  "command": "env CONFIG=/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-f32/experiments/tag_closure/configs/f32_d4w_default_z60_c.yml DRIVER=/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-f32/experiments/tag_closure/analysis/water/d4w_driver.jl MANIFEST_PATH=/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/manifests/f32_d4w_default_z60_c.20261002T134039Z.json sbatch --account=pn49go-c --partition=hpda2_compute --time=06:00:00 --cpus-per-task=2 --mem=48G --job-name=f32_d4w_default_z60_c --output=/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/logs/f32/%x-%j.out --error=/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/logs/f32/%x-%j.err /dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-f32/experiments/tag_closure/runscripts/phase_c.sh",
+  "config": {
+    "path": "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-f32/experiments/tag_closure/configs/f32_d4w_default_z60_c.yml",
+    "sha256": "0b677835102a4106ccbed0a91a2356d04af11903e39751b530c537a9df4b75e8"
+  },
+  "config_paths": [
+    {
+      "exists": true,
+      "key": "toml",
+      "mtime": "2026-10-02T11:47:36.351219+00:00",
+      "raw": "toml/prognostic_edmfx_1M.toml",
+      "resolved": "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-f32/toml/prognostic_edmfx_1M.toml",
+      "sha256": "39d236b27c8c0a147b28f9f4b03400fc22cacf3f5fd1a8e490b83ea70d93163a",
+      "size": 717
+    }
+  ],
+  "diff": "",
+  "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "driver": {
+    "path": "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-f32/experiments/tag_closure/analysis/water/d4w_driver.jl",
+    "sha256": "6ba6f0e9fac0a1592625e31df2c0789c03412f46c7d8442d0cdc4f680289f0bb"
+  },
+  "env_vars": {
+    "CLIMACOMMS_CONTEXT": null,
+    "CLIMACOMMS_DEVICE": null,
+    "JULIA_CPU_TARGET": null,
+    "JULIA_DEPOT_PATH": null,
+    "JULIA_NUM_THREADS": null,
+    "MKL_NUM_THREADS": null,
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": null
+  },
+  "extra": [],
+  "head_on_remote": [
+    "refs/remotes/origin/claude/rec-f32"
+  ],
+  "head_sha": "abe8f9edb571f2c0b8a0c8ab7c0bfd922009d4cb",
+  "hostname": "dlr-login",
+  "julia_binary": "/dss/dsshome1/0D/di38kez/.juliaup/bin/julia",
+  "julia_channel": "+1.11",
+  "julia_depot_path": "",
+  "julia_version": "julia version 1.11.9",
+  "loaded_modules": [
+    "tempdir/2.0",
+    "stack/24.4.0",
+    "dsstools/1.0",
+    "lrz_setup/1.0",
+    "python/3.12"
+  ],
+  "manifest_tool_sha256": "32a1a595c4004e5fe58e484c76599d263ba494ef563db33fdc7fdb45d75cb440",
+  "repo": "/dss/dsshome1/0D/di38kez/git/Clima/ClimaAtmosResiDyn-rec-f32",
+  "status_lines": [],
+  "untracked": {
+    "count": 0,
+    "files": [],
+    "sha256": null
+  },
+  "utc_time": "2026-10-02T13:40:40.756110+00:00"
+}
