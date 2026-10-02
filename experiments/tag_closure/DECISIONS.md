@@ -271,6 +271,13 @@ option on all five. The brief was
         registry row.
       + The PR also checks whether #137's Q5 rule already covers micro-1 in
         the microphysics hook.
+  - **Option D for D4-W, accepted later on 2026-10-02.** **In force.** After
+    W54, the owner accepted D. D4-W has no eligible comparator at production
+    cost, and criteria 5 and 6 are not judged on D4-W
+    ([G3_PLAN.md](G3_PLAN.md), the note under the criteria). Per-tag accuracy
+    moves to TRMM 0M (after PX12) and the Soares air twin (PX11). B (PX12)
+    still runs. The brief had tied D to a per-step cause, which was the
+    reverse of PX5's rule (G3_TODO, corrected 2026-10-02).
   - **W50's copies repair: C, then B.** **In force.**
       + C: rerun W50's 60-level copies day and its twin on post-#139 `main`
         (two jobs). Score PX5's rule on it.

@@ -76,6 +76,11 @@ not checked, it says so.
 
 ## Where things stand
 
+  - **Update, 2026-10-02: option D accepted.** D4-W has no eligible comparator
+    at production cost (W54, PX5). Criteria 5 and 6 are not judged on D4-W.
+    Per-tag accuracy moves to TRMM 0M (after PX12) and the Soares air twin
+    (PX11). See DECISIONS and the note under G3_PLAN's criteria.
+
   - **Update, 2026-10-02: the G3 baselines on the new physics, and W53.**
     Five findings rerun the baselines at `b34bbd8b`. Each names the old one it
     updates.

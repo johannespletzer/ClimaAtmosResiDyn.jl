@@ -289,9 +289,9 @@ Restated 2026-09-30 from the findings; the plan's section 2 holds the criteria's
             cause leaves routes to a D4-W comparator (a copies-only draft PR,
             or the air twin with PX17). No per-step cause means PX5 records
             "no eligible D4-like comparator at production cost", which is
-            option D's declaration. W54 found no per-step cause. Whether to
-            adopt D, and so restate criteria 5 and 6 for D4-W, is the owner's
-            decision.
+            option D's declaration. W54 found no per-step cause. *The owner
+            accepted D on 2026-10-02:* criteria 5 and 6 are not judged on
+            D4-W (G3_PLAN, the note under the criteria).
   - [x] **The prognostic fields of the rain and snow tags**, settled in the
     design note WP4b-D and its review. *Decided 2026-09-25:* the three parts;
     `ρq_tag_<name>` holds the non-precipitating water, beside `ρq_rtag_<name>`

@@ -2449,9 +2449,8 @@ W21's repair, and R5 in G3_PLAN section 10. Pre-registered in
     comes next. PX5 records no eligible D4-like comparator at production
     cost. That is option D's declaration. The brief tied D to a per-step
     cause, which is the reverse of PX5's rule; G3_TODO carries the
-    correction (2026-10-02). Whether to restate criteria 5 and 6 for D4-W is
-    the owner's decision. Until then, D4-W's provenance at 60 levels stays
-    not assessable (R7, W55).
+    correction (2026-10-02). The owner accepted D on 2026-10-02, so criteria 5
+    and 6 are not judged on D4-W (G3_PLAN).
   - **What this does not show.** Why the repair is 0.4% a day. One uniform
     column at 60 levels, one Newton iteration, one day. The modes are compared
     with each other, not with an independent reference (PX13).
