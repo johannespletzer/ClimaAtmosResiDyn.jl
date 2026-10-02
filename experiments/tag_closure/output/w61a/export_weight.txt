@@ -1,0 +1,3 @@
+# analysis/water/w61a_export_weight.jl in wp4bfix_t1_ci111_env (81884d5b), login node, 2026-10-03
+deep_atmosphere = false: J(face) / J(horizontal) in (500.00000000028126, 500.0000000002814); sum on the face level / sum on the horizontal space = 250.00000000014091; z of the first centre in (250.00000000014066, 250.00000000014066); horizontal area 5.101008984010495e14
+deep_atmosphere = true: J(face) / J(horizontal) in (500.00000000028126, 500.0000000002814); sum on the face level / sum on the horizontal space = 250.00000000014091; z of the first centre in (250.00000000014066, 250.00000000014066); horizontal area 5.101008984010495e14

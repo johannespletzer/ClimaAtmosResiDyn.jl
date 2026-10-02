@@ -1,0 +1,6 @@
+commit: 81884d5b5; label passive; env /dss/dsstbyfs02/scratch/0D/di38kez/claude_work/wp4bfix_t1_ci111_env; host: hpdar03c04s11; start: 2026-10-02T22:07:22+02:00
+Precompiling ClimaAtmos...
+    ClimaAtmos Being precompiled by another process (pid: 64055, pidfile: /dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu/compiled/v1.11/ClimaAtmos/4EXdy_nHqaE.ji.pidfile)
+  85397.8 ms  ✓ ClimaAtmos
+  1 dependency successfully precompiled in 104 seconds. 292 already precompiled.
+ERROR: LoadError: Concrete type of result could not be inferred:
