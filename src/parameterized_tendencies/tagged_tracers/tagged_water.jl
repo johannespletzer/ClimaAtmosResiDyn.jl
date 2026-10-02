@@ -1251,12 +1251,14 @@ from the tracer limiters by [`is_tagged_tracer_name`](@ref).
     transport operators disagree", which `q_tag_res` alone would conflate.
   - Under `water_tag_precipitation: true` a correction can also change `ρq_rai`
     and `ρq_sno`. Their changes since
-    [`snapshot_water_tag_precipitation!`](@ref) move first, each between the
-    tags' rain or snow parts and their non-precipitating parts
+    [`snapshot_water_tag_precipitation!`](@ref) move between the tags' rain or
+    snow parts and their non-precipitating parts
     ([`water_tag_part_follow_shift`](@ref)). Where a compartment is negative
     before or after, the non-precipitating parts then also take the rest of
-    their compartment's change of target. Then they take the change of `ρq_tot`
-    on their own compartment `ρq_tot - ρq_rai - ρq_sno`.
+    their compartment's change of target. The non-precipitating parts take the
+    change of `ρq_tot` on their own compartment `ρq_tot - ρq_rai - ρq_sno`.
+    The changes that raise that compartment go first, and those that lower it
+    last, so it does not pass zero in between.
 """
 rescale_water_tags!(Y, p, ᶜρq_tot_before) =
     _rescale_water_tags!(Y, p, ᶜρq_tot_before, p.atmos.water_tagging_model)
