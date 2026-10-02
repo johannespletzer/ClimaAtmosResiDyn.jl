@@ -308,8 +308,9 @@ none.
 
 It does not run the copies at ten iterations, or read the rain and snow tags,
 which are refused under EDMF until WP4b's stage 2 (T3). It decides no cause.
-Finding: an addendum to W60. *Renumbered before scoring, 2026-10-02: W61
-went to WP4b's transport-1 measurement.*
+Finding: an addendum to W60. *Renumbered after the runs, in the finding's
+commit `e593ff3e`: W61 went to WP4b's transport-1 measurement. Only the
+finding's name changed, here and in 9.5.*
 
 *The check's result, 2026-10-02, before runs 5 and 6.* Job `14126446` (1 h
 1 min) passed. Both runs exited 0 and wrote `q_tag_res`, `q_tag_inc_left` and

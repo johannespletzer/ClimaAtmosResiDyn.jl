@@ -91,11 +91,15 @@ not checked, it says so.
     iteration and 3.8e-13 with ten, so criterion 4's named-parts clause
     passes (1e-6). Criterion 4 stays partial on the copies' repair and the
     rain and snow tags. In Float32 ten iterations leave 3.2e-6 and a
-    residual of 3.9e-6, about a million times Float64's, so criterion 9
-    fails on the named parts at ten iterations. With one iteration they are
-    within 10 times (9.1 at most). Whether criterion 9 needs a rounding
-    floor is the owner's question. The rain and snow tags' Float32 closure
-    waits for T3's stage 2.
+    residual of 3.9e-6, 8.5 and 1.8 million times Float64's, so criterion 9
+    fails on the named parts at ten iterations. Those Float32 values sit at
+    Float32's accumulated rounding, about eps·√n (3.2e-6 at 24 h), and the
+    10× limits lie below the Float32 partition's 1.7e-8 at 0 h. So the
+    failure cannot tell a defect from rounding. With one iteration they are
+    within 10 times at 24 h (9.1 at most, at the same rounding level; 14.5
+    at 12 h, not judged). Whether criterion 9 needs a rounding floor is the
+    owner's question; the review proposes one for future designs. The rain
+    and snow tags' Float32 closure waits for T3's stage 2.
 
   - **Update, 2026-10-02: V-W7, the Float32 twin (W60, reviewed).** D4-W in
     Float32 on `main` `d3c5e42f` (`design/F32_TWIN.md`). Both modes are bit

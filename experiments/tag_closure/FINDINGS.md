@@ -2784,8 +2784,12 @@ skips. In P0, 12 files differ only in their `comments` attribute, text that
 one Newton iteration and 3.8e-13 with ten, so criterion 4's named-parts
 clause passes (1e-6). Criterion 9 fails on the named parts at ten
 iterations: there Float32 leaves 3.2e-6 against 3.8e-13, about 8.5 million
-times, and its residual 3.9e-6 against 2.1e-12. With one iteration every
-named-part measure is within 10 times, the least margin `N` at 9.1 times.**
+times, and its residual 3.9e-6 against 2.1e-12. These Float32 values sit at
+Float32's accumulated rounding, about eps·√n (3.2e-6 at 24 h), and the 10×
+limits lie below the Float32 partition's rounding at 0 h. So this failure
+cannot tell a defect from rounding. With one iteration every named-part
+measure is within 10 times at 24 h, the least margin `N` at 9.1 times, and
+Float32's `N` sits at the same rounding level.**
 *Draft, for the Opus review.* Pre-registered in section 9 (`2f8a2287`; the
 check and a 12 h cap noted in `a423c8b6`) before runs 5 and 6. The parts:
 `q_tag_inc_left` is the one-iteration part; what they leave is
@@ -2795,41 +2799,81 @@ by the follower and only reported, and the water has no loss rule
 
 | rule (24 h, of the water)         | 1 iteration: Float64, Float32 (ratio) | 10 iterations: Float64, Float32 (ratio) | verdict                   |
 |:--------------------------------- |:------------------------------------- |:--------------------------------------- |:------------------------- |
-| C4 `N` in Float64, against 1e-6   | 4.1e-7                                | 3.8e-13                                 | *pass* at both            |
+| C4 `N` in Float64, against 1e-6   | 4.1e-7 (read before registration)     | 3.8e-13                                 | *pass* at both            |
 | C9 the residual `G`               | 6.49e-6, 7.73e-6 (1.19×)              | 2.1e-12, 3.88e-6 (1.8e6×)               | *pass* at 1, *fail* at 10 |
 | C9 the one-iteration part `P_inc` | 6.87e-6, 8.23e-6 (1.20×)              | 2.5e-12, 4.35e-6 (1.7e6×)               | *pass* at 1, *fail* at 10 |
 | C9 what the parts leave `N`       | 4.07e-7, 3.71e-6 (9.1×)               | 3.8e-13, 3.21e-6 (8.5e6×)               | *pass* at 1, *fail* at 10 |
 
-  - **Criterion 4 in Float64.** The one-iteration reading was known before
-    the jobs, from the smoke run on W55's run (section 9.3). Ten iterations
-    take the residual from 6.5e-6 to 2.1e-12 and `q_tag_inc_left` with it,
-    so the one-iteration part is the residual's main part, as W24 found on
-    the old physics (5.6e-10 there).
-  - **Float32 does not converge with the iterations.** Ten iterations take
-    its residual only from 7.7e-6 to 3.9e-6, and `q_tag_inc_left` stays at
+  - **Criterion 4 in Float64.** The one-iteration reading is not a blind
+    test. The smoke run on W55's run read it before section 9 was pushed
+    (section 9.3), and the leak's size was read then too. The definition of
+    `N`, without the leak, rests on W40 and the follower's design, not on
+    that value. The ten-iteration reading is blind. Ten iterations take the
+    residual from 6.5e-6 to 2.1e-12 and `q_tag_inc_left` with it, so the
+    one-iteration part is the residual's main part, as W24 found on the old
+    physics (5.6e-10 there).
+  - **Float32 stops at its rounding level.** Ten iterations take its
+    residual from 7.7e-6 to 3.9e-6 and `q_tag_inc_left` from 8.2e-6 to
     4.3e-6. Both are 220 to 250 times the 1.7e-8 the Float32 partition
-    starts with, so this is not the initial rounding alone. Section 9.5
-    expected a failure of this kind at ten iterations. Which part of the
-    Float32 solve leaves it (the increment's rounding, the Newton update or
-    the tags' own solve) is not separated.
+    starts with. That is one rounding of the partition, and rounding adds up
+    over the steps. So the review reads each Float32 value against
+    eps·√n, with eps = 1.19e-7 and n the steps (30 an hour; at 24 h,
+    3.2e-6). At ten iterations, from 1 h to 24 h, the residual reads 0.85
+    to 1.35 of it at every hour and `N` 0.79 to 1.02. That is the √n growth
+    of a random walk. `q_tag_inc_left` grows faster, from 0.45 to 1.41
+    (about t^0.85). Float64 at ten iterations reads the same multiple of its
+    own eps·√n in the first 3 h (0.75, 1.34, 2.1), until a part that is not
+    rounding, 5e-13 at 4 h, sets in. With one iteration Float32's `N` reads
+    0.72 to 1.16, as with ten, so it does not depend on the iterations.
+  - **What the failure can and cannot mean.** The limits at ten iterations,
+    3.8e-12 to 2.5e-11, are 700 to 4600 times below the Float32 partition's
+    1.7e-8 at 0 h, before any step. No Float32 run of this case could meet
+    them. So the failure does not show a Float32 defect in the follower or
+    in the named parts. It does not exclude one smaller than about eps·√n
+    either. It shows that a Float32 day of 720 steps cannot read the named
+    parts below about 3e-6 of the water, three times criterion 4's 1e-6.
+    Section 9.5 expected a failure from rounding, but put the floor near
+    1.7e-8. The accumulated level is about 200 times that. Which operations
+    round (the increment, the Newton update, the tags' own solve or the
+    stage sums) is not separated.
+  - **The one-iteration pass sits on the same level.** Float32's `N`
+    (3.71e-6, 1.16 eps·√n) passes 10 times Float64's 4.07e-7 by a factor of
+    1.10. At 12 h, which no rule judges, it reads 14.5 times (2.10e-6
+    against 1.45e-7). So that pass shows only that Float32's rounding level
+    lies below 10 times Float64's one-iteration `N` at 24 h.
   - **In Float32, `N` exceeds criterion 4's own 1e-6** at both iteration
     counts (3.7e-6 and 3.2e-6). Criterion 9 judges it against Float64 only,
     so this is reported.
   - **Reported.** The leak's sum over the day is 4.3e-3 to 6.6e-3 of the
-    water, gross, in all four runs, and `q_tag_res` does not hold it. `G`
-    from NetCDF equals the closure table's in all four runs.
+    water, gross, in all four runs, and `q_tag_res` does not hold it. The
+    leak is a divergence, so its column total is zero, and with
+    `water_tag_leak_correction: false` the follower moves it in
+    `q_tag_inc_moved`. `G` from NetCDF agrees with the closure table's to
+    2e-7 of its value in all four runs.
   - **Criterion 9 now reads:** parity and every other criterion-4 measure
-    pass (W60); the named parts pass with one iteration and fail with ten;
-    the rain and snow tags wait for T3's stage 2 (rain and snow under EDMF).
-    Whether criterion 9 needs a rounding floor for a converged Float64
-    reference is the owner's question. Section 9 set none.
+    pass (W60); the named parts pass with one iteration and fail with ten,
+    both at Float32's rounding level; the rain and snow tags wait for T3's
+    stage 2 (rain and snow under EDMF). Whether criterion 9 needs a
+    rounding floor for a converged Float64 reference is the owner's
+    question. Section 9 set none, and the verdict stands. *The review's
+    proposal, for future designs only:* Float32 passes where it is at most
+    the larger of 10 times Float64 and 3·eps·√n (9.6e-6 at 24 h here). At
+    ten iterations Float32 reads at most 1.41 eps·√n at any hour, so that
+    leaves a factor of 2.1. A factor of 10 on the floor (3.2e-5) would let a
+    Float32 defect of 32 times criterion 4's 1e-6 pass. The floor assumes
+    unbiased rounding. `q_tag_inc_left` grows faster than √n, so a run much
+    longer than a day needs its own check.
   - **What this does not show.** A cause. One case, one day; the copies
     were not run at ten iterations.
 
 *Jobs `14126670` (Float64) and `14126671` (Float32), 33 and 32 minutes,
 check `14126446`, model `d3c5e42f` from `../ClimaAtmosResiDyn-f32-run`,
 record `a423c8b6`. `analysis/water/f32_named_score.py`; `output/f32/`
-(`f32_named_scores.csv`, `data/`, `logs/`).*
+(`f32_named_scores.csv`, `data/`, `logs/`). Opus review, 2026-10-02: the
+scorer reproduces `f32_named_scores.csv` byte for byte from the scratch
+output, whose 408 files match `SHA256SUMS_scratch_inputs`. The ratios to
+eps·√n come from the review's `analysis/water/f32_named_floor.py`
+(`output/f32/f32_named_floor.csv`), not from the scorer.*
 
 ## 2. Energy source tags: closure by transport
 
