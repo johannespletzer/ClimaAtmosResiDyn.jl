@@ -3055,6 +3055,64 @@ from the shared detached tree `../ClimaAtmosResiDyn-main`, and `81884d5b`
 from `../ClimaAtmosResiDyn-wp4bfix-t1`. `output/w61/` (`forms.csv`,
 `ledgers.csv` per run, the driver, the passive-form diff, log tails).*
 
+**W61 addendum. Each tag's inventory under the reference term, and a face
+arm: over 3 days the passive form's reference term changes a tag's inventory
+by at most 2.2e-5 of it, signed, and moves 2.0e-3 of it in absolute value.
+Allocating the parent's reference flux before the divergence (the face form)
+keeps every inventory to rounding (5e-21), keeps the mixing diffusive at all
+24 samples, and leaves the repair ledgers within 8% of the passive form's.**
+*Drafted 2026-10-03 (Opus); for the coordinator's review.* Pre-registered in
+`design/W61_ADDENDUM.md` (`8173f6e0`) before any job, for point 2 of the
+owner's review of PR #146. The first two jobs failed in their first sample (a
+broadcast of `getproperty` in the driver); the fix was pushed (`f49f2849`)
+before the rerun, which changed nothing else.
+
+W61's sphere: the moist baroclinic wave, `h_elem` 6, 10 levels, 1M, `dt`
+400 s, 3 days, region tags `tropics` and `extratropics` with the key. The
+`passive` arm runs `main` plus the passive form (`81884d5b`), the `face` arm
+the same plus the face form (`d4cda274`). Neither is for merge. Every step the
+driver evaluates both forms' reference term per tag on the step's end state
+and integrates it with a rectangle rule, so the numbers give the size, not the
+exact budget.
+
+| reading (3 days)                                 | tropics  | extratropics |
+|:------------------------------------------------ |:-------- |:------------ |
+| passive form, signed, over the start inventory   | −1.14e-5 | +2.20e-5     |
+| passive form, absolute, over the start inventory | 5.29e-4  | 1.99e-3      |
+| passive form, signed, over the 3-day export      | −7.1e-6  | +9.8e-7      |
+| passive form, absolute, over the 3-day export    | 3.29e-4  | 8.89e-5      |
+| face form, signed, over the start inventory      | −9.1e-21 | +5.6e-21     |
+| face form, absolute, over the start inventory    | 5.37e-4  | 1.99e-3      |
+
+| rule (section 4)                                      | result                                                      |
+|:----------------------------------------------------- |:----------------------------------------------------------- |
+| Q2 inventory: `abs(∫∫R_face) ≤ 1e-9` of the inventory | *pass*, 9.1e-21 at most                                     |
+| Q2 mixing: face variance rate < 0 from 6 h, both tags | *pass*, 24 of 24 samples, at most −3.50e6 (passive −3.50e6) |
+| check: the `passive` arm reproduces W61's ledgers     | *pass*, byte for byte                                       |
+| Q2 ledgers, face over passive (reported)              | repair 1.000, empty 1.008, rescale 1.0005, repairnet 1.083  |
+
+  - **What it shows.** The passive form's per-tag inventory change is small
+    against the inventories in this run: the least favourable tag moves by
+    2.2e-5 of its water, signed, over 3 days. The face form removes that
+    change and, on this run's states, mixes the composition as the passive
+    form does: their variance rates agree to three digits at every sample.
+  - **What it does not show.** Another grid, length or physics. Whether the
+    face form's extra advection of the composition by the reference flux,
+    `F⋅∇φ`, matters where the reference profile varies more, for example over
+    topography. The integrals are taken once per step, not per stage. The
+    export is the driver's sum of each tag's surface precipitation over the
+    surface field. It is about 20 times the inventory over 3 days here, so
+    its ratios are reported, not judged.
+  - **For the owner.** The face form is a candidate that keeps per-tag
+    inventories without the anti-diffusion in this configuration. The PR
+    keeps the passive form; the switch would be a separate change.
+
+*`hpda2_compute`, 2026-10-02, jobs `14126932` (passive) and `14126933`
+(face); first submissions `14126904` and `14126905` failed in their first
+sample. `analysis/water/w61a_inventory.jl`, `w61a_score.py`;
+`output/w61a/` (`inventory.csv`, `variance.csv`, `ledgers.csv` per arm,
+`scores.txt`, the face-form diff, log tails).*
+
 ## 2. Energy source tags: closure by transport
 
 Under the default `tracer` transport the tags move as passive tracers while the
@@ -5066,8 +5124,7 @@ collects into a `Vector` and builds the tuple at run time
 `propertynames(Y.c)`, so with 32 or more top-level fields in `Y.c` every
 walk above runs at run time, allocates `Symbol` arrays, and dispatches on a
 `Val` of a run-time tuple. `advection.jl:124` filters `propertynames(Y.c)`
-too. The 8 + 8 point's `Y.c` has 38 top-level fields (the `NTuple{38,
-Symbol}`), and each half has fewer than 32 (no `Symbol` allocation). On a
+too. The 8 + 8 point's `Y.c` has 38 top-level fields (the `NTuple{38, Symbol}`), and each half has fewer than 32 (no `Symbol` allocation). On a
 login node, the pattern of `sedimenting_tracer_names` costs 0 B and 0.1 μs per
 call on a field of 31 entries, and 3.6 kB and 24 μs at 32, 4.3 kB and 33 μs
 at 38. This would explain why the excess is not additive: it appears when

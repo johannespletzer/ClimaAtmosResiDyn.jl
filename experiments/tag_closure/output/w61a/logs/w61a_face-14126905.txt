@@ -1,0 +1,6 @@
+commit: d4cda2740; label face; env /dss/dsstbyfs02/scratch/0D/di38kez/claude_work/wp4bfix_face_ci111_env; host: hpdar03c04s11; start: 2026-10-02T22:07:22+02:00
+Precompiling ClimaAtmos...
+  43662.8 ms  ✓ ClimaAtmos
+  1 dependency successfully precompiled in 62 seconds. 292 already precompiled.
+ERROR: LoadError: Concrete type of result could not be inferred:
+

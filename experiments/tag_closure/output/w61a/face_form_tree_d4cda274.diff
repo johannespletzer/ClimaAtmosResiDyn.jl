@@ -1,0 +1,27 @@
+diff --git a/src/parameterized_tendencies/tagged_tracers/tagged_water_precipitation.jl b/src/parameterized_tendencies/tagged_tracers/tagged_water_precipitation.jl
+index a8d7df00a..79e0b0c79 100644
+--- a/src/parameterized_tendencies/tagged_tracers/tagged_water_precipitation.jl
++++ b/src/parameterized_tendencies/tagged_tracers/tagged_water_precipitation.jl
+@@ -2028,17 +2028,18 @@ function apply_water_tag_hyperdiffusion!(Yₜ, Y, p, ν₄_scalar)
+     has_water_tag_precipitation(model) || return nothing
+     water_tag_share_norm!(p, Y)
+     (; ᶜ∇²q_tot_r) = p.hyperdiff
+-    ᶜreference = p.scratch.ᶜtemp_scalar
+-    @. ᶜreference = ν₄_scalar * wdivₕ(Y.c.ρ * gradₕ(ᶜ∇²q_tot_r))
++    # Face allocation (W61 addendum's comparison arm, not for merge): each tag
++    # takes its share of the parent's reference flux before the divergence.
++    ᶜshare_field = p.scratch.ᶜtemp_scalar
+     MatrixFields.unrolled_foreach(model.tags) do tag
+         ᶜρq_tagₜ = tag_field(Yₜ.c, tag)
+-        ᶜshare = water_tag_part_share(
++        ᶜshare_field .= water_tag_part_share(
+             Y.c,
+             p.scratch,
+             tag,
+             NonPrecipitatingPart(),
+         )
+-        @. ᶜρq_tagₜ += ᶜshare * ᶜreference
++        @. ᶜρq_tagₜ += ν₄_scalar * wdivₕ(ᶜshare_field * Y.c.ρ * gradₕ(ᶜ∇²q_tot_r))
+     end
+     return nothing
+ end
