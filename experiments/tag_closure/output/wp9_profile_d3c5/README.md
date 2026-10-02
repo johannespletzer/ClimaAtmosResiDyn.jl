@@ -48,13 +48,20 @@ ratios (8 + 8: 2.92 and 3.19) differ from it.
     of the 2.2 MB of excess allocation per step. Of the rest,
     `advection.jl:124` holds 0.49 MB, and the two tag sedimentation blocks of
     the Jacobian 0.23 MB each.
-  - **`other` / `(outside src)`:** about 51% of the samples at every point of
-    both jobs, in proportion to the step time, and without a frame in
-    `src/`. In section 8's profile `other` held 1% to 7%. So it is most
-    likely a second thread's samples and not the stepper's time. The profile
-    does not resolve it. If it is a second thread, the ms above are about
-    half the stepper's, and the walks hold nearly all of the excess. The
-    shares quoted are the pre-registered ones, against the timed excess.
+  - **`other` / `(outside src)`:** about 51% of the samples at every point
+    of both jobs. They match a second Julia thread's samples. The review
+    found the thread after the jobs (`threads_check.txt`, from
+    `analysis/wp9_profile_threads.jl` on a login node): `import ClimaAtmos`
+    in the run tree's environment leaves `Threads.maxthreadid()` at 2, and
+    `Profile` samples both threads, half each. So the ms above are about half
+    the stepper's. `excess_stepper.md` (`analysis/wp9_excess_stepper.py`,
+    post hoc) reads the stepper's half: implicit tendency 41% and 47%,
+    explicit 33% and 31%, Jacobian 29% and 30%, tag code at most 7.0% and
+    5.0%, and the six walks 102% and 126% of the timed excess.
+  - **Mechanism (inferred, FINDINGS E90):** ClimaCore's
+    `propertynames(::DataLayout)` filters a tuple with `Base.filter`, which
+    runs at run time from 32 entries on. The 8 + 8 point's `Y.c` has 38.
 
-A profile locates where the cost is recorded. It does not say why the walks
-cost time only when both families are on.
+A profile locates where the cost is recorded. The profile alone does not
+say why the walks cost time only when both families are on. The mechanism
+above is read from the code.

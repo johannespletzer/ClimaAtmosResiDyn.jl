@@ -87,9 +87,13 @@ not checked, it says so.
     OD3's ceiling of 2×, approved 2026-09-24.** *Decided 2026-10-02 (the
     owner): profile first, then decide. OD3's 2× stays for now, so criterion
     10 is recorded as failing.* Under `design/WP9_COST.md` section 12 (drafts,
-    waiting for the review): E90 locates the 8 + 8 excess in the parent's
-    walks over tracer names, at least 51% of it, not in the tag code. OD3's
-    copies row fails: both families' copies at 8 built in 4 h 16 min.
+    reviewed 2026-10-02): E90 locates the 8 + 8 excess in the parent's
+    walks over tracer names, at least 51% of it and about all of it for the
+    stepper, not in the tag code. Inferred from the code: `propertynames`
+    of `Y.c` runs at run time once `Y.c` has 32 fields or more (8 + 8 has
+    38). A fix would be pure performance, best in ClimaCore. OD3's copies
+    row fails: both families' copies at 8 built in 4 h 16 min, 6.8% over,
+    on the slowest of three nodes.
 
   - **The session goal of 2026-09-28** (the owner). It is met when:
 

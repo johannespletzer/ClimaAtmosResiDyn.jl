@@ -1128,9 +1128,14 @@ owner's points in the note's section 8.
         4 h). The proposal below stays open until the profile is read.
         *Measured 2026-10-02 (drafts on `claude/rec-wp9`):* E90 locates the
         8 + 8 excess in the parent's walks over tracer names
-        (`src/utils/`), at least 51% of it, and at most 3.5% in the tag
-        code. The cause is not isolated. OD3's copies row fails: 8 + 8
-        copies built in 4 h 16 min (E88 addendum). Both wait for the owner.
+        (`src/utils/`), at least 51% of it and about all of it for the
+        stepper, and at most 3.5% in the tag code (7.0% for the stepper).
+        Inferred from the code, not shown in the model: ClimaCore's
+        `propertynames` of `Y.c` runs at run time from 32 fields on, and
+        8 + 8 has 38. A fix would change no result: in ClimaCore upstream,
+        or in the walks (ClimaAtmos upstream or the fork). OD3's copies row
+        fails: 8 + 8 copies built in 4 h 16 min (E88 addendum), 6.8% over,
+        less than the node spread. Both wait for the owner.
 
       + [ ] **The cost budget: proposal, waiting for the owner.** OD3's
         approved row (2026-09-24) caps the default mode at 8 + 8 tags at 2×
