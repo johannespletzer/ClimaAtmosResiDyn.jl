@@ -77,6 +77,18 @@ def table(pts, name):
                     float(t[k]["samples"]) if k in t else 0.0,
                     float(a[k]["bytes_per_step"]) if k in a else 0.0,
                 )
+        elif name == "frame":
+            # Post hoc, added after the first job's read (section 12 note): the
+            # innermost frame in `src/`, from section 8's top-80 tables. A frame
+            # outside one point's top 80 reads as 0 there; the 80th row bounds it.
+            t = {x["frame"]: x for x in read(stem + "_time_frame.csv")}
+            a = {x["frame"]: x for x in read(stem + "_alloc_frame.csv")}
+            for k in set(t) | set(a):
+                out.setdefault(k, {})[p] = (
+                    float(t[k]["ms_per_step"]) if k in t else 0.0,
+                    float(t[k]["samples"]) if k in t else 0.0,
+                    float(a[k]["bytes_per_step"]) if k in a else 0.0,
+                )
         else:
             for x in read(f"{stem}_{name}.csv"):
                 out.setdefault(x["key"], {})[p] = (
@@ -103,6 +115,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("root", type=Path)
     ap.add_argument("--out", type=Path)
+    ap.add_argument("--frames", action="store_true", help="also the innermost frames (post hoc)")
     args = ap.parse_args()
     jobs = sorted(d for d in args.root.iterdir() if d.is_dir() and list(d.glob("*_summary.csv")))
     if not jobs:
@@ -123,7 +136,7 @@ def main():
             + ", ".join(f"{p} {float(pts[p][1]['samples']):.0f}" for p in POINTS) + ".",
             "",
         ]
-        for name in ("phase", "call", "tag_entry"):
+        for name in ("phase", "call", "tag_entry") + (("frame",) if args.frames else ()):
             rows, total = rows_for(pts, name)
             lines += [f"### By {name.replace('_', ' ')}", "",
                       "| key | untagged ms | water ms | energy ms | both ms | excess ms | ± | share | excess B/step |",

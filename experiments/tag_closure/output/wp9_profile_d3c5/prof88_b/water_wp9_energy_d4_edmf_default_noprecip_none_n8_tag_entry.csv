@@ -1,0 +1,25 @@
+key,samples,share,ms_per_step,bytes_per_step
+"(not tag code)",16521.0,0.9396541917870549,9.41311304842168,770519.999999827
+"sediment_water_tags! (tagged_water.jl)",467.0,0.026561255829825957,0.2660809753412581,0.0
+"sgs_mass_flux_of_water_tags! (tagged_water_edmf.jl)",350.0,0.019906722784666136,0.1994182898703219,32.000000000000014
+"WaterTagIncrementCorrection (tagged_water_increment.jl)",122.0,0.006938914799226482,0.06951151818336934,0.0
+"attribute_tags! (tagged_water.jl)",43.0,0.002445683084973268,0.024499961326925262,0.0
+"attribute_tagged_ρq_tot! (tagged_water.jl)",15.0,0.0008531452621999773,0.00854649813729951,0.0
+"accumulate_tag_ledger_gross! (tag_throughput.jl)",9.0,0.0005118871573199864,0.005127898882379706,0.0
+"repair_water_tag_partition! (tagged_water.jl)",7.0,0.0003981344556933227,0.0039883657974064375,0.0
+"snapshot_water_tag_increment! (tagged_water_increment.jl)",6.0,0.0003412581048799909,0.003418599254919804,0.0
+"water_tag_share_norm! (tagged_water.jl)",6.0,0.0003412581048799909,0.003418599254919804,0.0
+"water_tag_source_sediment_dshare (tagged_water.jl)",6.0,0.0003412581048799909,0.003418599254919804,0.0
+"water_tag_sediment_dshare (tagged_water.jl)",5.0,0.0002843817540666591,0.00284883271243317,0.0
+"sedimenting_energy_source_tag_names (energy_source_tags.jl)",4.0,0.00022750540325332727,0.002279066169946536,259.9999999999988
+"water_tag_source_sediment_share (tagged_water.jl)",4.0,0.00022750540325332727,0.002279066169946536,0.0
+"water_tag_sediment_share (tagged_water.jl)",3.0,0.00017062905243999546,0.001709299627459902,0.0
+"snapshot_tags! (tagged_water.jl)",3.0,0.00017062905243999546,0.001709299627459902,0.0
+"getidx (tagged_water.jl)",2.0,0.00011375270162666363,0.001139533084973268,0.0
+"water_tag_sediment_dshare_field (tagged_water.jl)",2.0,0.00011375270162666363,0.001139533084973268,0.0
+"water_tag_sediment_share_field (tagged_water.jl)",2.0,0.00011375270162666363,0.001139533084973268,0.0
+"tag_field (tagged_water.jl)",1.0,5.687635081333182e-5,0.000569766542486634,0.0
+"_attribute_tagged_ρq_tot! (tagged_water.jl)",1.0,5.687635081333182e-5,0.000569766542486634,0.0
+"keep_water_tag_exp_rate! (tagged_water_increment.jl)",1.0,5.687635081333182e-5,0.000569766542486634,0.0
+"_keep_water_tag_exp_rate! (tagged_water_increment.jl)",1.0,5.687635081333182e-5,0.000569766542486634,0.0
+"sedimenting_water_tag_names (tagged_water.jl)",1.0,5.687635081333182e-5,0.000569766542486634,259.9999999999988

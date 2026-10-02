@@ -1,0 +1,20 @@
+key,samples,share,ms_per_step,bytes_per_step
+"other",8070.0,0.51648,5.7866671242239995,0.0
+"implicit tendency > macro expansion (implicit_tendency.jl)",2225.0,0.1424,1.59545654912,412015.9999999696
+"jacobian > macro expansion (jacobian.jl)",1694.0,0.108416,1.2146981547007998,32552.000000000233
+"cache! > macro expansion (precomputed_quantities.jl)",1386.0,0.088704,0.9938439447552,16303.999999999894
+"explicit tendency > macro expansion (remaining_tendency.jl)",1257.0,0.080448,0.9013433178624,232332.00000002387
+"cache_imp! > macro expansion (precomputed_quantities.jl)",440.0,0.02816,0.31550601420799995,25679.999999998734
+"linear solve > macro expansion (jacobian.jl)",320.0,0.02048,0.22945891942399996,0.0
+"callbacks",129.0,0.008256,0.09250062689279999,1388.0000000000011
+"initialize_imp! > solve_sgs_ρa_implicit_stage_analytic! (initialize_implicit_problem.jl)",40.0,0.00256,0.028682364927999995,0.0
+"constrain_state! > macro expansion (constrain_state.jl)",37.0,0.002368,0.026531187558399998,8176.000000000054
+"initialize_imp! > solve_sgs_u₃_implicit_stage_analytic! (initialize_implicit_problem.jl)",16.0,0.001024,0.011472945971199999,0.0
+"cache! > (no src frame)",4.0,0.000256,0.0028682364927999997,0.0
+"jacobian > (no src frame)",1.0,6.4e-5,0.0007170591231999999,0.0
+"initialize_imp! > snapshot_energy_source_increment! (energy_source_tags.jl)",1.0,6.4e-5,0.0007170591231999999,0.0
+"explicit tendency > (no src frame)",1.0,6.4e-5,0.0007170591231999999,0.0
+"initialize_imp! > (no src frame)",1.0,6.4e-5,0.0007170591231999999,0.0
+"linear solve > (no src frame)",1.0,6.4e-5,0.0007170591231999999,0.0
+"cache! > set_precipitation_surface_fluxes! (microphysics_cache.jl)",1.0,6.4e-5,0.0007170591231999999,0.0
+"cache_imp! > (no src frame)",1.0,6.4e-5,0.0007170591231999999,0.0

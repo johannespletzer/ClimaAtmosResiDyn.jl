@@ -1,0 +1,20 @@
+key,samples,share,ms_per_step,bytes_per_step
+"other",23350.0,0.5218226920240463,3.6717620089614953,0.0
+"implicit tendency > macro expansion (implicit_tendency.jl)",6325.0,0.14135025811786264,0.994599345039891,426015.9999999683
+"jacobian > macro expansion (jacobian.jl)",4445.0,0.0993362683531857,0.6989713974232911,32520.000000000426
+"cache! > macro expansion (precomputed_quantities.jl)",4392.0,0.09815183140769214,0.6906372052830357,16303.999999999894
+"explicit tendency > macro expansion (remaining_tendency.jl)",3060.0,0.06838447270208059,0.48118165941850854,260988.000000028
+"cache_imp! > macro expansion (precomputed_quantities.jl)",1440.0,0.032180928330390865,0.2264384279616511,25679.999999998734
+"linear solve > macro expansion (jacobian.jl)",1083.0,0.024202739848481463,0.17030056769615842,0.0
+"callbacks",379.0,0.008469841553623706,0.05959733624824011,5378.899999999979
+"initialize_imp! > solve_sgs_ρa_implicit_stage_analytic! (initialize_implicit_problem.jl)",108.0,0.0024135696247793146,0.01698288209712383,0.0
+"constrain_state! > macro expansion (constrain_state.jl)",85.0,0.0018995686861689052,0.013366157206069684,8176.000000000054
+"initialize_imp! > solve_sgs_u₃_implicit_stage_analytic! (initialize_implicit_problem.jl)",43.0,0.0009609582765325049,0.0067617030571881925,0.0
+"cache! > (no src frame)",10.0,0.00022347866896104768,0.0015724890830670214,0.0
+"initialize_imp! > snapshot_water_tag_increment! (tagged_water_increment.jl)",8.0,0.00017878293516883814,0.0012579912664536172,0.0
+"initialize_imp! > (no src frame)",6.0,0.0001340872013766286,0.0009434934498402129,0.0
+"cache_imp! > (no src frame)",6.0,0.0001340872013766286,0.0009434934498402129,0.0
+"linear solve > (no src frame)",2.0,4.4695733792209536e-5,0.0003144978166134043,0.0
+"cache! > set_covariance_cache_and_cloud_fraction! (cloud_fraction.jl)",2.0,4.4695733792209536e-5,0.0003144978166134043,0.0
+"implicit tendency > (no src frame)",2.0,4.4695733792209536e-5,0.0003144978166134043,0.0
+"lim! > (no src frame)",1.0,2.2347866896104768e-5,0.00015724890830670215,0.0
