@@ -2152,8 +2152,11 @@ Under `water_tag_precipitation: true`, give each tag's non-precipitating part
 its share `φ` of the reference profile's hyperdiffusion,
 `φ ν₄ ∇⋅(ρ ∇∇²q_tot_r)`. The part has already taken its own hyperdiffusion as a
 passive tracer, `-ν₄ ∇⋅(ρ ∇∇²(N_tag/ρ))`. The parent hyperdiffuses
-`q_tot_eff - q_tot_r`, and the partition's shares sum to one, so the partition's
-non-precipitating parts sum to the parent's tendency of its diffusing water.
+`q_tot_eff - q_tot_r`. Where the partition holds water its shares sum to one,
+so there the partition's non-precipitating parts sum to the parent's tendency
+of its diffusing water. Where the partition is empty the shares are zero, and
+no tag takes the reference term there (W61's addendum: about 3.8e10 kg over 3
+days on its sphere).
 
 The share is taken outside the operator. Inside it, as
 `∇²(N_tag/ρ - φ q_tot_r)`, a tag's composition would mix against its gradient
