@@ -86,8 +86,12 @@ def job(case, mode):
     return f"{prefix}_{mode}_{rung}"
 
 
-def probe_csv(probe, mode):
-    run = f"w25i_d4w_{mode}_z60_c" if SMOKE else f"g3b_d4w_{mode}_z60_c"
+def probe_csv(probe, mode, case="plain"):
+    if case == "pulse":
+        # Run 12 (design section 7a): P2 on the pulse's copies at 30 levels.
+        run = "w25i_d4w_pulse_copies_z30_c" if SMOKE else "g3b_d4w_pulse_copies_z30_c"
+    else:
+        run = f"w25i_d4w_{mode}_z60_c" if SMOKE else f"g3b_d4w_{mode}_z60_c"
     return os.path.join(PROBES, probe, f"{run}_{probe}.csv")
 
 
@@ -431,6 +435,22 @@ for mode in MODES:
                     r, 0.75, ratio_verdict(r, a == 0 and b == 0), "Refinement",
                     f"{a:.3e} over {b:.3e}" + ("; parent moved more than 1%" if moved > 0.01 else ""))
 
+# R6 on the pulse's copies, from run 12 (design section 7a), as on the plain case.
+pulse_refinement_ok = None
+table = read_csv(probe_csv("refinement", "copies", "pulse"))
+if table is not None:
+    by = {(int(r["dt"]), int(r["newton"])): r for r in table}
+    pulse_refinement_ok = True
+    for fine, coarse in [((60, 1), (120, 1)), ((30, 1), (60, 1)), ((120, 2), (120, 1)), ((120, 10), (120, 1))]:
+        a, b = by[fine]["q_tag_led_uprepair_per_hour"], by[coarse]["q_tag_led_uprepair_per_hour"]
+        r = a / b if b > 0 else None
+        ok = r is not None and r <= 1.1
+        pulse_refinement_ok &= ok
+        moved = by[fine]["parent_hus_change_vs_first"]
+        add("R6", "pulse", "copies", f"copies' repair per hour, {fine} over {coarse}", "6-7 h", r, 1.1,
+            verdict(ok), "Comparator: refinement",
+            f"{a:.3e} over {b:.3e}" + ("; parent moved more than 1%" if moved > 0.01 else ""))
+
 # PX5 (PROVENANCE_PATHWAY.md, PX5 and PT10). (a) The filter's share of the
 # copies' two corrections, gross, over the day's established window; (b) its
 # growth per halving of dt, per hour, from P2; (c) where it acts, reported.
@@ -509,8 +529,12 @@ for case in D4W_CASES:
         status = None
     elif case == "plain":
         status = "not assessable (R6 failed)"
-    else:
+    elif pulse_refinement_ok is None:
         status = "waits for R6 (no P2 on this case)"
+    elif pulse_refinement_ok:
+        status = None
+    else:
+        status = "not assessable (R6 failed)"
     for jr in report["judge"]["rows"]:
         m = report["tag_metrics"][jr["tag"]][str(jr["hour"])]
         value = m["abs_L1"] if jr["small"] else m["L1_mass_weighted"]

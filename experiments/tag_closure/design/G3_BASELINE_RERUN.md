@@ -210,6 +210,34 @@ review, and G3_TODO is not ticked here.
     (runs 7, 8).
   - W58: TRMM 0M, 6 h (runs 9 to 11).
 
+## 7a. Run 12: P2 on the pulse's copies (amendment, 2026-10-02, before the job)
+
+The owner approved it on 2026-10-02, after the Opus review of W54 to W58. W56
+found that the pulse's copies pass R5 at 30 levels, so by section 4 its R7
+waits for R6. Run 12 supplies R6 there.
+
+  - **Run 12:** P2 (`w25_probes.jl`, `PROBE=refinement`) on
+    `g3b_d4w_pulse_copies_z30_c`. The rungs and reading are run 7's: from the
+    6 h state, one-hour variants at `dt` 120 s with 1, 2 and 10 iterations,
+    and 60 and 30 s with one. Same run tree at `b34bbd8b`, same runscript
+    (`g3base_probe.sh`), `-A pn49go-c -p hpda2_compute`, limit 6 h, expected
+    about 1 h (run 7 took 1.0 h at 60 levels).
+  - **R6 on the pulse:** the copies' repair per hour at `dt` 60 against 120 s,
+    30 against 60 s, 2 and 10 iterations against 1, each at most 1.1 times the
+    coarser rung's (Comparator: refinement). R6 passes only if all four pass.
+  - **The R7 reading it settles.** If R6 passes, R7 on the pulse becomes a
+    verdict: each row of `compare_runs.py --judge` (`sfc`, `air`, `evap` at
+    1 h and 24 h, with the budgets of section 4) passes or fails, and the case
+    passes provenance only if every row passes. If R6 fails, R7 on the pulse
+    is *not assessable (R6 failed)*. Either way the numbers are W56's, already
+    measured; run 12 changes only their status.
+  - `g3base_score.py` now reads the pulse's P2 CSV
+    (`g3b_d4w_pulse_copies_z30_c_refinement.csv`) for R6 on the pulse, and
+    keeps "waits for R6" where the CSV is missing. The plain case's scoring
+    is unchanged.
+  - Jobs: thirteen with the check, one past section 6's twelve. The owner
+    approved it.
+
 ## 8. What this does not do
 
 It sets no threshold and no level, and does not rescore an old finding. It
