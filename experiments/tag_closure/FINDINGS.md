@@ -2664,13 +2664,15 @@ in `design/MPI_PARITY.md` (`f519462a`), model `d3c5e42f`, six runs.
     correction. They do not exchange condensate or rain. The moist paths'
     parity rests on the column checks.
   - **The parent's negative water.** The untagged run has it too, so it is
-    the model's, not the tags'. The negative part of `ρq_tot` is 1.37
-    times the positive at 30 min and 0.52 at 6 h, and the closure check sets
-    `negative_water_void`. Half the points hold no positive water
-    (`nonpositive_fraction` 0.50), a count that includes the dry ones. The tags start at `max(ρq_tot, 0)`, so the
-    partition's relative residual is 0.38 at 6 h (0.61 at 30 min). That
-    residual is reported, not judged. It agrees between one rank and two to
-    four digits. Whether the sphere's dry start belongs in criterion 11 is a
+    the model's, not the tags'. The negative part of `ρq_tot`,
+    `∫max(-ρq_tot, 0) dV`, is 1.37 times the net water `∫ρq_tot dV` at
+    30 min and 0.52 at 6 h (`negative_water_relative`). Against the positive
+    part it is 0.58 and 0.34. The closure check sets `negative_water_void`.
+    Half the points hold no positive water (`nonpositive_fraction` 0.50), a
+    count that includes the dry ones. The tags start at `max(ρq_tot, 0)`, so
+    the partition's relative residual is 0.38 at 6 h (0.61 at 30 min) in the
+    default mode, and 0.37 (0.61) in the copies. That residual is reported,
+    not judged. It agrees between one rank and two to four digits. Whether the sphere's dry start belongs in criterion 11 is a
     question for the owner.
   - **One rank against two.** Every model field differs between the one-rank
     and two-rank untagged runs from the first checkpoint. `ρ` differs at
@@ -2679,9 +2681,10 @@ in `design/MPI_PARITY.md` (`f519462a`), model `d3c5e42f`, six runs.
     order as their values. The tagged pairs show the same model-field
     differences, and their tags differ too: `ρq_tag_tropics` by 0.35 at 6 h
     in the default mode and by 0.70 in the copies. The cause is not isolated.
-    The order of the sums at the ranks' boundary is the likely source, grown
-    by the dynamics, but this run does not show it. So parity holds within a
-    rank count, and nothing here is reproducible across rank counts.
+    One candidate is the order of the sums at the ranks' boundary, grown by
+    the dynamics. This run does not test it. So parity holds within a rank
+    count, and the runs are not bit for bit across rank counts, with or
+    without tags.
   - **The CI column checks.** Six test groups compare a tagged column with
     its untagged twin bit for bit: `tagging_water_edmf`,
     `tagging_water_edmf_copies`, `tagging_water_edmf_0m`,
