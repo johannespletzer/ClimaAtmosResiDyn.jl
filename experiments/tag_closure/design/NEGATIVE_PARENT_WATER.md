@@ -2639,3 +2639,166 @@ Three jobs, `sbatch -A pn49go-c -p hpda2_compute`, 2 CPUs, 48 GB. W49's
 0. Within the brief's limits: at most 4 jobs and 12 hours.
 
 What follows from the result is for the owner. No code changes here.
+
+### 11.13 Why the follower drains `free` more under the rule at site 23: the outflow beyond the tag's content, pre-registered before any run (2026-10-02)
+
+W53 left one question open. Under the rule, the follower drains `free` more
+in the steps where the repair then raises it (P2, `φ = 0.999`). Why? The
+follower's docstring names a way: the shares are normalized, so a donor cell
+sends the parent's whole flux whatever its partition holds, and a draining
+cell's partition can go negative while the parent does not. This section
+tests that one mechanism at site 23. The owner approved the probe on
+2026-10-02. V5's 2% limit stays as it is. Nothing in 11.13.3 to 11.13.6
+changes after the runs.
+
+#### 11.13.1 The mechanism, in the follower's terms
+
+In a stage, tag `k` in cell `i` changes by four parts, each an amount (the
+tendency times `dtγ`):
+
+  - **out**, the outflow: the cell's share `s_k` times the whole flux that
+    leaves the cell through its faces, `dtγ (J⁺ max(F⁺, 0) + J⁻ max(−F⁻, 0)) / J`;
+  - **in**, the inflow: the flux that enters times the donor neighbour's
+    share;
+  - **give**, the negative part's weight times `s_k`, where the column's `N`
+    is not zero;
+  - **cross**, the mask times the crossing's positive part `g`, where `δL`
+    is not zero.
+
+The shares add up to one, and `s_k` is about the tag's part of the
+partition's positive water. So the outflow of `k` exceeds what `k` holds
+exactly when the whole outflow exceeds what the partition holds: a donor
+whose partition is nearly empty against the parent's flux. Then `k` goes
+below zero, and the repair at the step's end raises it. The stated
+mechanism is that this overdraw makes the extra repair of `free`.
+
+The other ways the tag can go below zero in a step are the negative part's
+give (when `N` takes water), and everything else in the step (`b`, small for
+`free` by W53's `φ`).
+
+#### 11.13.2 The question
+
+**S.** In the cell-steps where the repair raises `free`, how much of the
+extra repair under the rule (rev less switch) does the follower's outflow
+beyond `free`'s content account for?
+
+#### 11.13.3 The runs
+
+No run of W49 or W53 saved a state (`dt_save_state_to_disk: Inf`). So both
+arms start again from day 0. A fixed-parent probe in W35's pattern is not
+used: the drain depends on the tags' own history over eleven days and more,
+which a fixed parent from one state would not carry.
+
+The model is W53's: run tree `e524dbac` (W49's `b6d452b5`, model
+`0eb329b2`, the physics before #139). This is not `main`'s physics today.
+It is kept so that the arms are W53's runs again, bit for bit. A new
+detached run tree, `../ClimaAtmosResiDyn-ledfix-od-run`, is made at
+`e524dbac`, and this section's driver and two configs are added in one
+commit. No file in `src` changes.
+
+The driver is `analysis/water/ledfix_overdraw.jl`. It is
+`ledfix_trace.jl` (the switch and the step trace) with two additions:
+
+  - each step trace row carries the run's step count;
+  - in the windows, the follower's post-solve hook
+    (`WaterTagIncrementCorrection`) is redefined to call the same two
+    functions in the same order (the parent's correction, then
+    `correct_water_tag_increment!`), and then to read the four parts of
+    11.13.1 for `free` and `pbl` from the follower's own fields: the face
+    flux, the shares (`_water_tag_follower_share_field`), the negative
+    part's weight, `N`, `g`, `δL` and the masks. It also reads the tag's
+    value in the stage before the follower, the partition's positive water,
+    the parent, and the follower's ledger increment of each tag. It writes
+    nothing to the model.
+
+The windows are W53's: days 11.25 to 11.75, 15.75 to 16.0 and 55.75 to
+56.25. The traced levels are 1 to 22 (15 m to 1911 m), every level below
+2 km. Stage A put all of the extra below 2 km (11.12.1).
+
+| run                | arm    | `t_end` | what for                           |
+|:------------------ |:------ |:------- |:---------------------------------- |
+| `lf_od_rev_check`  | rev    | 1 hour  | the check, before the others       |
+| `lf_od_rev_s23`    | rev    | 56.5 d  | the rule, as W49 and W53 ran it    |
+| `lf_od_switch_s23` | switch | 56.5 d  | the parent's gain, as W53's switch |
+
+  - **The check** runs the rev arm for one hour with the windows in
+    seconds (600 to 1200 and 3000 to 3600). Its config is kept outside the
+    run tree. It must exit 0 and pass V0 to V2 (11.13.4). The two arms are
+    submitted only after it passes. If V1 fails, the stage weights are
+    taken again from ClimaTimeSteppers' code, the change is committed here,
+    and the check runs once more. That is the only change allowed.
+
+#### 11.13.4 Validity, before any score
+
+  - **C1.** `lf_od_rev_s23`'s NetCDF files and audit rows equal `cr_s23`'s
+    bit for bit at every output both have.
+  - **C2.** `lf_od_switch_s23`'s equal W53's `lf_switch_s23`'s the same way.
+    C1 and C2 show that the hook reads only. If either fails, S is reported,
+    not read.
+  - **V0.** In every traced cell and stage, for both tags,
+    `−out + in + give + cross` equals the follower's ledger increment to
+    `1e-9` of the largest increment. This checks the decomposition.
+  - **V1.** The stages, weighted into the step, equal the step's change of
+    `q_tag_led_inc_<tag>`: per window and tag, the sum of absolute
+    differences is at most `1e-6` of `Σ|a|`. The weights are ARS222's,
+    `b_imp[i] / a_imp[i, i]`: `(1 − γ)/γ` for the first stage with a solve
+    and 1 for the second, `γ = 1 − √2/2`. The stepper adds
+    `dt b_imp[i] T_imp[i]`, and `T_imp[i]` holds the follower's tendency.
+  - **V2.** Every traced step has exactly two stages with a follower.
+  - If V0, V1 or V2 fails in an arm, S is void.
+  - If the extra repair (below) is not positive, S is void.
+
+#### 11.13.5 The score and its reading
+
+Per arm, over the cell-steps of the three windows at levels 1 to 22, for
+`free`. With `q₀` the tag at the step's start, `r` the step's change of
+`q_tag_led_fix_free` and `x_{k,i}` stage `i`'s parts:
+
+    O = Σᵢ wᵢ out_i          the step's outflow of free from the cell
+    E = max(O − max(q₀, 0), 0)   the outflow beyond the tag's content
+    R = Σ max(r, 0)          the repair that raised free
+    X = Σ min(E, max(r, 0))  the repair the overdraw can account for
+
+    S = (X_rev − X_switch) / (R_rev − R_switch)
+
+The extra repair, `R_rev − R_switch`, is the drain below zero that the
+repair gives back. It is what V5 counts and what P1 gave to the rule. The
+drain within the tag's content is not repaired, so it is not in the
+denominator. `min(E, r)` counts in each cell-step no more of the overdraw
+than the repair it could explain.
+
+  - `S ≥ 0.8`: the mechanism is confirmed at site 23. The outflow beyond
+    `free`'s content accounts for at least 0.8 of the extra repair in the
+    traced windows and levels.
+  - `S < 0.5`: it is not the mechanism. It accounts for less than half.
+  - Otherwise: partly, as measured.
+
+The least favourable window's `S` is quoted with it. The reading is for
+site 23, these windows and these levels. It does not say why the outflow
+exceeds the content more often under the rule, and it does not generalise
+to other sites.
+
+Reported, not scored:
+
+  - `S` per window, at W53's levels 8 to 14, and for `pbl`;
+  - `S` with a stage-level overdraw, `Σᵢ wᵢ max(out_i − max(C_i, 0), 0)`,
+    `C_i` the tag in stage `i`'s value before the follower;
+  - over the events (`r > 0`) of each arm: the sums of `−O`, in, give,
+    cross and `b`, and W53's `D_a`; `Q_a`, the extra `E` over the extra
+    `D_a`;
+  - in rev's events, both arms in the same cell-steps: `free`'s outflow,
+    the whole flux out, `free` at the start, and `E`;
+  - where `E > 0`: the part of `E` where the whole outflow is at least the
+    partition's water at the step's start, `free`'s median share of the
+    partition, and the median of the whole outflow over the partition.
+
+#### 11.13.6 Cost and jobs
+
+Three jobs, `sbatch -A pn49go-c -p hpda2_compute`, 2 CPUs, 48 GB. W53's
+`lf_rev_s23` ran 56.5 days in 2 h 35 min. The stage trace adds a little in
+the windows. So the check takes under an hour (`--time=01:30:00`), and each
+arm about 2.7 h (`--time=08:00:00`). At most one more check if V1 fails.
+Within the brief's limit of six jobs. Score:
+`analysis/water/ledfix_overdraw_score.py`, output in `output/w63/`.
+
+What follows from the result is for the owner. No code changes here.
