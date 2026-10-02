@@ -107,6 +107,16 @@ diagnostic, and the probe CSVs carry `error_n2_ρq_tot` and
 `q_tag_led_upfilter_per_hour`. If it fails, the real jobs wait, and a fix that
 changes a config or a script is committed and pushed first.
 
+*Amendment, 2026-10-02, after the check job (14103866) and before the real
+jobs.* Every step exited 0. The two driver runs wrote their closure and audit
+tables and every configured diagnostic: 68 files for the copies, 52 for TRMM.
+The copies' audit carries `led_upfilter` and `led_uprepair`, and TRMM's the
+per-tag ledgers. P1's CSV carries `error_n2_ρq_tot`. The pass reading above
+asked P2's CSV for `q_tag_led_upfilter_per_hour`, but the check's P2 ran on the
+default's config, which has no filter ledger. So that clause could not be met
+as written. It is read from run 7's CSV only, and the scorer marks PX5 not
+assessable if the column is missing. Nothing else changes.
+
 ## 4. What is scored, and how
 
 The scorer is `analysis/water/g3base_score.py`. Its code is `w25_score.py`'s

@@ -450,7 +450,7 @@ if audit is not None and row_at(audit, DAY) is not None and t0 is not None:
     px5.append(dict(reading="share, whole day (reported)", value=filt0 / (filt0 + rep0) if filt0 + rep0 > 0 else "",
                     note=f"filter {filt0:.4e}, repair {rep0:.4e}, filter events {e['led_upfilter_events']:.0f}"))
 growth = []
-if "copies" in p2:
+if "copies" in p2 and "q_tag_led_upfilter_per_hour" in next(iter(p2["copies"].values())):
     by = p2["copies"]
     for key in sorted(by, key=lambda k: (-k[0], k[1])):
         f_, r_ = by[key]["q_tag_led_upfilter_per_hour"], by[key]["q_tag_led_uprepair_per_hour"]
