@@ -2992,11 +2992,13 @@ from `../ClimaAtmosResiDyn-wp4bfix-t1`. `output/w61/` (`forms.csv`,
 
 **W63. W53's follow-up: at site 23, the follower's outflow beyond `free`'s
 content accounts for the extra repair (`S = 0.996`, least favourable window
-0.992; 0.832 if the negative part's give is counted first).** Where the
-repair raises `free` under the rule, the donor cell's partition is nearly
-empty, and the follower still sends the parent's whole flux with the
-normalized shares. The probe of design section 11.13, pre-registered before
-any job (commit `7a169230`). It tests the one mechanism W53 named and did not
+0.992; 0.808 to 0.832 under orderings chosen after the runs, not
+pre-registered). On W53's model, the physics before #139.** Where the repair
+raises `free` under the rule, the donor cell's partition is nearly empty at
+the step's start, and the follower still sends the parent's whole flux with
+the normalized shares. *Drafted 2026-10-03 (Opus); reviewed 2026-10-03
+(Opus).* The probe of design section 11.13, pre-registered before any job
+(commit `7a169230`). It tests the one mechanism W53 named and did not
 isolate.
 
 **The probe.** Two arms on W53's model, `0eb329b2` (the physics before
@@ -3021,6 +3023,8 @@ give and the crossing's part. W53's three windows, levels 1 to 22 (15 m to
 | S per window (days 11.25, 15.75, 55.75)                          | 0.993, 1.000, 0.992                                          | —                |
 | reported: S at W53's levels 8 to 14; with a stage-level overdraw | 0.996; 0.957                                                 | —                |
 | reported, not pre-registered: S with the give counted first      | 0.832                                                        | —                |
+| review, not pre-registered: the give first, stage-level overdraw | 0.808                                                        | —                |
+| review, not pre-registered: the whole outflow in place of `E`    | 0.999                                                        | —                |
 | reported: S for `pbl` (extra repair 2.7e-5 at these levels)      | −0.29                                                        | —                |
 
   - **What S measures.** `E`, the step's outflow of `free` from a cell less
@@ -3035,25 +3039,35 @@ give and the crossing's part. W53's three windows, levels 1 to 22 (15 m to
     +1.70e-2. So `min(E, r)` is `r` almost wherever the outflow overdrew.
     The score separates the outflow from the other channels that can take
     `free` below zero: the negative part's give and the rest of the step.
+    It does not test the content condition by itself. With the whole
+    outflow in place of `E`, S is 0.999 (review). The content condition
+    rests on the numbers under "The donor's partition is nearly empty".
   - **The least favourable number.** The give drains `free` in the same
     cell-steps, 0.07 of the outflow there. Counting it first (taking
-    `max(−give, 0)` out of `r` before `E`) gives `S = 0.832`, still above
-    0.8. This ordering was not pre-registered.
+    `max(−give, 0)` out of `r` before `E`) gives `S = 0.832`. With the
+    stage-level overdraw `Es` in place of `E` as well, S is 0.808 (review),
+    just above 0.8. Neither ordering was pre-registered.
   - **The donor's partition is nearly empty.** Where `E > 0` under the
     rule, 0.998 of `E` lies in cell-steps whose whole outflow is at least
     the partition's water at the step's start (0.987 for the switch). In
     `rev`'s repaired cell-steps, both arms in the same cell-steps: the whole
     flux out is about the same (7.07e-2 and 7.25e-2), and `free`'s outflow
     is 1.77e-2 and 1.40e-2. But `free` at the steps' start is 1.6e-5 under
-    the rule against 1.8e-2 under the switch. So the switch's outflow there
-    mostly stays within what `free` holds (`E` 9.6e-3), and the rule's does
-    not.
+    the rule against 1.8e-2 under the switch. The part of `free`'s outflow
+    there that exceeds what `free` held at the step's start is 0.999 under
+    the rule and 0.69 under the switch (review; `E` 1.76e-2 and 9.6e-3).
+    Under the switch the rest of the step refills it, and the repair in
+    these cell-steps is 1.2e-4 against the rule's 1.74e-3.
   - **Where.** One level, 435 m (level 10), carries 0.85 of `rev`'s repair
     of `free` at these levels (1.48e-3 of 1.74e-3), as stage A's 0.43 of
     the 90-day extra at that level suggested.
   - **What it does not show.** Why `free` starts the step nearly empty in
     those cells under the rule. That fits the rule withholding gains where
-    the parent is negative, but no run here isolates it. The reading is for
+    the parent is negative. The parent, `ρq_tot`, is negative at the step's
+    end in 0.996 of `rev`'s repaired cell-steps (0.94 of its repair) and in
+    0.999 of the switch's (0.87), against 0.116 of all traced cell-steps.
+    It is the same in both arms at every traced step (review). But no run
+    here isolates why `free` is empty there. The reading is for
     site 23, these windows and levels below 2 km. It does not generalise to
     other sites or to `pbl`, for which the overdraw accounts for 0.03 of
     the repair under the rule (W53: `pbl` is the side that gives water in
@@ -3064,7 +3078,9 @@ V0 to V2 pass), `14126889` (`lf_od_rev_s23`, 2 h 46 min) and `14126890`
 (`lf_od_switch_s23`, 2 h 46 min), all exit 0, from
 `../ClimaAtmosResiDyn-ledfix-od-run` at `bda3f660`, driver
 `analysis/water/ledfix_overdraw.jl`. Scored with
-`analysis/water/ledfix_overdraw_score.py`; `output/w63/`.*
+`analysis/water/ledfix_overdraw_score.py`; `output/w63/`. The numbers marked
+"review" are from `analysis/water/ledfix_overdraw_review.py`
+(`output/w63/ledfix_overdraw_review.txt`), not pre-registered.*
 
 ## 2. Energy source tags: closure by transport
 

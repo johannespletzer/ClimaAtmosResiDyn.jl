@@ -1,0 +1,9 @@
+S with the stage-level overdraw and the give first: 0.808 (explained rev 0.808 of R, switch 0.806)
+RESULT S_with_the_stage-level_overdraw_and_the_give_first 0.808
+S with the whole outflow in place of E: 0.999 (explained rev 0.995 of R, switch 0.951)
+RESULT S_with_the_whole_outflow_in_place_of_E 0.999
+In rev's repaired cell-steps, lf_od_rev_s23: ΣO 1.7653e-02, ΣE 1.7641e-02, ΣE/ΣO 0.999, free at the start 1.5650e-05, rest of the step Σb 1.7038e-02, Σr+ 1.7439e-03
+In rev's repaired cell-steps, lf_od_switch_s23: ΣO 1.4040e-02, ΣE 9.6261e-03, ΣE/ΣO 0.686, free at the start 1.8347e-02, rest of the step Σb 1.4484e-02, Σr+ 1.2197e-04
+lf_od_rev_s23: ρq_tot < 0 at the step's end in 0.996 of the 12561 repaired cell-steps, holding 0.944 of the repair; in 0.116 of all 237600 traced cell-steps
+lf_od_switch_s23: ρq_tot < 0 at the step's end in 0.999 of the 6821 repaired cell-steps, holding 0.872 of the repair; in 0.116 of all 237600 traced cell-steps
+ρq_tot in the step traces, every row, the same in both arms: True

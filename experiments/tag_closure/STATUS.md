@@ -151,12 +151,14 @@ not checked, it says so.
         same step (share 0.999; 0.591 for `pbl`).
       + **Open for the owner:**
           * why the follower drains `free` more under the rule: *W63
-            (2026-10-03)* confirms the mechanism at site 23. The follower's
-            outflow beyond `free`'s content accounts for the extra repair
-            (`S = 0.996`; 0.832 with the give counted first). The donor's
-            partition is nearly empty and the follower sends the parent's
-            whole flux. Why `free` starts those steps nearly empty is not
-            isolated;
+            (2026-10-03, W53's model, the physics before #139)* confirms
+            the mechanism at site 23. The follower's outflow beyond
+            `free`'s content accounts for the extra repair (`S = 0.996`;
+            0.808 to 0.832 under orderings chosen after the runs). The
+            donor's partition is nearly empty at the step's start, and the
+            follower sends the parent's whole flux. Why `free` starts those
+            steps nearly empty is not isolated. The parent is negative in
+            0.996 of those cell-steps;
           * V5's 2% limit, since `main` is at 2.7% and 2.3%;
           * OD2's windows, which do not mark a startup on the new twins
             (their peak tendency comes at 3.2 to 3.3 h).

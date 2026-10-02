@@ -8,6 +8,7 @@ files.
 |:--|:--|
 | `ledfix_overdraw_score.txt`, `ledfix_overdraw_score.err` | `analysis/water/ledfix_overdraw_score.py`, the pre-registered checks and score: C1, C2, V0 to V2, S, and the reported numbers |
 | `ledfix_overdraw_givefirst.txt` | `analysis/water/ledfix_overdraw_givefirst.py`, not pre-registered: S with the negative part's give taken first |
+| `ledfix_overdraw_review.txt` | `analysis/water/ledfix_overdraw_review.py`, the review's checks, not pre-registered: S with the give first and the stage-level overdraw, S with the whole outflow in place of `E`, `ΣE/ΣO` in rev's repaired cell-steps for both arms, the parent's sign there, and whether the parent is the same in both arms |
 | `<run>/` | for `lf_od_rev_check`, `lf_od_rev_s23` and `lf_od_switch_s23`: the config the model ran, `manifest.json`, `provenance.txt`, and the water closure and audit CSVs. `lf_od_rev_check/` adds its two traces |
 | `job_exit_check.txt` | `sacct` for the three jobs, and the count of lines with "error" or "exception" in each `.err` log |
 | `SHA256SUMS` | every file in this directory |
