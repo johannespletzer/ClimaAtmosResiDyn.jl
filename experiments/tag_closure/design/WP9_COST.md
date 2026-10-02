@@ -402,3 +402,64 @@ its baseline had one slow block (`output/wp9_cost_b34d/README.md`). The owner
 chose to rerun that arm alone, as one exclusive job under this section's rule,
 named `water_copies_r2` in the same results directory. The table and the fit
 then read it with `--skip water_copies`.
+
+## 11. Amendment of 2026-10-02 (evening): the 8 + 8 point on `d3c5e42f`
+
+Written before any job of this section, and pushed first. Criterion 10 needs
+a cost budget, set before V-W11. The owner holds it until a combined point of
+8 water and 8 energy tags is measured on the base of the current goals,
+`main` `d3c5e42f` (goals of 2026-10-02, batch 2, task T1).
+
+**Commit.** `main` `d3c5e42f`, after #139 to #145, in a clean detached run
+tree, `../ClimaAtmosResiDyn-wp9-run-d3c5`, with `.buildkite/LocalPreferences.toml`
+copied in. `.buildkite/` is the same as at `b34bbd8b`, so the Julia
+environment is too. Between the two commits the model source changes in
+#142 (message strings), #143 (the automatic sparse Jacobian, which these
+configs do not use) and #145 (a ClimaCore compat cap, already met by the
+manifest). So no change in cost is expected. Section 10's `both_default` at
+`b34bbd8b` is a cross-check, not a replicate, and is not pooled.
+
+**Arms.** One exclusive job each, account `pn49go-c`, partition
+`hpda2_compute`, on D4 (`wp9_energy_d4_edmf`, 1M, EDMF), default mode. Every
+arm runs its own untagged point `0` first, on its own node, and its ratios are
+read against that point only. Julia, depot, modules, one rank, one thread, 50
+warm-up steps and 6 timed blocks of 20 steps are section 10's.
+
+| Arm         | Family | Points                  | Role                               |
+|:----------- |:------ |:----------------------- |:---------------------------------- |
+| `both_d3c5` | both   | 0, 8 (8 + 8), 8:ledgers | the 8 + 8 point the budget needs   |
+| `water_d4`  | water  | 0, 8, 8:ledgers         | the water half of it alone, on D4  |
+| `energy_d4` | energy | 0, 8, 8:ledgers         | the energy half of it alone, on D4 |
+
+The tag layouts are section 9's. The water tags are the two region tags
+split at 750 m and six surface-flux sources. The energy tags are G4.15's
+eight. `water_d4` and `energy_d4` put exactly one half of `both_d3c5` on the
+same column. Water was measured before only on TRMM's 0M column, so the 8 + 8
+point could not be split. These two arms let it be compared on one column and
+one commit. Their nodes differ from `both_d3c5`'s, so a split is read in
+ratios only and is bounded by the node effect on a ratio, which is not
+measured.
+
+**Measure and rule.** Section 10's: blocks 2 to 6, the minimum and the
+median, `--discard 1`. For every point the block spread is at most 10%, and
+for every tagged point the spread of its ratio to its arm's baseline, block
+by block, is at most 10% too. The rule gates each arm's reading. If
+`both_d3c5` fails, nothing is quoted from it, nothing is rerun, and the work
+stops for the owner. If `water_d4` or `energy_d4` fails, that arm is reported
+with its spreads and not quoted, and the 8 + 8 reading stands. Nothing is
+rerun.
+
+**How it is read.** The 8 + 8 ratio quoted is the less favourable of the
+minimum's and the median's, without and with ledgers. Beside it go build time,
+allocation per step and peak memory. The split compares `both_d3c5`'s added
+step time with the sum of `water_d4`'s and `energy_d4`'s. Section 10's
+`both_default` (4.189, and 9.037 with ledgers) is quoted as the cross-check.
+The budget is proposed from these, marked as waiting for the owner. It is not
+set here.
+
+**Submission.** `SET=d3c5 runscripts/submit_wp9.sh`. Results go to
+`$SCRATCH/tag_closure/output/wp9_cost_d3c5/`, logs to
+`$SCRATCH/tag_closure/logs/wp9_cost_d3c5/`. Three jobs, 4 h limit each. From
+section 10's `both_default`, which took 83 min, each should take under 2 h.
+No check job: the driver, the configs and `FAMILY=both` are section 10's, and
+the only model change these configs reach is in message strings.

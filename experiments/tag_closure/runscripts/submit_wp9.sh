@@ -106,6 +106,20 @@ if [[ "${SET:-}" == b34d ]]; then
     EXTRA=(--exclusive)
     OUT_ROOT=wp9_cost_b34d
 fi
+# SET=d3c5 submits the 8 + 8 point of the amendment of 2026-10-02 (evening),
+# section 11, at main d3c5e42f: the combined arm and each half of it alone, on
+# D4, with section 10's warm-up and blocks.
+if [[ "${SET:-}" == d3c5 ]]; then
+    EXPECT_SHA=d3c5e42f5
+    export WP9_WARMUP=50 WP9_REPEATS=6
+    TABLE=(
+      "both_d3c5 both default 0 wp9_energy_d4_edmf 0,8,8:ledgers 200G 04:00:00"
+      "water_d4 water default 0 wp9_energy_d4_edmf 0,8,8:ledgers 200G 04:00:00"
+      "energy_d4 energy default 0 wp9_energy_d4_edmf 0,8,8:ledgers 200G 04:00:00"
+    )
+    EXTRA=(--exclusive)
+    OUT_ROOT=wp9_cost_d3c5
+fi
 export OUT_ROOT
 [[ "${RUN_SHA}" == "${EXPECT_SHA}"* ]] || [[ -n "${ALLOW_OTHER_MODEL_COMMIT:-}" ]] || {
     echo "ERROR: the model tree is at ${RUN_SHA}, not ${EXPECT_SHA}." >&2; exit 1; }
