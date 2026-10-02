@@ -3040,7 +3040,9 @@ end
             CA.water_tag_audit_state_names(keyed),
         ),
     )
-    with_exp(exp) = (; c = (; state(keyed_names; exp).c..., audit_records...))
+    with_exp(exp) = (;
+        c = (; state(keyed_names; exp, mechanisms = keyed_ledgers).c..., audit_records...)
+    )
     @test_throws r"before the water tags kept the ledger of the withheld gain \(q_tag_exp_negative, q_tag_exp_negative_precip\)" check(
         written,
         keyed,
