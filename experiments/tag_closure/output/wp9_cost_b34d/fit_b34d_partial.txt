@@ -1,0 +1,29 @@
+base, mode, precip: exponent of added step time | of build time | local exponents of added step time
+('both', 'wp9_energy_d4_edmf', 'default', '0') N=[8] one point, no fit; added step 14.364 ms
+('energy', 'wp9_energy_d4_edmf', 'copies', '0') N=[2, 4] k_step=0.89 k_build=0.40 local [np.float64(0.89)]
+   N=2 ratio blocks [1.19 1.19 1.19 1.19 1.19] spread 0.7% (blocks 2-5 0.2%)
+   N=4 ratio blocks [1.35 1.35 1.34 1.35 1.36] spread 1.2% (blocks 2-5 1.2%)
+('energy', 'wp9_energy_d4_edmf', 'default', '0') N=[2, 4, 8, 32] k_step=1.53 k_build=0.34 local [np.float64(0.76), np.float64(1.11), np.float64(2.06)]
+   N=2 ratio blocks [1.17 1.17 1.15 1.16 1.16] spread 1.3% (blocks 2-5 1.3%)
+   N=4 ratio blocks [1.27 1.31 1.27 1.27 1.27] spread 3.2% (blocks 2-5 3.2%)
+   N=8 ratio blocks [1.58 1.56 1.58 1.58 1.58] spread 1.3% (blocks 2-5 1.3%)
+   N=32 ratio blocks [8.02 8.05 8.03 8.12 8.06] spread 1.3% (blocks 2-5 1.2%)
+('water', 'wp9_water_1m_column', 'default', '0') N=[2, 4, 8, 32] k_step=1.51 k_build=0.33 local [np.float64(0.87), np.float64(0.93), np.float64(2.09)]
+   N=2 ratio blocks [1.2  1.21 1.21 1.2  1.21] spread 1.0% (blocks 2-5 0.8%)
+   N=4 ratio blocks [1.37 1.38 1.38 1.37 1.38] spread 0.6% (blocks 2-5 0.5%)
+   N=8 ratio blocks [1.72 1.73 1.72 1.72 1.73] spread 0.6% (blocks 2-5 0.6%)
+   N=32 ratio blocks [14.03 14.12 14.12 14.11 14.16] spread 0.9% (blocks 2-5 0.4%)
+('water', 'wp9_water_1m_column', 'default', '1') N=[2, 4, 8, 32] k_step=2.09 k_build=0.71 local [np.float64(2.44), np.float64(1.56), np.float64(2.24)]
+   N=2 ratio blocks [1.67 1.68 1.7  1.68 1.68] spread 1.8% (blocks 2-5 1.0%)
+   N=4 ratio blocks [4.67 4.71 4.76 4.81 4.8 ] spread 2.9% (blocks 2-5 2.1%)
+   N=8 ratio blocks [11.88 11.98 11.9  11.98 11.97] spread 0.8% (blocks 2-5 0.7%)
+   N=32 ratio blocks [242.87 245.04 243.43 245.77 245.42] spread 1.2% (blocks 2-5 1.0%)
+('water', 'wp9_water_trmm0m_edmf', 'copies', '0') N=[2, 4, 8] k_step=0.95 k_build=0.34 local [np.float64(1.04), np.float64(0.86)]
+   N=2 ratio blocks [1.18 1.19 0.81 1.18 1.18] spread 47.3% (blocks 2-5 47.3%)
+   N=4 ratio blocks [1.39 1.38 0.94 1.38 1.38] spread 48.1% (blocks 2-5 47.1%)
+   N=8 ratio blocks [1.71 1.69 1.15 1.69 1.68] spread 48.0% (blocks 2-5 46.5%)
+('water', 'wp9_water_trmm0m_edmf', 'default', '0') N=[2, 4, 8, 32] k_step=1.37 k_build=0.14 local [np.float64(0.58), np.float64(0.89), np.float64(1.95)]
+   N=2 ratio blocks [1.16 1.14 1.16 1.17 1.15] spread 3.0% (blocks 2-5 3.0%)
+   N=4 ratio blocks [1.23 1.21 1.23 1.24 1.23] spread 1.7% (blocks 2-5 1.7%)
+   N=8 ratio blocks [1.46 1.41 1.43 1.43 1.43] spread 3.8% (blocks 2-5 1.6%)
+   N=32 ratio blocks [7.36 7.38 7.37 7.38 7.4 ] spread 0.5% (blocks 2-5 0.4%)
