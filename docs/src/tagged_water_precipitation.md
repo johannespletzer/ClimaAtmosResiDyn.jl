@@ -60,22 +60,42 @@ with it, and one written without it only without it.
     substeps, and the tags move once per model step.
   - **Limiters and constraints.** A correction that changes a compartment moves
     the change between the part and the tag's non-precipitating part. Floors
-    keep every part non-negative. Then the non-precipitating parts take the
-    change of ``\rho q_\mathrm{tot}`` by the rule of
-    [`ClimaAtmos.rescale_water_tags!`](@ref). The grid-mean constraint of
-    1-moment microphysics clips the condensates each time the state is
-    constrained, so this runs every step.
+    keep every part non-negative. The non-precipitating parts take the change
+    of ``\rho q_\mathrm{tot}`` by the rule of
+    [`ClimaAtmos.rescale_water_tags!`](@ref). The changes that raise the
+    non-precipitating water ``N`` go first: a rise of ``\rho q_\mathrm{tot}``
+    and a fall of rain or snow. Those that lower it go last. So where ``N`` is
+    positive before and after, it stays positive in between, and its parts
+    keep their water. The grid-mean constraint of 1-moment microphysics clips
+    the condensates each time the state is constrained, so this runs every
+    step.
+  - **Closing step.** After each follow, the partition's rain parts are brought
+    to the non-negative part of ``\rho q_\mathrm{rai}``, and its snow parts to
+    that of ``\rho q_\mathrm{sno}``
+    ([`ClimaAtmos.water_tag_part_closing_shift`](@ref)). The parts take the
+    difference by their own composition, or, where they hold none, by the
+    non-precipitating composition. Other paths can leave the parts apart from
+    their compartment where it is negative: the microphysics, the
+    sedimentation, and the advection, which can take a compartment below zero
+    on a sphere. The closing step changes the tags' totals, and the rescale's
+    ledgers take what it moves: `q_tag_fix_<name>` and `q_tag_led_rescale`.
+    So `q_rtag_res` and `q_stag_res` stay at rounding after each constrained
+    state, and the closing step's work shows in those ledgers instead.
   - **Repair.** The partition repair runs on each compartment's parts, among
     themselves.
   - **Vapour nonnegativity tendency.** When it is configured, it lifts negative
     rain and snow from vapour. Their parts take the non-precipitating
     composition by the net-flow rule.
 
-The hyperdiffusion takes each non-precipitating part as
-``\nabla^2(\rho q_{\mathrm{tag},i}/\rho - \varphi_i q_\mathrm{tot,r})``, with
-``\varphi_i`` its share of the compartment and ``q_\mathrm{tot,r}`` the reference
-profile. The tags' sum does not follow the parent's hyperdiffusion in two
-cases. One is where the partition holds none of the non-precipitating water,
+The hyperdiffusion takes each non-precipitating part as a passive tracer, on
+``\rho q_{\mathrm{tag},i}/\rho``, and gives it its share ``\varphi_i`` of the
+reference profile's term, ``\varphi_i \nu_4 \nabla\cdot(\rho \nabla\nabla^2 q_\mathrm{tot,r})``
+([`ClimaAtmos.apply_water_tag_hyperdiffusion!`](@ref)). The parent
+hyperdiffuses ``q_\mathrm{tot,eff} - q_\mathrm{tot,r}``, so the partition's
+parts sum to its tendency. The share stays outside the operator. Inside it, a
+tag's composition would mix against its gradient wherever
+``q_\mathrm{tot,eff}`` is below ``q_\mathrm{tot,r}``, about above 250 hPa.
+The tags' sum does not follow the parent's hyperdiffusion in two cases. One is where the partition holds none of the non-precipitating water,
 so every share is zero and the tags take no part of the reference profile. The
 other is where the non-precipitating water is negative, so its parts partition
 zero and the tags do not diffuse its negative part. `q_tag_leak_hyperdiff`
@@ -90,8 +110,8 @@ parts' sum minus its tendency of the parent. It is taken where the parts sum to
 the target ``\max(N, 0)``, with ``N`` the water that is neither rain nor snow.
 So it includes the path's transport of the negative part, and it is the path's
 source of `q_tag_res + q_tag_negative`, with the opposite sign. For the
-hyperdiffusion it also holds the reference-profile term
-``(1 - \sum_i \varphi_i) q_\mathrm{tot,r}``.
+hyperdiffusion it also holds ``1 - \sum_i \varphi_i`` times the reference
+profile's term.
 
 The composition of the compartment a flow leaves is taken over the step
 ([`ClimaAtmos.water_tag_pool_shares`](@ref)): the compartment's water at the
@@ -117,13 +137,17 @@ alone would give an empty compartment no composition to pass on.
     the change the gross flows gave. Where rain forms and evaporates in one
     step, the net-flow rule gives the evaporated water the rain's composition
     only for the net, and the audit shows the difference. The fields are
-    cumulative and carried through restarts.
+    cumulative and carried through restarts. They are state fields, on by
+    default. `water_tag_precipitation_audit: false` leaves them and their two
+    extra solves per tag out. The parts are the same either way.
 
 With first-order tracer upwinding the rain and snow parts' transport is linear,
 and each compartment closes to rounding under `increment` on a column. The
 default `vanleer_limiter` is nonlinear per field, so the parts drift from
-their species as the tags drift from ``\rho q_\mathrm{tot}``. The repair only
-removes negative parts.
+their species as the tags drift from ``\rho q_\mathrm{tot}``. The closing
+step brings the rain and snow parts back each time the state is constrained.
+The non-precipitating parts keep their drift, which `q_ntag_res` reports. The
+repair only removes negative parts.
 
 ## Negative water
 
@@ -144,7 +168,11 @@ be non-zero where ``\rho q_\mathrm{tot}`` is positive, for example where rain
 is slightly negative. Without the key it is the negative part of
 ``\rho q_\mathrm{tot}`` alone, so its values with and without the key do not
 compare. `q_tag_res`, `q_tag_negative` and the partition's parts add up to
-``q_\mathrm{tot}``, to rounding. Under `water_tag_transport: increment` the
+``q_\mathrm{tot}``, to rounding. The water closure check's
+`negative_water_void` reads the raw ``\rho q_\mathrm{tot}`` only, by the
+owner's decision of 2026-09-25. So negative rain or snow in a cell whose
+``\rho q_\mathrm{tot}`` is positive does not void the check. It shows in
+`q_tag_negative` and in each compartment's residual. Under `water_tag_transport: increment` the
 correction after each solve takes the increment of the non-precipitating water's
 target, and `q_tag_inc_negative` holds what it gives the tags for that water's negative
 part. Where no compartment is negative, nothing changes, bit for bit.
@@ -163,14 +191,15 @@ snow keep.
 
   - Without EDMF only. Updraft copies are refused.
   - Only 1-moment microphysics.
-  - The three parts cost three fields per tag, two audit fields per tag, and the
-    flows. The flows evaluate the microphysics rates again, so their cost is of
+  - The three parts cost three fields per tag, two audit fields per tag unless
+    `water_tag_precipitation_audit: false`, and the flows. The flows evaluate the microphysics rates again, so their cost is of
     the same order as the microphysics.
 
 ## Rain and snow tags API
 
 ```@docs
 ClimaAtmos.has_water_tag_precipitation
+ClimaAtmos.has_water_tag_precipitation_audit
 ClimaAtmos.WaterTagPart
 ClimaAtmos.NonPrecipitatingPart
 ClimaAtmos.water_tag_part_field
@@ -206,11 +235,15 @@ ClimaAtmos.snapshot_water_tag_precipitation!
 ClimaAtmos.follow_water_tag_precipitation!
 ClimaAtmos.water_tag_part_follow_shift
 ClimaAtmos.water_tag_source_part_follow_shift
+ClimaAtmos.water_tag_part_closing_shift
 ClimaAtmos.water_tag_moves_precip_advection
 ClimaAtmos.water_tag_precip_advection!
+ClimaAtmos.water_tag_hyperdiffusion_quantities
 ClimaAtmos.prep_water_tag_hyperdiffusion!
+ClimaAtmos.apply_water_tag_hyperdiffusion!
 ClimaAtmos.water_tag_precipitation_flux!
 ClimaAtmos.water_tag_precipitation_from_config
+ClimaAtmos.water_tag_precipitation_audit_from_config
 ClimaAtmos.check_water_tag_precipitation_supported
 ClimaAtmos.rebuild_water_tags_from_state!
 ClimaAtmos.water_tag_precipitation_audit_variables

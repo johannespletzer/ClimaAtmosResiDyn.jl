@@ -46,10 +46,15 @@ ghost buffers when the space requires DSS.
 function hyperdiffusion_cache(Y, atmos)
     (; hyperdiff, turbconv_model) = atmos
     isnothing(hyperdiff) && return (;)  # No hyperdiffiusion
-    hyperdiffusion_cache(Y, hyperdiff, turbconv_model)
+    hyperdiffusion_cache(Y, hyperdiff, turbconv_model, atmos.water_tagging_model)
 end
 
-function hyperdiffusion_cache(Y, ::Hyperdiffusion, turbconv_model)
+function hyperdiffusion_cache(
+    Y,
+    ::Hyperdiffusion,
+    turbconv_model,
+    water_tagging_model = nothing,
+)
     FT = eltype(Y)
     n = n_mass_flux_subdomains(turbconv_model)
 
@@ -66,6 +71,9 @@ function hyperdiffusion_cache(Y, ::Hyperdiffusion, turbconv_model)
         # does not compile on a GPU once there are more than about 32 tracers.
         # `prep_tracer_hyperdiffusion_tendency!` fills this one tracer at a time.
         ᶜ∇²specific_tracers = allocate_ᶜspecific_gs_tracers(Y, FT),
+        # The water tags' reference profile, under `water_tag_precipitation`
+        # only.
+        water_tag_hyperdiffusion_quantities(Y, water_tagging_model)...,
     )
 
     # Sub-grid scale quantities. `ᶜ∇²uʲs` is DSSed as a full C123 vector
@@ -414,7 +422,14 @@ function dss_hyperdiffusion_tendency_pairs(p)
     core_tracer_pairs =
         !isempty(propertynames(ᶜ∇²specific_tracers)) ?
         (ᶜ∇²specific_tracers => buffer.ᶜ∇²specific_tracers,) : ()
-    tracer_pairs = core_tracer_pairs
+    tracer_pairs = (
+        core_tracer_pairs...,
+        water_tag_hyperdiffusion_dss_pairs(
+            p.hyperdiff,
+            buffer,
+            p.atmos.water_tagging_model,
+        )...,
+    )
     return (dynamics_pairs..., tracer_pairs...)
 end
 
@@ -443,9 +458,9 @@ NVTX.@annotate function prep_tracer_hyperdiffusion_tendency!(Yₜ, Y, p, t)
         @. ᶜ∇²χ = wdivₕ(gradₕ(specific(ᶜρχ, Y.c.ρ)))
     end
     # Under `water_tag_precipitation: true` the water tags' non-precipitating
-    # parts are hyperdiffused against their share of the reference profile, as
-    # the parent's diffusing water is.
-    prep_water_tag_hyperdiffusion!(ᶜ∇²specific_tracers, Y, p)
+    # parts also take their share of the reference profile's hyperdiffusion,
+    # as the parent's diffusing water does. Its Laplacian is set here.
+    prep_water_tag_hyperdiffusion!(Y, p)
     return nothing
 end
 
@@ -558,6 +573,9 @@ NVTX.@annotate function apply_tracer_hyperdiffusion_tendency!(Yₜ, Y, p, t)
         energy_source_tag_moves_as_enthalpy(p, ρχ_name) && return
         @. ᶜρχₜ -= ν₄_scalar * wdivₕ(Y.c.ρ * gradₕ(ᶜ∇²χ))
     end
+    # Under `water_tag_precipitation: true` each water tag's non-precipitating
+    # part takes its share of the reference profile's term.
+    apply_water_tag_hyperdiffusion!(Yₜ, Y, p, ν₄_scalar)
 
     if turbconv_model isa PrognosticEDMFX
         (; ᶜ∇²q_tot_effʲs) = p.hyperdiff

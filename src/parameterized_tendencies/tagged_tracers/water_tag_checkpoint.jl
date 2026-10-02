@@ -232,7 +232,7 @@ function check_water_tag_checkpoint(restart_file, model, Y, context)
         is_water_tag_audit_name,
         water_tag_audit_state_names(water_model),
         "records of the water tags' microphysics audit",
-        "water_tag_precipitation",
+        "water_tag_precipitation` and `water_tag_precipitation_audit",
         "q_",
     )
     isnothing(water_model) && return nothing

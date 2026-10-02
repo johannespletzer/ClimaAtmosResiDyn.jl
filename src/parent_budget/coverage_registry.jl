@@ -106,6 +106,8 @@ nogw(c::RegistryContext) = !isnothing(c.atmos.non_orographic_gravity_wave)
 ogw(c::RegistryContext) = !isnothing(c.atmos.orographic_gravity_wave)
 prescribed_flow(c::RegistryContext) = !isnothing(c.atmos.prescribed_flow)
 water_tags(c::RegistryContext) = !isnothing(c.atmos.water_tagging_model)
+water_tag_precipitation(c::RegistryContext) =
+    has_water_tag_precipitation(c.atmos.water_tagging_model)
 energy_source_repair(c::RegistryContext) =
     !isnothing(c.atmos.energy_source_tagging_model) &&
     c.atmos.energy_source_tagging_model.repair
@@ -1144,6 +1146,23 @@ const COVERAGE_ROWS = CoverageRow[
     ),
     CoverageRow(
         :final_maps,
+        Symbol("map.follow_water_tag_precipitation"),
+        "`limiters_func!`, `follow_water_tag_precipitation!`",
+        "`lim!`",
+        "rain and snow tags configured",
+        "atmosphere",
+        "tag fields only",
+        (:invariant_zero, :invariant_zero, :invariant_zero),
+        "tag-only, writes no parent field",
+        :final_map,
+        :collected,
+        "field-write inventory",
+        "`tagged_water_precipitation_tests.jl`",
+        7,
+        water_tag_precipitation,
+    ),
+    CoverageRow(
+        :final_maps,
         Symbol("map.mass_energy_consistency"),
         "`limiters_func!`, `enforce_mass_energy_consistency!`",
         "`lim!`",
@@ -1277,6 +1296,23 @@ const COVERAGE_ROWS = CoverageRow[
         "`journal_tests.jl`",
         7,
         one_moment,
+    ),
+    CoverageRow(
+        :final_maps,
+        Symbol("map.follow_water_tag_precipitation_constrain"),
+        "`constrain_state!`, `follow_water_tag_precipitation!`",
+        "`constrain_state!`",
+        "rain and snow tags configured",
+        "atmosphere",
+        "tag fields only",
+        (:invariant_zero, :invariant_zero, :invariant_zero),
+        "tag-only, writes no parent field",
+        :final_map,
+        :collected,
+        "field-write inventory",
+        "`tagged_water_precipitation_tests.jl`",
+        7,
+        water_tag_precipitation,
     ),
     CoverageRow(
         :final_maps,

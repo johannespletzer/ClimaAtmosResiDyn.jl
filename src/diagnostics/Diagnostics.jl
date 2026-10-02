@@ -86,6 +86,8 @@ import ..WaterTaggingModel
 import ..water_region_tag_state_names
 import ..water_partition_state_names
 import ..has_water_tag_precipitation
+import ..has_water_tag_precipitation_audit
+import ..is_water_tag_audit_name
 import ..water_tag_part_parent
 import ..NonPrecipitatingPart
 import ..RainPart

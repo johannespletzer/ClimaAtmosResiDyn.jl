@@ -492,7 +492,9 @@ function water_closure_parent(Y, p)
 end
 
 # The closure's `nonpositive_fraction` and the audit's `nonpositive_mass` read
-# the raw parent, since the partition's target is never negative.
+# the raw parent, since the partition's target is never negative. Under
+# `water_tag_precipitation: true` that is still the raw `ρq_tot`, not the
+# compartments' negative parts, as `parent_negative_water` says.
 closure_signed_parent(Y, p, ::typeof(water_closure_parent)) = Y.c.ρq_tot
 
 """
@@ -516,8 +518,13 @@ The parent's negative water, from the raw `ρq_tot`:
   - `relative = negative / total` ([`negative_water_relative`](@ref)).
 
 Not the partition's target `max(ρq_tot, 0)`, whose negative part is zero by
-construction. `negative` is the integral of `ρ q_tag_negative` up to sign.
-It writes no field, not even scratch. So the check at every accepted step
+construction. Without `water_tag_precipitation`, `negative` is the integral of
+`ρ q_tag_negative` up to sign. With it, it is not. There `q_tag_negative` is
+the sum of the three compartments' negative parts, and a cell with negative
+rain or snow but positive `ρq_tot` adds to `q_tag_negative` and not here. The
+check reads the raw `ρq_tot` by the owner's decision of 2026-09-25, so it does
+not gate those remainders. `q_ntag_res`, `q_rtag_res`, `q_stag_res` and
+`q_tag_negative` report them. It writes no field, not even scratch. So the check at every accepted step
 ([`check_negative_water_step!`](@ref)), which takes the same sums, writes none
 either. `Base.sum` reduces across processes, so this is collective: every
 process must call it.
