@@ -61,9 +61,9 @@ def drop_blocks(row, discard):
     row["step_ms_min"], row["step_ms_median"], row["step_ms_max"] = kept.min(), float(np.median(kept)), kept.max()
 
 
-def read_points(root, discard=0):
+def read_points(root, discard=0, skip=frozenset()):
     rows, statuses = {}, []
-    arms = sorted(p for p in root.iterdir() if p.is_dir())
+    arms = sorted(p for p in root.iterdir() if p.is_dir() and p.name not in skip)
     if not arms:
         sys.exit(f"No arm directories under {root}.")
     for arm in arms:
@@ -128,8 +128,9 @@ def main():
     parser.add_argument("root", type=Path)
     parser.add_argument("--out", type=Path)
     parser.add_argument("--discard", type=int, default=0, help="timed blocks to discard (section 10: 1)")
+    parser.add_argument("--skip", action="append", default=[], help="an arm not read, e.g. one rerun")
     args = parser.parse_args()
-    rows, statuses = read_points(args.root, args.discard)
+    rows, statuses = read_points(args.root, args.discard, set(args.skip))
     not_finished = check_statuses(rows, statuses)
 
     # Since the amendment of 2026-10-02 every arm runs its own untagged point on

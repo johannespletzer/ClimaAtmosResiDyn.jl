@@ -117,6 +117,9 @@ for row in "${TABLE[@]}"; do
         [[ " ${ARMS[*]} " == *" ${arm} "* ]] || continue
     fi
     points="${points//,/ }"
+    # ARM_SUFFIX names a rerun of an arm apart from its first run (section 10's
+    # note of 2026-10-02: water_copies_r2).
+    arm="${arm}${ARM_SUFFIX:-}"
     cmd=(sbatch --parsable --account="${ACCOUNT:-pn49go-c}" --partition="${PARTITION}" --nodes=1 --ntasks=1
          --cpus-per-task=4 --mem="${mem}" ${EXTRA[@]+"${EXTRA[@]}"} --time="${time}" -J "wp9${EXTRA[@]+x}_${arm}"
          -o "${LOGS}/%x-%j.out" "${REC_TREE}/experiments/tag_closure/runscripts/wp9_cost.sh")

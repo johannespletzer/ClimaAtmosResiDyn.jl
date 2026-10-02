@@ -20,6 +20,8 @@ root = sys.argv[1]
 # Section 10 (2026-10-02): `--discard 1` drops the first timed block before
 # anything is read from the blocks.
 discard = int(sys.argv[sys.argv.index("--discard") + 1]) if "--discard" in sys.argv else 0
+# `--skip ARM` leaves out an arm that was rerun (section 10's note).
+skip = {sys.argv[i + 1] for i, a in enumerate(sys.argv) if a == "--skip"}
 rows = []
 for f in sorted(glob.glob(root + "/*/*.csv")):
     if f.endswith("status.csv"):
@@ -28,6 +30,8 @@ for f in sorted(glob.glob(root + "/*/*.csv")):
     if len(got) != 1:
         sys.exit(f"{f}: one row expected")
     got[0]["arm"] = f.split("/")[-2]
+    if got[0]["arm"] in skip:
+        continue
     if discard:
         kept = np.array(got[0]["step_ms_blocks"].split(";"), float)[discard:]
         got[0]["step_ms_blocks"] = ";".join(str(x) for x in kept)

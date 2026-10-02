@@ -396,3 +396,9 @@ Section 9's data count for nothing beyond that record.
 **How it is read.** As section 9, on blocks 2 to 6. If the rule passes, the
 table and the fit give W52 (water) and E88 (energy), the RUNS rows and the
 budget proposal, marked as waiting for the owner.
+
+*Note of 2026-10-02, before the job.* `water_copies` failed the rule because
+its baseline had one slow block (`output/wp9_cost_b34d/README.md`). The owner
+chose to rerun that arm alone, as one exclusive job under this section's rule,
+named `water_copies_r2` in the same results directory. The table and the fit
+then read it with `--skip water_copies`.
