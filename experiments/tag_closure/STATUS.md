@@ -15,7 +15,8 @@ unchecked task, to establish completion.
 | Water, clean transport references | PX11/PX24 remain the scheduled source-free reference route. | Part 6 after contract floors/accounting and OD14 held-out freeze. | Validates only named active transport rules; cannot qualify precipitating EDMF or surface origins. |
 | Water, 0M surface precipitation origins | W58 C7 is an instantaneous accounting report in the three-tag pilot. | Parts 4/5 paired accumulation, Part 7 independent attribution; owner WA-PRECIP. | No approved 0M C7 tolerance or accumulated per-tag window evidence from the current overlay; exact sum does not prove correct origins. |
 | Rain/snow, non-EDMF stage 1 | PR #146 open at `33cbfd4fa282618788cea54de7a69696b592ead8`; implementation/test evidence differs from merge and qualification. | Part 5 cancellation accounting, part 7 donor attribution, applicable part 9 integration. | Stage 2/3 EDMF and independent provenance remain open; signed closing ledger cannot bound cumulative error. |
-| Energy | Existing tags/records and conditional budget evidence; copies eligibility and convention limits remain. | Part 3 then 11a; reuse 4/5. | Water success is not energy qualification; OD7/OD11 and G4 numerical levels remain gated. |
+| Energy, proposed signed-radiation record pilot | Level 0: Part 3 defines one-record/zero-source-tag non-EDMF DYCOMS use, independent flux route and explicit exclusions. C3/C5 give historical interpretation evidence only. | Parts 4/11a/11b, with EA-USE/EA-ACCURACY/EA-COST before qualification. | No current workflow parity, independent accepted-stage flux, reference floor, restart or measured cost; no stored-source or total-budget claim. |
+| Energy, stored source provenance / EDMF | Level 0: fixed-convention meanings and applicable matrix documented. Tags/records and historical conditional budgets exist; E84 copies remain ineligible. | Parts 4/5/11a then 11b–d; existing OD7/OD11 and seven-point level gates. | cΔρ is not generally cΔwater; Θx nets within a cell/accepted step; C4 per-tag outflow, intervention and independent origin coverage remain open. Water qualification is not energy qualification. |
 | Production envelope | W59 MPI and W60/W62 precision evidence cover stated cases only. | Part 12 after relevant qualification and cost gates. | Preserve W60 failure and W62's narrower pass; no blanket production verdict. |
 
 No level is assigned to a whole family without matching the required
@@ -36,6 +37,29 @@ cell-step retained and attempted ledger readings remain useful but cannot
 exclude cancelling applied corrections; Parts 4/5 own the documented scorer
 and accounting gaps. OD5's historical conditional verdict is retained
 without a mathematical error-bound claim; OD9–OD11 remain proposed.
+
+**Part 3 documentation:** energy meanings, equations, proposed first signed
+record use, [canonical matrix](design/G4_CLAIM_CONTRACTS.md#5-energy-acceptance-matrix),
+reference designs and downstream obligations are prepared. Independent
+actual-diff review and final consistency validation are in progress; no
+scientific evidence level is raised. EA-USE/EA-ACCURACY/EA-COST are owner
+proposals; EA-STATE covers a proposed additional stored-state criterion,
+without changing approved closure growth. OD7/OD9–11 and remaining G4
+numerical levels keep their gates.
+The approved OD4 scale is defined exactly as the code records it, including
+within-step cancellation, and legacy interim/runtime estimates are separated.
+Parts 4/5 own density differencing, persistent-state residual and accepted
+activity scorer/accounting gaps; no executable change was made here.
+
+**Part 3 source recheck, 2026-10-06:** PR #147 remains open/unmerged at
+`24b7536a351c57f4c5b639b868e6b499acc4e763`; PR #148 is open/unmerged on
+`codex/water-acceptance-part2` at `fb8ddf62540df8c36095313bec3dee17aa2b5206`,
+with Part 1 as its base. Part 2 is one six-document commit ahead. Part 3 uses
+that exact immutable source/planning snapshot, with current `main`
+`d3c5e42f54515729f53216ae6b8ba268bea8262f`. These branch checks do not reverify
+PR #146 or establish current simulation qualification. No local checkout
+exists in this execution; original and revised files are separately
+materialized, and no Part 3 branch/commit or publication is claimed.
 
 **Source state rechecked 2026-10-06:** Part 1 PR #147 is open/unmerged on
 `codex/plan-capability-increments-part1` at

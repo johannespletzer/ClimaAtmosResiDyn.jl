@@ -181,6 +181,54 @@ targeted fixes, Part 10 scoped qualification and Part 12 production expansion.
 No simulations, executable changes or branch/PR publication belong to this
 Part 2 handout.
 
+### Part 3 energy specification (2026-10-06)
+
+The canonical energy meanings, equations, normalizations and
+[acceptance matrix](design/G4_CLAIM_CONTRACTS.md#5-energy-acceptance-matrix)
+are in [G4_CLAIM_CONTRACTS](design/G4_CLAIM_CONTRACTS.md). OD3 and the
+register below retain their approved numerical authority. The contract
+separates stored source ancestry, signed process increments and accepted
+parent-budget reconstruction; none is a causal counterfactual.
+
+The proposed first useful energy question is a signed radiation
+heating/cooling profile and day-integrated amount on a non-EDMF DYCOMS RF02
+0M column, with one radiation record and zero source tags. Its fixed
+reference, configuration, excluded claims, startup/sensitivity windows and
+independent accepted-stage flux route are
+[specified there](design/G4_CLAIM_CONTRACTS.md#3-one-first-useful-energy-workflow-a-signed-radiation-record).
+EA-USE, EA-ACCURACY and EA-COST (record pilot), plus EA-STATE (additional stored-state criterion), remain
+[owner proposals](DECISIONS.md#part-3-proposals-2026-10-06-waiting).
+This pilot could qualify its process-record question only; stored energy
+provenance and the full eight-tag G4 objective remain separate obligations.
+
+The offset identity uses `c Δρ`; a water record is a mass proxy only after a
+process-specific discrete proof. OD4's exact quantity is cellwise absolute
+**accepted-step** source-ledger change summed over partition tags and steps;
+within-step process/stage cancellation remains. Offline interim records
+and runtime fallback are different estimates. Reconstruction of cumulative
+specific outputs requires density at both endpoints. Source-state residual
+and its window change are reported separately; the approved closure-growth
+reading is preserved, and a proposed scored state requirement needs EA-STATE.
+A small change cannot establish a small retained residual. These demonstrated scorer/accounting gaps go to
+Parts 4/5, not executable changes in this part.
+
+Preserve the decided seven-point definitions and C4's documented size;
+points 2/3/4/6 levels need post-#139 evidence. OD7 and proposed OD9–11 remain
+gated; OD12–14 reference/probe/held-out restrictions remain accepted.
+Mirrors, sedimentation cross blocks and unsupported-mode guards are reused
+at the actual baseline. D4 copies are still ineligible; water's passing
+rules and qualifications are not inherited. Full source-tag conditional
+tests state fixed `c` and source/loss conventions; the offset sweep is a
+convention comparison, not a reference or error bound.
+
+Part 3 completes after independent review and source/decision/threshold/
+link/crosswalk validation resolve concrete findings. Missing evidence and
+owner decisions continue to block affected scientific claims. G4_TODO
+routes independent energy references to 11a, process/integrated baseline
+and measured cost to 11b, evidenced fixes to 11c, scoped qualification to
+11d and expanded/production qualification to 12. No simulations,
+executable changes, scientific default changes or publishing belong here.
+
 ## Rev. 2 of the work plan (2026-09-24)
 
 The owner revised the work plan on 2026-09-24 ("Simulation-results synthesis
@@ -247,8 +295,10 @@ assessable**. *Not assessable* names the missing prerequisite, for example "no
 eligible comparator: copies repair 0.60%/day against a 0.20%/day bound"
 (W21). Its treatment at M5 follows OD5. This table supplies the common rows;
 [G3_PLAN's water matrix](G3_PLAN.md#612-water-acceptance-matrix-authoritative-part-2-specification)
-supplies water-specific definitions and applicability. M2 and G4.3 to G4.6
-retain their own technical specifications and the existing threshold sources.
+supplies water-specific definitions and applicability;
+[G4_CLAIM_CONTRACTS](design/G4_CLAIM_CONTRACTS.md#5-energy-acceptance-matrix)
+supplies the energy-specific matrix. M2 and G4.3 to G4.6 retain their
+technical specifications and the existing threshold sources.
 
 | Verdict                | Required evidence                                                                                                                                                                                         | Threshold                                                                                                   |
 |:---------------------- |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:----------------------------------------------------------------------------------------------------------- |
@@ -724,7 +774,7 @@ neither an undecided convention nor an unapproved run.
 |:--|:--|:--|
 | 1 Plan reconciliation | One queue and a complete crosswalk; preserve every WP/PX/G4 item, decision and failed result. Documentation only. | Loss check, link checks, independent review. No implementation or runs. |
 | 2 Water acceptance contract | Define one useful initial water workflow, its observables and scientific tolerance rationale. Reuse G3's twelve criteria, OD1–OD3/OD5/OD8/OD12–OD15 and the claim contract. Propose missing tolerances without changing existing ones. | Part 1; separate missing-owner-decision list. Scope may be narrower than G3's full production target, which stays open. |
-| 3 Energy acceptance contract | Distinguish stored source attribution, signed process records and causal claims; specify reference convention, source/loss meaning and observable. Reuse G4.3, OD4/OD7/OD11 and the recorded seven-point decisions. | Part 1; may run beside 2. Fixed convention and owner decisions before scored energy tests. No automatic inheritance of water's rules. |
+| 3 Energy acceptance contract | Canonical [G4 contract/matrix](design/G4_CLAIM_CONTRACTS.md#5-energy-acceptance-matrix), signed radiation-record pilot proposal and EA-USE/EA-ACCURACY/EA-COST. Distinguish stored labels, records and parent accounting; define cΔρ, OD4 discrete scales, window state residuals and cancellation. | Parts 1/2 source work reused; may run beside water. Independent doc review and preservation checks. Missing scientific choices/evidence stay blocked; no code or runs. |
 | 4 Common evidence and scoring | Reuse WP0, manifests, verifier, archive, WP6 outputs and verdict records; fill demonstrated gaps only. PX0, PX21 when triggered, and fault injection remain. | Parts 2/3 determine applicable outputs. Missing data/reference produces not assessable, not an omitted row. Exact code/configuration, environment, window, results and checksum evidence. |
 | 5 Correction accounting | Reuse WP6 and G4.6; distinguish signed accounting from absolute correction activity before summing events, cells or compartments. Resolve the PR #146 signed closing-ledger interpretation. Prefer probes to new state fields (OD13). | Part 4; alternating signs, simultaneous rain/snow corrections and restart stitching must reveal cancellation. No unsupported cumulative provenance-error bound. Energy uses OD4. |
 | 6 Independent water transport references | Reuse PX1/PX8, PX7, PX11/PX24, eligible PX12 and existing mixing tests. Add only missing analytic/manufactured or independent transport references after design. | Parts 2, 4, applicable 5; OD12 floors and parent validity first. Wrong-origin mutants fail despite closed totals; report shared operators. PX16 only after PX8's trigger and OD13. |
@@ -732,8 +782,8 @@ neither an undecided convention nor an unapproved run.
 | 8 Water baseline and cost pilot | Assess one useful integrated workflow; reuse W54–W62 and WP9 where applicable. Measure dominant errors, intervention and intended-count cost before selecting fixes/defaults. | Parts 6/7 for relevant active processes, contract and parent parity. Eligible comparator or explicit limitation; build/step/memory measurement. Baseline is not qualification. |
 | 9 Targeted water fixes | One demonstrated defect or inseparable coupled change per PR. Reuse WP1/3/5/5b/4a/4b/4c designs. Include required EDMF precipitation stages; retain refusals until supported. Shared-helper consolidation (WP2) only where justified. | Part 8 identifies priority; small reference-demonstrated fixes may proceed after 6/7. Independent regression, parity, restart and relevant CI; no upstream-model changes. Re-establish baseline after changes. |
 | 10 Water qualification | One scoped, usable water workflow with published limitations. Reuse V-W6, PX23 and the applicable V-W8/V-W9/WP8 evidence; keep the broader G3 target open if not covered. | Parts 8/9, fixed cost ceilings, OD14 held-out hygiene. All applicable criteria pass; unresolved provenance cannot be called validated. No retuning on held-out data. |
-| 11a Energy references | Independent simple heating/loss/work/boundary and fixed-convention tests; reuse G4.7/8, PX22, process-budget identities and existing manufactured tests. | Parts 3/4 and applicable 5. Can proceed beside water references. Explicit independent/shared rules and reference eligibility; parent-budget support limitations remain. |
-| 11b Energy baseline | Reuse G4.1/6/7/10/11/15/16 and post-#139 reruns; quantify dominant signed-process, source-attribution and convention effects and cost. | 11a; OD4 exact scale or labelled estimate, required OD7/OD11 decisions. Do not use ineligible copies as truth. |
+| 11a Energy references | [Discriminating energy cases](design/G4_CLAIM_CONTRACTS.md#6-discriminating-reference-work-for-later-parts), radiation record versus independent accepted-stage flux, heating/loss/work/boundary and fixed-convention tests; reuse G4.7/8 and PX22. | Parts 3/4 and applicable 5. Freeze reference/floors/owner accuracy before deciding evidence. Stored-tag PX22 retains OD7/OD11 and active nonshared-rule eligibility; the record-only pilot does not inherit source-tag gates. |
+| 11b Energy baseline | Reuse G4.1/6/7/10/11/15/16 and post-#139 reruns; separate record pilot, process-budget and stored-source evidence. Measure current parity/restart, exact scale/correction activity, eligible references and cost. | 11a for the named claim; record pilot EA choices, stored-source OD7/OD11 and seven-point levels where applicable. Legacy interim is labelled, not a new qualified scale. Do not use ineligible copies as truth. |
 | 11c Energy fixes | Separate PR per evidenced defect; mirrors, cross blocks, subsidence and follower choices only where baseline/design justifies them. | 11b; retain unsupported-mode guards, require independent regression and parity. G4.9 placement and offset sweeps are comparisons, not automatic bounds. |
 | 11d Energy qualification | G4.12 held-out evidence, fixed convention and supported-use statement. Preserve C4 and other limits. | 11b/11c, energy criteria and cost; no qualification inherited from water. G4.13 long sphere belongs to 12d. |
 | 12a Precision and refinement | Extend the qualified envelope; reuse V-W7/W60/W62, refinement ladders and long-Float32 requirements. | Relevant 10 or 11d. Existing failures preserved, named owner-approved rounding rule used only as authorized; rain/snow coverage remains explicit. |
