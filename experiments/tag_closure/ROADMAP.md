@@ -143,6 +143,44 @@ Freeze held-out cases before tuning, and measure cost before choosing a
 default or commissioning the long runs. Existing passed work is reused;
 rerun only where the changed code, physics or claim invalidates its evidence.
 
+### Part 2 water specification (2026-10-06)
+
+The authoritative water observables, equations, required evidence and
+acceptance matrix are in
+[G3_PLAN 6.1.1–6.1.5](G3_PLAN.md#611-water-observables-and-accounting-conventions-part-2).
+Its [initial-use proposal](G3_PLAN.md#21-part-2-the-first-useful-water-workflow-proposed-2026-10-06)
+and twelve-criterion disposition retain the full G3 objective. The general
+verdict rows and OD3 decision/threshold table below still own their approved
+numbers; the water matrix interprets applicability without changing them.
+
+Reuse TRMM_LBA 0M's six-hour, three-tracer baseline as the first pilot.
+`pbl`/`free` partition entry-labelled water (initial masks plus later
+mask-weighted gains); `evap` is an overlapping surface-source tracer, not a
+third partition tag. Inventory and precipitation attribution are separate
+claims. W58 records parity/accounting, with provenance reported only; PX12's
+eligibility/refinement and independent active-rule coverage remain required.
+A clean transport reference does not qualify precipitating EDMF. Current
+rain/snow tagging refuses EDMF and copies; WP4b stages 2/3 stay open.
+
+[DECISIONS' Part 2 proposals](DECISIONS.md#part-2-proposals-2026-10-06-waiting)
+name the unresolved initial qualified-use scope/count/window and scientific
+accuracy rationale, additional 0M precipitation rule, and any missing local
+cost/memory cap. They do not approve new tolerances or defaults. Six-hour
+provenance differences are not scored by transplanting the 24-hour row;
+three-tag evidence does not qualify OD8's eight-tag target. OD5's historical
+verdict is retained without implying a mathematical error bound. OD9–OD11
+remain proposed, OD15 remains a PX25 preregistration decision, and option D
+keeps D4-W criteria 3/4/9/10 without provenance qualification.
+
+Part 2's documentation deliverable is complete after its independent review
+and consistency checks resolve concrete findings; pending owner choices keep
+affected scientific claims blocked. The next executable obligations stay in
+G3_TODO: Part 4 data/window/denominator scoring, Part 5 cancellation-safe
+accounting, Parts 6/7 references, Part 8 integrated baseline/cost, Part 9
+targeted fixes, Part 10 scoped qualification and Part 12 production expansion.
+No simulations, executable changes or branch/PR publication belong to this
+Part 2 handout.
+
 ## Rev. 2 of the work plan (2026-09-24)
 
 The owner revised the work plan on 2026-09-24 ("Simulation-results synthesis
@@ -207,8 +245,10 @@ are in [PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md).
 Every result reports each row that applies as **pass**, **fail** or **not
 assessable**. *Not assessable* names the missing prerequisite, for example "no
 eligible comparator: copies repair 0.60%/day against a 0.20%/day bound"
-(W21). Its treatment at M5 follows OD5. G3_PLAN 6.1, M2 and G4.3 to G4.6 refer
-to this table and do not restate it.
+(W21). Its treatment at M5 follows OD5. This table supplies the common rows;
+[G3_PLAN's water matrix](G3_PLAN.md#612-water-acceptance-matrix-authoritative-part-2-specification)
+supplies water-specific definitions and applicability. M2 and G4.3 to G4.6
+retain their own technical specifications and the existing threshold sources.
 
 | Verdict                | Required evidence                                                                                                                                                                                         | Threshold                                                                                                   |
 |:---------------------- |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:----------------------------------------------------------------------------------------------------------- |
@@ -222,9 +262,11 @@ to this table and do not restate it.
 | Reproducibility        | An immutable SHA or tag, the exact configuration, the manifest, the verifier's output and machine-readable results                                                                                        | Complete, or fail                                                                                           |
 | Cost                   | Build time, peak memory and per-step scaling at the intended tag count, the comparator included; the sphere's run length within budget                                                                    | OD3; OD6                                                                                                    |
 
-Closure never substitutes for provenance. Where no comparator is eligible, the
-convergence, intervention and aggregation rows can bound the default's
-provenance but not validate it.
+Closure never substitutes for provenance. Where no comparator is eligible,
+convergence, intervention and aggregation are OD5's conditional evidence for
+its historical "provenance bounded, not validated" verdict. They do not by
+themselves establish a mathematical error bound or validate origins; preserve
+the owner wording and the limitation together.
 
 A copies run is a provenance comparator only if, in that run, it passes its
 own closure criterion, the repair-throughput criterion and Newton and time-step
@@ -786,4 +828,3 @@ the agents listed there.
 **The next goal, G4: the energy source tags,** with what G3 learns. Its
 items are listed in [G4_TODO.md](G4_TODO.md). The job session carries #95 to its
 merge, and runs the ladder at the merged head.
-

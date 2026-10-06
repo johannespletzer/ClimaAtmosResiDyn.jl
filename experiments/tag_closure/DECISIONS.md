@@ -1,5 +1,28 @@
 # The owner's decisions
 
+## Part 2 proposals (2026-10-06; waiting)
+
+The user authorized preparation/review of the water acceptance documentation,
+then its agent execution/resumption. This authorization approves no scientific
+scope change, tolerance, default, experiment execution or publication. The
+[water acceptance matrix](G3_PLAN.md#612-water-acceptance-matrix-authoritative-part-2-specification)
+uses the approved register/thresholds and identifies these additional choices.
+The entries below are **proposals, waiting for the owner**, not dated answers.
+
+| Proposal | Exact choice needed before the affected claim | Recommendation and evidence | Current effect |
+|:--|:--|:--|:--|
+| WA-SCOPE — first qualified water use | Fix inventory versus precipitation claim, label model, tag count, endpoint/windows, applicable held-out case/reference and a scientifically defensible use-specific accuracy requirement. Decide whether an initial six-hour/three-tag qualified scope is permitted beside full G3, or qualification keeps the approved first-hour/24-hour assessment at eight tags. Any new endpoint tolerance requires an explicit approved value/rationale before the deciding evidence. | Reuse the existing TRMM 0M pilot to develop evidence first, with `pbl`/`free` entry labels and `evap` as an overlay. W58 has six-hour accounting, R7 reported only and no PX12 refinement. Do not change a tolerance to pass its slightly-outside `pbl` difference. A longer/eight-tag claim needs that actual configuration and evidence; three tags provide no count qualification. | No short three-tag qualified attribution claim yet. Full G3's OD1/OD6/OD8 objective is unchanged. |
+| WA-PRECIP — additional 0M precipitation acceptance | If a scored 0M surface-origin use is wanted, fix instantaneous versus accumulated observable, small/no-rain normalization, signed subdomain treatment, independent reference, endpoint/windows and tolerance. OD15 separately decides PX25's additional 1M/EDMF pool/refinement rows. | Keep W58 C7 reported as accounting; supply paired parent/tag interval averages or applied accumulators and independently known donors before attributing a scientific pass. The baseline design explicitly supplies no 0M C7 tolerance, and the 1M closure/audit rows cannot be transplanted. | 0M precipitation provenance is unqualified; exact partition sum supplies no origin proof. |
+| WA-COST — local operational scope | Set any missing cap for build/step/peak memory and pilot allocation at the new initial scope/count, based on measured Part 8 cost before selection; retain OD3's intended eight-plus-eight and copies/sphere limits. | Measure matched candidate/copies/untagged builds and steady solve with required diagnostics; W52's intended-count cost failures stand. A six-hour run's job time or the M4 sphere extrapolation is not a measured production budget. | Missing local cap is not assessable; no default or expensive qualification is selected without measured cost and its applicable limit. |
+
+OD5 retains "provenance bounded, not validated" as its historical conditional
+verdict, not a mathematical error bound. No replacement terminology is
+adopted. OD9–OD11 stay proposed; OD12–OD14 keep their accepted reference,
+probe and held-out gates; OD15 stays at PX25 preregistration. D4-W keeps
+parity, closure, Float32 and cost under option D, and its reference work is
+not reopened. The owner's Float32 rounding floor remains limited to its
+precision-sensitivity measures; W60's failed historical verdict is preserved.
+
 ## Planning revision of 2026-10-05
 
 The owner requested an in-place capability-and-evidence plan, with
@@ -1013,4 +1036,3 @@ These decisions are in the documents but have no row in `decisions.csv`.
   - **Undated. B1's grid and length:** `numerics_sphere_he6ze10.yml`, ten days,
     on the shared CPU partition. **Done** (B1 ran, E50).
     [archived README.md, "Open items"](archive/2026-09-23/README.md#open-items)
-
