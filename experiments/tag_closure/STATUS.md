@@ -1,5 +1,27 @@
 # Status
 
+## Current delivery entry point (2026-10-05)
+
+The active plan is [ROADMAP.md](ROADMAP.md#the-execution-order).
+[PLAN_CROSSWALK.md](PLAN_CROSSWALK.md) preserves every source obligation and
+its delivery destination. The dated status narrative below is evidence
+history; use the newest applicable finding and decision, not the oldest
+unchecked task, to establish completion.
+
+| Capability | Evidence now recorded | Next increment | Limitation |
+|:--|:--|:--|:--|
+| Water, D4-W | Parity/closure and cost evidence exists; W54 comparator repair still fails. | Parts 2/4/5, then eligible references in 6. | Criteria 5/6 are not judged on D4-W under option D; no validated provenance claim. |
+| Water, 0M/clean transport | PX12 and PX11/PX24 are the scheduled reference route. | Part 6 after contracts and reference floors. | No new pass is asserted by this plan. |
+| Rain/snow, non-EDMF stage 1 | PR #146 open at `33cbfd4fa282618788cea54de7a69696b592ead8`; implementation/test evidence differs from merge and qualification. | Part 5 cancellation accounting, part 7 donor attribution, applicable part 9 integration. | Stage 2/3 EDMF and independent provenance remain open; signed closing ledger cannot bound cumulative error. |
+| Energy | Existing tags/records and conditional budget evidence; copies eligibility and convention limits remain. | Part 3 then 11a; reuse 4/5. | Water success is not energy qualification; OD7/OD11 and G4 numerical levels remain gated. |
+| Production envelope | W59 MPI and W60/W62 precision evidence cover stated cases only. | Part 12 after relevant qualification and cost gates. | Preserve W60 failure and W62's narrower pass; no blanket production verdict. |
+
+No level is assigned to a whole family without matching the required
+configuration-specific evidence. Residence-time and air-age work is deferred.
+G4.14 loss timescales and PX19 correction-flush screens are not ages and keep
+their existing gates. This change is documentation only: no simulations,
+model changes, threshold revisions or merges.
+
 The entry point for every session. Written on 2026-09-23 around 11:30, during
 the housekeeping (step H4). Updated at 13:55 the same day, when the
 housekeeping was done, at 16:45 after #95 merged, and at 18:15 with WP0
@@ -1100,3 +1122,4 @@ Every decision taken so far is in [DECISIONS.md](DECISIONS.md).
 | the housekeeping of 2026-09-23 and its outcome                                                                                               | [archive/2026-09-23/CONDENSE_PLAN.md](archive/2026-09-23/CONDENSE_PLAN.md)                                    |
 | the run data                                                                                                                                 | `$SCRATCH/tag_closure/output/` and `~/git/Clima/ClimaAtmosResiDyn-archive/` (RUNS.md)                         |
 | the user docs of the diagnostics                                                                                                             | `docs/src/energy_source_tags.md`, `tagged_water.md`, `process_record.md`; #95's `energy_source_tags_guide.md` |
+

@@ -1,5 +1,24 @@
 # G3 plan: water tags under EDMF
 
+## Delivery status and order (2026-10-05)
+
+[ROADMAP's execution order](ROADMAP.md#the-execution-order) now governs the
+remaining work. This document remains authoritative for G3's technical
+design and numerical criteria; dated results and decisions below are retained.
+Parts 2 and 6–10 deliver the first scoped water capability; part 12 expands
+it toward the full production target. The twelve criteria are not silently
+narrowed by qualifying a smaller workflow. [PLAN_CROSSWALK.md](PLAN_CROSSWALK.md)
+maps every criterion, work-package sub-item and decision to its delivery part.
+The original section 5 order below is historical dependency context; use the
+roadmap for execution. Water parity and restart checks apply to every relevant
+change, not only the later production-expansion parts.
+
+PR #146 is open at `33cbfd4fa282618788cea54de7a69696b592ead8` on
+2026-10-05. Its stage-1 fixes do not establish WP4b stage 2/3 or precipitation
+provenance validity. Signed closing-ledger cancellation and donor-origin
+validation remain parts 5 and 7. Preserve W33, W54 and W60's registered
+failures; W62 does not retrospectively change W60.
+
 Final version of 2026-09-23. The draft (`f3ae8ca7`) was reviewed by an
 independent agent (`review/agent_reviews/g3_water_plan_review.md`). Every
 finding is handled here; the section "Review" at the end maps each to its
@@ -556,6 +575,11 @@ metadata (WP6).
 
 ## 5. Work packages and their order
 
+Historical implementation inventory: retain these dependencies and evidence,
+but schedule remaining work through [ROADMAP](ROADMAP.md#the-execution-order).
+The order and branch assignments recorded below are not new instructions
+to recreate completed work or use the older experiment branch.
+
 | WP     | What                                                                                                                                                                                                                                                                                                                                                                                                                                            | Kind              | Depends on   | Review       |
 |:------ |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:----------------- |:------------ |:------------ |
 | WP0    | #95 merged with decision 5 (job session, owner). The phase-1 review. The verifier extended to `q_tag_*`, copies, rain and snow parts and `pr_tag_*`. Checks: the ERA5 forcing of V-W8 is on disk, and V-W2 can be set up. The sizing run V-W0c                                                                                                                                                                                                  | analysis          | —            | this session |
@@ -1001,3 +1025,4 @@ The independent review of the draft, `review/agent_reviews/g3_water_plan_review.
 The design of the rain and snow tags is new since the review, and has not
 been reviewed. Its design note gets its own review, at xhigh, before any code
 (WP4b-D).
+

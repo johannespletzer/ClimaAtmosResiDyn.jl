@@ -1,5 +1,14 @@
 # Development requirements for upstream ClimaAtmos
 
+## Delivery routing (2026-10-05)
+
+UP1's fixed-parent KI4-COPIES probe stays in PX12 (part 6); use its own
+decision criterion before proposing an upstream change. UP2 stays deferred
+until upstream support changes. Neither becomes permission to change parent
+physics in the fork. Parts 9/11c may implement tag-only follow-ups only after
+their upstream and parity prerequisites. See
+[PLAN_CROSSWALK.md](PLAN_CROSSWALK.md) for the retained individual obligations.
+
 Changes the tagging programme needs from upstream `CliMA/ClimaAtmos.jl`. Each
 one would change the model's own results, so it cannot be made in this fork:
 the fork's results must stay bit for bit those of upstream
@@ -78,3 +87,4 @@ remain.
 
 *Sources: the owner's review of #101 (P1), 2026-09-23; the discussion that
 followed; `docs/known_issues.md`, issues 3 and 4.*
+

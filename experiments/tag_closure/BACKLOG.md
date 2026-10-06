@@ -1,5 +1,16 @@
 # Backlog: open items beyond G3 and G4
 
+## Routing after the planning revision (2026-10-05)
+
+Every item below remains in [PLAN_CROSSWALK.md](PLAN_CROSSWALK.md), including
+items outside the roadmap and optional housekeeping. Parts 12a–d route
+precision, MPI/restart, performance and production work; upstream-only work
+keeps its owner/upstream gate. Deferred work is not automatically activated.
+Residence-time/air-age extensions and their feature-specific qualification
+are deferred. Existing stratospheric code is not removed. Parent parity
+for active water/energy use remains mandatory. Numerical-loss and flush
+screens in G4.14/PX19 remain available under their original triggers.
+
 What is open and belongs to neither G3 ([G3_TODO.md](G3_TODO.md)) nor G4
 ([G4_TODO.md](G4_TODO.md)): milestones M6 to M8, work that only upstream can
 do, CI, and what lies outside the roadmap. The energy items within M1 to M5
@@ -91,3 +102,4 @@ section 0. Not re-checked since.
   - R3 of that review: the committed `.buildkite` manifest keeps upstream's
     `project_hash`, so every setup rewrites two lines. They stay uncommitted
     unless the owner decides otherwise.
+

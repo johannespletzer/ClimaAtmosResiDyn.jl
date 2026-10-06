@@ -1,5 +1,26 @@
 # G3: water tags under EDMF
 
+## Active delivery queue (2026-10-05)
+
+Use [ROADMAP's execution order](ROADMAP.md#the-execution-order), with
+[PLAN_CROSSWALK.md](PLAN_CROSSWALK.md) as the item-by-item index. Checkboxes
+below retain their dated evidence status; an old unchecked CI/PR item is a
+verification obligation, not an instruction to rebuild merged code.
+
+Next: part 2's scientific-use contract; part 4's evidence reuse; part 5's
+cancellation-safe accounting; parts 6/7's eligible independent references.
+PX12, including KI4-COPIES and UP1's fixed-parent probe, stays in that queue.
+Part 8 identifies the dominant remaining error and costs the workflow;
+part 9 fixes it; part 10 qualifies without held-out retuning. Required
+precipitation/EDMF stages remain in WP4b. All later parts retain their gates.
+
+PR #146 is built and reviewed but still open at
+`33cbfd4fa282618788cea54de7a69696b592ead8` (2026-10-05). Its own description
+reports the #121 follow-ups already in #127; verify that merge evidence before
+closing the historical checkbox. The current plan does not repeat those
+changes. A signed closing ledger is accounting, not a cumulative attribution
+error bound. Parts 5 and 7 own cancellation tests and independent donor tests.
+
 The owner set G3 on 2026-09-23 and re-scoped it the same day: **G3 brings the
 tagged water tracers to work under prognostic EDMF, operational in the
 production configuration (a sphere with EDMF and 1M), with precipitation
@@ -1450,3 +1471,4 @@ Reports go to `review/agent_reviews/`.
 | `clima-reviewer`           | Opus, high                | WP1, WP6, WP8                                    |
 | `clima-analysis-builder`   | Sonnet, medium            | the verifier, tables, the audit's scaffolding    |
 | `clima-inventory-explorer` | Sonnet, medium, read-only | the operator list for WP4b-D, the claim contract |
+

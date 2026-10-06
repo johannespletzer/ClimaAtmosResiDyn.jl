@@ -24,8 +24,9 @@ configuration upstream supports has been validated for every diagnostic.
     production configuration, a sphere with EDMF and 1M;
   - the energy source tags follow, as G4, with what G3 learns.
 
-Water has a true reference under EDMF, exact mass bookkeeping, and no offset
-or sign problem. So the shared machinery is qualified there first. The
+Water has candidate references under EDMF, exact mass bookkeeping, and no
+energy-offset convention. Reference eligibility is case-specific; copies
+are not a universal truth. The shared machinery is qualified there first. The
 process records go with the energy family in G4.
 
 | Milestone | Outcome                                                                                                                                                                                                                                                                              | Water tags (G3)                                                                                                                      | Energy source tags (G4)                                                                                                               |
@@ -39,7 +40,7 @@ process records go with the energy family in G4.
 | sphere    | Ten days in the production configuration. *Scope added (provenance pathway, 2026-09-26): superseded 2026-09-24 by OD1 and OD6, 90 days at 60 levels.*                                                                                                                                | V-W11                                                                                                                                | G4.13                                                                                                                                 |
 | M6        | Devices, precision, input data and restarts at scale                                                                                                                                                                                                                                 | not started; the GPU decision belongs here                                                                                           | not started                                                                                                                           |
 | M7        | A production trial and a supported envelope                                                                                                                                                                                                                                          | not started                                                                                                                          | not started                                                                                                                           |
-| M8        | Extensions: air age, memory and forecasts                                                                                                                                                                                                                                            | —                                                                                                                                    | memory number (G4.14); the rest later                                                                                                 |
+| M8        | Extensions: air age deferred; numerical-loss diagnostics retain their gates                                                                                                                                                                                                                                            | —                                                                                                                                    | memory number (G4.14); the rest later                                                                                                 |
 
 The goals after G4 are sketched, not approved. Each needs the owner. The
 plan for G3 is [G3_PLAN.md](G3_PLAN.md), reviewed and finalised, and its
@@ -54,6 +55,93 @@ chosen only after the cost at the intended tag count is measured, including
 the comparator's (OD8). Before rev. 2, G3 reversed the two: it chose the
 closure on columns, where runs are cheap, and measured the cost before its
 sphere run.
+
+## Capability increments (2026-10-05)
+
+This revision changes the active execution order in place. The M0–M8, WP,
+V-W, PX, G4 and owner-decision IDs remain the scientific work inventory;
+the part numbers below are delivery boundaries, not a second programme.
+The acceptance contract and decision register below remain authoritative.
+The dated earlier tables describe their recorded state, not today's queue.
+[PLAN_CROSSWALK.md](PLAN_CROSSWALK.md) maps their individual obligations to
+the new delivery boundaries. It is a navigation and loss-check index, not
+another source of scientific criteria.
+
+**Scope.** Water is the first end-to-end qualification target. Energy's
+definitions and independent reference development may proceed in parallel;
+its implementation and qualification keep their own gates. Residence-time
+and air-age development is deferred. This does not remove G4.14's
+instantaneous donor-loss timescale, PX19's correction-flush screen, or OD6's
+long-run criterion: those diagnose numerical intervention and are not ages.
+Their original triggers and validity restrictions still apply. GPU and
+other previously unapproved extensions remain unapproved.
+
+**Baseline checked 2026-10-05.** The consolidated planning head is
+`claude/plan-rev2` at `58d3535467dc330f1baf1a69936d683c778a3d18`.
+PR #146 is open, not merged, at
+`33cbfd4fa282618788cea54de7a69696b592ead8`, against `main`
+`d3c5e42f54515729f53216ae6b8ba268bea8262f`. Its tested implementation,
+its merge status and scientific qualification are separate facts.
+Post-#139 evidence requirements remain in force. This planning revision
+executes no experiments and changes no threshold or scientific default.
+
+### Measuring progress
+
+Maintain one compact status row per declared capability and configuration:
+current evidence level, next part, acceptance evidence, verdict, limitation.
+Levels describe evidence actually available; never infer a repository-wide
+level from one successful case.
+
+| Level | Evidence required |
+|:--|:--|
+| 0 Defined | Label meaning, intended scientific use, observable, assumptions and supported configuration are explicit. |
+| 1 Operational | That configuration runs and has the required parent parity and restart evidence. |
+| 2 Accounted | Relevant transfers, numerical intervention and unexplained discrepancies are measured. |
+| 3 Attribution tested | Eligible independent references test individual origins for explicitly named active rules. |
+| 4 Qualified | Predefined criteria and measured cost pass in the declared operating range, with the applicable held-out evidence. |
+
+These are delivery labels, not replacements for the contract's separate
+pass/fail/not-assessable rows or the pathway's Fid/Val proposals. OD9–OD11
+remain proposed. In particular, a configuration accepted under OD5's
+historical phrase "provenance bounded, not validated" is not promoted to
+level 3 or 4 without independent attribution evidence. Preserve that owner
+decision and report its meaning explicitly; its wording does not establish
+a mathematical error bound. Parts 2 and 3 must present any proposed change
+to that terminology for owner resolution, not silently rewrite OD5.
+
+Keep parent parity and parent validity, accounting/closure, provenance,
+comparator eligibility, intervention, convergence, aggregation,
+reproducibility and cost visible separately. A pass in one cannot compensate
+for a failure or missing prerequisite in another. Preserve the distinction
+between implementation verification, testing of the declared labelling
+model, and evidence for real atmospheric provenance.
+
+### Acceptance specifications and PR boundaries
+
+Before the deciding experiment, each part records its user value, scope,
+baseline limitation, observable and window, acceptance evidence and existing
+threshold source, dependencies, exclusions, and a reviewable deliverable.
+Parts 2 and 3 explain the scientific rationale for each use-specific
+tolerance. They propose missing values to the owner rather than choose
+values that make existing results pass. Retain small-tag absolute errors,
+energy's fixed convention and OD4 scales, and OD2's sensitivity row.
+
+A reference declares which rules it shares, which it tests independently,
+its floors, excluded processes and convergence evidence. Analytic and
+manufactured cases, and independently implemented known-donor transfers,
+verify specified equations; they do not by themselves validate their physics.
+New benchmark designs reuse PX11/PX24 and PX14/PX25 where suitable. New
+experiments outside existing approvals need an explicit design and owner
+decision before execution.
+
+Every implementation PR includes relevant tests, parent-parity evidence,
+restart/schema checks where state changes, documentation, and an update to
+the existing status and crosswalk. Split independent mechanisms into
+separate PRs. An investigation can finish with a negative result that rules
+out an option; it must not raise the capability's qualification level.
+Freeze held-out cases before tuning, and measure cost before choosing a
+default or commissioning the long runs. Existing passed work is reused;
+rerun only where the changed code, physics or claim invalidates its evidence.
 
 ## Rev. 2 of the work plan (2026-09-24)
 
@@ -583,85 +671,64 @@ Asked with a short background, options and a recommendation each
 
 ### The execution order
 
-Each step names the decisions it needs. An agent stops at a step whose
-decision is open and asks the owner.
+This is the active delivery sequence as of 2026-10-05. It supersedes the
+earlier step ordering, not its scientific requirements or recorded results.
+The old steps are mapped in [PLAN_CROSSWALK.md](PLAN_CROSSWALK.md); their
+original text is available at the pinned baseline. The contract, OD register,
+G3_PLAN §6.1 and existing designs supply thresholds. A part number authorizes
+neither an undecided convention nor an unapproved run.
 
-| Step | What                                                                                                                                                                                                                                                         | Needs                                                           | State (2026-09-25)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-|:---- |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |:--------------------------------------------------------------- |:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0    | Guard and records, no simulations: G4.16's interim refusal and its test; STATUS; the in-place edits; this register; the comparator-eligibility annotations on W29, E39, E76 and D4-W                                                                         | —                                                               | Done. The guard, extended to 1M, 2M and P3 (the owner, 2026-09-24), is draft PR #108 against `main` (`e55ae293`); its two integration jobs passed at `33eeb5cd`, before the 2M and P3 extension, which has passed its config tests only; PR CI covers the rest (`output/g416_guard/`)                                                                                                                                                                                                                                                                          |
-| 1    | G3 WP6 step 3, with the per-tag ledger (Insight 10)                                                                                                                                                                                                          | —                                                               | Done: draft PR #109 on #103 (`claude/water-tags-wp6-step3`). Unit tests, 13 integration groups and the check script all pass (`output/wp6_step3/jobs/`)                                                                                                                                                                                                                                                                                                                                                                                                        |
-| 1b   | The provenance pathway's documents and PX0 (gate A): archive the runs the gates read, and fault-inject the scripts                                                                                                                                           | —                                                               | Proposed 2026-09-26 (provenance pathway); the documents are written                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| 2    | W25 isolation at 30, 60 and 120 levels, centred and first-order: fixed-parent probes and the refinement test first, then full matched runs                                                                                                                   | OD1, OD2, OD3                                                   | Done 2026-09-25: jobs 13932703 to 748 scored against every rule (`output/w25i/`). Two P1 probes at 120 levels, first order, failed in the model (the README)                                                                                                                                                                                                                                                                                                                                                                                                   |
-| 2a   | Gate B's screen, with no run: PX1 (the subsidence screen). The other re-scores are deferred with their triggers                                                                                                                                              | step 1b                                                         | Proposed 2026-09-26 (provenance pathway)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| 3    | The audit-feasibility decision (WP9, OD8), water and energy copies at the intended tag counts; may run beside step 2                                                                                                                                         | OD1                                                             | Decided (OD8): 8 water and 8 energy tags, copies at 8 as the direct audit where eligible, no aggregation bridge. 32 tags stay a WP9 cost item, not qualified                                                                                                                                                                                                                                                                                                                                                                                                   |
-| 4    | WP5b-C at the tag counts OD8 keeps; copies pass eligibility in each run before they serve as the audit                                                                                                                                                       | OD8                                                             | A first build exists outside the pushed branches (G3_TODO, WP5b-C)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| 5    | WP5b-V's remaining arms: those without copies after step 2, default-against-copies arms after step 4; the explicit-1M follower stays opt-in unless it passes                                                                                                 | step 2, step 4                                                  | The same-atmosphere check is done and passes (W35). W33 stays a failure; the explicit-1M default is decided at M5 (the register's open choices)                                                                                                                                                                                                                                                                                                                                                                                                                |
-| 6    | The WP4c operator-decomposition gate, with the three-part retention rule; defer, don't delete                                                                                                                                                                | OD3                                                             | Pre-registered 2026-09-25: `design/WP4C_GATE.md`, probe and score scripts, two configs. The trial configurations build on the login node. Its OD3 reading confirmed by the owner 2026-09-25. Scored (W40): `vdiff` and `diffusion_up` retained, none deferred. Both built on `claude/water-tags-leak-correction` (from #109) behind `water_tag_leak_correction`; validation pre-registered in `design/WP4C_CORRECTIONS.md`; jobs `13973348` (V1), `13973349` (V2) submitted                                                                                    |
-| 6a   | Gate C: PX7, the follower's work split into lag and structure, read by monotone ratios, pre-registered before it is read (its result will be W46)                                                                                                            | step 6; step 1b                                                 | Proposed 2026-09-26 (provenance pathway)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| 6b   | Gate B: PX8 (the accepted-step subsidence probe), after PX1 whatever PX1 finds; a low PX1 is not assessable                                                                                                                                                  | step 2a                                                         | Proposed 2026-09-26 (provenance pathway)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| 6c   | Gate D: PX24 (the per-tag process accounting) and PX11 (the Soares air twin, the clean label benchmark), then PX23 (one held-out case; Val-4 not assessable until an independent case and its reference are fixed)                                           | step 6a; OD12; OD14 for PX23                                    | Proposed 2026-09-26 (provenance pathway)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| 7    | WP4b, its implementation only: the rain and snow tag fields and their diagnostics, with closure as an invariant. No held-out evaluation yet                                                                                                                  | the owner's rain and snow decision (WP4b-D), decided 2026-09-25 | Unblocked 2026-09-25: three parts, gross flows. **Stage 1 built** (draft PR #121, `4b86ec66`; W43): each compartment closes to rounding on a precipitating 1M column, parity holds. Stages 2 (EDMF) and 3 (copies) remain                                                                                                                                                                                                                                                                                                                                      |
-| 7b   | Gate B: PP-SUB with PX16, only if PX8 is material; the other probe PRs deferred until a measured result needs them                                                                                                                                           | OD13                                                            | Proposed 2026-09-26 (provenance pathway)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| 8    | WP9's cost qualification at the intended tag count, with WP4b's fields on, the comparator included; M4's ceilings fixed                                                                                                                                      | OD3                                                             | Unblocked 2026-09-25 (WP4b-D decided). At 8 tags (OD8); the aggregation test is no longer needed for qualification                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| 8a   | The fix of known issue 7: tagged water ends a run where the parent's water goes negative (site 23). Added 2026-09-24                                                                                                                                         | the owner's choice of option                                    | Option A built (#112). The probe read (2026-09-25): it points to C. **Option C chosen 2026-09-25** and built (`claude/water-tags-negative-parent`); its validation pre-registered (the design note, section 8). **Validated 2026-09-25 (W42): V1, V2b, V3, V4 pass; V2 fails at site 23 (2.2% against 0.2%) and V5's per-tag row for `pbl` (2.03%). By section 8.3 the owner decides.** *The owner, 2026-09-25: probe the miss first* (what grows it where no ledger records it), then validate again. Site 23's long-run rerun (OD7) not submitted until then |
-| 8b   | WP4b's validation, then default selection (M5): process-weighted same-state evidence and a held-out case that rains in established flow, within step 8's cost ceilings                                                                                       | step 8, OD2, OD3                                                | Unblocked 2026-09-25 (WP4b-D decided); follows step 8. The part of the former step 7 that produces M5 evidence                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| 8c   | The verdict records of the gated results, by hand until PX21's script is needed: per case, tag and window, the recorded items and the rules left uncovered; before 8b                                                                                        | OD9                                                             | Proposed 2026-09-26 (provenance pathway)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| 9    | The water sphere under the revised long-run criterion                                                                                                                                                                                                        | OD6                                                             | Waits. `g2_v2_sphere_n2` at 60 levels, 90 days, judged by the level it reaches (OD1, OD6); after step 8a. First a 1 to 2 day run at 60 levels, untagged and with 8 + 8 tags, measures its cost (the owner, 2026-09-24)                                                                                                                                                                                                                                                                                                                                         |
-| 10   | G4: G4.16's cross blocks (the refusal stays until they pass), G4.1 and G4.11's mirrors at the OD8 counts, G4.3 to G4.6 with offset-invariant scales, the G4.15 decision, G4.7 and G4.8 with startup windows and fixed-parent comparisons, the energy default | OD4, OD7                                                        | OD4 decided (2026-09-24 and 2026-09-25; its accumulator being built); OD7 open. G4.16 (#113) and G4.1 and G4.11's mirrors (#114) built, their validations pre-registered and submitted (13944447 to 462)                                                                                                                                                                                                                                                                                                                                                       |
-| 10a  | Gate E: PX22, the energy budget and `C4` checks at a fixed `c`                                                                                                                                                                                               | OD11; step 1b                                                   | Proposed 2026-09-26 (provenance pathway)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| 11   | The energy sphere, once its comparator, offset, cross-block, intervention and cost contracts are settled                                                                                                                                                     | OD6                                                             | Waits. The same sphere as step 9 (OD1, OD6)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Part / PR boundary | Value, scope and existing work to reuse | Dependencies and acceptance evidence |
+|:--|:--|:--|
+| 1 Plan reconciliation | One queue and a complete crosswalk; preserve every WP/PX/G4 item, decision and failed result. Documentation only. | Loss check, link checks, independent review. No implementation or runs. |
+| 2 Water acceptance contract | Define one useful initial water workflow, its observables and scientific tolerance rationale. Reuse G3's twelve criteria, OD1–OD3/OD5/OD8/OD12–OD15 and the claim contract. Propose missing tolerances without changing existing ones. | Part 1; separate missing-owner-decision list. Scope may be narrower than G3's full production target, which stays open. |
+| 3 Energy acceptance contract | Distinguish stored source attribution, signed process records and causal claims; specify reference convention, source/loss meaning and observable. Reuse G4.3, OD4/OD7/OD11 and the recorded seven-point decisions. | Part 1; may run beside 2. Fixed convention and owner decisions before scored energy tests. No automatic inheritance of water's rules. |
+| 4 Common evidence and scoring | Reuse WP0, manifests, verifier, archive, WP6 outputs and verdict records; fill demonstrated gaps only. PX0, PX21 when triggered, and fault injection remain. | Parts 2/3 determine applicable outputs. Missing data/reference produces not assessable, not an omitted row. Exact code/configuration, environment, window, results and checksum evidence. |
+| 5 Correction accounting | Reuse WP6 and G4.6; distinguish signed accounting from absolute correction activity before summing events, cells or compartments. Resolve the PR #146 signed closing-ledger interpretation. Prefer probes to new state fields (OD13). | Part 4; alternating signs, simultaneous rain/snow corrections and restart stitching must reveal cancellation. No unsupported cumulative provenance-error bound. Energy uses OD4. |
+| 6 Independent water transport references | Reuse PX1/PX8, PX7, PX11/PX24, eligible PX12 and existing mixing tests. Add only missing analytic/manufactured or independent transport references after design. | Parts 2, 4, applicable 5; OD12 floors and parent validity first. Wrong-origin mutants fail despite closed totals; report shared operators. PX16 only after PX8's trigger and OD13. |
+| 7 Independent water-transfer references | Reuse WP4a-V/J, WP4b-D, PX14/PX25. Known donor compositions distinguish transfer attribution from compartment closure, including rain/snow, export, empty/negative pools and simultaneous flows. | Parts 2, 4, applicable 5; OD15 before scoring PX25. Independent rates/solver and temporal convention stated; unavailable references remain not assessable. Do not presume EDMF stage 2/3 already built. |
+| 8 Water baseline and cost pilot | Assess one useful integrated workflow; reuse W54–W62 and WP9 where applicable. Measure dominant errors, intervention and intended-count cost before selecting fixes/defaults. | Parts 6/7 for relevant active processes, contract and parent parity. Eligible comparator or explicit limitation; build/step/memory measurement. Baseline is not qualification. |
+| 9 Targeted water fixes | One demonstrated defect or inseparable coupled change per PR. Reuse WP1/3/5/5b/4a/4b/4c designs. Include required EDMF precipitation stages; retain refusals until supported. Shared-helper consolidation (WP2) only where justified. | Part 8 identifies priority; small reference-demonstrated fixes may proceed after 6/7. Independent regression, parity, restart and relevant CI; no upstream-model changes. Re-establish baseline after changes. |
+| 10 Water qualification | One scoped, usable water workflow with published limitations. Reuse V-W6, PX23 and the applicable V-W8/V-W9/WP8 evidence; keep the broader G3 target open if not covered. | Parts 8/9, fixed cost ceilings, OD14 held-out hygiene. All applicable criteria pass; unresolved provenance cannot be called validated. No retuning on held-out data. |
+| 11a Energy references | Independent simple heating/loss/work/boundary and fixed-convention tests; reuse G4.7/8, PX22, process-budget identities and existing manufactured tests. | Parts 3/4 and applicable 5. Can proceed beside water references. Explicit independent/shared rules and reference eligibility; parent-budget support limitations remain. |
+| 11b Energy baseline | Reuse G4.1/6/7/10/11/15/16 and post-#139 reruns; quantify dominant signed-process, source-attribution and convention effects and cost. | 11a; OD4 exact scale or labelled estimate, required OD7/OD11 decisions. Do not use ineligible copies as truth. |
+| 11c Energy fixes | Separate PR per evidenced defect; mirrors, cross blocks, subsidence and follower choices only where baseline/design justifies them. | 11b; retain unsupported-mode guards, require independent regression and parity. G4.9 placement and offset sweeps are comparisons, not automatic bounds. |
+| 11d Energy qualification | G4.12 held-out evidence, fixed convention and supported-use statement. Preserve C4 and other limits. | 11b/11c, energy criteria and cost; no qualification inherited from water. G4.13 long sphere belongs to 12d. |
+| 12a Precision and refinement | Extend the qualified envelope; reuse V-W7/W60/W62, refinement ladders and long-Float32 requirements. | Relevant 10 or 11d. Existing failures preserved, named owner-approved rounding rule used only as authorized; rain/snow coverage remains explicit. |
+| 12b MPI and restart at scale | Reuse W59, V-W9, MP1 and restart/forcing checks. Split MPI and restart changes if independently reviewable. | Relevant qualification; baseline parity/restart checks are required earlier too. Distinguish rank-to-rank differences from tagged/untagged parity within a rank count. Multi-node approval remains required. |
+| 12c Production performance | Reuse WP9, P2/P3, compiler/allocation findings and measured tag-count scaling. One bounded optimization per PR; GPU remains gated. | Earlier cost pilot and scientific baseline. Build/step/memory results and unchanged qualified answers; no hidden loosening of cost criteria. |
+| 12d Long-run qualification | Preserve OD1/OD6's 90-day, 60-level target and G4.13; first the authorized 1–2-day cost pilot. PX19/PX20 retain their triggers and limitations. Publish supported envelope. | Relevant qualification, 12a–c, parent validity and affordable cost. Explicit owner/run approvals remain. No new residence-time or air-age feature. |
 
-*Scope added (provenance pathway, 2026-09-26, proposed, pending OD9 to OD11;
-OD12 to OD14 accepted 2026-10-02):* notes on existing steps, which are not
-rewritten.
+Parts 2 and 3 may run together; 11a may follow its own prerequisites while
+water advances. Parts 4 and 5 should be split into family-specific PRs if
+necessary. Part 9 and 11c are queues of bounded fixes, not single omnibus
+PRs. Engineering checks required by a particular earlier claim must happen
+there; placing expanded coverage in part 12 does not postpone those checks.
 
-  - **Step 4:** before copies serve as the comparator on D4-W, PX5 would name
-    the cause of their repair (deferred until then). Copies at four Newton
-    iterations need no rerun: `w4_d4w_copies_n4` already failed at 0.28% a
-    day.
-  - **Step 6:** the gate's part 3 is a first-order estimate of an observed
-    spread, not a bound. PX2 would give the realized value (deferred).
-  - **Step 7:** PX14 replays WP4b's pool and the sedimentation reset once
-    WP4b moves toward validation (deferred).
-  - **Step 7, from the owner's review of #121.** *Scope added (provenance
-    pathway, 2026-09-27):* two of the review's tests were added to #121 in
-    `00b4ecf`. One is a test-only reference that evolves the three
-    compartments after every microphysics sub-step (item 4). The other is a
-    horizontally varying operator test (item 6). #121's commit `3681fc2`
-    reports item 4's test file passing on the login node, and `835ff9a`
-    item 6's sphere passing. Neither is in FINDINGS.md, so they are tests,
-    not results. Items 5 and 7 go to PX25,
-    at step 8b.
-  - **Step 8b:** it selects under rev. 2's rules as approved. If the owner
-    adopts OD9, the verdict records of step 8c are reported beside it, and
-    step 8b also needs OD11 (OD12 and OD14 were accepted on 2026-10-02).
-  - **Step 8b, from the owner's review of #121.** *Scope added (provenance
-    pathway, 2026-09-27, pending OD15):* before a default is selected, PX25
-    runs WP4b's refinement matrix. It covers both transports, first-order
-    and van Leer upwinding, and the case's `dt` with two halvings. The
-    sub-step counts 1 and 10, beside the default, run only under van Leer at
-    the case's `dt`. It records the compartments' residuals, the parts'
-    minima, the repair's throughput, accumulated `Σ pr_tag` and the audit on
-    two scales. It is scored on OD3's approved rows, G3_PLAN 6.1's rain and
-    snow row and its audit row (within 10% of each tag's precipitation over
-    the day). OD15 names the cases and their length. The proposed first
-    case, `PrecipitatingColumn` cut at 6 km as in W43, would run 1500 s. So
-    R9's hourly reading and the day-scale rows have no output to read there,
-    and OD15 says how they are read. Item 5's longer run needs a second case,
-    1M without EDMF, that rains in established flow and is not held out. None
-    is shown yet, so until OD15 names one and its untagged run shows rain in
-    established flow, that longer run is not assessable (PX25). PX25 does
-    not use OD2's WP4b held-out case. By analogy with the owner's statement
-    of 2026-09-26, the pathway asks OD14 whether RICO 1M, the fallback
-    held-out case, still counts as held out for a mode PX25 recommends. PX25
-    has 24 jobs per case, 48 for two. No approved budget counts them. They
-    are outside G3_PLAN's job total (G3_PLAN, V-P3). Step 8's cost ceilings
-    bound the model's cost, not a job count. Step 8b stays within them, as
-    approved.
-  - **Step 9:** PX20 once the one-to-two-day run exists; PX19 before the 90
-    days, if a long-run screen is needed. Both are deferred.
-  - **Step 10:** PX22 (step 10a) before G4.7. PX10 and PX15 are deferred with
-    their triggers. G4.9's placements would be read as an observed spread.
+**Value and effort.** Parts 2–4 are the first priority: small documentation
+and evidence-tool increments prevent expensive but uninterpretable runs.
+Part 5 and the smallest useful reference in 6 or 7 are next: medium effort,
+high value because they can expose wrong origins even when totals close.
+Part 8 is a bounded pilot that determines which fixes in 9 offer the largest
+measured benefit. Parts 10/11d deliver the usable capability; 12a–d expand
+its operating range only after the earlier evidence and cost gates. These
+are relative planning estimates, not measured developer time or run cost.
+A part can close with documented reuse when its required evidence already
+exists; it need not create new machinery to count as progress.
+
+**Immediate progress.** Finish the contracts and reuse the evidence tools,
+then resolve the smallest independent-reference gaps that unlock water
+attribution assessment. PX12 remains the scheduled 0M eligibility and
+KI4-COPIES/UP1 probe. D4-W's ineligible comparator is not reopened without
+the owner (option D). PR #146 implementation does not close WP4b's EDMF or
+provenance qualification obligations. The known signed-ledger cancellation
+concern belongs to part 5; its closure rule needs part 7's donor tests.
+
+**Stop rules.** An unavailable independent reference blocks the corresponding
+validated claim. A parent defect goes to UPSTREAM_REQUIREMENTS, not a fork
+physics change. Retain deferred PX/PP triggers, guards, owner decisions and
+failed experiments. Any narrower initial workflow is an increment toward,
+not a replacement for, G3/G4 production goals.
 
 ## Where the open items go
 
@@ -719,3 +786,4 @@ the agents listed there.
 **The next goal, G4: the energy source tags,** with what G3 learns. Its
 items are listed in [G4_TODO.md](G4_TODO.md). The job session carries #95 to its
 merge, and runs the ladder at the merged head.
+

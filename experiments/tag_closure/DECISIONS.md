@@ -1,5 +1,28 @@
 # The owner's decisions
 
+## Planning revision of 2026-10-05
+
+The owner requested an in-place capability-and-evidence plan, with
+residence-time work excluded, and authorized a reviewed documentation branch.
+The active sequence is in [ROADMAP.md](ROADMAP.md#the-execution-order).
+This entry changes delivery organization only. It approves no new threshold,
+scientific default, simulation campaign or proposed OD9–OD11 label.
+Residence-time and air-age features are deferred; numerical loss/flush
+diagnostics keep their existing meaning and gates.
+
+Still requiring explicit resolution: OD7; proposed OD9–OD11; OD15 at PX25
+pre-registration; energy's remaining G4.3–6 levels; and any new use-specific
+tolerance or benchmark outside existing approvals. OD5's historical
+"bounded" wording is preserved, without implying a mathematical error bound.
+The crosswalk includes dated decisions and their individual sub-points;
+their register state is authoritative, not inferred from delivery labels.
+
+PR #146's October 2 instruction "not built" below is historical: the PR is
+open, built and reviewed at `33cbfd4fa282618788cea54de7a69696b592ead8` on
+2026-10-05. The implementation's dedicated closing ledger differs from the
+earlier rescale-ledger wording; verify the PR's decision trail when closing
+that task. This plan does not authorize or perform its merge.
+
 Every decision of the register (`review/register/decisions.csv`), one line
 each, grouped by date, newest first. Each links to where it is recorded. A
 short section at the end adds decisions that the documents record but the
@@ -990,3 +1013,4 @@ These decisions are in the documents but have no row in `decisions.csv`.
   - **Undated. B1's grid and length:** `numerics_sphere_he6ze10.yml`, ten days,
     on the shared CPU partition. **Done** (B1 ran, E50).
     [archived README.md, "Open items"](archive/2026-09-23/README.md#open-items)
+
