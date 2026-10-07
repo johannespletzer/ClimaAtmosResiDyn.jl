@@ -5,21 +5,21 @@
 The active plan is [ROADMAP.md](ROADMAP.md#the-execution-order).
 [PLAN_CROSSWALK.md](PLAN_CROSSWALK.md) preserves every source obligation and
 its delivery destination. The dated status narrative below is evidence
-history; use the newest applicable finding and decision, not the oldest
+history. Use the newest applicable finding and decision, not the oldest
 unchecked task, to establish completion.
 
-| Capability | Evidence now recorded | Next increment | Limitation |
-|:--|:--|:--|:--|
-| Water, D4-W | Parity/closure and cost evidence exists; W54 comparator repair still fails. | Parts 2/4/5, then eligible references in 6. | Criteria 5/6 are not judged on D4-W under option D; no validated provenance claim. |
-| Water, TRMM_LBA 0M entry/source inventory pilot, Float64 / three tracers / six hours | Level 0: label meanings/configuration documented in Part 2. W58 records both-mode parent parity, default closure and instantaneous partition precipitation near rounding; copies residual/repair passed those measured checks. | Parts 4/5 complete data/accounting, Part 6 PX12 and independent active-rule coverage; owner WA-SCOPE/WA-COST before a qualified use. | `pbl`/`free` are entry-mask partition labels, `evap` an overlapping source tracer. W58 R7 is reported only; no PX12 refinement, no six-hour/eight-tag qualification, and workflow restart evidence is not established here. |
-| Water, clean transport references | PX11/PX24 remain the scheduled source-free reference route. | Part 6 after contract floors/accounting and OD14 held-out freeze. | Validates only named active transport rules; cannot qualify precipitating EDMF or surface origins. |
-| Water, 0M surface precipitation origins | W58 C7 is an instantaneous accounting report in the three-tag pilot. | Parts 4/5 paired accumulation, Part 7 independent attribution; owner WA-PRECIP. | No approved 0M C7 tolerance or accumulated per-tag window evidence from the current overlay; exact sum does not prove correct origins. |
-| Rain/snow, non-EDMF stage 1 | PR #146 open at `33cbfd4fa282618788cea54de7a69696b592ead8`; implementation/test evidence differs from merge and qualification. | Part 5 cancellation accounting, part 7 donor attribution, applicable part 9 integration. | Stage 2/3 EDMF and independent provenance remain open; signed closing ledger cannot bound cumulative error. |
+| Capability                                                                                                | Evidence now recorded                                                                                                                                                                                                                                                                       | Next increment                                                                                                                           | Limitation                                                                                                                                                                                                                  |
+|:--------------------------------------------------------------------------------------------------------- |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:---------------------------------------------------------------------------------------------------------------------------------------- |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Water, D4-W                                                                                               | Parity and closure evidence exists. W54 comparator repair still fails. Cost is measured and fails criterion 10 against OD3's 2× (8 + 8 step 4.16×).                                                                                                                                         | Parts 2/4/5. Per-tag accuracy moves to TRMM 0M and Soares in part 6 (option D).                                                          | Criteria 5/6 are not judged on D4-W under option D. No validated origin claim. The cost budget waits for the owner.                                                                                                         |
+| Water, TRMM_LBA 0M entry/source inventory pilot (proposed, WA-SCOPE), Float64 / three tracers / six hours | Level 0 in part: label meanings, observable and configuration documented in Part 2. The intended use waits for WA-SCOPE. W58 records both-mode parent parity, default closure and instantaneous partition precipitation near rounding. Copies residual/repair passed those measured checks. | Parts 4/5 complete data/accounting, Part 6 PX12 and independent active-rule coverage, and owner WA-SCOPE/WA-COST before a qualified use. | `pbl`/`free` are entry-mask partition labels, `evap` an overlapping source tracer. W58 R7 is reported only. No PX12 refinement, no six-hour/eight-tag qualification, and workflow restart evidence is not established here. |
+| Water, clean transport references                                                                         | PX11/PX24 remain the scheduled source-free reference route.                                                                                                                                                                                                                                 | Part 6 after contract floors/accounting and OD14 held-out freeze.                                                                        | Validates only named active transport rules. It cannot qualify precipitating EDMF or surface origins.                                                                                                                       |
+| Water, 0M surface precipitation origins                                                                   | W58 C7 is an instantaneous accounting report in the three-tag pilot.                                                                                                                                                                                                                        | Parts 4/5 paired accumulation, Part 7 independent attribution, and owner WA-PRECIP.                                                      | No approved 0M C7 tolerance or accumulated per-tag window evidence from the current overlay. Exact sum does not prove correct origins.                                                                                      |
+| Rain/snow, non-EDMF stage 1                                                                               | PR #146 open at `33cbfd4fa282618788cea54de7a69696b592ead8`. Implementation/test evidence differs from merge and qualification.                                                                                                                                                              | Part 5 cancellation accounting, part 7 attribution against known compositions, applicable part 9 integration.                            | Stage 2/3 EDMF and independent origin evidence remain open. A signed closing ledger cannot bound cumulative error.                                                                                                          |
 | Energy, proposed signed-radiation record pilot | Level 0: Part 3 defines one-record/zero-source-tag non-EDMF DYCOMS use, independent flux route and explicit exclusions. C3/C5 give historical interpretation evidence only. | Parts 4/11a/11b, with EA-USE/EA-ACCURACY/EA-COST before qualification. | No current workflow parity, independent accepted-stage flux, reference floor, restart or measured cost; no stored-source or total-budget claim. |
 | Energy, stored source provenance / EDMF | Level 0: fixed-convention meanings and applicable matrix documented. Tags/records and historical conditional budgets exist; E84 copies remain ineligible. | Parts 4/5/11a then 11b–d; existing OD7/OD11 and seven-point level gates. | cΔρ is not generally cΔwater; Θx nets within a cell/accepted step; C4 per-tag outflow, intervention and independent origin coverage remain open. Water qualification is not energy qualification. |
-| Production envelope | W59 MPI and W60/W62 precision evidence cover stated cases only. | Part 12 after relevant qualification and cost gates. | Preserve W60 failure and W62's narrower pass; no blanket production verdict. |
+| Production envelope                                                                                       | W59 MPI and W60/W62 precision evidence cover stated cases only.                                                                                                                                                                                                                             | Part 12 after relevant qualification and cost gates.                                                                                     | Preserve W60 failure and W62's narrower pass. No blanket production verdict.                                                                                                                                                |
 
-No level is assigned to a whole family without matching the required
+No evidence level is assigned yet. Parts 2 and 3 define what each level needs. No level is assigned to a whole family without matching the required
 configuration-specific evidence. Residence-time and air-age work is deferred.
 G4.14 loss timescales and PX19 correction-flush screens are not ages and keep
 their existing gates. This change is documentation only: no simulations,
@@ -29,14 +29,14 @@ model changes, threshold revisions or merges.
 matrix, reference gates, tolerance rationale and twelve-criterion disposition
 are documented in [G3_PLAN](G3_PLAN.md#21-part-2-the-first-useful-water-workflow-proposed-2026-10-06),
 with the [matrix in 6.1.2](G3_PLAN.md#612-water-acceptance-matrix-authoritative-part-2-specification).
-Independent actual-diff review and consistency validation are complete;
-the two normalization/target findings were resolved. WA-SCOPE,
+The independent review of the actual diff is pending. Part 2 is recorded
+complete only after its findings are resolved. WA-SCOPE,
 WA-PRECIP and WA-COST are proposed owner choices, not approvals or evidence.
 Preparing this contract does not raise scientific qualification. Current
 cell-step retained and attempted ledger readings remain useful but cannot
-exclude cancelling applied corrections; Parts 4/5 own the documented scorer
+exclude cancelling applied corrections. Parts 4/5 own the documented scorer
 and accounting gaps. OD5's historical conditional verdict is retained
-without a mathematical error-bound claim; OD9–OD11 remain proposed.
+without a mathematical error-bound claim. OD9–OD11 remain proposed.
 
 **Part 3 documentation:** energy meanings, equations, proposed first signed
 record use, [canonical matrix](design/G4_CLAIM_CONTRACTS.md#5-energy-acceptance-matrix),
@@ -65,7 +65,7 @@ materialized, and no Part 3 branch/commit or publication is claimed.
 `codex/plan-capability-increments-part1` at
 `24b7536a351c57f4c5b639b868e6b499acc4e763`, against `claude/plan-rev2`
 `58d3535467dc330f1baf1a69936d683c778a3d18`. Part 2 uses that immutable
-documentation/source snapshot; it creates no model-result evidence. PR #146's
+documentation/source snapshot. It creates no model-result evidence. PR #146's
 recorded October 5 status below has not been reverified by this source check.
 
 The entry point for every session. Written on 2026-09-23 around 11:30, during
@@ -179,6 +179,7 @@ not checked, it says so.
     Float32 closure waits for T3's stage 2.
 
   - **Update, 2026-10-02: V-W7's named parts (W60 addendum, draft).** In
+
   - **Update, 2026-10-02: V-W7's named parts (W60 addendum, reviewed).** In
     Float64 the named parts leave 4.1e-7 of the water at 24 h with one Newton
     iteration and 3.8e-13 with ten, so criterion 4's named-parts clause

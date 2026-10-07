@@ -2,24 +2,24 @@
 
 ## Active delivery queue (2026-10-05)
 
-[ROADMAP's execution order](ROADMAP.md#the-execution-order) governs delivery;
+[ROADMAP's execution order](ROADMAP.md#the-execution-order) governs delivery.
 [PLAN_CROSSWALK.md](PLAN_CROSSWALK.md) retains every G4 item and sub-item.
 Part 3 defines the energy contract in parallel with water's. Part 11a may
-build eligible independent references once that contract and evidence tools
-exist. Parts 11b, 11c and 11d then baseline, fix and qualify energy in separate
-PRs. The older phrase "after G3" does not block this preparatory work; it
+build eligible independent references once that contract, part 4's evidence
+tools and the applicable part 5 accounting exist. Parts 11b, 11c and 11d then baseline, fix and qualify energy in separate
+PRs. Proposed 2026-10-05, waiting for the owner: the older phrase "after G3" would not block this work. It
 still prevents water evidence from substituting for energy qualification.
 
 OD7 and OD11, the remaining numerical levels for G4.3–6, comparator
 eligibility and the declared fixed energy convention remain gates. Reuse
-merged mirrors, cross blocks, records and ledgers; do not recreate them from
-old checkboxes. G4.13 goes to part 12d. G4.14's instantaneous loss timescale
-and residual-flush diagnostics retain their original conditions and are
-not residence time. Air-age and residence-time extensions are deferred.
+merged mirrors, cross blocks, records and ledgers. Do not recreate them from
+old checkboxes. G4.13 goes to part 12d. G4.14's instantaneous loss timescale,
+G4.4's flush-rate column and PX19's flush screen retain their original conditions and are
+not residence time. Air-age and residence-time extensions are deferred. "Step n" below means the earlier order's step.
 
 G4 brings the energy source tags and the process records to operation, with
 what G3 learns about the water tags. The original sequence waited for G3,
-except work on PR #95 and its ladder. The active sequence above now allows
+except the job session's work on PR #95 and the ladder at #95's merged head. The active sequence above now allows
 the energy contract and independent references in parallel. E76 is the ladder at
 `dcf7d086`. The roadmap is
 [ROADMAP.md](ROADMAP.md). What G3 hands over, and what is energy-specific, is
@@ -893,4 +893,3 @@ G3 WP0 first.
     the budget per layer and for the column, with the remainder named.
 
   - **Cost.** Two short runs and one analysis script.
-
