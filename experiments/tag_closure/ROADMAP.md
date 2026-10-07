@@ -25,7 +25,7 @@ configuration upstream supports has been validated for every diagnostic.
   - the energy source tags follow, as G4, with what G3 learns.
 
 Water has candidate references under EDMF, exact mass bookkeeping, and no
-energy-offset convention. Reference eligibility is case-specific; copies
+energy-offset convention. Reference eligibility is case-specific. Copies
 are not a universal truth. The shared machinery is qualified there first. The
 process records go with the energy family in G4.
 
@@ -40,7 +40,7 @@ process records go with the energy family in G4.
 | sphere    | Ten days in the production configuration. *Scope added (provenance pathway, 2026-09-26): superseded 2026-09-24 by OD1 and OD6, 90 days at 60 levels.*                                                                                                                                | V-W11                                                                                                                                | G4.13                                                                                                                                 |
 | M6        | Devices, precision, input data and restarts at scale                                                                                                                                                                                                                                 | not started; the GPU decision belongs here                                                                                           | not started                                                                                                                           |
 | M7        | A production trial and a supported envelope                                                                                                                                                                                                                                          | not started                                                                                                                          | not started                                                                                                                           |
-| M8        | Extensions: air age deferred; numerical-loss diagnostics retain their gates                                                                                                                                                                                                                                            | —                                                                                                                                    | memory number (G4.14); the rest later                                                                                                 |
+| M8        | Extensions: air age (deferral proposed 2026-10-05), memory and forecasts. Numerical-loss diagnostics retain their gates                                                                                                                                                              | —                                                                                                                                    | memory number (G4.14). The rest later                                                                                                 |
 
 The goals after G4 are sketched, not approved. Each needs the owner. The
 plan for G3 is [G3_PLAN.md](G3_PLAN.md), reviewed and finalised, and its
@@ -58,9 +58,9 @@ sphere run.
 
 ## Capability increments (2026-10-05)
 
-This revision changes the active execution order in place. The M0–M8, WP,
-V-W, PX, G4 and owner-decision IDs remain the scientific work inventory;
-the part numbers below are delivery boundaries, not a second programme.
+This revision proposes to change the active execution order in place (proposed 2026-10-05, waiting for the owner, DECISIONS.md). The M0–M8, WP,
+V-W, PX, G4 and owner-decision IDs remain the scientific work inventory.
+The part numbers below are delivery boundaries, not a second programme.
 The acceptance contract and decision register below remain authoritative.
 The dated earlier tables describe their recorded state, not today's queue.
 [PLAN_CROSSWALK.md](PLAN_CROSSWALK.md) maps their individual obligations to
@@ -68,8 +68,8 @@ the new delivery boundaries. It is a navigation and loss-check index, not
 another source of scientific criteria.
 
 **Scope.** Water is the first end-to-end qualification target. Energy's
-definitions and independent reference development may proceed in parallel;
-its implementation and qualification keep their own gates. Residence-time
+definitions and independent reference development may proceed in parallel.
+Its implementation and qualification keep their own gates. Residence-time
 and air-age development is deferred. This does not remove G4.14's
 instantaneous donor-loss timescale, PX19's correction-flush screen, or OD6's
 long-run criterion: those diagnose numerical intervention and are not ages.
@@ -89,32 +89,32 @@ executes no experiments and changes no threshold or scientific default.
 
 Maintain one compact status row per declared capability and configuration:
 current evidence level, next part, acceptance evidence, verdict, limitation.
-Levels describe evidence actually available; never infer a repository-wide
-level from one successful case.
+Levels describe evidence actually available. Never infer a repository-wide
+level from one successful case. Each level requires the levels below it.
 
-| Level | Evidence required |
-|:--|:--|
-| 0 Defined | Label meaning, intended scientific use, observable, assumptions and supported configuration are explicit. |
-| 1 Operational | That configuration runs and has the required parent parity and restart evidence. |
-| 2 Accounted | Relevant transfers, numerical intervention and unexplained discrepancies are measured. |
-| 3 Attribution tested | Eligible independent references test individual origins for explicitly named active rules. |
-| 4 Qualified | Predefined criteria and measured cost pass in the declared operating range, with the applicable held-out evidence. |
+| Level                | Evidence required                                                                                                    |
+|:-------------------- |:-------------------------------------------------------------------------------------------------------------------- |
+| 0 Defined            | Label meaning, intended scientific use, observable, assumptions and supported configuration are explicit.            |
+| 1 Operational        | That configuration runs and has the required parent parity, restart and reproducibility evidence (part 4's records). |
+| 2 Accounted          | Relevant transfers, numerical intervention and unexplained discrepancies are measured.                               |
+| 3 Attribution tested | Eligible independent references test individual origins for explicitly named active rules.                           |
+| 4 Qualified          | Predefined criteria and measured cost pass in the declared operating range, with the applicable held-out evidence.   |
 
 These are delivery labels, not replacements for the contract's separate
 pass/fail/not-assessable rows or the pathway's Fid/Val proposals. OD9–OD11
 remain proposed. In particular, a configuration accepted under OD5's
 historical phrase "provenance bounded, not validated" is not promoted to
 level 3 or 4 without independent attribution evidence. Preserve that owner
-decision and report its meaning explicitly; its wording does not establish
+decision and report its meaning explicitly. Its wording does not establish
 a mathematical error bound. Parts 2 and 3 must present any proposed change
 to that terminology for owner resolution, not silently rewrite OD5.
 
-Keep parent parity and parent validity, accounting/closure, provenance,
+Keep parent parity and parent validity, accounting/closure, origin,
 comparator eligibility, intervention, convergence, aggregation,
 reproducibility and cost visible separately. A pass in one cannot compensate
 for a failure or missing prerequisite in another. Preserve the distinction
 between implementation verification, testing of the declared labelling
-model, and evidence for real atmospheric provenance.
+model, and evidence for real atmospheric origins.
 
 ### Acceptance specifications and PR boundaries
 
@@ -128,8 +128,8 @@ energy's fixed convention and OD4 scales, and OD2's sensitivity row.
 
 A reference declares which rules it shares, which it tests independently,
 its floors, excluded processes and convergence evidence. Analytic and
-manufactured cases, and independently implemented known-donor transfers,
-verify specified equations; they do not by themselves validate their physics.
+manufactured cases, and independently implemented transfers of known composition,
+verify specified equations. They do not by themselves validate their physics.
 New benchmark designs reuse PX11/PX24 and PX14/PX25 where suitable. New
 experiments outside existing approvals need an explicit design and owner
 decision before execution.
@@ -138,10 +138,10 @@ Every implementation PR includes relevant tests, parent-parity evidence,
 restart/schema checks where state changes, documentation, and an update to
 the existing status and crosswalk. Split independent mechanisms into
 separate PRs. An investigation can finish with a negative result that rules
-out an option; it must not raise the capability's qualification level.
+out an option. It must not raise the capability's qualification level.
 Freeze held-out cases before tuning, and measure cost before choosing a
-default or commissioning the long runs. Existing passed work is reused;
-rerun only where the changed code, physics or claim invalidates its evidence.
+default or commissioning the long runs. Existing passed work is reused.
+Rerun only where the changed code, physics or claim invalidates its evidence.
 
 ### Part 2 water specification (2026-10-06)
 
@@ -713,60 +713,60 @@ Asked with a short background, options and a recommendation each
 
 ### The execution order
 
-This is the active delivery sequence as of 2026-10-05. It supersedes the
+Proposed 2026-10-05, waiting for the owner: once adopted, this is the active delivery sequence. It supersedes the
 earlier step ordering, not its scientific requirements or recorded results.
-The old steps are mapped in [PLAN_CROSSWALK.md](PLAN_CROSSWALK.md); their
+Step numbers elsewhere in these documents are the earlier order's. The old steps are mapped in [PLAN_CROSSWALK.md](PLAN_CROSSWALK.md). Their
 original text is available at the pinned baseline. The contract, OD register,
 G3_PLAN §6.1 and existing designs supply thresholds. A part number authorizes
 neither an undecided convention nor an unapproved run.
 
-| Part / PR boundary | Value, scope and existing work to reuse | Dependencies and acceptance evidence |
-|:--|:--|:--|
-| 1 Plan reconciliation | One queue and a complete crosswalk; preserve every WP/PX/G4 item, decision and failed result. Documentation only. | Loss check, link checks, independent review. No implementation or runs. |
-| 2 Water acceptance contract | Define one useful initial water workflow, its observables and scientific tolerance rationale. Reuse G3's twelve criteria, OD1–OD3/OD5/OD8/OD12–OD15 and the claim contract. Propose missing tolerances without changing existing ones. | Part 1; separate missing-owner-decision list. Scope may be narrower than G3's full production target, which stays open. |
-| 3 Energy acceptance contract | Distinguish stored source attribution, signed process records and causal claims; specify reference convention, source/loss meaning and observable. Reuse G4.3, OD4/OD7/OD11 and the recorded seven-point decisions. | Part 1; may run beside 2. Fixed convention and owner decisions before scored energy tests. No automatic inheritance of water's rules. |
-| 4 Common evidence and scoring | Reuse WP0, manifests, verifier, archive, WP6 outputs and verdict records; fill demonstrated gaps only. PX0, PX21 when triggered, and fault injection remain. | Parts 2/3 determine applicable outputs. Missing data/reference produces not assessable, not an omitted row. Exact code/configuration, environment, window, results and checksum evidence. |
-| 5 Correction accounting | Reuse WP6 and G4.6; distinguish signed accounting from absolute correction activity before summing events, cells or compartments. Resolve the PR #146 signed closing-ledger interpretation. Prefer probes to new state fields (OD13). | Part 4; alternating signs, simultaneous rain/snow corrections and restart stitching must reveal cancellation. No unsupported cumulative provenance-error bound. Energy uses OD4. |
-| 6 Independent water transport references | Reuse PX1/PX8, PX7, PX11/PX24, eligible PX12 and existing mixing tests. Add only missing analytic/manufactured or independent transport references after design. | Parts 2, 4, applicable 5; OD12 floors and parent validity first. Wrong-origin mutants fail despite closed totals; report shared operators. PX16 only after PX8's trigger and OD13. |
-| 7 Independent water-transfer references | Reuse WP4a-V/J, WP4b-D, PX14/PX25. Known donor compositions distinguish transfer attribution from compartment closure, including rain/snow, export, empty/negative pools and simultaneous flows. | Parts 2, 4, applicable 5; OD15 before scoring PX25. Independent rates/solver and temporal convention stated; unavailable references remain not assessable. Do not presume EDMF stage 2/3 already built. |
-| 8 Water baseline and cost pilot | Assess one useful integrated workflow; reuse W54–W62 and WP9 where applicable. Measure dominant errors, intervention and intended-count cost before selecting fixes/defaults. | Parts 6/7 for relevant active processes, contract and parent parity. Eligible comparator or explicit limitation; build/step/memory measurement. Baseline is not qualification. |
-| 9 Targeted water fixes | One demonstrated defect or inseparable coupled change per PR. Reuse WP1/3/5/5b/4a/4b/4c designs. Include required EDMF precipitation stages; retain refusals until supported. Shared-helper consolidation (WP2) only where justified. | Part 8 identifies priority; small reference-demonstrated fixes may proceed after 6/7. Independent regression, parity, restart and relevant CI; no upstream-model changes. Re-establish baseline after changes. |
-| 10 Water qualification | One scoped, usable water workflow with published limitations. Reuse V-W6, PX23 and the applicable V-W8/V-W9/WP8 evidence; keep the broader G3 target open if not covered. | Parts 8/9, fixed cost ceilings, OD14 held-out hygiene. All applicable criteria pass; unresolved provenance cannot be called validated. No retuning on held-out data. |
-| 11a Energy references | Independent simple heating/loss/work/boundary and fixed-convention tests; reuse G4.7/8, PX22, process-budget identities and existing manufactured tests. | Parts 3/4 and applicable 5. Can proceed beside water references. Explicit independent/shared rules and reference eligibility; parent-budget support limitations remain. |
-| 11b Energy baseline | Reuse G4.1/6/7/10/11/15/16 and post-#139 reruns; quantify dominant signed-process, source-attribution and convention effects and cost. | 11a; OD4 exact scale or labelled estimate, required OD7/OD11 decisions. Do not use ineligible copies as truth. |
-| 11c Energy fixes | Separate PR per evidenced defect; mirrors, cross blocks, subsidence and follower choices only where baseline/design justifies them. | 11b; retain unsupported-mode guards, require independent regression and parity. G4.9 placement and offset sweeps are comparisons, not automatic bounds. |
-| 11d Energy qualification | G4.12 held-out evidence, fixed convention and supported-use statement. Preserve C4 and other limits. | 11b/11c, energy criteria and cost; no qualification inherited from water. G4.13 long sphere belongs to 12d. |
-| 12a Precision and refinement | Extend the qualified envelope; reuse V-W7/W60/W62, refinement ladders and long-Float32 requirements. | Relevant 10 or 11d. Existing failures preserved, named owner-approved rounding rule used only as authorized; rain/snow coverage remains explicit. |
-| 12b MPI and restart at scale | Reuse W59, V-W9, MP1 and restart/forcing checks. Split MPI and restart changes if independently reviewable. | Relevant qualification; baseline parity/restart checks are required earlier too. Distinguish rank-to-rank differences from tagged/untagged parity within a rank count. Multi-node approval remains required. |
-| 12c Production performance | Reuse WP9, P2/P3, compiler/allocation findings and measured tag-count scaling. One bounded optimization per PR; GPU remains gated. | Earlier cost pilot and scientific baseline. Build/step/memory results and unchanged qualified answers; no hidden loosening of cost criteria. |
-| 12d Long-run qualification | Preserve OD1/OD6's 90-day, 60-level target and G4.13; first the authorized 1–2-day cost pilot. PX19/PX20 retain their triggers and limitations. Publish supported envelope. | Relevant qualification, 12a–c, parent validity and affordable cost. Explicit owner/run approvals remain. No new residence-time or air-age feature. |
+| Part / PR boundary                       | Value, scope and existing work to reuse                                                                                                                                                                                                                                                                       | Dependencies and acceptance evidence                                                                                                                                                                                                                                                                            |
+|:---------------------------------------- |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 Plan reconciliation                    | One queue and a complete crosswalk. Preserve every WP/PX/G4 item, decision and failed result. Documentation only.                                                                                                                                                                                             | Loss check, link checks, independent review. No implementation or runs.                                                                                                                                                                                                                                         |
+| 2 Water acceptance contract              | Define one useful initial water workflow, its observables and scientific tolerance rationale. Reuse G3's twelve criteria, OD1–OD3/OD5/OD8/OD12–OD15 and the claim contract. Propose missing tolerances without changing existing ones.                                                                        | Part 1. Separate missing-owner-decision list. Scope may be narrower than G3's full production target, which stays open.                                                                                                                                                                                         |
+| 3 Energy acceptance contract             | Distinguish stored source attribution, signed process records and causal claims. Specify reference convention, source/loss meaning and observable. Reuse G4.3, OD4/OD7/OD11 and the recorded seven-point decisions.                                                                                           | Part 1. May run beside 2. Fixed convention and owner decisions before scored energy tests. No automatic inheritance of water's rules.                                                                                                                                                                           |
+| 4 Common evidence and scoring            | Reuse WP0, manifests, verifier, archive, WP6 outputs and verdict records. Fill demonstrated gaps only. PX0, PX21 when triggered, and fault injection remain.                                                                                                                                                  | Parts 2/3 determine applicable outputs. Missing data/reference produces not assessable, not an omitted row. Exact code/configuration, environment, window, results and checksum evidence.                                                                                                                       |
+| 5 Correction accounting                  | Reuse WP6 and G4.6. Distinguish signed accounting from absolute correction activity before summing events, cells or compartments. Resolve the PR #146 signed closing-ledger interpretation. Prefer probes to new state fields (OD13).                                                                         | Part 4. Alternating signs, simultaneous rain/snow corrections and restart stitching must reveal cancellation. No cumulative origin-error bound is claimed without support. Energy uses OD4.                                                                                                                     |
+| 6 Independent water transport references | Reuse PX1/PX8, PX7, PX11/PX24 and existing mixing tests. Run PX12, the scheduled 0M eligibility test. Add only missing analytic/manufactured or independent transport references after design.                                                                                                                | Parts 2, 4, applicable 5. OD12 floors and parent validity first. Wrong-origin mutants fail despite closed totals. Report shared operators. PX16 (PP-SUB) goes to part 9, only after PX8's trigger and OD13.                                                                                                     |
+| 7 Independent water-transfer references  | Reuse WP4a-V/J, WP4b-D, PX14/PX25. Known compositions of the giving pool distinguish transfer attribution from compartment closure, including rain/snow, export, empty/negative pools and simultaneous flows.                                                                                                 | Parts 2, 4, applicable 5. OD15 before scoring PX25. Independent rates/solver and temporal convention stated. Unavailable references remain not assessable. Do not presume EDMF stage 2/3 already built.                                                                                                         |
+| 8 Water baseline and cost pilot          | Assess one useful integrated workflow. Reuse W54–W62 and WP9 where applicable. Measure dominant errors, intervention and intended-count cost before selecting fixes/defaults. This is the column cost pilot. The owner's 1–2-day sphere pilot is M4 work and may run once part 8's contract exists (see 12d). | Parts 6/7 for relevant active processes, contract and parent parity. Eligible comparator or explicit limitation. Build/step/memory measurement. Baseline is not qualification.                                                                                                                                  |
+| 9 Targeted water fixes                   | One demonstrated defect or inseparable coupled change per PR. Reuse WP1/3/5/5b/4a/4b/4c designs. Include required EDMF precipitation stages. Retain refusals until supported. Shared-helper consolidation (WP2) only where justified.                                                                         | Part 8 identifies priority. Small reference-demonstrated fixes may proceed after 6/7. Independent regression, parity, restart and relevant CI. No upstream-model changes. Re-establish baseline after changes.                                                                                                  |
+| 10 Water qualification                   | One scoped, usable water workflow with published limitations. Reuse V-W6, PX23 and the applicable V-W8/V-W9/WP8 evidence. Keep the broader G3 target open if not covered.                                                                                                                                     | Parts 8/9, cost ceilings fixed by the owner (the WP9 budget is waiting, criterion 10 fails against OD3's 2×), OD14 held-out hygiene. All applicable criteria pass. Unresolved origins cannot be called validated. No retuning on held-out data.                                                                 |
+| 11a Energy references                    | Independent simple heating/loss/work/boundary and fixed-convention tests. Reuse G4.7/8, PX22, process-budget identities and existing manufactured tests.                                                                                                                                                      | Parts 3/4 and applicable 5. Can proceed beside water references. Explicit independent/shared rules and reference eligibility. Parent-budget support limitations remain.                                                                                                                                         |
+| 11b Energy baseline                      | Reuse G4.1/6/7/10/11/15/16 and post-#139 reruns. Quantify dominant signed-process, source-attribution and convention effects and cost.                                                                                                                                                                        | 11a. OD4 exact scale or labelled estimate, required OD7/OD11 decisions. Do not use ineligible copies as truth.                                                                                                                                                                                                  |
+| 11c Energy fixes                         | Separate PR per evidenced defect. Mirrors, cross blocks, subsidence and choices for the correction after each solve only where baseline/design justifies them.                                                                                                                                                | 11b. Retain unsupported-mode guards, require independent regression and parity. G4.9 placement and offset sweeps are comparisons, not automatic bounds.                                                                                                                                                         |
+| 11d Energy qualification                 | G4.12 held-out evidence, fixed convention and supported-use statement. Preserve C4 and other limits.                                                                                                                                                                                                          | 11b/11c, energy criteria and cost. No qualification inherited from water. G4.13 long sphere belongs to 12d.                                                                                                                                                                                                     |
+| 12a Precision and refinement             | Extend the qualified envelope. Reuse V-W7/W60/W62, refinement ladders and long-Float32 requirements.                                                                                                                                                                                                          | Relevant 10 or 11d. Existing failures preserved, named owner-approved rounding rule used only as authorized. Rain/snow coverage remains explicit.                                                                                                                                                               |
+| 12b MPI and restart at scale             | Reuse W59, V-W9, MP1 and restart/forcing checks. Split MPI and restart changes if independently reviewable.                                                                                                                                                                                                   | Relevant qualification. Baseline parity/restart checks are required earlier too. Distinguish rank-to-rank differences from tagged/untagged parity within a rank count. Multi-node approval remains required.                                                                                                    |
+| 12c Production performance               | Reuse WP9, P2/P3, compiler/allocation findings and measured tag-count scaling. One bounded optimization per PR. GPU remains gated.                                                                                                                                                                            | Part 8's cost pilot and scientific baseline. Build/step/memory results and unchanged qualified answers. No hidden loosening of cost criteria.                                                                                                                                                                   |
+| 12d Long-run qualification               | Preserve OD1/OD6's 90-day, 60-level target and G4.13. First the authorized 1–2-day cost pilot. PX19/PX20 retain their triggers and limitations. Publish supported envelope.                                                                                                                                   | The 90-day run: relevant qualification, 12a–c, parent validity and affordable cost. The 1–2-day pilot keeps its earlier gate (OD6, after the negative-parent fix, merged as #137) and comes before M5 selection, as M4 requires. Explicit owner/run approvals remain. No new residence-time or air-age feature. |
 
-Parts 2 and 3 may run together; 11a may follow its own prerequisites while
+Parts 2 and 3 may run together, and 11a may follow its own prerequisites while
 water advances. Parts 4 and 5 should be split into family-specific PRs if
 necessary. Part 9 and 11c are queues of bounded fixes, not single omnibus
 PRs. Engineering checks required by a particular earlier claim must happen
-there; placing expanded coverage in part 12 does not postpone those checks.
+there. Placing expanded coverage in part 12 does not postpone those checks. Parts 12a–d also hold M6 and M7 work: multi-node runs, devices, a production trial and the supported envelope. That work stays sketched and not approved, as above. Each such item needs the owner before it starts. The G3 items these parts reuse (V-W7, V-W9, WP9, OD1/OD6's sphere) keep their existing approval and gates.
 
 **Value and effort.** Parts 2–4 are the first priority: small documentation
 and evidence-tool increments prevent expensive but uninterpretable runs.
 Part 5 and the smallest useful reference in 6 or 7 are next: medium effort,
 high value because they can expose wrong origins even when totals close.
 Part 8 is a bounded pilot that determines which fixes in 9 offer the largest
-measured benefit. Parts 10/11d deliver the usable capability; 12a–d expand
+measured benefit. Parts 10/11d deliver the usable capability, and 12a–d expand
 its operating range only after the earlier evidence and cost gates. These
 are relative planning estimates, not measured developer time or run cost.
 A part can close with documented reuse when its required evidence already
-exists; it need not create new machinery to count as progress.
+exists. It need not create new machinery to count as progress.
 
 **Immediate progress.** Finish the contracts and reuse the evidence tools,
 then resolve the smallest independent-reference gaps that unlock water
 attribution assessment. PX12 remains the scheduled 0M eligibility and
 KI4-COPIES/UP1 probe. D4-W's ineligible comparator is not reopened without
 the owner (option D). PR #146 implementation does not close WP4b's EDMF or
-provenance qualification obligations. The known signed-ledger cancellation
-concern belongs to part 5; its closure rule needs part 7's donor tests.
+origin qualification obligations. The known signed-ledger cancellation
+concern belongs to part 5, which delivers accounting that shows cancellation. Part 7's known-composition tests then check the closing rule's attribution. Part 7 needs part 5's outputs, not a part 5 verdict on the closing rule.
 
-**Stop rules.** An unavailable independent reference blocks the corresponding
+**Stop rules.** An agent stops at a part whose owner decision is open and asks the owner. Default selection (M5) follows rev. 2's rules as approved, within the cost ceilings. If the owner adopts OD9, it also needs OD11, and the verdict records are reported beside it. An unavailable independent reference blocks the corresponding
 validated claim. A parent defect goes to UPSTREAM_REQUIREMENTS, not a fork
 physics change. Retain deferred PX/PP triggers, guards, owner decisions and
 failed experiments. Any narrower initial workflow is an increment toward,
