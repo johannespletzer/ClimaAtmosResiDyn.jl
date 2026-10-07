@@ -128,7 +128,7 @@ Rows prefixed "interim" mark owner items as proposed. They apply only if the own
 - **R9 (F9, O4)** line 93. Old: `level from one successful case.` New: `level from one successful case. Each level requires the levels below it.`. Line 98. Old: `| 1 Operational | That configuration runs and has the required parent parity and restart evidence. |` New: `| 1 Operational | That configuration runs and has the required parent parity, restart and reproducibility evidence (part 4's records). |`
 - **R10 (F5, O7)** line 690, column 2. Old: `Measure dominant errors, intervention and intended-count cost before selecting fixes/defaults.` New: `Measure dominant errors, intervention and intended-count cost before selecting fixes/defaults. This is the column cost pilot. The owner's 1–2-day sphere pilot is M4 work and may run once part 8's contract exists (see 12d).` Line 699. Old: `Earlier cost pilot and scientific baseline.` New: `Part 8's cost pilot and scientific baseline.` Line 700, column 3. Old: `Relevant qualification, 12a–c, parent validity and affordable cost.` New: `The 90-day run: relevant qualification, 12a–c, parent validity and affordable cost. The 1–2-day pilot keeps its earlier gate (OD6, after the negative-parent fix, merged as #137) and comes before M5 selection, as M4 requires.`
 - **R11 (F26, O1)** line 43, column 2. Old: `Extensions: air age deferred. Numerical-loss diagnostics retain their gates` New: `Extensions: air age (deferral proposed 2026-10-05), memory and forecasts. Numerical-loss diagnostics retain their gates`
-- **R12 (F10)** line 676. Old: `The old steps are mapped in [PLAN_CROSSWALK.md](../PLAN_CROSSWALK.md). Their` New: `Step numbers elsewhere in these documents are the earlier order's. The old steps are mapped in [PLAN_CROSSWALK.md](../PLAN_CROSSWALK.md). Their`
+- **R12 (F10)** line 676. Old: `The old steps are mapped in [PLAN_CROSSWALK.md](../../PLAN_CROSSWALK.md). Their` New: `Step numbers elsewhere in these documents are the earlier order's. The old steps are mapped in [PLAN_CROSSWALK.md](../../PLAN_CROSSWALK.md). Their`
 - **R13 (F9, O2)** line 692, column 3. Old: `Parts 8/9, fixed cost ceilings, OD14 held-out hygiene.` New: `Parts 8/9, cost ceilings fixed by the owner (the WP9 budget is waiting, criterion 10 fails against OD3's 2×), OD14 held-out hygiene.`
 - **R14 interim (F15)** line 61. Old: `This revision changes the active execution order in place.` New: `This revision proposes to change the active execution order in place (proposed 2026-10-05, waiting for the owner, DECISIONS.md).` Line 674. Old: `This is the active delivery sequence as of 2026-10-05. It supersedes the` New: `Proposed 2026-10-05, waiting for the owner: once adopted, this is the active delivery sequence. It supersedes the`
 
@@ -146,7 +146,7 @@ Rows prefixed "interim" mark owner items as proposed. They apply only if the own
       proposal approves no threshold, scientific default, simulation
       campaign or OD9 to OD11 label. OD5's "bounded" wording stays, without
       implying a mathematical error bound.
-      [ROADMAP](../ROADMAP.md#the-execution-order)
+      [ROADMAP](../../ROADMAP.md#the-execution-order)
 
   ```
 - **D3 (F18, O2)** Insert directly after D2:
@@ -154,7 +154,7 @@ Rows prefixed "interim" mark owner items as proposed. They apply only if the own
     - **The WP9 cost budget (criterion 10).** OD3's 2× stays for now, so
       criterion 10 fails (8 + 8 step 4.16×). A revised step row is proposed.
       Water qualification (ROADMAP part 10) needs it.
-      [G3T](../G3_TODO.md#wp2-wp8-wp9-consolidation-docs-cost)
+      [G3T](../../G3_TODO.md#wp2-wp8-wp9-consolidation-docs-cost)
 
   ```
 - **D4 (F20, O3)** Insert after line 296 (`        the microphysics hook.`):
