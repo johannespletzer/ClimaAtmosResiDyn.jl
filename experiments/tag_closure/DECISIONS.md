@@ -26,8 +26,9 @@ Each decision's current state is in
 This list names what is still open. Classified on 2026-09-25 against the
 record; the answered and superseded entries are in the next section.
 
-  - **The planning revision of 2026-10-05 (PR #147).** Proposed
-    2026-10-05, waiting for the owner. PR #147's brief says the owner asked
+  - ~~**The planning revision of 2026-10-05 (PR #147).**~~ *Answered
+    2026-10-07: adopted as delivery boundaries, the levels stay proposed*
+    (below). Proposed 2026-10-05. PR #147's brief says the owner asked
     for an in-place plan by capability and evidence, without residence-time
     work. The proposal: ROADMAP's parts 1 to 12d replace rev. 2's execution
     order. Residence-time and air-age features are deferred. G4.14's loss
@@ -38,7 +39,8 @@ record; the answered and superseded entries are in the next section.
     implying a mathematical error bound.
     [ROADMAP](ROADMAP.md#the-execution-order)
 
-  - **The WP9 cost budget (criterion 10).** OD3's 2× stays for now, so
+  - ~~**The WP9 cost budget (criterion 10).**~~ *Answered 2026-10-07:
+    OD3's 2× stays, the walk fix goes upstream* (below). OD3's 2× stays, so
     criterion 10 fails (8 + 8 step 4.16×). A revised step row is proposed.
     Water qualification (ROADMAP part 10) needs it.
     [G3T](G3_TODO.md#wp2-wp8-wp9-consolidation-docs-cost)
@@ -72,7 +74,8 @@ record; the answered and superseded entries are in the next section.
 
     [G3T](G3_TODO.md#decisions)
 
-  - **The explicit-1M water default, at M5.** W33's verdict is decided (it
+  - ~~**The explicit-1M water default, at M5.**~~ *Answered 2026-10-07:
+    beside part 7, by WP5b-V's rule* (below). W33's verdict is decided (it
     stays a failure, W35 beside it; 2026-09-24). The default itself is decided
     at M5 under the contract. [G3T](G3_TODO.md#decisions)
 
@@ -252,6 +255,54 @@ The list as it stood before this classification, kept as written:
 >   - **When to investigate V-W4's two breaks:** the partition at 120 levels,
 >     and the copies under first-order upwinding (W25). **Waiting.**
 >     [FINDINGS W25](FINDINGS.md)
+
+## 2026-10-07
+
+The owner decided these on 2026-10-07, after the review of PRs #147 to #149
+and an adversarial check of the review's recommendations
+(`review/agent_reviews/plan_parts_1_to_3_review_2026-10-07.md`, section F).
+
+  - **Parts 1 to 12d are the active delivery order, as delivery
+    boundaries.** **In force.** They replace rev. 2's execution order. The
+    register, the OD3 table and the acceptance contract stay the scientific
+    source. The progress levels 0 to 4 stay proposed: each level requires
+    the ones below it, and level 3 means tested origins, so a record-only
+    capability cannot reach "qualified" under them.
+    ([ROADMAP](ROADMAP.md#the-execution-order))
+  - **Residence time and air age are deferred.** **In force.** They are
+    ages, not origins, and no acceptance row needs them. G4.14's loss
+    timescale, PX19's flush screen and OD6's long-run criterion keep their
+    meaning and gates. G4.4's flush-rate forecast is not an age. It stays in
+    part 11b as a reported diagnostic with no gate.
+  - **Energy beside water: parts 3 and 11a now, 11b after part 9.** **In
+    force.** The energy contract and the independent energy references run
+    beside water. Part 11b, the energy baseline, starts after part 9's
+    shared-code PRs and any walk fix have landed, so each shared fix is
+    measured once. The 8 + 8 cost is measured in 11b. The order of
+    2026-09-23, water first to qualification, is otherwise unchanged.
+  - **The cost budget: OD3's 2× at 8 + 8 stays and gates part 10.** **In
+    force.** Criterion 10 stays failing (8 + 8 step 4.16×, E88) until the
+    parent's walks over tracer names are fixed in ClimaCore or upstream
+    ClimaAtmos, where E90 locates the excess. A fork-side patch is allowed
+    only as a second named departure from upstream, tested bit for bit.
+    The post-fix measurement is pre-registered first, under WP9's spread
+    rule, as the less favourable of minimum and median, with the step that
+    follows a result between 2.0× and 2.1× stated. A cap for water alone is
+    not a reading of OD3's row, and none is set.
+  - **The 90-day sphere runs after 12a, 12b and 12c.** **In force.** The
+    kept sphere configuration (`configs/g2_v2_sphere_n2.yml`) is Float32, so
+    12a is required. The owner's 1-2-day cost pilot stays M4 work, before
+    M5.
+  - **The explicit-1M water default is decided beside part 7.** **In
+    force.** By WP5b-V's own rule on a named precipitating 1M case, after
+    W33 is revisited. Part 10 as scoped has no 1M case. OD9 and OD11 stay
+    conditions on any default selection.
+  - **PR #146's dedicated closing ledger.** **In force, at #146's merge.**
+    The closing step may be booked in a dedicated ledger, provided the
+    closure table sums it with the rescale's ledgers. The per-tag part of
+    the decision of 2026-10-02 is met at `33cbfd4f` (`q_tag_fix_<name>`).
+    That decision line is read with this amendment. Part 5 prefers probes
+    to new state fields (OD13).
 
 ## 2026-10-02
 

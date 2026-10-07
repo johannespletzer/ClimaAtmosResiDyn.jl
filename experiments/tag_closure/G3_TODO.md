@@ -1402,7 +1402,7 @@ owner's points in the note's section 8.
         fails: 8 + 8 copies built in 4 h 16 min (E88 addendum), 6.8% over,
         less than the node spread. Both wait for the owner.
 
-      + [ ] **The cost budget: proposal, waiting for the owner.** OD3's
+      + [ ] **The cost budget: decided 2026-10-07, OD3's 2× stays.** OD3's
         approved row (2026-09-24) caps the default mode at 8 + 8 tags at 2×
         the untagged step and 2× the untagged build. The step measures 4.16×,
         so against that row criterion 10 fails. The build, 1.51×, meets it.
@@ -1424,6 +1424,14 @@ owner's points in the note's section 8.
                 water at most 1.6× (1.44×), energy at most 1.75× (1.58×).
 
         The margins are 4% to 32% over the least favourable measured value.
+
+        *Decided 2026-10-07 (the owner):* keep OD3's 2× at 8 + 8, and it
+        gates part 10. The walk fix goes to ClimaCore or upstream ClimaAtmos.
+        A fork patch counts only as a second named departure, tested bit for
+        bit. The post-fix measurement is pre-registered first, the less
+        favourable of minimum and median under the spread rule, with the step
+        that follows a result between 2.0× and 2.1× stated. No cap for water
+        alone (DECISIONS.md, 2026-10-07).
         The sphere's run-length budget (OD6) and the GPU are not covered;
         T5 checks the sphere against this budget. OD3's row for the copies,
         both families' copies in one model built within 4 h, is not
