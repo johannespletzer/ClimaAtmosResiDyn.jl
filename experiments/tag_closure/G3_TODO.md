@@ -8,15 +8,17 @@ water partition/named closure, exact-time profile norms, OD2 plus the decided
 ratios from actual ledgers/inventories. It validates complete compartment and
 parent inventories and paired precipitation evidence, with explicit data
 failures and scientific blockers. [Coverage and tests](analysis/evidence/PART4.md)
-record the implementation and its remaining dependencies. Independent review
-is complete and its findings are resolved; no physical G3 completion is claimed.
+record the implementation and its remaining dependencies. Reviewed on
+2026-10-07, see the PR's review comment. No physical G3 completion is claimed.
 
 WP0/PX0 and WP8 reuse the existing manifest/archive workflow. Parts 5/6/7/8/9/10/12
 retain their accounting, independent-reference, integration, cost/restart and
 qualification obligations. WA-SCOPE/WA-PRECIP/WA-COST, option D, the limited
 Float32 rule, eight-tag/full-duration targets and every historical failure
-remain as recorded. Missing observations are not inferred as zero.
-
+remain as recorded. Missing observations are not inferred as zero: a
+missing or non-finite value fails the water row, labelled a data failure.
+Active-rule coverage is reported, not a gate (WA-GATES (b)). The TRMM 0M 6 h
+pilot scores the first-hour row only, labelled low power.
 
 ## Active delivery queue (2026-10-05)
 

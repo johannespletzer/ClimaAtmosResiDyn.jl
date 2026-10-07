@@ -1,6 +1,6 @@
 """Create small analytic evidence fixtures. These are not atmospheric runs.
 
-    python3 make_acceptance_fixture.py NEW_DIR [--family water|energy_source|radiation_record]
+    python3 make_acceptance_fixture.py NEW_DIR [--family water|energy_source|radiation_record] [--hours 24]
 
 Every output file is separately hashed. No repository result or golden
 reference is replaced. The expected answers in the tests are hand-derived.
@@ -20,16 +20,17 @@ from score_acceptance import local_identities
 BASE = "5dd23a8309e174592984da7d60912a4a9daaf08a"
 
 
-def write_fixture(root, family="water"):
+def write_fixture(root, family="water", hours=24):
     root = Path(root)
     root.mkdir(parents=True, exist_ok=False)
-    time = np.arange(25, dtype=np.float64) * 3600
+    n = hours + 1
+    time = np.arange(n, dtype=np.float64) * 3600
     geometry = np.array([[500.0], [1500.0]])
     weights = np.ones(2, dtype=np.float64)
-    mass = 100.0 + np.concatenate(([0.0], 100.0 + np.arange(24)))
+    mass = 100.0 + np.concatenate(([0.0], 100.0 + np.arange(hours)))
     water = np.repeat((mass / 2)[:, None], 2, axis=1)
     energy = water * 1000
-    rho = np.ones((25, 2), dtype=np.float64)
+    rho = np.ones((n, 2), dtype=np.float64)
     dimensions = ("z",)
     metadata = root / "fixture_metadata.json"
     metadata.write_text(json.dumps({"kind": "analytic fixture", "not_a_model_run": True,
@@ -72,16 +73,16 @@ def write_fixture(root, family="water"):
     add("rho", rho, "kg m^-3", representation="density")
     add("water_parent", water, "kg kg^-1")
     add("energy_parent", energy, "J kg^-1")
-    add("temperature", np.full((25, 2), 300.0), "K", representation="intensive")
-    add("negative_water_void", np.zeros((25, 1)), "1", representation="flag", scalar=True)
-    add("newton_error", np.full((25, 1), 1e-5), "1", representation="ratio", scalar=True)
-    add("source_partition_valid", np.ones((25, 1)), "1", representation="flag", scalar=True)
-    add("throughput", np.arange(25) * 10, "J m^-2", sampling="cumulative",
+    add("temperature", np.full((n, 2), 300.0), "K", representation="intensive")
+    add("negative_water_void", np.zeros((n, 1)), "1", representation="flag", scalar=True)
+    add("newton_error", np.full((n, 1), 1e-5), "1", representation="ratio", scalar=True)
+    add("source_partition_valid", np.ones((n, 1)), "1", representation="flag", scalar=True)
+    add("throughput", np.arange(n) * 10, "J m^-2", sampling="cumulative",
         representation="amount", accumulator_kind="accepted_step_source_variation", scalar=True)
     repair_increment = 0.001 if family == "water" else 0.0001
-    add("repair_retained", np.arange(25) * repair_increment, amount_unit, sampling="cumulative",
+    add("repair_retained", np.arange(n) * repair_increment, amount_unit, sampling="cumulative",
         representation="amount", accumulator_kind="retained_cell_step_repair", scalar=True)
-    add("repair_attempted", np.arange(25) * 2 * repair_increment, amount_unit, sampling="cumulative",
+    add("repair_attempted", np.arange(n) * 2 * repair_increment, amount_unit, sampling="cumulative",
         representation="amount", accumulator_kind="attempted_application_repair", scalar=True)
     target = water if family == "water" else energy
     tags = [] if family == "radiation_record" else [
@@ -93,27 +94,27 @@ def write_fixture(root, family="water"):
                  np.ones_like(target) * (5 if family == "water" else 5000))
         add("tag_" + tag["name"], values, unit)
         for mechanism in ("led_fix", "led_inc"):
-            add(mechanism + "_" + tag["name"], np.repeat((np.arange(25) * 1e-5)[:, None], 2, axis=1),
+            add(mechanism + "_" + tag["name"], np.repeat((np.arange(n) * 1e-5)[:, None], 2, axis=1),
                 unit, sampling="cumulative")
-            add(mechanism + "_" + tag["name"] + "_applicable", np.ones((25, 1)), "1",
+            add(mechanism + "_" + tag["name"] + "_applicable", np.ones((n, 1)), "1",
                 representation="flag", scalar=True)
     add("copy_residual", np.zeros_like(water), "kg kg^-1")
     add("named_remainder", np.zeros_like(water), "kg kg^-1")
     add("residual", np.ones_like(energy) * 100, "J kg^-1")
-    add("record_radiation", np.repeat(np.arange(25)[:, None], 2, axis=1), "J kg^-1", sampling="cumulative")
+    add("record_radiation", np.repeat(np.arange(n)[:, None], 2, axis=1), "J kg^-1", sampling="cumulative")
     for name, rate in (("precip_parent", -0.001), ("precip_pbl", -0.0006), ("precip_free", -0.0004)):
-        add(name, np.full((25, 1), rate), "kg m^-2 s^-1", representation="rate", scalar=True)
+        add(name, np.full((n, 1), rate), "kg m^-2 s^-1", representation="rate", scalar=True)
     bounds = np.column_stack((time, time + 3600))
-    add("process_amount", np.ones((25, 1)), amount_unit, sampling="applied_interval",
+    add("process_amount", np.ones((n, 1)), amount_unit, sampling="applied_interval",
         representation="weighted_applied_amount", scalar=True, bounds=bounds)
-    add("process_share", np.full((25, 1), 0.6), "1", sampling="applied_interval",
+    add("process_share", np.full((n, 1), 0.6), "1", sampling="applied_interval",
         representation="ratio", scalar=True, bounds=bounds)
     for role in ("candidate", "reference", "untagged"):
         filename = role + ".npz"
         np.savez(root / filename, **archive)
         artifact_hashes[filename] = sha256_file(root / filename)
     reference = {"identity": "analytic-independent-reference", "active_rules": ["transport"],
-                 "tag_names": [t["name"] for t in tags], "end_seconds": 86400, "model_commit": BASE,
+                 "tag_names": [t["name"] for t in tags], "end_seconds": hours * 3600, "model_commit": BASE,
                  "independent_rules": ["transport"], "converged": True,
                  "floor_fraction_of_tolerance": 0.0, "mirrors_complete": True,
                  "jacobian_complete": True, "repair_refinement_ratios": {"dt": 0.5, "newton": 0.5},
@@ -149,7 +150,8 @@ def write_fixture(root, family="water"):
             "runs": runs, "tags": tags,
             "required_parent_fields": ["rho", "water_parent", "energy_parent", "temperature"],
             "parent_capture_scope": "all-state", "same_parent_comparisons": True,
-            "end_seconds": 86400, "profile_times": [3600, 86400], "accepted_step_seconds": 3600,
+            "end_seconds": hours * 3600, "profile_times": [3600, 86400] if hours >= 24 else [3600],
+            "accepted_step_seconds": 3600,
             "throughput_accumulation": "accepted_step", "energy_ledger_per_tag": True,
             "energy_offset": 0, "active_rules": ["transport"],
             "named_parts": ["analytic zero remainder"], "reference": {"identity": reference["identity"],
@@ -164,8 +166,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("directory")
     parser.add_argument("--family", choices=("water", "energy_source", "radiation_record"), default="water")
+    parser.add_argument("--hours", type=int, default=24, help="hourly outputs after the start")
     args = parser.parse_args()
-    print(write_fixture(args.directory, args.family))
+    print(write_fixture(args.directory, args.family, args.hours))
 
 
 if __name__ == "__main__":

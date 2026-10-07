@@ -7,7 +7,12 @@ Exit 0: evaluation completed with no required scientific blocker/failure.
 Exit 1: a measured required approved criterion failed.
 Exit 2: required evidence is missing, corrupt or inconsistent.
 Exit 3: required scientific approval/reference/prerequisite is unavailable.
+Exit 4: nothing was evaluated. The result path exists, the command line is
+invalid, or the scorer itself raised an error. A scorer error is not a data
+failure and not a scientific result.
 A validation-only zero certifies bundle integrity, not physical qualification.
+The persistent blocked rows (convergence, accepted applications, restart,
+held-out and scope) keep a score from exiting 0 until their parts deliver.
 """
 
 import argparse
@@ -25,10 +30,47 @@ from manifest import sha256_file
 
 
 DAY = 86400.0
-SMALL = 2e-4
+FIRST_HOUR = 3600.0
+# Approved numbers (G3_PLAN 6.1 and ROADMAP's OD3 table). Each has a test.
+SMALL = 2e-4  # small-tag absolute rule and small-burden exemption, of the parent scale
+SMALL_SHARE = 0.01  # a tag below 1% of the partition is small
+ORIGIN_L1_DAY, ORIGIN_LINF_DAY = 0.02, 0.05
+ORIGIN_L1_FIRST_HOUR = {"region": 0.01, "source": 0.10}
+ORIGIN_LINF_FIRST_HOUR = 0.25
+LED_FIX_MAX = 0.02  # per-tag retained correction over the window
+AGGREGATE_REPAIR_PER_DAY = 0.005  # candidate partition repair
+COMPARATOR_REPAIR_PER_DAY = 0.002  # copies repair
+COPIES_RESIDUAL_MAX = 2e-4  # a tenth of the closure budget
+COMPARATOR_REFINEMENT_MAX = 1.1
+FLOOR_FRACTION_MAX = 0.25  # OD12 reference floor, a quarter of the tolerance
+PROCESS_WEIGHTED_MAX = 0.05
+NAMED_REMAINDER_MAX = 1e-6
+NEGATIVE_WATER_MAX = 1e-4
+NEWTON_MAX = 1e-3
+TEMPERATURE_FLOOR_K, TOP_CHANGE_K = 150.0, 5.0
+FLOAT32_FACTOR, FLOAT32_EPS_FACTOR = 10, 3
+# Criteria the owner excluded for a named case. A manifest declares an
+# exclusion in `excluded_criteria`, and only these declarations are accepted.
+APPROVED_EXCLUSIONS = {("water", "D4-W"): {5: "option D, 2026-10-02", 6: "option D, 2026-10-02"}}
+PILOT_LABEL = ("low power: the TRMM 0M 6 h pilot scores the first-hour row only "
+               "(the first hour's evaporation is 0.13% of the water, rain starts near 3 h)")
 SPEC_ROOT = Path(__file__).resolve().parent.parent.parent
 SPEC_PATHS = ("G3_PLAN.md", "design/G4_CLAIM_CONTRACTS.md", "ROADMAP.md", "DECISIONS.md")
 SCORER_PATHS = ("score_acceptance.py", "acceptance_data.py", "manifest.py", "closure_verdict.py")
+
+
+def origin_limits(kind, time):
+    """The approved L1 and L∞ limits of an origin row at the 1 h or 24 h endpoint."""
+    require(kind in ORIGIN_L1_FIRST_HOUR, f"unknown tag classification {kind!r}")
+    if time == DAY:
+        return ORIGIN_L1_DAY, ORIGIN_LINF_DAY
+    require(time == FIRST_HOUR, f"no approved origin tolerance at {time:g} s")
+    return ORIGIN_L1_FIRST_HOUR[kind], ORIGIN_LINF_FIRST_HOUR
+
+
+def float32_limit(float64_measure, steps):
+    """Criterion 9's rounding floor: max(10 × Float64, 3 · eps32 · √n_steps)."""
+    return max(FLOAT32_FACTOR * float64_measure, FLOAT32_EPS_FACTOR * 2 ** -23 * np.sqrt(steps))
 
 
 def local_identities():
@@ -49,39 +91,88 @@ class Scorer:
         self.accepted_cadence = self.s.get("accepted_step_seconds")
         self.units = ("kg" if self.family == "water" else "J") if self.s.get("geometry_kind") == "sphere" else \
             ("kg m^-2" if self.family == "water" else "J m^-2")
+        self.end = self.s.get("end_seconds")
+        self.pilot = self.s.get("pilot_first_hour") is True
+        self.excluded = {}
+
+    def json_artifact(self, rel):
+        """Read a JSON evidence object. A malformed file is a data failure."""
+        try:
+            detail = json.loads(self.b.artifact(rel).read_text())
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise DataError(f"{rel}: invalid JSON evidence: {exc}") from exc
+        require(isinstance(detail, dict), f"{rel}: JSON evidence must be an object")
+        return detail
+
+    def exclusions(self):
+        """Declared criteria not judged for this case, checked against the approved list."""
+        declared = self.s.get("excluded_criteria", [])
+        require(isinstance(declared, list) and all(isinstance(c, int) for c in declared),
+                "excluded_criteria must be a list of criterion numbers")
+        approved = APPROVED_EXCLUSIONS.get((self.family, self.s.get("case")), {})
+        require(set(declared) <= set(approved),
+                f"excluded_criteria {sorted(set(declared) - set(approved))} are not approved for this case")
+        return {c: approved[c] for c in declared}
+
+    def pilot_scope(self):
+        require(self.family == "water", "the first-hour pilot scope is a water scope")
+        require(isinstance(self.end, (int, float)) and FIRST_HOUR < self.end < DAY,
+                "the first-hour pilot runs past 1 h and ends before 24 h")
+        return {"metrics": {"scored_origin_endpoints": [FIRST_HOUR], "end_seconds": self.end},
+                "limitation": PILOT_LABEL}
 
     def temperature(self):
         f = self.f("candidate", "temperature", units="K", sampling="instantaneous")
         require(self.s.get("geometry_kind") == "column" and f.dimensions == ("z",),
-                "top-temperature mean requires the declared native column; sphere horizontal weights are separate")
-        i, j = window(f.time, 0, DAY)
+                "top-temperature mean requires the declared native column. Sphere horizontal weights are separate")
+        require(np.all(np.diff(f.geometry[:, 0]) > 0), "column levels must run from the bottom to the top")
+        end = min(self.end, DAY)
+        i, j = window(f.time, 0, end)
         change = abs(float(f.values[j, -1] - f.values[i, -1]))
-        return {"meets": bool(np.min(f.values[i:j + 1]) > 150 and change < 5),
-                "metrics": {"minimum_K": float(np.min(f.values[i:j + 1])), "top_change_K": change}, "units": "K"}
+        return {"meets": bool(np.min(f.values[i:j + 1]) > TEMPERATURE_FLOOR_K and change < TOP_CHANGE_K),
+                "metrics": {"minimum_K": float(np.min(f.values[i:j + 1])), "top_change_K": change,
+                            "window_end_seconds": end}, "units": "K",
+                "limitation": "" if end == DAY else f"covers the first {end / 3600:g} h of the first day"}
 
     def newton_trial(self):
         f = self.f("candidate", "newton_error", units="1", sampling="instantaneous")
         value = float(np.max(f.values))
         same_parent = self.s.get("same_parent_comparisons") is True
-        return {"metrics": {"E": value}, "meets": value <= 1e-3,
-                "verdict": "REPORTED ONLY" if same_parent else ("PASS" if value <= 1e-3 else "FAIL"),
-                "units": "1", "limitation": "E is reported; its gate only applies to different-parent comparisons" if same_parent else ""}
+        return {"metrics": {"E": value}, "meets": value <= NEWTON_MAX,
+                "verdict": "REPORTED ONLY" if same_parent else ("PASS" if value <= NEWTON_MAX else "FAIL"),
+                "units": "1", "limitation": "E is reported. Its gate only applies to different-parent comparisons" if same_parent else ""}
 
     def named_remainder(self):
         f, residual = self.d("candidate", "named_remainder", "water")
         p_f, parent = self.d("untagged", "water_parent", "water")
         aligned(f, p_f, "named-parts parent")
-        j = at(f.time, DAY)
+        endpoint = DAY if self.end >= DAY else self.end
+        j = at(f.time, endpoint)
         mass = float(integrate(parent[j], p_f.weights))
         require(mass > 0, "nonpositive raw named-parts scale")
         require(self.s.get("named_parts"), "missing named-part decomposition roster")
         amount = float(integrate(np.abs(residual[j]), f.weights))
-        return {"metrics": {"absolute_remainder": amount, "raw_parent": mass, "ratio": amount / mass,
-                            "named_parts": self.s["named_parts"]}, "meets": amount / mass <= 1e-6,
-                "normalization": "raw untagged parent water at 24 h"}
+        result = {"metrics": {"absolute_remainder": amount, "raw_parent": mass, "ratio": amount / mass,
+                              "endpoint_seconds": endpoint, "named_parts": self.s["named_parts"]},
+                  "meets": amount / mass <= NAMED_REMAINDER_MAX,
+                  "normalization": "raw untagged parent water at the endpoint"}
+        if endpoint != DAY:
+            result.update(verdict="REPORTED ONLY", limitation="the approved remainder is at 24 h, no threshold transplant")
+        return result
+
+    def data_failure_verdict(self, row_id, required, decision):
+        """Water: missing or non-finite data fails a required scored row (G3_PLAN 6.1, 6.1.2).
+
+        Reported-only rows stay not assessable, as 6.1.2's precipitation row
+        says. Energy rows keep G4's reading, absent fields are not assessable
+        (G4_CLAIM_CONTRACTS section 5). The reproducibility row fails on
+        incomplete evidence in both contracts.
+        """
+        scored = self.family == "water" and required and decision == "approved"
+        return "FAIL" if scored or row_id == "COMMON.EVIDENCE" else "NOT ASSESSABLE"
 
     def row(self, row_id, fn=None, *, threshold=None, decision="reported-only",
-            required=True, dependency="", window_name=None, reason="", prerequisites=()):
+            required=True, dependency="", window_name=None, reason="", prerequisites=(), criterion=None):
         row = {"id": row_id, "scope": self.s.get("claim", {}), "required": required,
                "applicability": "applicable", "data_status": "COMPLETE", "metrics": {},
                "units": self.units, "normalization": None, "window": window_name,
@@ -114,18 +205,31 @@ class Scorer:
                 row["verdict"] = result["verdict"]
         except NotAssessable as exc:
             row["verdict"], row["limitation"] = "NOT ASSESSABLE", str(exc)
-        except (DataError, KeyError, IndexError, TypeError, ValueError, OSError) as exc:
-            row["verdict"], row["data_status"], row["limitation"] = "NOT ASSESSABLE", "DATA FAILURE", str(exc)
+        except DataError as exc:
+            # Only evidence errors are data failures. Any other exception is a
+            # scorer error and propagates, so it is never read as bad data.
+            row["verdict"], row["data_status"], row["limitation"] = \
+                self.data_failure_verdict(row_id, required, decision), "DATA FAILURE", str(exc)
+        if criterion in self.excluded:
+            row["applicability"], row["verdict"] = "not applicable", "NOT APPLICABLE"
+            row["limitation"] = (f"criterion {criterion} is not judged on this case "
+                                 f"({self.excluded[criterion]}). " + row["limitation"]).rstrip(". ")
         row["evidence"] = sorted(set(self.b.used) - before)
         if fn and not row["evidence"]:
             row["evidence"] = sorted(k for k in self.b.used if k != self.b.path.name)
         self.rows.append(row)
         return row
 
-    def block(self, row_id, why, dependency, decision="approved", required=True):
+    def block(self, row_id, why, dependency, decision="approved", required=True, criterion=None):
         def unavailable():
             raise NotAssessable(why)
-        return self.row(row_id, unavailable, decision=decision, dependency=dependency, required=required)
+        return self.row(row_id, unavailable, decision=decision, dependency=dependency, required=required,
+                        criterion=criterion)
+
+    def inapplicable(self, row_id, why, dependency="", required=True, criterion=None):
+        """A row that the approved rule or the declared scope excludes. Never a pass."""
+        return self.row(row_id, lambda: {"applicability": "not applicable", "limitation": why},
+                        decision="approved", dependency=dependency, required=required, criterion=criterion)
 
     def f(self, role, name, *, units=None, sampling=None):
         field = self.b.field(role, name)
@@ -241,7 +345,7 @@ class Scorer:
         require(np.array_equal(latch.time, f.time), "negative-water latch coverage differs")
         require(np.isin(latch.values, (0, 1)).all() and np.all(np.diff(latch.values, axis=0) >= 0),
                 "invalid/reset negative-water latch")
-        return {"meets": bool(np.max(ratio) < 1e-4 and not np.any(latch.values)),
+        return {"meets": bool(np.max(ratio) < NEGATIVE_WATER_MAX and not np.any(latch.values)),
                 "metrics": {"max_ratio": float(np.max(ratio)), "latched": bool(np.any(latch.values))},
                 "normalization": "raw candidate parent water"}
 
@@ -263,7 +367,7 @@ class Scorer:
         if requested != DAY:
             return {"metrics": metrics, "verdict": "REPORTED ONLY",
                     "normalization": "raw untagged parent at each endpoint",
-                    "limitation": "approved water closure is at 24 h; no threshold transplant"}
+                    "limitation": "approved water closure is at 24 h, no threshold transplant"}
         i, m = at(f.time, 0), at(f.time, DAY / 2)
         first, second = float(g[m] - g[i]), float(g[j] - g[m])
         metrics.update(first_normalized_growth=first, second_normalized_growth=second)
@@ -303,12 +407,12 @@ class Scorer:
                    "theta_x": scale}
         if scale <= 0:
             return {"metrics": metrics, "verdict": "NOT ASSESSABLE",
-                    "limitation": "zero Θx; no approved absolute near-zero percentage rule"}
+                    "limitation": "zero Θx, no approved absolute near-zero percentage rule"}
         metrics.update(growth_ratio=metrics["delta_gross"] / scale,
                        end_state_ratio=metrics["gross_end"] / scale,
                        max_state_ratio=metrics["gross_max"] / scale)
         return {"metrics": metrics, "meets": metrics["growth_ratio"] <= ENERGY_GROSS,
-                "normalization": "approved accepted-step Θx(window); state ratios reported separately"}
+                "normalization": "approved accepted-step Θx(window), state ratios reported separately"}
 
     def ledger_metric(self, tag, start, end, mechanism="led_fix"):
         f, values = self.d("candidate", "tag_" + tag["name"])
@@ -348,14 +452,14 @@ class Scorer:
             return {"metrics": metrics, "verdict": "NOT ASSESSABLE", "limitation": "nonpositive valid parent/Θx scale"}
         if burden < SMALL * scale:
             return {"metrics": metrics, "applicability": "not applicable",
-                    "limitation": "approved small-burden exemption; absolute activity remains reported"}
+                    "limitation": "approved small-burden exemption, absolute activity remains reported"}
         if tag["kind"] == "region" and inventory <= 0:
             return {"metrics": metrics, "verdict": "NOT ASSESSABLE",
                     "limitation": "pure-region intervention requires positive signed inventory"}
         denominator = inventory if tag["kind"] == "region" else burden
         require(denominator > 0, "unknown/zero tag denominator")
         metrics["scored_fraction"] = activity / denominator
-        return {"metrics": metrics, "meets": metrics["scored_fraction"] <= 0.02,
+        return {"metrics": metrics, "meets": metrics["scored_fraction"] <= LED_FIX_MAX,
                 "normalization": "positive signed region inventory" if tag["kind"] == "region" else
                 "source absolute burden"}
 
@@ -382,14 +486,14 @@ class Scorer:
                             "endpoint_scale": scale, "daily_rate": rate,
                             "mean_parent_diagnostic": mean,
                             "mean_parent_daily_rate": activity / mean * DAY / (end - start) if mean and mean > 0 else None},
-                "meets": rate <= (0.002 if role == "reference" else 0.005),
+                "meets": rate <= (COMPARATOR_REPAIR_PER_DAY if role == "reference" else AGGREGATE_REPAIR_PER_DAY),
                 "normalization": "window cumulative difference / endpoint raw parent × 86400/seconds"}
 
     def reference_eligibility(self, start, end):
         ref = self.s.get("reference", {})
         if not ref.get("identity") or not ref.get("evidence"):
             raise NotAssessable("no independent reference has been supplied for this scope")
-        detail = json.loads(self.b.artifact(ref["evidence"]).read_text())
+        detail = self.json_artifact(ref["evidence"])
         require(detail.get("identity") == ref["identity"], "reference evidence identity differs")
         require(detail.get("active_rules") == self.s.get("active_rules"), "reference active-rule roster differs")
         require(detail.get("tag_names") == [t["name"] for t in self.tags] and
@@ -397,11 +501,13 @@ class Scorer:
                 detail.get("model_commit") == self.s.get("runs", {}).get("reference", {}).get("model_commit"),
                 "reference eligibility was not measured for this tag/time/model scope")
         unshared = detail.get("independent_rules", [])
+        require(isinstance(unshared, list) and all(isinstance(r, str) for r in unshared),
+                "independent_rules must be a list of rule names")
         floor = detail.get("floor_fraction_of_tolerance")
         if floor is None or detail.get("converged") is None:
             raise NotAssessable("reference floors/convergence evidence is unavailable")
         eligible = (bool(set(unshared) & set(self.s.get("active_rules", []))) and detail.get("converged") is True and
-                    isinstance(floor, (float, int)) and 0 <= floor <= 0.25 and
+                    isinstance(floor, (float, int)) and 0 <= floor <= FLOOR_FRACTION_MAX and
                     detail.get("mirrors_complete") is True and detail.get("jacobian_complete") is True)
         if ref.get("kind") == "copies":
             if self.family == "water":
@@ -414,7 +520,7 @@ class Scorer:
                 mass = integrate(parent, f.weights)
                 require(np.all(mass[i:j + 1] > 0), "invalid copies parent water")
                 residual = float(np.max(integrate(np.abs(values[i:j + 1]), f.weights) / mass[i:j + 1]))
-                eligible &= residual <= 2e-4
+                eligible &= residual <= COPIES_RESIDUAL_MAX
             else:
                 f, value = self.d("reference", "residual")
                 i, j = window(f.time, start, end)
@@ -422,14 +528,15 @@ class Scorer:
                 require(scale > 0, "no eligible energy reference Θx")
                 residual = float((integrate(np.abs(value[j]), f.weights) -
                                   integrate(np.abs(value[i]), f.weights)) / scale)
-                eligible &= residual <= 2e-4
+                eligible &= residual <= COPIES_RESIDUAL_MAX
             repair = self.aggregate_repair(start, end, "reference")
             eligible &= repair["meets"]
             ratios = detail.get("repair_refinement_ratios", {})
+            require(isinstance(ratios, dict), "copies refinement ratios must be an object")
             require(set(ratios) == {"dt", "newton"}, "copies need time and Newton refinement evidence")
             require(all(isinstance(v, (float, int)) and np.isfinite(v) and v >= 0 for v in ratios.values()),
                     "invalid copies refinement ratios")
-            eligible &= all(v <= 1.1 for v in ratios.values())
+            eligible &= all(v <= COMPARATOR_REFINEMENT_MAX for v in ratios.values())
         else:
             residual, repair, ratios = None, None, None
         return {"metrics": {"independent_rules": unshared,
@@ -440,17 +547,30 @@ class Scorer:
                 "meets": bool(eligible)}
 
     def active_rule_coverage(self):
+        """Coverage of every active rule by an independent reference.
+
+        Water reports it and does not gate on it (WA-GATES (b), revisited
+        with OD9). Energy keeps it as a gate, since G4's per-tag row makes
+        absent independent rule coverage not assessable.
+        """
         ref = self.s.get("reference", {})
         if not ref.get("evidence"):
             raise NotAssessable("independent active-rule coverage evidence unavailable")
-        detail = json.loads(self.b.artifact(ref["evidence"]).read_text())
+        detail = self.json_artifact(ref["evidence"])
+        rules = detail.get("independent_rules", [])
+        require(isinstance(rules, list) and all(isinstance(r, str) for r in rules),
+                "independent_rules must be a list of rule names")
         active = set(self.s.get("active_rules", []))
-        tested = active & set(detail.get("independent_rules", []))
+        tested = active & set(rules)
         missing = sorted(active - tested)
-        return {"metrics": {"tested_active_rules": sorted(tested), "untested_or_shared_rules": missing},
-                "meets": bool(active) and not missing,
-                "verdict": "PASS" if active and not missing else "NOT ASSESSABLE",
-                "limitation": "endpoint agreement cannot validate untested/shared active origins" if missing or not active else ""}
+        result = {"metrics": {"tested_active_rules": sorted(tested), "untested_or_shared_rules": missing},
+                  "meets": bool(active) and not missing,
+                  "limitation": "endpoint agreement cannot validate untested/shared active origins" if missing or not active else ""}
+        if self.family == "water":
+            result["limitation"] = ("reported, not a gate (WA-GATES (b)). " + result["limitation"]).rstrip(". ")
+        else:
+            result["verdict"] = "PASS" if active and not missing else "NOT ASSESSABLE"
+        return result
 
     def profile(self, tag, time):
         a_f, a = self.d("candidate", "tag_" + tag["name"])
@@ -490,12 +610,11 @@ class Scorer:
         require(scale > 0, "nonpositive reference partition/parent")
         share = ref_inventory / scale
         metrics["reference_share"] = share
-        if time not in (3600, DAY):
+        if time not in (FIRST_HOUR, DAY):
             return {"metrics": metrics, "verdict": "REPORTED ONLY",
-                    "limitation": "unapproved endpoint; 6 h/12 h remain reported"}
-        if self.family == "water" and self.s.get("case") == "D4-W":
-            return {"metrics": metrics, "applicability": "not applicable", "limitation": "option D excludes D4-W criteria 5/6"}
-        if share < 0.01:
+                    "limitation": "unapproved endpoint, 6 h/12 h remain reported"}
+        limitation = PILOT_LABEL if self.pilot and time == FIRST_HOUR else ""
+        if share < SMALL_SHARE:
             if self.family == "energy_source":
                 established = next((w for w in self.windows if w[0] == "established"), None)
                 if not established or established[1] is None or established[2] != time:
@@ -504,12 +623,11 @@ class Scorer:
                 if scale <= 0:
                     raise NotAssessable("small energy source has zero Θx")
             metrics["small_absolute_limit"] = SMALL * scale
-            return {"metrics": metrics, "meets": abs_l1 <= SMALL * scale,
+            return {"metrics": metrics, "meets": abs_l1 <= SMALL * scale, "limitation": limitation,
                     "normalization": "approved small-tag absolute rule replaces both relative tests"}
-        l1_limit = 0.02 if time == DAY else (0.01 if tag["kind"] == "region" else 0.10)
-        linf_limit = 0.05 if time == DAY else 0.25
+        l1_limit, linf_limit = origin_limits(tag["kind"], time)
         return {"metrics": metrics, "meets": metrics["L1"] <= l1_limit and metrics["Linf"] <= linf_limit,
-                "normalization": "reference absolute burden / specific profile peak"}
+                "limitation": limitation, "normalization": "reference absolute burden / specific profile peak"}
 
     def record_variation(self, start, end):
         roster = self.s.get("record_processes")
@@ -529,11 +647,11 @@ class Scorer:
             total += variation
             net += signed
         return {"metrics": {"density_reconstructed_record_variation": total, "signed_amount": net,
-                            "processes": terms}, "normalization": "native weights; reconstruct ρe_record at each endpoint",
-                "limitation": "corrected record estimate excludes cΔρ and within-output cancellation; neither Θx nor runtime fallback"}
+                            "processes": terms}, "normalization": "native weights, reconstruct ρe_record at each endpoint",
+                "limitation": "corrected record estimate excludes cΔρ and within-output cancellation. Neither Θx nor runtime fallback"}
 
     def precipitation(self, start=None, end=None):
-        require(self.s.get("geometry_kind") == "column", "native sphere precipitation requires area-weighted evidence; column reader cannot sum it")
+        require(self.s.get("geometry_kind") == "column", "native sphere precipitation requires area-weighted evidence. The column reader cannot sum it")
         p = self.f("candidate", "precip_parent", units="kg m^-2 s^-1" if start is None else
                    ("kg m^-2 s^-1", "kg m^-2"))
         require(p.values.shape[1] == 1 and p.weight_units == "1" and p.dimensions == ("scalar",),
@@ -550,7 +668,7 @@ class Scorer:
             return {"metrics": {"max_absolute_rate_defect": float(np.max(np.abs(defect))),
                                 "no_rain_absolute_defect": float(np.max(np.abs(defect[p.values == 0])))
                                 if np.any(p.values == 0) else None}, "units": "kg m^-2 s^-1",
-                    "limitation": "snapshot accounting only; exact sum supplies no donor provenance"}
+                    "limitation": "snapshot accounting only. An exact sum gives no origin evidence"}
         if p.sampling == "interval_average":
             require(p.bounds is not None, "precipitation averages lack interval bounds")
             for t in tags:
@@ -575,11 +693,11 @@ class Scorer:
             defect_amount = -float(np.sum(defect[j] - defect[i]))
             positive, negative = None, None
         else:
-            raise DataError("integrated precipitation needs paired applied averages/accumulators; snapshots are insufficient")
+            raise DataError("integrated precipitation needs paired applied averages/accumulators. Snapshots are insufficient")
         return {"metrics": {"signed_downward_amount": amount, "signed_defect": defect_amount,
                             "absolute_defect": abs(defect_amount), "positive_amount": positive,
                             "negative_amount": negative}, "units": "kg m^-2",
-                "limitation": "0M approval pending WA-PRECIP; no clipping or hourly interpolation"}
+                "limitation": "reported accounting (WA-PRECIP): no 0M tolerance, no clipping or hourly interpolation"}
 
     def process_weighted(self, start, end):
         q = self.f("candidate", "process_amount", sampling="applied_interval")
@@ -603,13 +721,13 @@ class Scorer:
             return {"metrics": {"activity": 0.0, "absolute_defect": absolute, "weighted_error": None},
                     "applicability": "not applicable", "limitation": "inactive process proves no transfer accuracy"}
         return {"metrics": {"activity": activity, "absolute_defect": absolute, "weighted_error": absolute / activity},
-                "meets": absolute / activity <= 0.05, "units": "1",
+                "meets": absolute / activity <= PROCESS_WEIGHTED_MAX, "units": "1",
                 "normalization": "absolute error inside sum of already weighted applied amounts"}
 
     def radiation_reference(self, start, end):
         ref = self.s.get("reference", {})
         require(ref.get("evidence"), "missing signed-record reference eligibility evidence")
-        detail = json.loads(self.b.artifact(ref["evidence"]).read_text())
+        detail = self.json_artifact(ref["evidence"])
         require(detail.get("identity") == ref.get("identity") and
                 detail.get("independent_rules") == ["radiation_divergence"] and
                 detail.get("converged") is True,
@@ -625,12 +743,13 @@ class Scorer:
         return {"metrics": {"signed_record_amount": amount, "independent_flux_amount": expected_amount,
                             "absolute_profile_difference": absolute, "column_difference": amount - expected_amount,
                             "window_mean_W_m^-2": amount / (end - start)},
-                "reference_eligibility": "independent accepted-stage divergence; parameterization accuracy excluded",
-                "verdict": "NOT ASSESSABLE", "limitation": "EA-ACCURACY has no approved radiation-specific tolerance"}
+                "reference_eligibility": "independent accepted-stage divergence, parameterization accuracy excluded",
+                "limitation": "unqualified diagnostic (EA-USE): the record is verified against the "
+                              "independent accepted-stage flux and reported, with no threshold"}
 
     def aggregation(self):
         mapping = self.s.get("groups")
-        require(mapping and self.s.get("precision") == "Float64", "aggregation needs Float64 nested group mapping")
+        require(isinstance(mapping, dict) and mapping and self.s.get("precision") == "Float64", "aggregation needs Float64 nested group mapping")
         errors = {}
         for group, names in mapping.items():
             require(names and len(names) == len(set(names)) and set(names) <= {t["name"] for t in self.tags},
@@ -652,72 +771,97 @@ class Scorer:
         evidence = self.s.get("float32_evidence")
         if not evidence:
             return {"applicability": "not applicable", "limitation": "Float64 column scope supplies no Float32 qualification"}
-        detail = json.loads(self.b.artifact(evidence).read_text())
+        detail = self.json_artifact(evidence)
         require(detail.get("fresh_preregistered") is True and detail.get("historical_id") != "W60",
-                "W60 remains failed; rounding rule needs a fresh preregistered run")
+                "W60 remains failed. The rounding rule needs a fresh preregistered run")
         count = detail.get("accepted_steps")
         a, b = detail.get("Float32"), detail.get("Float64")
-        require(isinstance(count, int) and count > 0 and a is not None and b is not None,
+        require(isinstance(count, int) and count > 0 and isinstance(a, (int, float)) and isinstance(b, (int, float)),
                 "missing matched precision measurement/count")
         finite(np.array([a, b]), "precision measures")
         require(a >= 0 and b >= 0, "negative precision measure")
-        limit = max(10 * b, 3 * 2 ** -23 * np.sqrt(count))
+        limit = float32_limit(b, count)
         return {"metrics": {"Float32": a, "Float64": b, "accepted_steps": count,
                             "approved_rounding_limit": float(limit)}, "meets": a <= limit, "units": "1"}
 
     def run(self):
         identities = local_identities()
         errors = self.b.validate()
+        require(self.family in ("water", "energy_source", "radiation_record"), "unknown claim family")
+        require(isinstance(self.end, (int, float)) and np.isfinite(self.end) and self.end > 0,
+                "missing/invalid claim duration")
+        extra_times = self.s.get("profile_times", [])
+        require(isinstance(extra_times, list) and all(isinstance(t, (int, float)) for t in extra_times),
+                "profile_times must be a list of seconds")
         for key in ("scorer_files", "acceptance_files"):
             if self.s.get(key) != identities[key]:
                 errors.append(f"{key}: pinned files differ from evaluator/specification")
+        try:
+            self.excluded = self.exclusions()
+        except DataError as exc:
+            errors.append(str(exc))
         evidence = self.row("COMMON.EVIDENCE", lambda: {"meets": not errors,
                             "metrics": {"validation_errors": sorted(set(errors))}}, decision="approved")
         if errors:
-            evidence["data_status"], evidence["verdict"] = "DATA FAILURE", "NOT ASSESSABLE"
+            evidence["data_status"], evidence["verdict"] = "DATA FAILURE", "FAIL"
+        if self.pilot:
+            pilot = self.row("COMMON.PILOT_SCOPE", self.pilot_scope, dependency="DECISIONS 2026-10-07, the pilot's windows")
+            self.pilot = pilot["data_status"] == "COMPLETE"
+        family = self.family.upper()
         roster = self.row("COMMON.ROSTER", self.roster, decision="approved")
         parity = self.row("COMMON.PARENT_PARITY", self.parity, decision="approved", dependency="Parts 8/11b state snapshots")
         validity = self.row("COMMON.NEGATIVE_WATER", self.negative_water, decision="approved",
-                            threshold=1e-4, dependency="Parts 5/8/11b complete validity evidence")
-        windows = self.row("COMMON.OD2_WINDOWS", self.choose_windows, decision="approved", dependency="untagged physical boundary evidence")
+                            threshold=NEGATIVE_WATER_MAX, dependency="Parts 5/8/11b complete validity evidence")
+        self.row("COMMON.OD2_WINDOWS", self.choose_windows, decision="approved", dependency="untagged physical boundary evidence")
         if self.family != "radiation_record":
             reference_parity = self.row("REFERENCE.PARENT_PARITY", lambda: self.parity("reference"),
                                         decision="approved" if self.s.get("same_parent_comparisons") is True else "reported-only",
                                         dependency="same-parent reference capture / fixed-parent E for different parents")
-            coverage = self.row("REFERENCE.ACTIVE_RULE_COVERAGE", self.active_rule_coverage, decision="approved",
-                                dependency="Part 6 / 11a independent coverage of material active rules")
-        self.row("COMMON.PARENT_TEMPERATURE", self.temperature, decision="approved", threshold={"minimum_K": 150, "top_change_K": 5}, dependency="Parts 8/11b/12")
-        newton = self.row("COMMON.NEWTON_TRIAL", self.newton_trial, decision="approved", threshold=1e-3, dependency="Parts 6/11a reference trials")
+            water = self.family == "water"
+            coverage = self.row("REFERENCE.ACTIVE_RULE_COVERAGE", self.active_rule_coverage,
+                                decision="reported-only" if water else "approved", required=not water,
+                                dependency="revisited with OD9 (WA-GATES (b))" if water else
+                                "Part 11a independent coverage of every named active origin rule")
+        self.row("COMMON.PARENT_TEMPERATURE", self.temperature, decision="approved",
+                 threshold={"minimum_K": TEMPERATURE_FLOOR_K, "top_change_K": TOP_CHANGE_K}, dependency="Parts 8/11b/12")
+        newton = self.row("COMMON.NEWTON_TRIAL", self.newton_trial, decision="approved", threshold=NEWTON_MAX,
+                          dependency="Parts 6/11a reference trials")
         if self.family == "water":
             self.row("WATER.CLOSURE", self.water_closure, decision="approved", threshold=WATER_GROSS,
                      prerequisites=(parity, validity, roster), dependency="Part 5 completeness / Parts 8/10 data")
-            self.row("WATER.NAMED_REMAINDER", self.named_remainder, decision="approved", threshold=1e-6,
+            self.row("WATER.NAMED_REMAINDER", self.named_remainder, decision="approved", threshold=NAMED_REMAINDER_MAX,
                      prerequisites=(parity, validity), dependency="Parts 5/8/9 complete named parts")
-            self.row("WATER.PRECIP_INSTANTANEOUS", self.precipitation, required=False, dependency="Part 7 donor reference")
+            self.row("WATER.PRECIP_INSTANTANEOUS", self.precipitation, required=False,
+                     dependency="Part 7 independent references for the giving pool")
         if not self.windows:
-            self.windows = [("startup", 0.0, self.s.get("end_seconds", 0)), ("established", None, self.s.get("end_seconds", 0)),
-                            ("sensitivity_1h", 3600, self.s.get("end_seconds", 0))]
+            self.windows = [("startup", 0.0, self.end), ("established", None, self.end),
+                            ("sensitivity_1h", FIRST_HOUR if self.end > FIRST_HOUR else None, self.end)]
         eligibility_rows = []
         for name, start, end in self.windows:
             if start is None or start >= end:
-                self.block("COMMON.WINDOW." + name, "no established/sensitivity interval exists", "OD2 physical window evidence")
+                if name == "startup":
+                    why = f"the OD2 boundary is at {end:g} s, so startup has zero length at this output cadence"
+                elif name == "established":
+                    why = "no established interval exists (OD2)"
+                else:
+                    why = "the run ends before the 1 h sensitivity start"
+                self.block("COMMON.WINDOW." + name, why, "OD2 physical window evidence")
                 if self.family != "radiation_record":
-                    blocked_ids = ["REFERENCE.ELIGIBILITY." + name,
-                                   self.family.upper() + ".AGGREGATE_REPAIR." + name,
-                                   self.family.upper() + ".PROCESS_WEIGHTED." + name]
-                    blocked_ids += [self.family.upper() + "." + mechanism + "." + tag["name"] + "." + name
+                    blocked_ids = [("REFERENCE.ELIGIBILITY." + name, None), (family + ".AGGREGATE_REPAIR." + name, None),
+                                   (family + ".PROCESS_WEIGHTED." + name, 5)]
+                    blocked_ids += [(family + "." + mechanism + "." + tag["name"] + "." + name, None)
                                     for tag in self.tags for mechanism in ("LED_FIX", "LED_INC")]
                     if self.family == "energy_source":
-                        blocked_ids.append("ENERGY.CLOSURE_GROWTH." + name)
-                    for row_id in blocked_ids:
-                        unavailable = self.block(row_id, "no declared physical interval exists", "OD2 physical window evidence")
+                        blocked_ids.append(("ENERGY.CLOSURE_GROWTH." + name, None))
+                    for row_id, criterion in blocked_ids:
+                        unavailable = self.block(row_id, why, "OD2 physical window evidence", criterion=criterion)
                         if row_id.startswith("REFERENCE."):
                             eligibility_rows.append(unavailable)
                 if self.family in ("energy_source", "radiation_record"):
-                    self.block("ENERGY.CORRECTED_RECORD_ESTIMATE." + name, "no declared physical interval exists",
+                    self.block("ENERGY.CORRECTED_RECORD_ESTIMATE." + name, why,
                                "OD2 physical window evidence", decision="reported-only", required=False)
                 if self.family == "water":
-                    self.block("WATER.PRECIP_INTEGRATED." + name, "no declared physical interval exists",
+                    self.block("WATER.PRECIP_INTEGRATED." + name, why,
                                "OD2 / Part 5 paired accumulation", decision="reported-only",
                                required=self.s.get("claim", {}).get("precipitation") is True)
                 continue
@@ -728,25 +872,29 @@ class Scorer:
                                     prerequisites=(reference_parity,) if self.s.get("same_parent_comparisons") is True else ())
                 eligibility_rows.append(eligible)
                 for tag in self.tags:
-                    self.row(self.family.upper() + ".LED_FIX." + tag["name"] + "." + name,
-                             lambda t=tag, a=start, b=end: self.ledger_metric(t, a, b), decision="approved", threshold=0.02,
+                    self.row(family + ".LED_FIX." + tag["name"] + "." + name,
+                             lambda t=tag, a=start, b=end: self.ledger_metric(t, a, b), decision="approved", threshold=LED_FIX_MAX,
                              window_name=[start, end], prerequisites=(parity, validity, roster), dependency="Part 5 accepted correction activity")
-                    self.row(self.family.upper() + ".LED_INC." + tag["name"] + "." + name,
+                    self.row(family + ".LED_INC." + tag["name"] + "." + name,
                              lambda t=tag, a=start, b=end: self.ledger_metric(t, a, b, "led_inc"), window_name=[start, end],
                              prerequisites=(parity, validity, roster),
-                             dependency="Parts 6/11a refinement; no repair threshold on follower")
-                self.row(self.family.upper() + ".AGGREGATE_REPAIR." + name,
+                             dependency="Parts 6/11a refinement, no repair threshold on the correction after each solve")
+                self.row(family + ".AGGREGATE_REPAIR." + name,
                          lambda a=start, b=end: self.aggregate_repair(a, b), window_name=[start, end],
                          decision="approved" if self.family == "water" else "proposed",
-                         threshold=0.005 if self.family == "water" else None,
-                         prerequisites=(parity, validity, roster), dependency="Part 5 accounting / owner energy aggregate level")
+                         threshold=AGGREGATE_REPAIR_PER_DAY if self.family == "water" else None,
+                         prerequisites=(parity, validity, roster),
+                         dependency="Part 5 accounting" if self.family == "water" else
+                         "Part 5 accounting / energy aggregate level from Part 11b's own baseline")
                 if self.family == "energy_source":
                     self.row("ENERGY.CLOSURE_GROWTH." + name, lambda a=start, b=end: self.energy_closure(a, b),
                              decision="approved", threshold=ENERGY_GROSS, window_name=[start, end],
                              prerequisites=(parity, validity, roster), dependency="valid exact accepted-step Θx")
-                self.row(self.family.upper() + ".PROCESS_WEIGHTED." + name,
-                         lambda a=start, b=end: self.process_weighted(a, b), decision="approved", threshold=0.05,
-                         window_name=[start, end], prerequisites=(parity, validity, roster, eligible), dependency="Parts 5/6/7/11a applied donor evidence")
+                self.row(family + ".PROCESS_WEIGHTED." + name,
+                         lambda a=start, b=end: self.process_weighted(a, b), decision="approved",
+                         threshold=PROCESS_WEIGHTED_MAX, criterion=5, window_name=[start, end],
+                         prerequisites=(parity, validity, roster, eligible),
+                         dependency="Parts 5/6/7/11a applied transfers from the giving pool")
             if self.family in ("energy_source", "radiation_record"):
                 self.row("ENERGY.CORRECTED_RECORD_ESTIMATE." + name,
                          lambda a=start, b=end: self.record_variation(a, b), window_name=[start, end], required=False,
@@ -755,43 +903,107 @@ class Scorer:
                 self.row("WATER.PRECIP_INTEGRATED." + name,
                          lambda a=start, b=end: self.precipitation(a, b), window_name=[start, end],
                          required=self.s.get("claim", {}).get("precipitation") is True,
-                         dependency="Part 5 paired accumulation / Part 7 donors / WA-PRECIP")
+                         dependency="Part 5 paired accumulation / Part 7 giving-pool references / WA-PRECIP")
         if self.family != "radiation_record":
-            # Required contract endpoints remain present even if extra times are empty.
-            profile_times = [3600, int(DAY)] + self.s.get("profile_times", [])
-            for t in dict.fromkeys(profile_times):
-                # A failed active-window comparator blocks the corresponding endpoint's origins.
-                ref_prereqs = tuple(eligibility_rows) + (coverage,) + (() if self.s.get("same_parent_comparisons") is True else (newton,))
+            # The required endpoints stay present even if extra times are empty.
+            # The pilot scores the first-hour row only (DECISIONS 2026-10-07).
+            required_times = [FIRST_HOUR] if self.pilot else [FIRST_HOUR, DAY]
+            profile_times = required_times + [t for t in extra_times if not (self.pilot and t == DAY)]
+            # Every window's eligibility row is a prerequisite: any required
+            # reference check fails eligibility (G3_PLAN 6.1.2). Water reports
+            # active-rule coverage and does not gate on it (WA-GATES (b)).
+            ref_prereqs = (tuple(eligibility_rows) + (() if self.family == "water" else (coverage,)) +
+                           (() if self.s.get("same_parent_comparisons") is True else (newton,)))
+            for t in dict.fromkeys(float(t) for t in profile_times):
                 for tag in self.tags:
-                    self.row(self.family.upper() + ".ORIGINS." + tag["name"] + "." + str(t),
-                             lambda tag=tag, t=t: self.profile(tag, t), decision="approved", threshold={"endpoint_seconds": t,
-                             "L1": 0.02 if t == DAY else (0.01 if tag["kind"] == "region" else 0.10),
-                             "Linf": 0.05 if t == DAY else 0.25, "small_absolute_factor": SMALL},
+                    limits = origin_limits(tag["kind"], t) if t in (FIRST_HOUR, DAY) else (None, None)
+                    self.row(family + ".ORIGINS." + tag["name"] + "." + f"{t:g}",
+                             lambda tag=tag, t=t: self.profile(tag, t), decision="approved",
+                             threshold={"endpoint_seconds": t, "L1": limits[0], "Linf": limits[1],
+                                        "small_absolute_factor": SMALL, "small_share": SMALL_SHARE},
                              prerequisites=(parity, validity, roster, *ref_prereqs), window_name={"endpoint_seconds": t},
-                             dependency="Part 6 / 11a eligible reference")
-            self.block("COMMON.CONVERGENCE", "complete parent/reference/tag time-grid-Newton ladders required", "Parts 6/8/11a/11b/12")
+                             dependency="Part 6 / 11a eligible reference", criterion=5)
+            if self.pilot:
+                for tag in self.tags:
+                    self.inapplicable(family + ".ORIGINS." + tag["name"] + "." + f"{DAY:g}",
+                                      "the first-hour pilot scope has no 24 h endpoint", criterion=5)
+            self.block("COMMON.CONVERGENCE", "complete parent/reference/tag time-grid-Newton ladders required",
+                       "Parts 6/8/11a/11b/12", criterion=6)
+            self.block("COMMON.REFINEMENT", "the repair's and inc_left's throughput per unit time at the finer rung "
+                       "must be at most 0.75 of the coarser rung's, and above 0.9 flags a structural cause. "
+                       "The time-step and Newton ladders are not in this bundle", "Parts 6/11a ladders, 8/11b baselines, 12")
             self.row("COMMON.AGGREGATION", self.aggregation, required=False, dependency="Parts 6/11a/12 intended-count group runs")
-            self.block("COMMON.ACCEPTED_APPLICATION_ACTIVITY", "cell-step variation can hide cancelling applications/legs; retained/attempted totals are insufficient", "Part 5")
+            self.block("COMMON.ACCEPTED_APPLICATION_ACTIVITY", "cell-step variation can hide cancelling applications/legs. Retained/attempted totals are insufficient", "Part 5")
         else:
             for name, start, end in self.windows:
                 if start is not None and start < end:
                     self.row("RADIATION.INDEPENDENT_FLUX_REFERENCE." + name,
-                             lambda a=start, b=end: self.radiation_reference(a, b), decision="proposed",
-                             window_name=[start, end], dependency="Part 11a/11b; EA-ACCURACY")
+                             lambda a=start, b=end: self.radiation_reference(a, b), required=False,
+                             window_name=[start, end], dependency="Parts 11a/11b, reported (EA-USE)")
+        if self.family == "water":
+            one_moment = self.s.get("compartments") == ["N", "R", "S"]
+            precipitation_claim = self.s.get("claim", {}).get("precipitation") is True
+            if one_moment:
+                self.block("WATER.RAIN_SNOW_CLOSURE", "the rain and snow parts must close against ρq_rai and ρq_sno "
+                           "within 1e-8 relative in Float64. No per-part closure evidence is in this bundle",
+                           "Parts 5/7/9 (rain/snow key)")
+                self.block("WATER.PRECIP_TAG_SUM", "Σ pr_tag = pr within 1e-8 relative under 1M. "
+                           "No scored sum evidence is in this bundle", "Part 7 / PX25 under OD15 (WA-PRECIP)",
+                           required=precipitation_claim)
+                self.block("WATER.PRECIP_NET_FLOW_AUDIT", "the net-flow audit is within 10% of each tag's precipitation "
+                           "over the day on the 1M column without EDMF, and reported under EDMF",
+                           "Part 7 / PX25 under OD15 (WA-PRECIP)", required=precipitation_claim)
+            else:
+                why = "no prognostic rain/snow compartments (0M or no rain/snow key)"
+                self.inapplicable("WATER.RAIN_SNOW_CLOSURE", why)
+                self.inapplicable("WATER.PRECIP_TAG_SUM", why + ". The 0M sum has no approved tolerance (WA-PRECIP) "
+                                  "and is reported in WATER.PRECIP_INSTANTANEOUS")
+                self.inapplicable("WATER.PRECIP_NET_FLOW_AUDIT", why + ". The audit is a 1M row")
+        if self.s.get("geometry_kind") == "sphere":
+            self.block("COMMON.OD6_CEILING", "the gross residual stays below max(0.02 S_min, 2e-4) of the partition "
+                       "at every output of the 90-day sphere", "Part 12 (90-day sphere)")
+            if self.family == "water":
+                self.block("WATER.SPHERE_TAG_SUM_BOUND", "Σ ρq_tag ≤ ρq_tot (1 + 1e-6) at every point and output, "
+                           "and the non-positive fraction does not grow", "Part 12 (90-day sphere)")
+        else:
+            self.inapplicable("COMMON.OD6_CEILING", "OD6's ceiling applies to the 90-day sphere")
+            if self.family == "water":
+                self.inapplicable("WATER.SPHERE_TAG_SUM_BOUND", "the sphere's tag-sum bound applies to the sphere")
         self.row("COMMON.FLOAT32", self.float32, decision="approved", dependency="Part 12 fresh precision matrix")
         self.block("COMMON.RESTART_PHYSICAL", "reader stitching is separate from checkpoint round-trip and continuous/restarted model evidence", "Parts 9/10/11b/12")
-        self.block("COMMON.COST", "matched hardware/build/warm-step/allocation/memory evidence and scope-specific caps required", "Part 8 / 11b / 12; WA-COST or EA-COST")
-        self.block("COMMON.HELD_OUT", "independent case/reference frozen before tuning required for applicable qualification", "Parts 6/7/10/11d/12; OD14")
-        self.block("COMMON.SCOPE_APPROVAL", "pilot scope/accuracy owner choices remain proposals; software completion does not qualify physical claims", "WA-SCOPE / EA-USE / EA-ACCURACY / Parts 10/11d", decision="proposed")
-        integrity_end = self.row("COMMON.FINAL_ARTIFACT_CHECK", lambda: (self.b.reverify() or {"meets": True}),
-                                 decision="approved", dependency="immutable bundle artifacts")
+        if self.family == "radiation_record":
+            record_only = "the radiation record is an unqualified diagnostic (EA-USE). EA-ACCURACY and EA-COST lapsed"
+            self.inapplicable("COMMON.COST", record_only)
+            self.inapplicable("COMMON.HELD_OUT", record_only + ", and a held-out case serves qualification only")
+            self.inapplicable("COMMON.SCOPE_APPROVAL", record_only)
+        else:
+            self.block("COMMON.COST", "matched hardware/build/warm-step/allocation/memory evidence required. "
+                       "OD3's 2× at 8 + 8 gates Part 10 after the walk fix, with no pilot or water-only cap (WA-COST)"
+                       if self.family == "water" else
+                       "matched hardware/build/warm-step/allocation/memory evidence required. OD3's 2× at 8 + 8 "
+                       "is measured in Part 11b", "Parts 8/10/12" if self.family == "water" else "Parts 11b/12")
+            self.block("COMMON.HELD_OUT", "independent case/reference frozen before tuning required for applicable qualification", "Parts 6/7/10/11d/12, OD14")
+            if self.family == "water":
+                self.block("COMMON.SCOPE_APPROVAL", "qualification stays at eight tags on the approved rows (WA-SCOPE). "
+                           "The 24 h development case and the held-out case are named before PX11, and the owner has "
+                           "not named them yet", "WA-SCOPE / Parts 10/12")
+            else:
+                self.block("COMMON.SCOPE_APPROVAL", "the stored-source qualification scope is set in Part 11d",
+                           "Part 11d", decision="proposed")
+        self.row("COMMON.FINAL_ARTIFACT_CHECK", lambda: (self.b.reverify() or {"meets": True}),
+                 decision="approved", dependency="immutable bundle artifacts")
+        required = [r for r in self.rows if r["required"] and r["applicability"] == "applicable"]
+        # A data failure fails the affected row and the reproducibility row (G3_PLAN 6.1.2).
+        failed = [r["id"] for r in required if r["data_status"] == "DATA FAILURE" and r["id"] != "COMMON.EVIDENCE"]
+        if failed:
+            evidence["metrics"]["row_data_failures"] = failed
+            evidence["data_status"], evidence["verdict"] = "DATA FAILURE", "FAIL"
         result = {"schema_version": 1, "claim": self.s.get("claim", {}), "model_commit": self.b.manifest.get("head_sha"),
                   "experiment_commit": self.s.get("experiment_commit"), "scorer_commit": self.s.get("scorer_commit"),
                   "acceptance_commit": self.s.get("acceptance_commit"), **identities,
                   "artifacts": dict(sorted(self.b.used.items())), "rows": self.rows,
                   "scientific_qualification": "NOT QUALIFIED",
                   "limitation": "offline implementation/fixtures do not supply physical qualification evidence"}
-        required = [r for r in self.rows if r["required"] and r["applicability"] == "applicable"]
         result["exit_code"] = (2 if any(r["data_status"] == "DATA FAILURE" for r in required) else
                                1 if any(r["verdict"] == "FAIL" for r in required) else
                                3 if any(r["verdict"] == "NOT ASSESSABLE" for r in required) else 0)
@@ -799,12 +1011,14 @@ class Scorer:
 
 
 def summary(result):
-    lines = [f"qualification: {result.get('scientific_qualification', 'not evaluated')}; exit {result['exit_code']}"]
+    lines = [f"qualification: {result.get('scientific_qualification', 'not evaluated')}, exit {result['exit_code']}"]
     for row in result.get("rows", []):
         lines.append(f"{row['id']}: {row['verdict']} / {row['data_status']}" +
                      (f" — {row['limitation']}" if row["limitation"] else ""))
     for error in result.get("validation_errors", []):
         lines.append("DATA FAILURE: " + error)
+    if result.get("scorer_error"):
+        lines.append("SCORER ERROR: " + result["scorer_error"])
     return "\n".join(lines)
 
 
@@ -812,10 +1026,17 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("mode", choices=("validate", "score"))
     parser.add_argument("manifest")
-    parser.add_argument("--json", required=True, help="new deterministic result artifact; existing paths are refused")
-    args = parser.parse_args(argv)
+    parser.add_argument("--json", required=True, help="new deterministic result artifact. Existing paths are refused")
+    try:
+        args = parser.parse_args(argv)
+    except SystemExit as exc:
+        return 0 if exc.code == 0 else 4
     output = Path(args.json)
-    require(not output.exists(), "result path exists; preserve historical scores and choose a new reanalysis ID")
+    if output.exists():
+        print("not evaluated: result path exists. Preserve historical scores and choose a new reanalysis ID",
+              file=sys.stderr)
+        return 4
+    not_evaluated = {"schema_version": 1, "scientific_qualification": "NOT EVALUATED"}
     try:
         bundle = Bundle(args.manifest)
         if args.mode == "validate":
@@ -833,9 +1054,10 @@ def main(argv=None):
                       "exit_code": 2 if errors else 0, "scientific_qualification": "NOT EVALUATED"}
         else:
             result = Scorer(bundle).run()
-    except (DataError, ValueError, OSError) as exc:
-        result = {"schema_version": 1, "validation_errors": [str(exc)], "exit_code": 2,
-                  "scientific_qualification": "NOT EVALUATED"}
+    except (DataError, json.JSONDecodeError, UnicodeDecodeError, OSError) as exc:
+        result = {**not_evaluated, "validation_errors": [str(exc)], "exit_code": 2}
+    except Exception as exc:  # A scorer error is reported as such, never as bad data.
+        result = {**not_evaluated, "scorer_error": f"{type(exc).__name__}: {exc}", "exit_code": 4}
     output.write_text(json.dumps(result, sort_keys=True, indent=2, allow_nan=False) + "\n")
     print(summary(result))
     return result["exit_code"]
