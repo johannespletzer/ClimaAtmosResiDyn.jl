@@ -2192,7 +2192,7 @@ documents. This index records no new simulation result.
 
 All original source rows and immutable baseline links above are preserved.
 These amendments route the water acceptance definitions/evidence obligations
-from Part 1's published head `24b7536a351c57f4c5b639b868e6b499acc4e763`.
+from Part 1's published head `24b7536a351c57f4c5b639b868e6b499acc4e763`. The review of 2026-10-07 patched that head to `d68ab8e6a` and merged it forward.
 They add no result and change no threshold/owner decision. The authoritative
 [twelve-criterion disposition](G3_PLAN.md#21-part-2-the-first-useful-water-workflow-proposed-2026-10-06)
 and [water acceptance matrix](G3_PLAN.md#612-water-acceptance-matrix-authoritative-part-2-specification)
@@ -2214,3 +2214,25 @@ for the full eight-tag, ninety-day G3 scope.
 
 No residence-time/air-age development, new benchmark execution or scientific
 default is activated by these amendments.
+
+## Part 3 disposition amendments (2026-10-06)
+
+The pinned baseline rows and prior amendments above remain unchanged.
+These dispositions link the active
+[energy contract/matrix](design/G4_CLAIM_CONTRACTS.md#5-energy-acceptance-matrix)
+without introducing another criterion authority or deleting a historical
+obligation. Part 3 is documentation. Listed implementation/evidence and
+owner choices remain outstanding.
+
+| Existing source obligation                               | Disposition after Part 3                                                                                                                                                                                                      | Remaining destination/gate                                                                                                                            |
+|:-------------------------------------------------------- |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| G4.3 three diagnostics and OD4 restatement               | Stored source ancestry, signed records and parent budget separated. Generic water/mass substitution corrected. Exact, offline interim and runtime estimates named by actual algorithms.                                       | Part 4 scorer/density-window reconciliation. Part 5 finer activity. No historical rescore or approved-scale change.                                   |
+| G4.3–6 seven-point definitions                           | Point 1 estimates, point 5 partition-sum overlay bound and point 7 documented C4 treatment applied. Point 4 warning form retained.                                                                                            | Runtime/docs/tests inventory still checked in 11b. Levels for points 2/3/4/6 require post-#139 evidence and owner.                                    |
+| G4.4 residual/headroom/overlay reports and G4.5 warnings | Approved window-growth closure preserved. State gross/max and window change reported apart. Additional scored state requirement is proposed EA-STATE. Flush conditions, admissibility and descriptive forecast stay distinct. | Part 4 observable coverage and 11b measurements. Warning/abort levels do not become provenance tolerances.                                            |
+| G4.6 D4 process budget and C4                            | Correct signs/endpoints and cΔρ requirements stated. A5 failure and owner choice to document C4 size preserved.                                                                                                               | Part 11b post-#139 budget, explicit implicit and unattributed remainder and repeated C4 size. Per-tag outflow probe stays OD13-gated.                 |
+| G4.1/11 mirrors and G4.16 cross blocks/guards            | Reuse inspected code. Net copy residual is not an omitted-activity bound, and complete mirrors alone do not establish eligibility or independence.                                                                            | Parts 11a/11b actual active-mode tests and eligible references. Fix only evidenced gaps in 11c.                                                       |
+| G4.2/7/8 and PX22                                        | Discriminating references and wrong-origin mutants specified. Simple signed-radiation pilot is a new owner proposal, not full provenance.                                                                                     | Part 11a references, 11b integrated evidence. EA choices and stored-source OD7/OD11 gates where applicable.                                           |
+| G4.9/10/15, OD7 and OD11                                 | Placement, follower and c sweep are conditional convention comparisons, not references/automatic error bounds. Same-sign energy decision remains open.                                                                        | Owner OD7 after registered long-run/site-23 prerequisites. Current c fixed for named tests. Proposed OD11 remains proposed.                           |
+| G4.12, OD5 and OD9–14                                    | Applicable row-by-row acceptance, independent active-rule coverage and held-out hygiene retained. Historical conditional bounded verdict is no mathematical bound.                                                            | Part 11d after evidence/cost/owner decisions. OD9–11 proposal status and accepted OD12–14 gates unchanged.                                            |
+| G4.13/14, OD1/6/8, M4 and WP9                            | Production count/90-day scope and numerical-loss diagnostic gates preserved. Record pilot has its own pending cost.                                                                                                           | Part 11b measured pilot/full-count cost before selection. Part 12 precision/restart/production, 12d long sphere. No residence-time/air-age extension. |
+| All other G4.n and energy M1–M5/archived items           | Original pinned row, owner status, historical result and trigger retained. Part 3 creates no implementation/qualification evidence.                                                                                           | Existing destination and source gate remain authoritative.                                                                                            |
