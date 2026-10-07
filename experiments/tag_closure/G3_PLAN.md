@@ -256,14 +256,15 @@ a tolerance to turn that observation into a pass.
 
 **Three scopes and their gates:**
 
-| Scope                         | What it can establish                                                                                                                                    | Remaining gate                                                                                                                                                                        |
-|:----------------------------- |:-------------------------------------------------------------------------------------------------------------------------------------------------------- |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Initial useful workflow above | Conditional inventory attribution for this declared entry/source model, in this column and time interval.                                                | Owner choice WA-SCOPE in DECISIONS, eligible PX12 and independent active-rule tests, and every required matrix row. Six-hour differences remain reported under the existing contract. |
-| Mechanism reference cases     | PX11/PX24 source-free transport, manufactured mixing, PX12 subgrid audit and Part 7 known-donor transfer references, each for its measured active rules. | OD12 reference floors/independence and OD14 held-out hygiene. No clean transport pass qualifies moist EDMF or precipitation.                                                          |
-| Full G3 production objective  | The twelve criteria above, at OD8's intended eight water tags, the approved held-out cases and OD1/OD6's 60-level 1M EDMF sphere over ninety days.       | Parts 10/12 plus relevant implementation, precision, restart, cost and owner gates. Three-tag evidence is no aggregation bridge to eight-tag qualification.                           |
+| Scope                         | What it can establish                                                                                                                                    | Remaining gate                                                                                                                                                                                                 |
+|:----------------------------- |:-------------------------------------------------------------------------------------------------------------------------------------------------------- |:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Initial useful workflow above | Conditional inventory attribution for this declared entry/source model, in this column and time interval.                                                | WA-SCOPE (decided 2026-10-07, no qualified three-tag scope), eligible PX12 and independent active-rule tests, and every required matrix row. Six-hour differences remain reported under the existing contract. |
+| Mechanism reference cases     | PX11/PX24 source-free transport, manufactured mixing, PX12 subgrid audit and Part 7 known-donor transfer references, each for its measured active rules. | OD12 reference floors/independence and OD14 held-out hygiene. No clean transport pass qualifies moist EDMF or precipitation.                                                                                   |
+| Full G3 production objective  | The twelve criteria above, at OD8's intended eight water tags, the approved held-out cases and OD1/OD6's 60-level 1M EDMF sphere over ninety days.       | Parts 10/12 plus relevant implementation, precision, restart, cost and owner gates. Three-tag evidence is no aggregation bridge to eight-tag qualification.                                                    |
 
-WA-SCOPE is a proposal, not an approval to narrow OD8 or move a 24-hour
-threshold to six hours. Prefer the existing pilot for implementation/reference
+WA-SCOPE was decided on 2026-10-07. It does not narrow OD8 or move a
+24-hour threshold to six hours, and no three-tag or six-hour scope is
+qualified. Prefer the existing pilot for implementation/reference
 development. Before a scientifically qualified short workflow is claimed,
 the owner must fix its endpoint, tag count, metrics and use-specific accuracy
 rationale. The alternative is to retain the approved first-hour and 24-hour
@@ -1065,7 +1066,7 @@ interval average or accumulator. Never compare unlike conventions.
 
 Each row records configuration, observable/window, threshold citation,
 reference eligibility, evidence and consequence. All rows inherit 6.1.1's
-units, integration and restart conventions. The matrix routes the approved rows. Conditions it adds beyond the approved register are proposals, waiting for the owner (DECISIONS, WA-GATES). Store separate verdicts for
+units, integration and restart conventions. The matrix routes the approved rows. Conditions it adds beyond the approved register were decided on 2026-10-07 (DECISIONS, WA-GATES): cancellation-safe leg accounting and initialization/fallback coverage are conditions, and material-rule coverage stays reported. Store separate verdicts for
 startup/source-pulse, established flow and long run where the metric is
 defined there. Obtain OD2's physical boundary from the untagged twin before
 scoring. Use its approved sustained-tendency/pulse rule. Preserve the owner's
@@ -1106,7 +1107,7 @@ a scientific negative result. No scorer exit code alone establishes a pass.
 tag count, interval, observable and required rows. An inventory-only scope
 does not qualify precipitation. A Float64 column does not qualify Float32,
 eight tags or a sphere. A scoped **qualified attribution** claim requires
-approved scope/accuracy rules, pass in every required row at every required tag/time/rung, reproducibility, measured acceptable cost and applicable held-out evidence. Part 2 proposes two more conditions, waiting for the owner (DECISIONS, WA-GATES): complete cancellation-safe accounting, and eligible independent coverage of all material active rules. A failed required row cannot be
+approved scope/accuracy rules, pass in every required row at every required tag/time/rung, reproducibility, measured acceptable cost and applicable held-out evidence. Of Part 2's two further conditions (DECISIONS, WA-GATES, 2026-10-07), complete cancellation-safe accounting is a condition, delivered by part 5, and coverage of all material active rules stays reported until OD9 is decided. A failed required row cannot be
 averaged away. A required not-assessable row blocks the claim.
 
 OD5 is preserved: where provenance is not assessable, its specified Insight
@@ -1184,7 +1185,7 @@ the actual precision/reference/window, not inferred from a failed score.
 | Criterion 9's owner rounding floor, `design/F32_TWIN.md` §10            | Limited Float32 precision-sensitivity criterion for accumulated criterion-4 measures.                                                                                   | Preserve `max(10 × Float64, 3 · eps32 · sqrt(n_steps))` with the existing accumulated measure and its actual step count. It does not relax origin rows, comparator eligibility, cost, parent validity or every Float32 field. W60's ten-iteration failure stands. W62 does not retrospectively rescore it or independently retest reused default data. |
 | OD3 parent validity/cost, OD6 sphere ceiling                            | Numerical/physical trajectory screens and operational resource limits. The sphere level is observed over ninety days with growth reported.                              | Passing a screen is not physical validation of the model. Criterion 10's recorded cost failure stands (E88). M4's sphere estimate is a planning extrapolation. Actual memory/runtime pilot precedes expensive qualification. The residual/source/flush model is a diagnostic assumption, not residence time or a forecast bound.                       |
 
-**Owner proposals are recorded in DECISIONS.md, not assumed:** WA-SCOPE
+**Owner proposals are recorded in DECISIONS.md, decided 2026-10-07:** WA-SCOPE
 (a qualified initial use, count/window and accuracy rationale), WA-PRECIP
 (additional 0M precipitation acceptance), and any missing local cost/memory
 cap. Prefer measuring the current pilot and the approved reference floors
@@ -1241,7 +1242,7 @@ Part 2 is complete when the documentation defines every claimed observable,
 equation, required matrix row, existing threshold source, reference gate,
 owner choice and downstream evidence destination, proposes a value with its
 rationale for each missing use-specific tolerance or records the owner's
-deferral of it (ROADMAP, Part 2), and independent review findings are resolved. This completion makes future acceptance decisions
+deferral of it (ROADMAP, Part 2. Deferred 2026-10-07, under W62's rule), and independent review findings are resolved. This completion makes future acceptance decisions
 reviewable once evidence/approvals exist. It does not certify water origins.
 It changes no executable code, simulation, threshold or default.
 

@@ -7,7 +7,7 @@
 Part 3 defines the energy contract in parallel with water's. Part 11a may
 build eligible independent references once that contract, part 4's evidence
 tools and the applicable part 5 accounting exist. Parts 11b, 11c and 11d then baseline, fix and qualify energy in separate
-PRs. Proposed 2026-10-05, waiting for the owner: the older phrase "after G3" would not block this work. It
+PRs. Decided 2026-10-07: parts 3 and 11a run now, and 11b starts after part 9's shared-code PRs and any walk fix. The older phrase "after G3" does not block parts 3 and 11a. It
 still prevents water evidence from substituting for energy qualification.
 
 OD7 and OD11, the remaining numerical levels for G4.3–6, comparator
