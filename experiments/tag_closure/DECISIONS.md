@@ -1,5 +1,30 @@
 # The owner's decisions
 
+## Part 2 proposals (2026-10-06, decided 2026-10-07)
+
+The owner asked agents to prepare and review the Part 2 water acceptance
+documentation. This authorization approves no scientific
+scope change, tolerance, default, experiment execution or publication. The
+[water acceptance matrix](G3_PLAN.md#612-water-acceptance-matrix-authoritative-part-2-specification)
+uses the approved register/thresholds and identifies these additional choices.
+The entries below were proposals. The owner decided them on 2026-10-07
+(section 2026-10-07 below). The rows keep their proposal text.
+
+| Proposal                                           | Exact choice needed before the affected claim                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Recommendation and evidence                                                                                                                                                                                                                                                                                                                                                                                                                        | Current effect                                                                                                                         |
+|:-------------------------------------------------- |:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:-------------------------------------------------------------------------------------------------------------------------------------- |
+| WA-SCOPE — first qualified water use               | Fix inventory versus precipitation claim, label model, tag count, endpoint/windows, applicable held-out case/reference and a scientifically defensible use-specific accuracy requirement. Decide whether an initial six-hour/three-tag qualified scope is permitted beside full G3, or qualification keeps the approved first-hour/24-hour assessment at eight tags. Any new endpoint tolerance requires an explicit approved value/rationale before the deciding evidence.                                                                                                                                                  | Reuse the existing TRMM 0M pilot to develop evidence first, with `pbl`/`free` entry labels and `evap` as an overlay. W58 has six-hour accounting, R7 reported only and no PX12 refinement. Do not change a tolerance to pass its slightly-outside `pbl` difference. A longer/eight-tag claim needs that actual configuration and evidence. Three tags provide no count qualification.                                                              | No short three-tag qualified attribution claim yet. Full G3's OD1/OD6/OD8 objective is unchanged.                                      |
+| WA-PRECIP — additional 0M precipitation acceptance | If a scored 0M surface-origin use is wanted, fix instantaneous versus accumulated observable, small/no-rain normalization, signed subdomain treatment, independent reference, endpoint/windows and tolerance. OD15 separately decides PX25's additional 1M/EDMF pool/refinement rows. OD15 also asks whether accumulated `Σ pr_tag` is scored under 1M. One window convention can serve both, if the owner so chooses.                                                                                                                                                                                                       | Keep W58 C7 reported as accounting. Supply paired parent/tag interval averages or applied accumulators and independently known donors before attributing a scientific pass. The baseline design explicitly supplies no 0M C7 tolerance, and the 1M closure/audit rows cannot be transplanted.                                                                                                                                                      | 0M precipitation origins are unqualified. Exact partition sum supplies no origin proof.                                                |
+| WA-COST — local operational scope                  | Set any missing cap for build/step/peak memory and pilot allocation at the new initial scope/count, based on measured Part 8 cost before selection. Retain OD3's intended eight-plus-eight and copies/sphere limits.                                                                                                                                                                                                                                                                                                                                                                                                         | Measure matched candidate/copies/untagged builds and steady solve with required diagnostics. Criterion 10's recorded failure stands: the 8 + 8 step at 4.16× against OD3's 2× (E88, the owner 2026-10-02), and OD3's copies row (8 + 8 copies built in 4 h 16 min). W52 is the water half: 1.43× at 8 tags, 2.43× with per-tag ledgers, 7.38× at 32. A six-hour run's job time or the M4 sphere extrapolation is not a measured production budget. | Missing local cap is not assessable. No default or expensive qualification is selected without measured cost and its applicable limit. |
+| WA-GATES — conditions the matrix adds              | Accept, amend or reject, as conditions of a qualified water claim. (a) Complete cancellation-safe accounting of accepted applied corrections and compartment legs (G3_PLAN 6.1.2, intervention row and overall decision). (b) Eligible independent coverage of all material active rules, with "material" defined. The pathway's materiality is exploratory, and "validated for named rules" is proposed OD9. (c) Grid-rung stability and initialization/fallback coverage in copies eligibility, beyond 6.1's list and OD3's time-step and Newton refinement. (d) The Part 2 reading of ROADMAP's contract sentence on OD5. | Part 2 recommends (a) to (c) as stated, and (d) beside OD5's unchanged wording.                                                                                                                                                                                                                                                                                                                                                                    | Until decided, the matrix reports these beside the approved rows. They are not approved gates.                                         |
+
+OD5 retains "provenance bounded, not validated" as its historical conditional
+verdict, not a mathematical error bound. No replacement terminology is
+adopted. OD9–OD11 stay proposed. OD12–OD14 keep their accepted reference,
+probe and held-out gates. OD15 stays at PX25 preregistration. D4-W keeps
+parity, closure, Float32 and cost under option D, and its reference work is
+not reopened. The owner's Float32 rounding floor remains limited to its
+precision-sensitivity measures. W60's failed historical verdict is preserved.
+
 Every decision of the register (`review/register/decisions.csv`), one line
 each, grouped by date, newest first. Each links to where it is recorded. A
 short section at the end adds decisions that the documents record but the
@@ -303,6 +328,42 @@ and an adversarial check of the review's recommendations
     the decision of 2026-10-02 is met at `33cbfd4f` (`q_tag_fix_<name>`).
     That decision line is read with this amendment. Part 5 prefers probes
     to new state fields (OD13).
+  - **WA-SCOPE: no three-tag or six-hour qualified scope.** **In force.**
+    Three tags reach level 2, accounted, and give no count evidence.
+    Qualification stays at eight tags on the approved rows. The inventory
+    claim comes first, with `pbl` and `free` entry labels and `evap` as an
+    overlay. The precipitation claim waits for OD15. The 24 h development
+    case and the held-out case are named before PX11 runs (OD14).
+    *Waiting:* the owner names those two cases.
+  - **WA-PRECIP: criterion 7 stays reported accounting.** **In force.**
+    Precipitation origin is scored only under 1M, at PX25 under OD15, where
+    independent donor references exist. One precipitation pathway.
+  - **WA-COST: no cap for the pilot or for water alone.** **In force.**
+    Caps gate level 4. Part 10 is gated by OD3's 2× at 8 + 8 after the walk
+    fix (above).
+  - **WA-GATES.** **In force.** (a) Complete cancellation-safe accounting
+    of applied corrections and compartment legs is a condition of a
+    qualified water claim. Part 5 measures the absolute leg amounts, which
+    WP6's columns do not hold, and part 5 precedes part 10. (b) Coverage of
+    all "material" active rules is not a gate. It stays reported and is
+    revisited with OD9. (c) Initialization and fallback coverage joins
+    copies eligibility. Grid-rung stability is deferred to 12a. (d) The
+    Part 2 reading of OD5's contract sentence is accepted: the rows are
+    OD5's conditional evidence for "provenance bounded, not validated", not
+    a mathematical error bound.
+  - **The missing tolerances are deferred.** **In force.** No six-hour
+    origin tolerance, no 0M precipitation tolerance and no three-tag
+    endpoint tolerance is set. Any later value comes from a stated use and
+    is judged on a fresh pre-registered run, as W62's rule says. The pilot
+    scores the approved rows only.
+  - **The pilot's windows.** **In force.** OD2's row "TRMM_LBA 0M and 1M,
+    6 h" applies. Before scoring, the boundary reading on the untagged run
+    is recorded with its output cadence (the challenge of 2026-10-07
+    computed that 10-minute outputs end startup at 0 h and 30-minute
+    outputs never do). The pilot scores the first-hour row only, after
+    PX12's eligibility, labelled low power: the first hour's evaporation is
+    0.13% of the column's water, and rain starts near 3 h. No six-hour
+    tolerance.
 
 ## 2026-10-02
 

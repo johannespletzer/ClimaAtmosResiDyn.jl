@@ -7,8 +7,10 @@ Use [ROADMAP's execution order](ROADMAP.md#the-execution-order), with
 below retain their dated evidence status. An old unchecked CI/PR item is a
 verification obligation, not an instruction to rebuild merged code.
 
-Next: part 2's scientific-use contract, part 4's evidence reuse, part 5's
-cancellation-safe accounting and parts 6/7's eligible independent references.
+Part 2's [water acceptance specification](G3_PLAN.md#611-water-observables-and-accounting-conventions-part-2)
+is drafted. Its independent review is pending. Next: resolve its explicit owner choices, part 4's
+evidence reuse and scorer gaps, part 5's cancellation-safe accounting, and parts
+6/7's eligible independent references.
 PX12, including KI4-COPIES and UP1's fixed-parent probe, stays in that queue.
 Part 8 identifies the dominant remaining error and costs the workflow.
 Part 9 fixes it. Part 10 qualifies without held-out retuning. Required
@@ -20,6 +22,60 @@ reports the #121 follow-ups already in #127. Verify that merge evidence before
 closing the historical checkbox. The current plan does not repeat those
 changes. A signed closing ledger is accounting, not a cumulative attribution
 error bound. Part 5 owns the cancellation tests. Part 7 owns the independent known-composition tests.
+
+### Part 2 disposition and remaining evidence (2026-10-06)
+
+Use [G3_PLAN 2.1](G3_PLAN.md#21-part-2-the-first-useful-water-workflow-proposed-2026-10-06)
+for the candidate and disposition of all twelve criteria, and
+[6.1.2](G3_PLAN.md#612-water-acceptance-matrix-authoritative-part-2-specification)
+for the acceptance decision. These items route the existing obligations.
+They are not a competing experiment programme. No historical status below
+is promoted by preparing this documentation.
+
+  - [ ] **Part 2 documentation:** drafted in PR #148. Links and crosswalk
+    pointers pass the mechanical checks. Open: the independent review of the actual
+    diff and the resolution of its findings. Completion will qualify no water
+    claim. The owner and evidence gates below stay open.
+  - [!] **Owner choices:** WA-SCOPE, WA-PRECIP and WA-COST in
+    [DECISIONS](DECISIONS.md#part-2-proposals-2026-10-06-decided-2026-10-07) were decided on 2026-10-07.
+    Record a qualified use's count/window/observable, scientific accuracy
+    rationale, independent held-out coverage and any missing limits before
+    scoring it. Preserve OD7, proposed OD9–OD11 and OD15's separate gate.
+  - [ ] **Part 4 / WP0 / PX0 / WP8:** inventory reusable current-code evidence,
+    preserve immutable model/record/scorer/config stamps, and make the verifier
+    distinguish data failures from scientific not-assessable judgments. Correct
+    TRMM's OD2 physical/sensitivity windows and R8 source/signed burden,
+    applicability and zero-denominator handling. Never infer an unknown
+    inventory ratio as zero. Require state parity beyond only written outputs.
+    Preserve W58's recorded six-hour R4/R5/R8 passes and its reported R7/C7.
+  - [ ] **Part 5 / WP6 / WP4b accounting:** measure absolute accepted applied
+    corrections and directed compartment legs, per-tag copies repair,
+    attempted/retained activity, fallback/bound events and missing channels.
+    Test cancellation within a step and between parts beside existing cell-step
+    retained grosses. Supply paired parent/tag precipitation interval averages
+    or applied accumulations. Check signed rates and every checkpointed
+    numerator/latch/count. Do not reinterpret approved retained thresholds as a
+    different observable without an owner decision.
+  - [ ] **Part 6 / PX11-PX24 / PX12:** establish floors and eligibility at the
+    actual tag count/window, including copies grid/updraft residuals, repair,
+    mirrors/Jacobian, KI4-COPIES/UP1 and E/refinement per rung. Known-answer
+    transport/mixing checks must detect a label swap despite exact closure.
+    Preserve PX1→PX8 and OD13's PP-SUB trigger. Clean transport excludes moist
+    precipitation claims. Do not reopen D4-W references under option D.
+  - [ ] **Part 7 / PX14-PX25 / WP4b:** independently test directed transfers
+    between distinct donor compositions, opposing transfers, empty/negative
+    donors and actual falling rain/snow owners. Resolve OD15 at preregistration.
+    A shared-rule rate audit is accounting. Current separate rain/snow tags
+    refuse EDMF/copies. Support and validation of stages 2/3 remain required.
+  - [ ] **Parts 8/9/10:** measure integrated error and matched build/step/memory
+    with required diagnostics before selection. Fix only evidenced defects,
+    then qualify the owner-fixed scope with every required row and independent
+    held-out case, without retuning. Criterion 10's recorded cost failure (E88's 8 + 8 point) is not closed here.
+  - [ ] **Part 12:** retain eight-tag/deep/held-out accuracy, precision,
+    column/sphere and both-mode restarts, full precipitation/EDMF support,
+    intended eight-plus-eight cost and the ninety-day 60-level sphere. W60's
+    failure and W62's narrower floor result stand. Numerical flush/loss
+    diagnostics retain their gates and do not introduce age work.
 
 The owner set G3 on 2026-09-23 and re-scoped it the same day: **G3 brings the
 tagged water tracers to work under prognostic EDMF, operational in the
