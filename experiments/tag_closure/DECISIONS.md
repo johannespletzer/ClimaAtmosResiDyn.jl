@@ -30,8 +30,6 @@ its grouping or changing its approved scale would need a separate amendment.
 
 ## Part 2 proposals (2026-10-06, waiting)
 
-## Part 2 proposals (2026-10-06, waiting)
-
 The owner asked agents to prepare and review the Part 2 water acceptance
 documentation. This authorization approves no scientific
 scope change, tolerance, default, experiment execution or publication. The
