@@ -151,13 +151,13 @@ Rerun only where the changed code, physics or claim invalidates its evidence.
 
 The water observables, equations, required evidence and
 acceptance matrix are in
-[G3_PLAN 6.1.1–6.1.5](G3_PLAN.md#611-water-observables-and-accounting-conventions-part-2). Conditions beyond the approved register wait for the owner (DECISIONS, WA-GATES).
+[G3_PLAN 6.1.1–6.1.5](G3_PLAN.md#611-water-observables-and-accounting-conventions-part-2). Conditions beyond the approved register were decided on 2026-10-07 (DECISIONS, WA-GATES: a and the initialization half of c accepted, b reported only, d accepted).
 Its [initial-use proposal](G3_PLAN.md#21-part-2-the-first-useful-water-workflow-proposed-2026-10-06)
 and twelve-criterion disposition retain the full G3 objective. The general
 verdict rows and OD3 decision/threshold table below still own their approved
 numbers. The water matrix interprets applicability without changing them.
 
-Part 2 proposes TRMM_LBA 0M's six-hour, three-tracer baseline as the first pilot (WA-SCOPE, waiting).
+Part 2 uses TRMM_LBA 0M's six-hour, three-tracer baseline as the development pilot (WA-SCOPE, decided 2026-10-07: no three-tag or six-hour qualified scope, and the pilot scores the first-hour row only, after PX12).
 `pbl`/`free` partition entry-labelled water (initial masks plus later
 mask-weighted gains). `evap` is an overlapping surface-source tracer, not a
 third partition tag. Inventory and precipitation attribution are separate
@@ -166,7 +166,7 @@ eligibility/refinement and independent active-rule coverage remain required.
 A clean transport reference does not qualify precipitating EDMF. Current
 rain/snow tagging refuses EDMF and copies. WP4b stages 2/3 stay open.
 
-[DECISIONS' Part 2 proposals](DECISIONS.md#part-2-proposals-2026-10-06-waiting)
+[DECISIONS' Part 2 proposals](DECISIONS.md#part-2-proposals-2026-10-06-decided-2026-10-07)
 name the unresolved initial qualified-use scope/count/window and scientific
 accuracy rationale, additional 0M precipitation rule, and any missing local
 cost/memory cap. They do not approve new tolerances or defaults. Six-hour
@@ -263,7 +263,7 @@ eligible comparator: copies repair 0.60%/day against a 0.20%/day bound"
 | Reproducibility        | An immutable SHA or tag, the exact configuration, the manifest, the verifier's output and machine-readable results                                                                                        | Complete, or fail                                                                                           |
 | Cost                   | Build time, peak memory and per-step scaling at the intended tag count, the comparator included; the sphere's run length within budget                                                                    | OD3; OD6                                                                                                    |
 
-Closure never substitutes for provenance. Where no comparator is eligible, the convergence, intervention and aggregation rows can bound the default's provenance but not validate it. *Part 2 reading, proposed (DECISIONS, WA-GATES (d)):* these rows are OD5's conditional evidence for its "provenance bounded, not validated" verdict. They do not by themselves establish a mathematical error bound.
+Closure never substitutes for provenance. Where no comparator is eligible, the convergence, intervention and aggregation rows can bound the default's provenance but not validate it. *Part 2 reading, accepted 2026-10-07 (DECISIONS, WA-GATES (d)):* these rows are OD5's conditional evidence for its "provenance bounded, not validated" verdict. They do not by themselves establish a mathematical error bound.
 
 A copies run is a provenance comparator only if, in that run, it passes its
 own closure criterion, the repair-throughput criterion and Newton and time-step

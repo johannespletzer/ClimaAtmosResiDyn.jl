@@ -37,7 +37,7 @@ is promoted by preparing this documentation.
     diff and the resolution of its findings. Completion will qualify no water
     claim. The owner and evidence gates below stay open.
   - [!] **Owner choices:** WA-SCOPE, WA-PRECIP and WA-COST in
-    [DECISIONS](DECISIONS.md#part-2-proposals-2026-10-06-waiting) are proposed.
+    [DECISIONS](DECISIONS.md#part-2-proposals-2026-10-06-decided-2026-10-07) were decided on 2026-10-07.
     Record a qualified use's count/window/observable, scientific accuracy
     rationale, independent held-out coverage and any missing limits before
     scoring it. Preserve OD7, proposed OD9–OD11 and OD15's separate gate.

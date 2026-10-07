@@ -1,13 +1,14 @@
 # The owner's decisions
 
-## Part 2 proposals (2026-10-06, waiting)
+## Part 2 proposals (2026-10-06, decided 2026-10-07)
 
 The owner asked agents to prepare and review the Part 2 water acceptance
 documentation. This authorization approves no scientific
 scope change, tolerance, default, experiment execution or publication. The
 [water acceptance matrix](G3_PLAN.md#612-water-acceptance-matrix-authoritative-part-2-specification)
 uses the approved register/thresholds and identifies these additional choices.
-The entries below are **proposals, waiting for the owner**, not dated answers.
+The entries below were proposals. The owner decided them on 2026-10-07
+(section 2026-10-07 below). The rows keep their proposal text.
 
 | Proposal                                           | Exact choice needed before the affected claim                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Recommendation and evidence                                                                                                                                                                                                                                                                                                                                                                                                                        | Current effect                                                                                                                         |
 |:-------------------------------------------------- |:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:-------------------------------------------------------------------------------------------------------------------------------------- |
@@ -327,6 +328,42 @@ and an adversarial check of the review's recommendations
     the decision of 2026-10-02 is met at `33cbfd4f` (`q_tag_fix_<name>`).
     That decision line is read with this amendment. Part 5 prefers probes
     to new state fields (OD13).
+  - **WA-SCOPE: no three-tag or six-hour qualified scope.** **In force.**
+    Three tags reach level 2, accounted, and give no count evidence.
+    Qualification stays at eight tags on the approved rows. The inventory
+    claim comes first, with `pbl` and `free` entry labels and `evap` as an
+    overlay. The precipitation claim waits for OD15. The 24 h development
+    case and the held-out case are named before PX11 runs (OD14).
+    *Waiting:* the owner names those two cases.
+  - **WA-PRECIP: criterion 7 stays reported accounting.** **In force.**
+    Precipitation origin is scored only under 1M, at PX25 under OD15, where
+    independent donor references exist. One precipitation pathway.
+  - **WA-COST: no cap for the pilot or for water alone.** **In force.**
+    Caps gate level 4. Part 10 is gated by OD3's 2× at 8 + 8 after the walk
+    fix (above).
+  - **WA-GATES.** **In force.** (a) Complete cancellation-safe accounting
+    of applied corrections and compartment legs is a condition of a
+    qualified water claim. Part 5 measures the absolute leg amounts, which
+    WP6's columns do not hold, and part 5 precedes part 10. (b) Coverage of
+    all "material" active rules is not a gate. It stays reported and is
+    revisited with OD9. (c) Initialization and fallback coverage joins
+    copies eligibility. Grid-rung stability is deferred to 12a. (d) The
+    Part 2 reading of OD5's contract sentence is accepted: the rows are
+    OD5's conditional evidence for "provenance bounded, not validated", not
+    a mathematical error bound.
+  - **The missing tolerances are deferred.** **In force.** No six-hour
+    origin tolerance, no 0M precipitation tolerance and no three-tag
+    endpoint tolerance is set. Any later value comes from a stated use and
+    is judged on a fresh pre-registered run, as W62's rule says. The pilot
+    scores the approved rows only.
+  - **The pilot's windows.** **In force.** OD2's row "TRMM_LBA 0M and 1M,
+    6 h" applies. Before scoring, the boundary reading on the untagged run
+    is recorded with its output cadence (the challenge of 2026-10-07
+    computed that 10-minute outputs end startup at 0 h and 30-minute
+    outputs never do). The pilot scores the first-hour row only, after
+    PX12's eligibility, labelled low power: the first hour's evaporation is
+    0.13% of the column's water, and rain starts near 3 h. No six-hour
+    tolerance.
 
 ## 2026-10-02
 

@@ -1,4 +1,10 @@
 date,decided_by,decision,doc,section,still_in_force,superseded_by
+2026-10-07,owner,"WA-SCOPE: no three-tag or six-hour qualified scope. Qualification stays at eight tags on the approved rows. Inventory claim first (pbl/free labels, evap overlay), precipitation claim waits for OD15. The 24 h development case and the held-out case are named before PX11.",DECISIONS.md,2026-10-07,yes,
+2026-10-07,owner,"WA-PRECIP: criterion 7 stays reported accounting. Precipitation origin is scored only under 1M at PX25 under OD15.",DECISIONS.md,2026-10-07,yes,
+2026-10-07,owner,"WA-COST: no cap for the pilot or for water alone. Part 10 is gated by OD3's 2x at 8 + 8 after the walk fix.",DECISIONS.md,2026-10-07,yes,
+2026-10-07,owner,"WA-GATES: (a) cancellation-safe leg accounting is a condition, delivered by part 5. (b) material-rule coverage is not a gate, reported, revisited with OD9. (c) initialization/fallback coverage joins copies eligibility, grid-rung stability deferred to 12a. (d) the Part 2 reading of OD5's sentence is accepted.",DECISIONS.md,2026-10-07,yes,
+2026-10-07,owner,"The missing water tolerances (six-hour origin, 0M precipitation, three-tag endpoint) are deferred. Any later value comes from a stated use and is judged on a fresh pre-registered run (W62's rule).",DECISIONS.md,2026-10-07,yes,
+2026-10-07,owner,"The TRMM 0M pilot scores the first-hour row only, after PX12, labelled low power. The boundary reading with its output cadence is recorded before scoring. No six-hour tolerance.",DECISIONS.md,2026-10-07,yes,
 2026-10-07,owner,"Parts 1 to 12d are the active delivery order as delivery boundaries. The progress levels 0 to 4 stay proposed.",DECISIONS.md,2026-10-07,yes,
 2026-10-07,owner,"Residence time and air age are deferred. G4.4's flush-rate forecast is not an age and stays in part 11b, reported only.",DECISIONS.md,2026-10-07,yes,
 2026-10-07,owner,"Energy beside water: parts 3 and 11a run now. Part 11b starts after part 9's shared-code PRs and any walk fix, and measures the 8 + 8 cost.",DECISIONS.md,2026-10-07,yes,
