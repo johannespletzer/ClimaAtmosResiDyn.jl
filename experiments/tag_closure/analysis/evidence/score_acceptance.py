@@ -21,6 +21,7 @@ from acceptance_data import (Bundle, DataError, NotAssessable, aligned, at,
                              cumulative_amount, density, finite, integrate,
                              od2_start, require, retained, same_bits, window)
 from closure_verdict import ENERGY_GROSS, WATER_GROSS
+from correction_accounting import evaluate_accounting, paired_precipitation
 from manifest import sha256_file
 
 
@@ -28,7 +29,7 @@ DAY = 86400.0
 SMALL = 2e-4
 SPEC_ROOT = Path(__file__).resolve().parent.parent.parent
 SPEC_PATHS = ("G3_PLAN.md", "design/G4_CLAIM_CONTRACTS.md", "ROADMAP.md", "DECISIONS.md")
-SCORER_PATHS = ("score_acceptance.py", "acceptance_data.py", "manifest.py", "closure_verdict.py")
+SCORER_PATHS = ("score_acceptance.py", "acceptance_data.py", "correction_accounting.py", "manifest.py", "closure_verdict.py")
 
 
 def local_identities():
@@ -533,6 +534,8 @@ class Scorer:
                 "limitation": "corrected record estimate excludes cΔρ and within-output cancellation; neither Θx nor runtime fallback"}
 
     def precipitation(self, start=None, end=None):
+        if start is not None and "precipitation_applications" in self.s:
+            return paired_precipitation(self.b, start, end)
         require(self.s.get("geometry_kind") == "column", "native sphere precipitation requires area-weighted evidence; column reader cannot sum it")
         p = self.f("candidate", "precip_parent", units="kg m^-2 s^-1" if start is None else
                    ("kg m^-2 s^-1", "kg m^-2"))
@@ -740,6 +743,10 @@ class Scorer:
                          decision="approved" if self.family == "water" else "proposed",
                          threshold=0.005 if self.family == "water" else None,
                          prerequisites=(parity, validity, roster), dependency="Part 5 accounting / owner energy aggregate level")
+                self.row("COMMON.APPLICATION_ACTIVITY." + name,
+                         lambda a=start, b=end: evaluate_accounting(self.b, a, b), window_name=[start, end],
+                         required=False, prerequisites=(parity, validity, roster),
+                         dependency="Part 5 production application/leg coverage; absolute amounts have no scientific tolerance")
                 if self.family == "energy_source":
                     self.row("ENERGY.CLOSURE_GROWTH." + name, lambda a=start, b=end: self.energy_closure(a, b),
                              decision="approved", threshold=ENERGY_GROSS, window_name=[start, end],
@@ -771,7 +778,10 @@ class Scorer:
                              dependency="Part 6 / 11a eligible reference")
             self.block("COMMON.CONVERGENCE", "complete parent/reference/tag time-grid-Newton ladders required", "Parts 6/8/11a/11b/12")
             self.row("COMMON.AGGREGATION", self.aggregation, required=False, dependency="Parts 6/11a/12 intended-count group runs")
-            self.block("COMMON.ACCEPTED_APPLICATION_ACTIVITY", "cell-step variation can hide cancelling applications/legs; retained/attempted totals are insufficient", "Part 5")
+            self.row("COMMON.ACCEPTED_APPLICATION_ACTIVITY",
+                     lambda: evaluate_accounting(self.b, 0, self.s.get("end_seconds")),
+                     decision="approved", prerequisites=(parity, validity, roster),
+                     dependency="Part 5 complete production acceptance/rollback, active channels and checkpoint evidence")
         else:
             for name, start, end in self.windows:
                 if start is not None and start < end:

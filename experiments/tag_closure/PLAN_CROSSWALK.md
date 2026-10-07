@@ -2259,3 +2259,23 @@ No software result substitutes for missing scientific evidence.
 
 Independent actual-diff review is complete. Its findings are resolved and
 all 49 offline analytic/fault tests pass; no physical qualification is implied.
+
+## Part 5 offline accounting dispositions (2026-10-07)
+
+The [writer inventory and limitations](analysis/evidence/PART5.md) preserve
+all prior obligations and histories. This is a partial software handoff;
+Part 5's production obligation remains open.
+
+| Source obligation | Implemented local evidence path | Required remaining evidence |
+|:--|:--|:--|
+| Part 5 / G3 WP6 / numerical intervention | Native per-mechanism/tag/compartment weighted receipts; signed S, retained H, accepted A, separate attempted updates/evaluations, four counter types; exact step/window/native checks | Verified runtime tag capture before cancellation, including complete active rescale/empty/repair/copies/follower/negative/bounds/fallback coverage |
+| WP4b / PR146 closing interpretation | Directed transfer versus two legs; simultaneous rain/snow and within-step cancellation fixtures; signed closing ledger is not an activity bound | PR146 is unmerged/absent on this base; actual closing capture only after its dependency is available, then Part 7 donor validation |
+| OD4 / G4.3–6 finer source activity | Finer weighted source activity separately reported; exact accepted-step Θx and retained thresholds preserved | Actual source/application producer and valid partition/active rules; no new activity tolerance or propagated attribution bound |
+| C7 / paired precipitation | Same-update signed parent/tag applied fluxes, native column/sphere area, positive/negative amounts and exact windows beside snapshots | Complete supported 0M/1M rain/snow production pairing and physical restart; independent origins in 7 and WA-PRECIP/OD15 gates |
+| WP6 / validity / checkpoints | Finalized trial decisions, superseded Newton replacement, duplicate rejection, all declared numerator/count/latch reader stitching counterexamples | Real rollback hooks, continuous versus restarted accounting of every affected native channel; warned missing-history segments cannot qualify whole-run zeros |
+| OD13 / parent parity / performance | Existing PB pin inspected; nonadditive pre-solve maps refused; no new runtime state or PP-SUB activation | Prepared Julia Float32/Float64 on/off bitwise parity, allocations/device/distributed verification and measured cost for the eventual scoped producer |
+
+The existing manifest/evaluator carries this optional extension. Its full-scope
+completeness row requires actual runtime validation evidence; synthetic arrays
+exercise arithmetic and cannot close the production claim. Independent review
+and final finding closure are recorded separately from unrun runtime gates.

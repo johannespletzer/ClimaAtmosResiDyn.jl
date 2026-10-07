@@ -3,6 +3,13 @@ ClimaAtmos.jl Release Notes
 
 main
 ----
+- The offline tag-closure evidence tools can read finalized weighted
+  application receipts, report signed, retained and cancellation-safe
+  correction activity with directed-leg and counter conventions, and
+  integrate paired parent/tag precipitation on native control surfaces.
+  Synthetic examples cannot clear the production acceptance/rollback gate.
+  Runtime application capture, parent parity and checkpoint verification
+  remain open; no model behavior or approved tolerance changes.
 - The tag-closure experiment tools support offline common evidence validation
   and deterministic water/energy acceptance-row scoring through
   `analysis/evidence/score_acceptance.py`. The existing submission manifest

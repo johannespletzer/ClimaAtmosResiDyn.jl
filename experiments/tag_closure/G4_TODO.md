@@ -105,6 +105,12 @@ Concrete remaining work, retaining all G4.n/PX obligations below:
   preserve count conventions, cancellation visibility and checkpoints. Use
   OD13's probe gates rather than unsolicited state fields. No propagated
   attribution-error bound from these activity totals alone.
+  - Offline consumer/test layer implemented: [PART5](analysis/evidence/PART5.md)
+    reads accepted weighted source/repair/follower applications separately
+    from OD4, with native signed/retained/activity/counter reports. The exact
+    accepted-step source denominator and old results remain unchanged. Real
+    accepted tag capture, complete active counters and physical checkpoint/
+    parent parity verification remain open; no production completion is claimed.
 - [ ] **Part 11a, independent energy references:** design the
   [discriminating cases](design/G4_CLAIM_CONTRACTS.md#6-discriminating-reference-work-for-later-parts),
   including stage-weighted radiative flux/divergence versus the signed record,
@@ -911,4 +917,3 @@ G3 WP0 first.
     the budget per layer and for the column, with the remainder named.
 
   - **Cost.** Two short runs and one analysis script.
-

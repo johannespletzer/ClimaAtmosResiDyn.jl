@@ -1,5 +1,27 @@
 # Status
 
+## Part 5 offline accounting layer (2026-10-07)
+
+The [Part 5 inventory/design](analysis/evidence/PART5.md) and existing
+[evidence workflow](analysis/evidence/README.md) now include a strict native
+weighted-application reader, cancellation-safe S/H/A and directed-leg
+reports, distinct trial/evaluation counters, and paired signed parent/tag
+precipitation integration. Fifty-six focused analytic/fault tests and the
+49-test Part 4 acceptance suite pass; these are offline results only.
+
+**Part 5 remains incomplete.** The chosen base has no verified producer for
+complete accepted tag applications or paired applied precipitation. Julia
+runtime, parent on/off bitwise parity, physical checkpoint/restart,
+device/distributed behavior and cost are unverified. Synthetic evidence and
+mere coverage declarations cannot clear the production completeness gate.
+The implementation's verified-producer registry is empty; it cannot be
+populated from a submitted manifest. This prevents declared PASS logs or
+arbitrary hashed metadata from masquerading as verified runtime capture.
+PR146 is open and its closing implementation is not on this exact base;
+its signed ledger is inventoried without porting it. No runtime/default/
+checkpoint/dependency/CI/threshold or historical output changes are supplied.
+
+
 ## Part 4 offline evidence and scoring (2026-10-07)
 
 The common manifest extension, strict native readers and deterministic
