@@ -1,5 +1,26 @@
 # G3: water tags under EDMF
 
+## Active delivery queue (2026-10-05)
+
+Use [ROADMAP's execution order](ROADMAP.md#the-execution-order), with
+[PLAN_CROSSWALK.md](PLAN_CROSSWALK.md) as the item-by-item index. Checkboxes
+below retain their dated evidence status. An old unchecked CI/PR item is a
+verification obligation, not an instruction to rebuild merged code.
+
+Next: part 2's scientific-use contract, part 4's evidence reuse, part 5's
+cancellation-safe accounting and parts 6/7's eligible independent references.
+PX12, including KI4-COPIES and UP1's fixed-parent probe, stays in that queue.
+Part 8 identifies the dominant remaining error and costs the workflow.
+Part 9 fixes it. Part 10 qualifies without held-out retuning. Required
+precipitation/EDMF stages remain in WP4b. All later parts retain their gates. "Step n" below means the earlier order's step. The crosswalk maps it.
+
+PR #146 is built, with the owner's review points 1 and 3 answered in `b702ff17`. It is still open at
+`33cbfd4fa282618788cea54de7a69696b592ead8` (2026-10-05). Its own description
+reports the #121 follow-ups already in #127. Verify that merge evidence before
+closing the historical checkbox. The current plan does not repeat those
+changes. A signed closing ledger is accounting, not a cumulative attribution
+error bound. Part 5 owns the cancellation tests. Part 7 owns the independent known-composition tests.
+
 The owner set G3 on 2026-09-23 and re-scoped it the same day: **G3 brings the
 tagged water tracers to work under prognostic EDMF, operational in the
 production configuration (a sphere with EDMF and 1M), with precipitation
@@ -29,20 +50,20 @@ Marks: `[ ]` open, `[~]` under way, `[x]` done, `[!]` waiting for a decision.
 
 The twelve criteria of the plan, section 2, in short:
 
-| #  | Criterion                                                                                      | Status                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-|:-- |:---------------------------------------------------------------------------------------------- |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1  | Evidence: every headline number goes through the verifier and a manifest                       | partial: verifier, manifest, inventory and tools review done (WP0); R8, R9 and S6 not built                                                                                                                                                                                                                                                                                                                                                |
-| 2  | Refusals with tests, known issues settled, a file-based start, restart round trips             | partial: refusals merged (#100); KI1 closed (W19); KI4 closed for the grid rule (W51, #130); file-based start passes (W22); restart only for ledgers (W27) and a rain/snow column (W43); KI7 open                                                                                                                                                                                                                                          |
-| 3  | Parity in both modes: 1M and 0M EDMF columns, explicit microphysics, two MPI ranks             | met (W59, reviewed 2026-10-02): every tagged column run is bit for bit its twin (W17–W51); six column checks in CI, green at `d3c5e42f`; two MPI ranks bit for bit in both modes on the sphere, dry (W59) and moist, with cloud, rain, snow and surface precipitation (W59 addendum, reviewed 2026-10-02); two ranks and 6 h only |
-| 4  | Closure on D4-W, including the copies' own residual and the rain and snow parts                | partial: default passes (W55 6.5e-6 at 24 h, its second 12 h below the first; W24, W38); the second-half rule failed on four W38 rungs (up to 1.7e-5; old physics, not rerun); named parts pass in Float64 (4.1e-7 at one iteration, read before registration; 3.8e-13 at ten; W60 addendum); copies' repair fails (3.98e-3/day against 2e-3, W54); rain/snow tags under EDMF wait for T3 stage 2 (shown only on 1M without EDMF, W43)     |
-| 5  | Per-tag accuracy against the copies, at 24 h and in the first hour                             | not assessable: copies ineligible on D4-W (W21, W38 R5, R7); first hour 13.1% (W50 rule) against 14.3% (main), budget 1%; R5 fails on all rungs (W50)                                                                                                                                                                                                                                                                                      |
-| 6  | Convergence of the default's error and of the copies                                           | not assessable: no eligible comparator (W38); centred rows R6, R9, R10 pass; first-order breaks the copies (R4, R6)                                                                                                                                                                                                                                                                                                                        |
-| 7  | Precipitation provenance: the 0M split, rain and snow tags, `Σ pr_tag = pr`, the audit         | partial: 0M split validated (W26); WP4a-V passes (W32); rain/snow stage 1 without EDMF (W43); stages 2 and 3, V-W5 and the audit's acceptance open                                                                                                                                                                                                                                                                                         |
-| 8  | Held-out columns: RICO, BOMEX, ARM SGP, GCM-driven 0M                                          | not started: waits on V-W5 (OD14 accepted 2026-10-02)                                                                                                                                                                                                                                                                                                                                                                                      |
+| #  | Criterion                                                                                      | Status                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+|:-- |:---------------------------------------------------------------------------------------------- |:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1  | Evidence: every headline number goes through the verifier and a manifest                       | partial: verifier, manifest, inventory and tools review done (WP0); R8, R9 and S6 not built                                                                                                                                                                                                                                                                                                                                            |
+| 2  | Refusals with tests, known issues settled, a file-based start, restart round trips             | partial: refusals merged (#100); KI1 closed (W19); KI4 closed for the grid rule (W51, #130); file-based start passes (W22); restart only for ledgers (W27) and a rain/snow column (W43); KI7 open                                                                                                                                                                                                                                      |
+| 3  | Parity in both modes: 1M and 0M EDMF columns, explicit microphysics, two MPI ranks             | met (W59, reviewed 2026-10-02): every tagged column run is bit for bit its twin (W17–W51); six column checks in CI, green at `d3c5e42f`; two MPI ranks bit for bit in both modes on the sphere, dry (W59) and moist, with cloud, rain, snow and surface precipitation (W59 addendum, reviewed 2026-10-02); two ranks and 6 h only                                                                                                      |
+| 4  | Closure on D4-W, including the copies' own residual and the rain and snow parts                | partial: default passes (W55 6.5e-6 at 24 h, its second 12 h below the first; W24, W38); the second-half rule failed on four W38 rungs (up to 1.7e-5; old physics, not rerun); named parts pass in Float64 (4.1e-7 at one iteration, read before registration; 3.8e-13 at ten; W60 addendum); copies' repair fails (3.98e-3/day against 2e-3, W54); rain/snow tags under EDMF wait for T3 stage 2 (shown only on 1M without EDMF, W43) |
+| 5  | Per-tag accuracy against the copies, at 24 h and in the first hour                             | not assessable: copies ineligible on D4-W (W21, W38 R5, R7); first hour 13.1% (W50 rule) against 14.3% (main), budget 1%; R5 fails on all rungs (W50)                                                                                                                                                                                                                                                                                  |
+| 6  | Convergence of the default's error and of the copies                                           | not assessable: no eligible comparator (W38); centred rows R6, R9, R10 pass; first-order breaks the copies (R4, R6)                                                                                                                                                                                                                                                                                                                    |
+| 7  | Precipitation provenance: the 0M split, rain and snow tags, `Σ pr_tag = pr`, the audit         | partial: 0M split validated (W26); WP4a-V passes (W32); rain/snow stage 1 without EDMF (W43); stages 2 and 3, V-W5 and the audit's acceptance open                                                                                                                                                                                                                                                                                     |
+| 8  | Held-out columns: RICO, BOMEX, ARM SGP, GCM-driven 0M                                          | not started: waits on V-W5 (OD14 accepted 2026-10-02)                                                                                                                                                                                                                                                                                                                                                                                  |
 | 9  | Float32 twin                                                                                   | partial: rain/snow Float32 closure waits for T3 stage 2. One iteration (production): parity and every criterion-4 measure within 10× (W60, ≤1.21×; named parts 9.1×). Ten iterations: registered 10× fails and stands (W60 addendum); post-hoc floor passes (W62): copies, new data, by 10× (≤18%); default on the addendum's data bit for bit, 45% of the floor (`q_tag_inc_left`): consistent with rounding, not an independent test |
-| 10 | Cost, both modes and both families                                                             | failing against OD3's 2× pending the profile (8 + 8 step 4.16×; owner 2026-10-02); copies row fails (4 h 16 min build) |
-| 11 | Ten days on the sphere (superseded 2026-09-24: 90 days at 60 levels), a copies twin, a restart | not started: waits on step 8a (crev) and step 8 (WP9)                                                                                                                                                                                                                                                                                                                                                                                      |
-| 12 | Reviews, CI, draft PRs, docs                                                                   | partial: reviews WP1–WP6 on file; WP4b stage-1 review done (12 findings, none moving a model field; transport-2 in #135); CI green on main; water claim contract (WP8) and final docs pass open                                                                                                                                                                                                                                            |
+| 10 | Cost, both modes and both families                                                             | failing against OD3's 2× pending the profile (8 + 8 step 4.16×; owner 2026-10-02); copies row fails (4 h 16 min build)                                                                                                                                                                                                                                                                                                                 |
+| 11 | Ten days on the sphere (superseded 2026-09-24: 90 days at 60 levels), a copies twin, a restart | not started: waits on step 8a (crev) and step 8 (WP9)                                                                                                                                                                                                                                                                                                                                                                                  |
+| 12 | Reviews, CI, draft PRs, docs                                                                   | partial: reviews WP1–WP6 on file; WP4b stage-1 review done (12 findings, none moving a model field; transport-2 in #135); CI green on main; water claim contract (WP8) and final docs pass open                                                                                                                                                                                                                                        |
 
 Restated 2026-09-30 from the findings; the plan's section 2 holds the criteria's full text.
 
@@ -927,7 +948,7 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
   - [~] **The WP4b fix PR** (decided 2026-10-02, option A, two to three days;
     DECISIONS.md). It covers P1 to P5 and the review's four open should-fix
     findings. No model field changes, and the tags change under the key.
-    Open as #146 (head `9dc512f1`), not merged. It holds:
+    Open as #146 (head `9dc512f1` on 2026-10-02), not merged. It holds:
 
       + [ ] a per-compartment closing step after the follow, booked in the
         rescale's ledgers (micro-1 on every path, and P2's revision);
@@ -1381,7 +1402,7 @@ owner's points in the note's section 8.
         fails: 8 + 8 copies built in 4 h 16 min (E88 addendum), 6.8% over,
         less than the node spread. Both wait for the owner.
 
-      + [ ] **The cost budget: proposal, waiting for the owner.** OD3's
+      + [ ] **The cost budget: decided 2026-10-07, OD3's 2× stays.** OD3's
         approved row (2026-09-24) caps the default mode at 8 + 8 tags at 2×
         the untagged step and 2× the untagged build. The step measures 4.16×,
         so against that row criterion 10 fails. The build, 1.51×, meets it.
@@ -1403,6 +1424,14 @@ owner's points in the note's section 8.
                 water at most 1.6× (1.44×), energy at most 1.75× (1.58×).
 
         The margins are 4% to 32% over the least favourable measured value.
+
+        *Decided 2026-10-07 (the owner):* keep OD3's 2× at 8 + 8, and it
+        gates part 10. The walk fix goes to ClimaCore or upstream ClimaAtmos.
+        A fork patch counts only as a second named departure, tested bit for
+        bit. The post-fix measurement is pre-registered first, the less
+        favourable of minimum and median under the spread rule, with the step
+        that follows a result between 2.0× and 2.1× stated. No cap for water
+        alone (DECISIONS.md, 2026-10-07).
         The sphere's run-length budget (OD6) and the GPU are not covered;
         T5 checks the sphere against this budget. OD3's row for the copies,
         both families' copies in one model built within 4 h, is not

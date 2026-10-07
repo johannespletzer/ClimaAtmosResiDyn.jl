@@ -1,8 +1,26 @@
 # G4: the energy source tags, after G3
 
+## Active delivery queue (2026-10-05)
+
+[ROADMAP's execution order](ROADMAP.md#the-execution-order) governs delivery.
+[PLAN_CROSSWALK.md](PLAN_CROSSWALK.md) retains every G4 item and sub-item.
+Part 3 defines the energy contract in parallel with water's. Part 11a may
+build eligible independent references once that contract, part 4's evidence
+tools and the applicable part 5 accounting exist. Parts 11b, 11c and 11d then baseline, fix and qualify energy in separate
+PRs. Decided 2026-10-07: parts 3 and 11a run now, and 11b starts after part 9's shared-code PRs and any walk fix. The older phrase "after G3" does not block parts 3 and 11a. It
+still prevents water evidence from substituting for energy qualification.
+
+OD7 and OD11, the remaining numerical levels for G4.3–6, comparator
+eligibility and the declared fixed energy convention remain gates. Reuse
+merged mirrors, cross blocks, records and ledgers. Do not recreate them from
+old checkboxes. G4.13 goes to part 12d. G4.14's instantaneous loss timescale,
+G4.4's flush-rate column and PX19's flush screen retain their original conditions and are
+not residence time. Air-age and residence-time extensions are deferred. "Step n" below means the earlier order's step.
+
 G4 brings the energy source tags and the process records to operation, with
-what G3 learns about the water tags. It waits for G3, except the job session's
-work on PR #95 and the ladder at #95's merged head. E76 is the ladder at
+what G3 learns about the water tags. The original sequence waited for G3,
+except the job session's work on PR #95 and the ladder at #95's merged head. The active sequence above now allows
+the energy contract and independent references in parallel. E76 is the ladder at
 `dcf7d086`. The roadmap is
 [ROADMAP.md](ROADMAP.md). What G3 hands over, and what is energy-specific, is
 in [G3_PLAN.md, section 9](G3_PLAN.md#9-g4-the-energy-source-tags-with-what-g3-learns).
