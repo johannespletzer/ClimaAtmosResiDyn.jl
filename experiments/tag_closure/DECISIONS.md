@@ -1,28 +1,5 @@
 # The owner's decisions
 
-## Planning revision of 2026-10-05
-
-The owner requested an in-place capability-and-evidence plan, with
-residence-time work excluded, and authorized a reviewed documentation branch.
-The active sequence is in [ROADMAP.md](ROADMAP.md#the-execution-order).
-This entry changes delivery organization only. It approves no new threshold,
-scientific default, simulation campaign or proposed OD9–OD11 label.
-Residence-time and air-age features are deferred; numerical loss/flush
-diagnostics keep their existing meaning and gates.
-
-Still requiring explicit resolution: OD7; proposed OD9–OD11; OD15 at PX25
-pre-registration; energy's remaining G4.3–6 levels; and any new use-specific
-tolerance or benchmark outside existing approvals. OD5's historical
-"bounded" wording is preserved, without implying a mathematical error bound.
-The crosswalk includes dated decisions and their individual sub-points;
-their register state is authoritative, not inferred from delivery labels.
-
-PR #146's October 2 instruction "not built" below is historical: the PR is
-open, built and reviewed at `33cbfd4fa282618788cea54de7a69696b592ead8` on
-2026-10-05. The implementation's dedicated closing ledger differs from the
-earlier rescale-ledger wording; verify the PR's decision trail when closing
-that task. This plan does not authorize or perform its merge.
-
 Every decision of the register (`review/register/decisions.csv`), one line
 each, grouped by date, newest first. Each links to where it is recorded. A
 short section at the end adds decisions that the documents record but the
@@ -48,6 +25,23 @@ Each decision's current state is in
 [ROADMAP.md's register](ROADMAP.md#the-decision-register), the single source.
 This list names what is still open. Classified on 2026-09-25 against the
 record; the answered and superseded entries are in the next section.
+
+  - **The planning revision of 2026-10-05 (PR #147).** Proposed
+    2026-10-05, waiting for the owner. PR #147's brief says the owner asked
+    for an in-place plan by capability and evidence, without residence-time
+    work. The proposal: ROADMAP's parts 1 to 12d replace rev. 2's execution
+    order. Residence-time and air-age features are deferred. G4.14's loss
+    timescale and PX19's flush screen keep their meaning and gates. The
+    energy contract and energy references may start before G3 ends. The
+    proposal approves no threshold, scientific default, simulation
+    campaign or OD9 to OD11 label. OD5's "bounded" wording stays, without
+    implying a mathematical error bound.
+    [ROADMAP](ROADMAP.md#the-execution-order)
+
+  - **The WP9 cost budget (criterion 10).** OD3's 2× stays for now, so
+    criterion 10 fails (8 + 8 step 4.16×). A revised step row is proposed.
+    Water qualification (ROADMAP part 10) needs it.
+    [G3T](G3_TODO.md#wp2-wp8-wp9-consolidation-docs-cost)
 
   - **OD7**, G4.15's rule for energy: same sign or |m|. Deferred by the owner
     on 2026-09-24, until the long runs can be scored at site 23.
@@ -294,6 +288,11 @@ option on all five. The brief was
         registry row.
       + The PR also checks whether #137's Q5 rule already covers micro-1 in
         the microphysics hook.
+      + *Update 2026-10-05, a status note:* #146 is open at `33cbfd4f`,
+        built, with the owner's review points 1 and 3 answered in
+        `b702ff17`. Its closing step books a dedicated closing ledger, not
+        the rescale's ledgers named above. Whether that meets this decision
+        is **waiting** for the owner, at #146's merge.
   - **Criterion 9's rounding floor, set later on 2026-10-02.** **In force.**
     After W60's addendum (criterion 9 failed on the named parts at ten
     Newton iterations: Float32 3.2e-6 against 3.8e-13), the owner set the
@@ -1013,4 +1012,3 @@ These decisions are in the documents but have no row in `decisions.csv`.
   - **Undated. B1's grid and length:** `numerics_sphere_he6ze10.yml`, ten days,
     on the shared CPU partition. **Done** (B1 ran, E50).
     [archived README.md, "Open items"](archive/2026-09-23/README.md#open-items)
-

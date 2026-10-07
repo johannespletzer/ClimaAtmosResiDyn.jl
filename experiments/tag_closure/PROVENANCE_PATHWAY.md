@@ -4,17 +4,17 @@
 
 The pathway's scientific definitions, PX designs and PP triggers stay here.
 [ROADMAP's execution order](ROADMAP.md#the-execution-order) is the single
-active delivery sequence; [PLAN_CROSSWALK.md](PLAN_CROSSWALK.md) maps every
+active delivery sequence. [PLAN_CROSSWALK.md](PLAN_CROSSWALK.md) maps every
 PX/PP and decision sub-item into it. Earlier step numbers below identify
 the historical revision and can be resolved through that index.
 
 The roadmap's capability levels organize delivery and do not approve
 OD9–OD11, change OD5, or replace the Fid/Val axes below. Independent
-known-donor/analytic references in parts 6/7/11a must declare shared rules
+known-composition/analytic references in parts 6/7/11a must declare shared rules
 and floors. They verify the declared labelling model, not atmospheric truth
 without independent physical evidence. Existing screens and observed spreads
 remain distinct from proven error bounds. Keep PX19's numerical-flush
-diagnostic where triggered; residence-time and air-age development is deferred.
+diagnostic where triggered. Residence-time and air-age development is deferred.
 
 Proposed on 2026-09-26. The owner accepted OD12, OD13 and OD14 on 2026-10-02
 (walk-through, option B). OD9 to OD11 stay proposed until a gated result
@@ -1788,4 +1788,3 @@ review.
     ROADMAP's note on step 7, G3_PLAN 4.5 and G3_TODO's hyperdiffusion item
     give item 6's result at #121's `835ff9a`. Nothing approved is changed,
     and FINDINGS.md is not touched.
-

@@ -4,20 +4,20 @@
 
 [ROADMAP's execution order](ROADMAP.md#the-execution-order) now governs the
 remaining work. This document remains authoritative for G3's technical
-design and numerical criteria; dated results and decisions below are retained.
-Parts 2 and 6–10 deliver the first scoped water capability; part 12 expands
+design and numerical criteria. Dated results and decisions below are retained.
+Parts 2, 4, 5 and 6–10 deliver the first scoped water capability. Part 12 expands
 it toward the full production target. The twelve criteria are not silently
 narrowed by qualifying a smaller workflow. [PLAN_CROSSWALK.md](PLAN_CROSSWALK.md)
 maps every criterion, work-package sub-item and decision to its delivery part.
-The original section 5 order below is historical dependency context; use the
+The original section 5 order below is historical dependency context. Use the
 roadmap for execution. Water parity and restart checks apply to every relevant
 change, not only the later production-expansion parts.
 
 PR #146 is open at `33cbfd4fa282618788cea54de7a69696b592ead8` on
 2026-10-05. Its stage-1 fixes do not establish WP4b stage 2/3 or precipitation
-provenance validity. Signed closing-ledger cancellation and donor-origin
-validation remain parts 5 and 7. Preserve W33, W54 and W60's registered
-failures; W62 does not retrospectively change W60.
+origin validity. Signed closing-ledger cancellation stays in part 5.
+Validation of origins against known compositions stays in part 7. Preserve W33, W54 and W60's registered
+failures. W62 does not retrospectively change W60.
 
 Final version of 2026-09-23. The draft (`f3ae8ca7`) was reviewed by an
 independent agent (`review/agent_reviews/g3_water_plan_review.md`). Every
@@ -1025,4 +1025,3 @@ The independent review of the draft, `review/agent_reviews/g3_water_plan_review.
 The design of the rain and snow tags is new since the review, and has not
 been reviewed. Its design note gets its own review, at xhigh, before any code
 (WP4b-D).
-
