@@ -20,24 +20,24 @@ EA-STATE is proposed; approved closure growth, OD7 and OD9–11 are preserved.
 
 ## Active delivery queue (2026-10-05)
 
-[ROADMAP's execution order](ROADMAP.md#the-execution-order) governs delivery;
+[ROADMAP's execution order](ROADMAP.md#the-execution-order) governs delivery.
 [PLAN_CROSSWALK.md](PLAN_CROSSWALK.md) retains every G4 item and sub-item.
 Part 3 defines the energy contract in parallel with water's. Part 11a may
-build eligible independent references once that contract and evidence tools
-exist. Parts 11b, 11c and 11d then baseline, fix and qualify energy in separate
-PRs. The older phrase "after G3" does not block this preparatory work; it
+build eligible independent references once that contract, part 4's evidence
+tools and the applicable part 5 accounting exist. Parts 11b, 11c and 11d then baseline, fix and qualify energy in separate
+PRs. Decided 2026-10-07: parts 3 and 11a run now, and 11b starts after part 9's shared-code PRs and any walk fix. The older phrase "after G3" does not block parts 3 and 11a. It
 still prevents water evidence from substituting for energy qualification.
 
 OD7 and OD11, the remaining numerical levels for G4.3–6, comparator
 eligibility and the declared fixed energy convention remain gates. Reuse
-merged mirrors, cross blocks, records and ledgers; do not recreate them from
-old checkboxes. G4.13 goes to part 12d. G4.14's instantaneous loss timescale
-and residual-flush diagnostics retain their original conditions and are
-not residence time. Air-age and residence-time extensions are deferred.
+merged mirrors, cross blocks, records and ledgers. Do not recreate them from
+old checkboxes. G4.13 goes to part 12d. G4.14's instantaneous loss timescale,
+G4.4's flush-rate column and PX19's flush screen retain their original conditions and are
+not residence time. Air-age and residence-time extensions are deferred. "Step n" below means the earlier order's step.
 
 G4 brings the energy source tags and the process records to operation, with
 what G3 learns about the water tags. The original sequence waited for G3,
-except work on PR #95 and its ladder. The active sequence above now allows
+except the job session's work on PR #95 and the ladder at #95's merged head. The active sequence above now allows
 the energy contract and independent references in parallel. E76 is the ladder at
 `dcf7d086`. The roadmap is
 [ROADMAP.md](ROADMAP.md). What G3 hands over, and what is energy-specific, is
@@ -76,65 +76,65 @@ orders of magnitude.
 
 The canonical [energy acceptance matrix](design/G4_CLAIM_CONTRACTS.md#5-energy-acceptance-matrix)
 now defines the equations and evidence for stored source tags, signed process
-records and the parent budget. Common approved thresholds remain in ROADMAP;
-[Part 3 owner proposals](DECISIONS.md#part-3-proposals-2026-10-06-waiting)
+records and the parent budget. Common approved thresholds remain in ROADMAP.
+[Part 3 owner proposals](DECISIONS.md#part-3-proposals-2026-10-06-decided-2026-10-07)
 are not approvals. The proposed first workflow is the non-EDMF DYCOMS RF02
-radiation record alone; a record-only pass cannot qualify stored origins.
+radiation record alone. A record-only pass cannot qualify stored origins.
 
 Concrete remaining work, retaining all G4.n/PX obligations below:
 
-- [ ] **Part 4, energy evidence/scoring:** reconstruct density-weighted
-  cumulative records/ledgers before differencing; require every expected
-  file/time/active process. Separate offline Θi rosters from runtime fallback,
-  preserve legacy estimates, and use valid window Θx for new tag acceptance.
-  Preserve approved window-growth closure while reporting residual
-  state/endpoints/max/change separately; any new scored state criterion waits
-  for EA-STATE. Replace any use of
-  absolute net `repair_moved` as retained activity. Recompute per-tag window
-  ratios from amount endpoints and correct denominator, with explicit
-  positive-region and small-tag behavior. Share-normalization fallback counts
-  are required but absent from the current audit; design a gated counter/probe
-  only if needed for the claimed transport. Native weights, aligned geometry,
-  restart deduplication/stitching, process-weighted share comparisons and
-  row-by-row missing/inapplicable verdicts are required. No silent historical
-  rescore or approval of a new normalization.
-- [ ] **Part 5, energy activity:** demonstrate opposing source/stage and
-  repair/follower applications. Accepted-step Θx and retained variation are
-  exact for their recorded grouping, not eventwise activity. Distinguish
-  signed, cell-step, column-gross, attempted and accepted-application amounts;
-  preserve count conventions, cancellation visibility and checkpoints. Use
-  OD13's probe gates rather than unsolicited state fields. No propagated
-  attribution-error bound from these activity totals alone.
-- [ ] **Part 11a, independent energy references:** design the
-  [discriminating cases](design/G4_CLAIM_CONTRACTS.md#6-discriminating-reference-work-for-later-parts),
-  including stage-weighted radiative flux/divergence versus the signed record,
-  and wrong-origin mutants that preserve total energy. Declare shared rules,
-  independent mechanisms, numerical floors, refinement and inactive exclusions
-  under OD12. PX22/15, copy mirrors and source-tag conventions retain their
-  own prerequisites; a simple record reference does not qualify those rules.
-- [ ] **Part 11b, process/integrated baseline:** post-#139 parity and raw
-  validity, record reference evidence, native process budget/remainders,
-  repeated C4 size and failed-A5 investigation, eligibility/mirror/cross-block
-  inventory, actual gross refinement, restart and matched cost. G4.1/11/16
-  code already present is reused, not recreated from historical checkboxes.
-  Prior E84/E86/E87/E89 are labelled prior evidence. Decide seven-point
-  point 2/3/4/6 levels only from this evidence, with owner approval.
-- [ ] **Part 11c, bounded fixes:** one demonstrated defect per PR, preserving
-  parent parity, guard/refusal scope and independent regression. No automatic
-  same-sign energy follower, offset change, comparator promotion or relaxation
-  of a tolerance. OD7 remains the owner's choice after its recorded long-run
-  prerequisites; C4's decided treatment is to document the size.
-- [ ] **Part 11d, scoped energy qualification:** apply the canonical matrix
-  only after owner accuracy/scope/cost choices and eligible evidence; report
-  record-only and source-provenance outcomes separately. OD14 freezes the
-  independent held-out case/window/metrics before tuning. OD5's historical
-  conditional verdict remains separate from validated provenance.
-- [ ] **Part 12, expanded operation:** stated precision/device/restart range,
-  OD8 target count and cost, then OD1/OD6 long production scope with its
-  short cost pilot before commissioning. G4.13 is 12d; G4.14/PX19 retain
-  numerical-loss gates; no residence-time or air-age work.
+  - [ ] **Part 4, energy evidence/scoring:** reconstruct density-weighted
+    cumulative records/ledgers before differencing. Require every expected
+    file/time/active process. Separate offline Θi rosters from runtime fallback,
+    preserve legacy estimates, and use valid window Θx for new tag acceptance.
+    Preserve approved window-growth closure while reporting residual
+    state/endpoints/max/change separately. No new scored state criterion is added
+    (EA-STATE, 2026-10-07). Replace any use of
+    absolute net `repair_moved` as retained activity. Recompute per-tag window
+    ratios from amount endpoints and correct denominator, with explicit
+    positive-region and small-tag behavior. Share-normalization fallback counts
+    are required but absent from the current audit. Design a gated counter/probe
+    only if needed for the claimed transport. Native weights, aligned geometry,
+    restart deduplication/stitching, process-weighted share comparisons and
+    row-by-row missing/inapplicable verdicts are required. No silent historical
+    rescore or approval of a new normalization. Fix the scripts' known defects first: `process_budget.py` adds `∫pr dt` as if `pr` were positive downward and drops the first hourly window (2026-10-07), `tag_correctness.py` weights by `np.gradient(z)` and floors denominators at `1e-300`, and `g411_eligibility.py`'s docstring still calls the interim a lower bound.
+  - [ ] **Part 5, energy activity:** demonstrate opposing source/stage and
+    repair/follower applications. Accepted-step Θx and retained variation are
+    exact for their recorded grouping, not eventwise activity. Distinguish
+    signed, cell-step, column-gross, attempted and accepted-application amounts.
+    Preserve count conventions, cancellation visibility and checkpoints. Use
+    OD13's probe gates rather than unsolicited state fields. No propagated
+    attribution-error bound from these activity totals alone.
+  - [ ] **Part 11a, independent energy references:** design the
+    [discriminating cases](design/G4_CLAIM_CONTRACTS.md#6-discriminating-reference-work-for-later-parts),
+    including stage-weighted radiative flux/divergence versus the signed record,
+    and wrong-origin mutants that preserve total energy. Declare shared rules,
+    independent mechanisms, numerical floors, refinement and inactive exclusions
+    under OD12. PX22/15, copy mirrors and source-tag conventions retain their
+    own prerequisites. A simple record reference does not qualify those rules.
+  - [ ] **Part 11b, process/integrated baseline:** post-#139 parity and raw
+    validity, record reference evidence, native process budget/remainders,
+    repeated C4 size per layer with the surface-precipitation offset `c·∫pr dt` separated, in a stated single-column scope (EA-C4, decided 2026-10-07), the G4.6 A5 investigation, eligibility/mirror/cross-block
+    inventory, actual gross refinement, restart and matched cost. G4.1/11/16
+    code already present is reused, not recreated from historical checkboxes.
+    Prior E84/E86/E87/E89 are labelled prior evidence. Decide seven-point
+    point 2/3/4/6 levels only from this evidence, with owner approval.
+  - [ ] **Part 11c, bounded fixes:** one demonstrated defect per PR, preserving
+    parent parity, guard/refusal scope and independent regression. No automatic
+    same-sign energy follower, offset change, comparator promotion or relaxation
+    of a tolerance. OD7 remains the owner's choice after its recorded long-run
+    prerequisites. C4's decided treatment is to document the size.
+  - [ ] **Part 11d, scoped energy qualification:** apply the canonical matrix
+    only after owner accuracy/scope/cost choices and eligible evidence. Report
+    record-only and source-provenance outcomes separately. OD14 freezes the
+    independent held-out case/window/metrics before tuning. OD5's historical
+    conditional verdict remains separate from validated provenance.
+  - [ ] **Part 12, expanded operation:** stated precision/device/restart range,
+    OD8 target count and cost, then OD1/OD6 long production scope with its
+    short cost pilot before commissioning. G4.13 is 12d. G4.14/PX19 retain
+    numerical-loss gates. No residence-time or air-age work.
 
-Part 3 is a reviewed documentation deliverable; completing these definitions
+Part 3 is a reviewed documentation deliverable. Completing these definitions
 supplies no run evidence. Remaining owner/evidence gaps do not prevent the
 handoff, but block the corresponding acceptance claims. The following dated
 checklists and results remain historical obligations, subject to the newest
@@ -304,13 +304,13 @@ ledger.
 
 *Decided 2026-10-02 (the walk-through, option B; DECISIONS.md), for G4.3 to
 G4.6's seven points.* The definitions are decided. The levels wait for G4's
-start. Part 3 applies the decided meanings in the canonical contract; tests
+start. Part 3 applies the decided meanings in the canonical contract. Tests
 and runtime/docs implementation obligations remain where not evidenced.
 The old statement "nothing below is built" is not a current implementation
 inventory.
 
   - [ ] **The four definitions, into contracts, tests and docs.** Part 3
-    completes their contract interpretation only; existing tests/runtime
+    completes their contract interpretation only. Existing tests/runtime
     evidence must still be checked, and any missing implementation remains.
       + Point 1: values on the interim throughput are estimates, not bounds.
         Say so in G4.3's interim rule (E84).
@@ -372,7 +372,7 @@ tag against `∫tag`, with a positive inventory as precondition; a source tag
 against `∫|tag|`. Below the small-tag bound, 2e-4 of the parent in OD4 units,
 "not applicable", reported explicitly. Both ratios and a parent-scale ratio
 are reported. This is present in `tag_ledger_normalization` at the Part 3
-source snapshot; recomputing qualified window ratios and positive-region
+source snapshot. Recomputing qualified window ratios and positive-region
 preconditions remains Part 4, rather than treating an old builder statement
 as missing code.
 
@@ -463,7 +463,7 @@ parent source). The offline EDMF column budget.
     sponges, hyperdiffusion, EDMF, LES (`OT-C4`; OT section 3). Measure it,
     then share it as transport or document its size. **Decided 2026-10-02:
     document its size** (seven-point point 7, DECISIONS). Per-tag sharing is
-    not authorized; preserve the E87 failed cross-check and repeat the size
+    not authorized. Preserve the E87 failed cross-check and repeat the size
     measurement for each conditional new case.
     *Scope added (provenance pathway, 2026-09-26):*
     the committed process budget gives `C4`'s size from the `c`/2`c` pair:
@@ -911,4 +911,3 @@ G3 WP0 first.
     the budget per layer and for the column, with the remainder named.
 
   - **Cost.** Two short runs and one analysis script.
-

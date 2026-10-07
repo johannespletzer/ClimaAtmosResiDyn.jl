@@ -1,77 +1,58 @@
 # The owner's decisions
 
-## Part 3 proposals (2026-10-06; waiting)
+## Part 3 proposals (2026-10-06, decided 2026-10-07)
 
-The owner authorized the Part 3 handout's execution and independent review
-with GPT-6.1 Sol, max reasoning. This authorizes documentation preparation;
-no scientific tolerance/default/run/publication is approved by that request.
+The owner asked for the Part 3 energy documentation and its independent
+review (2026-10-06). That approved no scientific tolerance, default, run or
+publication. The owner decided the questions below on 2026-10-07 (section
+2026-10-07). The rows keep their proposal text.
 The [canonical energy matrix](design/G4_CLAIM_CONTRACTS.md#5-energy-acceptance-matrix)
 interprets approved decisions and identifies these still-needed choices.
 
-| Question | Recommended option and simpler alternatives | Evidence and uncertainty | Claim blocked pending answer |
-|:--|:--|:--|:--|
-| **EA-USE:** May the first energy qualified use be signed radiation heating/cooling in the one-record, zero-source-tag DYCOMS RF02 0M column specified in the contract, with fixed reference, 24 h and OD2 windows? | Recommend the record-only pilot, with independent stage-flux evidence. Simpler alternative: keep a measured radiation record as an unqualified diagnostic; broader alternative: retain the full eight-source-tag EDMF workflow as the first qualified energy goal. | C3/E7–E9 and C5/E22 demonstrate useful distinction of record and stored tag, but old configs/results do not qualify post-#139 physics. Captured stage flux/reference, resolved configuration, startup existence and restart evidence remain missing. Stored-source fixed `c` and OD11 remain separate. | No newly qualified record use or shortened/scaled scope yet; full G4/OD8 target unchanged. |
-| **EA-ACCURACY:** What scientific accuracy and absolute near-zero rule should accept the signed radiative profile/integrated amount and its independent reference at the chosen windows/precision? If a different stored-source use/window is later wanted, what predeclared observable/tolerance applies? | Recommend first define the smallest radiative change the user must distinguish, then choose a profile and column-amount tolerance exceeding the measured stage/quadrature floor but smaller than that change. Simpler alternative: report values and reference differences without a qualification claim. Retain approved OD3 source rows for their original scope; do not transplant them onto signed records. | No approved record-specific scientific accuracy tolerance exists. OD12 requires reference floors at most a quarter of the relevant budget; independent stage-divergence and timestep refinement establish the floor. No numeric proposal should be selected to make C3/C5 or new evidence pass. | Record scientific acceptance and any novel source window remain not assessable; reference verification may be developed without deciding a default. |
-| **EA-COST:** Which build/warm-step/allocation/peak-memory cap applies to the one-record pilot, measured on matched hardware with its required sampling, before operational selection? | Recommend a matched untagged/record measurement in 11b followed by a fixed affordable cap before qualification/default choice. Simpler alternative: leave the diagnostic opt-in and report cost only. Keep OD3's full-count/copies/sphere caps. | One field per recorded process suggests lower effort than transported/copies tags, but it is not a measured cost claim. Stage-reference capture may cost more than production sampling; separate those measured uses. | A new operational/qualified pilot cost verdict remains not assessable until approved/measured. |
-| **EA-STATE:** For a newly qualified stored-energy inventory use, should endpoint/max residual state receive a separate criterion beside the approved OD2 window-growth closure, and how is a startup offset treated? | Recommend preserve the existing scored growth row and report endpoint/max state now; before an inventory qualification, preregister a separate state requirement linked to the smallest analysed tag and an approved absolute near-zero rule. Simpler alternative: retain growth-only accounting with an explicit persistent-state limitation and no small-state claim. | Original contract and CLOSURE_LEVELS score ΔG, while ΔG can be zero for a large persistent R. No new state threshold is approved; independent per-tag references still judge origins and OD6 already has its own long-run state ceiling. | New stored-inventory small-residual/acceptance claim beyond the approved growth reading; record-only pilot and historical growth verdicts unchanged. |
-| **Existing OD7:** Same sign or `\|m\|` for energy follower, after its site-23 long-run prerequisites? | Recommend keep the decision deferred under the existing rule and current implementation while evidence is refreshed; alternatives remain the two registered rules, not water's automatic choice. | E79 altered residual distribution; first long-run comparison was void because radiation seeds did not yield the same parent. C fix/site-23 scoring and post-#139 refresh remain prerequisites. | Stored-source follower default and dependent G4.7/8 tests; not the record-only pilot. |
-| **Existing OD9–11:** When gated evidence exists, adopt the proposed labels/arithmetic/rule classification and fixed `c`/source convention for conditional source tests? | Recommend retain proposal status and prepare the named-rule/fixed-convention result before owner resolution; simpler alternative: only the current contract's verdicts and stated limitations. `c=110,495 J/kg` remains the candidate unless owner chooses another. | OD12–14 were accepted, but owner kept OD9–11 proposed on 2026-10-02. E71 offset spread and C4 prevent convention-independent provenance claims; agreeing shared-rule references do not validate the rule. | New pathway labels and conditional stored-source qualification; no causal or uncertainty-bound label. |
-| **Seven-point points 2/3/4/6:** What energy aggregate-intervention level, throughput warning level, per-transport water warning level and high-settling warning behavior follow post-#139 evidence? | Recommend collect 11b's baseline and source/decision recheck, then owner-approved levels before scoring/selection. Simpler alternative: report all corresponding quantities without a scientific pass/default-warning change. Point 4's per-transport form is already decided. | E86 and original calibration use old physics. Warning levels and optional aborts are not provenance tolerances. Energy cannot inherit water's aggregate threshold; no new numerical level is fixed here. | Full energy intervention acceptance/default-warning choices as applicable; warning levels do not themselves block an unrelated record reference. |
+| Question                                                                                                                                                                                                                                                                                                  | Recommended option and simpler alternatives                                                                                                                                                                                                                                                                                                                                                                     | Evidence and uncertainty                                                                                                                                                                                                                                                                                                                                                                                      | Claim blocked pending answer                                                                                                                         |
+|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **EA-USE:** May the first energy qualified use be signed radiation heating/cooling in the one-record, zero-source-tag DYCOMS RF02 0M column specified in the contract, with fixed reference, 24 h and OD2 windows?                                                                                        | Recommend the record-only pilot, with independent stage-flux evidence. Simpler alternative: keep a measured radiation record as an unqualified diagnostic. Broader alternative: retain the full eight-source-tag EDMF workflow as the first qualified energy goal.                                                                                                                                              | C3/E7–E9 and C5/E22 demonstrate useful distinction of record and stored tag, but old configs/results do not qualify post-#139 physics. Captured stage flux/reference, resolved configuration, startup existence and restart evidence remain missing. OD2's approved DYCOMS 0M row lists no established window, so the scored window is part of this choice. Stored-source fixed `c` and OD11 remain separate. | No newly qualified record use or shortened/scaled scope yet. Full G4/OD8 target unchanged.                                                           |
+| **EA-ACCURACY:** What scientific accuracy and absolute near-zero rule should accept the signed radiative profile/integrated amount and its independent reference at the chosen windows/precision? If a different stored-source use/window is later wanted, what predeclared observable/tolerance applies? | Recommend first define the smallest radiative change the user must distinguish, then choose a profile and column-amount tolerance exceeding the measured stage/quadrature floor but smaller than that change. Simpler alternative: report values and reference differences without a qualification claim. Retain approved OD3 source rows for their original scope. Do not transplant them onto signed records. | No approved record-specific scientific accuracy tolerance exists. OD12 requires reference floors at most a quarter of the relevant budget. Independent stage-divergence and timestep refinement establish the floor. No numeric proposal should be selected to make C3/C5 or new evidence pass.                                                                                                               | Record scientific acceptance and any novel source window remain not assessable. Reference verification may be developed without deciding a default.  |
+| **EA-COST:** Which build/warm-step/allocation/peak-memory cap applies to the one-record pilot, measured on matched hardware with its required sampling, before operational selection?                                                                                                                     | Recommend a matched untagged/record measurement in 11b followed by a fixed affordable cap before qualification/default choice. Simpler alternative: leave the diagnostic opt-in and report cost only. Keep OD3's full-count/copies/sphere caps.                                                                                                                                                                 | One field per recorded process suggests lower effort than transported/copies tags, but it is not a measured cost claim. Stage-reference capture may cost more than production sampling. Separate those measured uses.                                                                                                                                                                                         | A new operational/qualified pilot cost verdict remains not assessable until approved/measured.                                                       |
+| **EA-STATE:** For a newly qualified stored-energy inventory use, should endpoint/max residual state receive a separate criterion beside the approved OD2 window-growth closure, and how is a startup offset treated?                                                                                      | Recommend preserve the existing scored growth row and report endpoint/max state now. Before an inventory qualification, preregister a separate state requirement linked to the smallest analysed tag and an approved absolute near-zero rule. Simpler alternative: retain growth-only accounting with an explicit persistent-state limitation and no small-state claim.                                         | Original contract and CLOSURE_LEVELS score ΔG, while ΔG can be zero for a large persistent R. No new state threshold is approved. Independent per-tag references still judge origins and OD6 already has its own long-run state ceiling.                                                                                                                                                                      | New stored-inventory small-residual/acceptance claim beyond the approved growth reading. Record-only pilot and historical growth verdicts unchanged. |
+| **Existing OD7:** Same sign or `\|m\|` for energy follower, after its site-23 long-run prerequisites?                                                                                                                                                                                                     | Recommend keep the decision deferred under the existing rule and current implementation while evidence is refreshed. Alternatives remain the two registered rules, not water's automatic choice.                                                                                                                                                                                                                | E79 altered residual distribution. First long-run comparison was void because radiation seeds did not yield the same parent. C fix/site-23 scoring and post-#139 refresh remain prerequisites.                                                                                                                                                                                                                | Stored-source follower default and dependent G4.7/8 tests. Not the record-only pilot.                                                                |
+| **Existing OD9–11:** When gated evidence exists, adopt the proposed labels/arithmetic/rule classification and fixed `c`/source convention for conditional source tests?                                                                                                                                   | Recommend retain proposal status and prepare the named-rule/fixed-convention result before owner resolution. Simpler alternative: only the current contract's verdicts and stated limitations. `c=110,495 J/kg` remains the candidate unless owner chooses another.                                                                                                                                             | OD12–14 were accepted, but owner kept OD9–11 proposed on 2026-10-02. E71 offset spread and C4 prevent convention-independent provenance claims. Agreeing shared-rule references do not validate the rule.                                                                                                                                                                                                     | New pathway labels and conditional stored-source qualification. No causal or uncertainty-bound label.                                                |
+| **Seven-point points 2/3/4/6:** What energy aggregate-intervention level, throughput warning level, per-transport water warning level and high-settling warning behavior follow post-#139 evidence?                                                                                                       | Recommend collect 11b's baseline and source/decision recheck, then owner-approved levels before scoring/selection. Simpler alternative: report all corresponding quantities without a scientific pass/default-warning change. Point 4's per-transport form is already decided.                                                                                                                                  | E86 and original calibration use old physics. Warning levels and optional aborts are not provenance tolerances. Energy cannot inherit water's aggregate threshold. No new numerical level is fixed here.                                                                                                                                                                                                      | Full energy intervention acceptance/default-warning choices as applicable. Warning levels do not themselves block an unrelated record reference.     |
+| **EA-C4:** Is E87's C4 size read as the offset of the surface precipitation, which the tags carry by sedimentation transport, rather than as unattributed mass change?                                                                                                                                    | Recommend recording that reading as an amendment to E87, keeping the decided treatment (document the size), and repeating the post-#139 measurement with `c·∫pr dt` separated and per-layer evidence for internal unattributed mass changes. Simpler alternative: keep E87's reading and add only the measured comparison.                                                                                      | Review check on the archived E87 output: `M_U` −1.040 kg m⁻² against −1.038 kg m⁻² of surface precipitation (0.2%). `B(2c)−B(c)` equals `c` times the surface-flux water record exactly. The record estimate counted subsidence water as mass and took `pr` as positive downward, but ClimaAtmos `pr` is negative for falling precipitation. One column, one day, pre-#139 code.                              | The reading of C4 in G4.6, OD9–11's "C4 prevents" rationale and Part 11b's C4 measurement design.                                                    |
 
 Decided definitions are implemented in this contract, not reopened: interim
-values are estimates, A5 means the partition's sum, and C4's treatment is
+values are estimates, G4.4's A5 means the partition's sum, and C4's treatment is
 **document its size**, not sharing as transport (2026-10-02). E87's 0.55% of
 the day's Θx is historical size evidence, not a bound or current qualification.
-C4's per-tag outflow and failed A5 cross-check remain evidence gaps. The active
-contract corrects generic `cΔρq_tot` accounting to `cΔρ`; source history is
-preserved. OD4's discrete accepted-step accumulator is unchanged; refining
+C4's per-tag outflow and the failed G4.6 A5 cross-check remain evidence gaps. EA-C4 proposes how E87's size is read. The active
+contract corrects generic `cΔρq_tot` accounting to `cΔρ`. Source history is
+preserved. OD4's discrete accepted-step accumulator is unchanged. Refining
 its grouping or changing its approved scale would need a separate amendment.
 
-## Part 2 proposals (2026-10-06; waiting)
+## Part 2 proposals (2026-10-06, decided 2026-10-07)
 
-The user authorized preparation/review of the water acceptance documentation,
-then its agent execution/resumption. This authorization approves no scientific
+The owner asked agents to prepare and review the Part 2 water acceptance
+documentation. This authorization approves no scientific
 scope change, tolerance, default, experiment execution or publication. The
 [water acceptance matrix](G3_PLAN.md#612-water-acceptance-matrix-authoritative-part-2-specification)
 uses the approved register/thresholds and identifies these additional choices.
-The entries below are **proposals, waiting for the owner**, not dated answers.
+The entries below were proposals. The owner decided them on 2026-10-07
+(section 2026-10-07 below). The rows keep their proposal text.
 
-| Proposal | Exact choice needed before the affected claim | Recommendation and evidence | Current effect |
-|:--|:--|:--|:--|
-| WA-SCOPE — first qualified water use | Fix inventory versus precipitation claim, label model, tag count, endpoint/windows, applicable held-out case/reference and a scientifically defensible use-specific accuracy requirement. Decide whether an initial six-hour/three-tag qualified scope is permitted beside full G3, or qualification keeps the approved first-hour/24-hour assessment at eight tags. Any new endpoint tolerance requires an explicit approved value/rationale before the deciding evidence. | Reuse the existing TRMM 0M pilot to develop evidence first, with `pbl`/`free` entry labels and `evap` as an overlay. W58 has six-hour accounting, R7 reported only and no PX12 refinement. Do not change a tolerance to pass its slightly-outside `pbl` difference. A longer/eight-tag claim needs that actual configuration and evidence; three tags provide no count qualification. | No short three-tag qualified attribution claim yet. Full G3's OD1/OD6/OD8 objective is unchanged. |
-| WA-PRECIP — additional 0M precipitation acceptance | If a scored 0M surface-origin use is wanted, fix instantaneous versus accumulated observable, small/no-rain normalization, signed subdomain treatment, independent reference, endpoint/windows and tolerance. OD15 separately decides PX25's additional 1M/EDMF pool/refinement rows. | Keep W58 C7 reported as accounting; supply paired parent/tag interval averages or applied accumulators and independently known donors before attributing a scientific pass. The baseline design explicitly supplies no 0M C7 tolerance, and the 1M closure/audit rows cannot be transplanted. | 0M precipitation provenance is unqualified; exact partition sum supplies no origin proof. |
-| WA-COST — local operational scope | Set any missing cap for build/step/peak memory and pilot allocation at the new initial scope/count, based on measured Part 8 cost before selection; retain OD3's intended eight-plus-eight and copies/sphere limits. | Measure matched candidate/copies/untagged builds and steady solve with required diagnostics; W52's intended-count cost failures stand. A six-hour run's job time or the M4 sphere extrapolation is not a measured production budget. | Missing local cap is not assessable; no default or expensive qualification is selected without measured cost and its applicable limit. |
+| Proposal                                           | Exact choice needed before the affected claim                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Recommendation and evidence                                                                                                                                                                                                                                                                                                                                                                                                                        | Current effect                                                                                                                         |
+|:-------------------------------------------------- |:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:-------------------------------------------------------------------------------------------------------------------------------------- |
+| WA-SCOPE — first qualified water use               | Fix inventory versus precipitation claim, label model, tag count, endpoint/windows, applicable held-out case/reference and a scientifically defensible use-specific accuracy requirement. Decide whether an initial six-hour/three-tag qualified scope is permitted beside full G3, or qualification keeps the approved first-hour/24-hour assessment at eight tags. Any new endpoint tolerance requires an explicit approved value/rationale before the deciding evidence.                                                                                                                                                  | Reuse the existing TRMM 0M pilot to develop evidence first, with `pbl`/`free` entry labels and `evap` as an overlay. W58 has six-hour accounting, R7 reported only and no PX12 refinement. Do not change a tolerance to pass its slightly-outside `pbl` difference. A longer/eight-tag claim needs that actual configuration and evidence. Three tags provide no count qualification.                                                              | No short three-tag qualified attribution claim yet. Full G3's OD1/OD6/OD8 objective is unchanged.                                      |
+| WA-PRECIP — additional 0M precipitation acceptance | If a scored 0M surface-origin use is wanted, fix instantaneous versus accumulated observable, small/no-rain normalization, signed subdomain treatment, independent reference, endpoint/windows and tolerance. OD15 separately decides PX25's additional 1M/EDMF pool/refinement rows. OD15 also asks whether accumulated `Σ pr_tag` is scored under 1M. One window convention can serve both, if the owner so chooses.                                                                                                                                                                                                       | Keep W58 C7 reported as accounting. Supply paired parent/tag interval averages or applied accumulators and independently known donors before attributing a scientific pass. The baseline design explicitly supplies no 0M C7 tolerance, and the 1M closure/audit rows cannot be transplanted.                                                                                                                                                      | 0M precipitation origins are unqualified. Exact partition sum supplies no origin proof.                                                |
+| WA-COST — local operational scope                  | Set any missing cap for build/step/peak memory and pilot allocation at the new initial scope/count, based on measured Part 8 cost before selection. Retain OD3's intended eight-plus-eight and copies/sphere limits.                                                                                                                                                                                                                                                                                                                                                                                                         | Measure matched candidate/copies/untagged builds and steady solve with required diagnostics. Criterion 10's recorded failure stands: the 8 + 8 step at 4.16× against OD3's 2× (E88, the owner 2026-10-02), and OD3's copies row (8 + 8 copies built in 4 h 16 min). W52 is the water half: 1.43× at 8 tags, 2.43× with per-tag ledgers, 7.38× at 32. A six-hour run's job time or the M4 sphere extrapolation is not a measured production budget. | Missing local cap is not assessable. No default or expensive qualification is selected without measured cost and its applicable limit. |
+| WA-GATES — conditions the matrix adds              | Accept, amend or reject, as conditions of a qualified water claim. (a) Complete cancellation-safe accounting of accepted applied corrections and compartment legs (G3_PLAN 6.1.2, intervention row and overall decision). (b) Eligible independent coverage of all material active rules, with "material" defined. The pathway's materiality is exploratory, and "validated for named rules" is proposed OD9. (c) Grid-rung stability and initialization/fallback coverage in copies eligibility, beyond 6.1's list and OD3's time-step and Newton refinement. (d) The Part 2 reading of ROADMAP's contract sentence on OD5. | Part 2 recommends (a) to (c) as stated, and (d) beside OD5's unchanged wording.                                                                                                                                                                                                                                                                                                                                                                    | Until decided, the matrix reports these beside the approved rows. They are not approved gates.                                         |
 
 OD5 retains "provenance bounded, not validated" as its historical conditional
 verdict, not a mathematical error bound. No replacement terminology is
-adopted. OD9–OD11 stay proposed; OD12–OD14 keep their accepted reference,
-probe and held-out gates; OD15 stays at PX25 preregistration. D4-W keeps
+adopted. OD9–OD11 stay proposed. OD12–OD14 keep their accepted reference,
+probe and held-out gates. OD15 stays at PX25 preregistration. D4-W keeps
 parity, closure, Float32 and cost under option D, and its reference work is
 not reopened. The owner's Float32 rounding floor remains limited to its
-precision-sensitivity measures; W60's failed historical verdict is preserved.
-
-## Planning revision of 2026-10-05
-
-The owner requested an in-place capability-and-evidence plan, with
-residence-time work excluded, and authorized a reviewed documentation branch.
-The active sequence is in [ROADMAP.md](ROADMAP.md#the-execution-order).
-This entry changes delivery organization only. It approves no new threshold,
-scientific default, simulation campaign or proposed OD9–OD11 label.
-Residence-time and air-age features are deferred; numerical loss/flush
-diagnostics keep their existing meaning and gates.
-
-Still requiring explicit resolution: OD7; proposed OD9–OD11; OD15 at PX25
-pre-registration; energy's remaining G4.3–6 levels; and any new use-specific
-tolerance or benchmark outside existing approvals. OD5's historical
-"bounded" wording is preserved, without implying a mathematical error bound.
-The crosswalk includes dated decisions and their individual sub-points;
-their register state is authoritative, not inferred from delivery labels.
-
-PR #146's October 2 instruction "not built" below is historical: the PR is
-open, built and reviewed at `33cbfd4fa282618788cea54de7a69696b592ead8` on
-2026-10-05. The implementation's dedicated closing ledger differs from the
-earlier rescale-ledger wording; verify the PR's decision trail when closing
-that task. This plan does not authorize or perform its merge.
+precision-sensitivity measures. W60's failed historical verdict is preserved.
 
 Every decision of the register (`review/register/decisions.csv`), one line
 each, grouped by date, newest first. Each links to where it is recorded. A
@@ -98,6 +79,25 @@ Each decision's current state is in
 [ROADMAP.md's register](ROADMAP.md#the-decision-register), the single source.
 This list names what is still open. Classified on 2026-09-25 against the
 record; the answered and superseded entries are in the next section.
+
+  - ~~**The planning revision of 2026-10-05 (PR #147).**~~ *Answered
+    2026-10-07: adopted as delivery boundaries, the levels stay proposed*
+    (below). Proposed 2026-10-05. PR #147's brief says the owner asked
+    for an in-place plan by capability and evidence, without residence-time
+    work. The proposal: ROADMAP's parts 1 to 12d replace rev. 2's execution
+    order. Residence-time and air-age features are deferred. G4.14's loss
+    timescale and PX19's flush screen keep their meaning and gates. The
+    energy contract and energy references may start before G3 ends. The
+    proposal approves no threshold, scientific default, simulation
+    campaign or OD9 to OD11 label. OD5's "bounded" wording stays, without
+    implying a mathematical error bound.
+    [ROADMAP](ROADMAP.md#the-execution-order)
+
+  - ~~**The WP9 cost budget (criterion 10).**~~ *Answered 2026-10-07:
+    OD3's 2× stays, the walk fix goes upstream* (below). OD3's 2× stays, so
+    criterion 10 fails (8 + 8 step 4.16×). A revised step row is proposed.
+    Water qualification (ROADMAP part 10) needs it.
+    [G3T](G3_TODO.md#wp2-wp8-wp9-consolidation-docs-cost)
 
   - **OD7**, G4.15's rule for energy: same sign or |m|. Deferred by the owner
     on 2026-09-24, until the long runs can be scored at site 23.
@@ -128,7 +128,8 @@ record; the answered and superseded entries are in the next section.
 
     [G3T](G3_TODO.md#decisions)
 
-  - **The explicit-1M water default, at M5.** W33's verdict is decided (it
+  - ~~**The explicit-1M water default, at M5.**~~ *Answered 2026-10-07:
+    beside part 7, by WP5b-V's rule* (below). W33's verdict is decided (it
     stays a failure, W35 beside it; 2026-09-24). The default itself is decided
     at M5 under the contract. [G3T](G3_TODO.md#decisions)
 
@@ -309,6 +310,139 @@ The list as it stood before this classification, kept as written:
 >     and the copies under first-order upwinding (W25). **Waiting.**
 >     [FINDINGS W25](FINDINGS.md)
 
+## 2026-10-07
+
+The owner decided these on 2026-10-07, after the review of PRs #147 to #149
+and an adversarial check of the review's recommendations
+(`review/agent_reviews/plan_parts_1_to_3_review_2026-10-07.md`, section F).
+
+  - **Parts 1 to 12d are the active delivery order, as delivery
+    boundaries.** **In force.** They replace rev. 2's execution order. The
+    register, the OD3 table and the acceptance contract stay the scientific
+    source. The progress levels 0 to 4 stay proposed: each level requires
+    the ones below it, and level 3 means tested origins, so a record-only
+    capability cannot reach "qualified" under them.
+    ([ROADMAP](ROADMAP.md#the-execution-order))
+  - **Residence time and air age are deferred.** **In force.** They are
+    ages, not origins, and no acceptance row needs them. G4.14's loss
+    timescale, PX19's flush screen and OD6's long-run criterion keep their
+    meaning and gates. G4.4's flush-rate forecast is not an age. It stays in
+    part 11b as a reported diagnostic with no gate.
+  - **Energy beside water: parts 3 and 11a now, 11b after part 9.** **In
+    force.** The energy contract and the independent energy references run
+    beside water. Part 11b, the energy baseline, starts after part 9's
+    shared-code PRs and any walk fix have landed, so each shared fix is
+    measured once. The 8 + 8 cost is measured in 11b. The order of
+    2026-09-23, water first to qualification, is otherwise unchanged.
+  - **The cost budget: OD3's 2× at 8 + 8 stays and gates part 10.** **In
+    force.** Criterion 10 stays failing (8 + 8 step 4.16×, E88) until the
+    parent's walks over tracer names are fixed in ClimaCore or upstream
+    ClimaAtmos, where E90 locates the excess. A fork-side patch is allowed
+    only as a second named departure from upstream, tested bit for bit.
+    The post-fix measurement is pre-registered first, under WP9's spread
+    rule, as the less favourable of minimum and median, with the step that
+    follows a result between 2.0× and 2.1× stated. A cap for water alone is
+    not a reading of OD3's row, and none is set.
+  - **The 90-day sphere runs after 12a, 12b and 12c.** **In force.** The
+    kept sphere configuration (`configs/g2_v2_sphere_n2.yml`) is Float32, so
+    12a is required. The owner's 1-2-day cost pilot stays M4 work, before
+    M5.
+  - **The explicit-1M water default is decided beside part 7.** **In
+    force.** By WP5b-V's own rule on a named precipitating 1M case, after
+    W33 is revisited. Part 10 as scoped has no 1M case. OD9 and OD11 stay
+    conditions on any default selection.
+  - **PR #146's dedicated closing ledger.** **In force, at #146's merge.**
+    The closing step may be booked in a dedicated ledger, provided the
+    closure table sums it with the rescale's ledgers. The per-tag part of
+    the decision of 2026-10-02 is met at `33cbfd4f` (`q_tag_fix_<name>`).
+    That decision line is read with this amendment. Part 5 prefers probes
+    to new state fields (OD13).
+  - **WA-SCOPE: no three-tag or six-hour qualified scope.** **In force.**
+    Three tags reach level 2, accounted, and give no count evidence.
+    Qualification stays at eight tags on the approved rows. The inventory
+    claim comes first, with `pbl` and `free` entry labels and `evap` as an
+    overlay. The precipitation claim waits for OD15. The 24 h development
+    case and the held-out case are named before PX11 runs (OD14).
+    *Waiting:* the owner names those two cases.
+  - **WA-PRECIP: criterion 7 stays reported accounting.** **In force.**
+    Precipitation origin is scored only under 1M, at PX25 under OD15, where
+    independent donor references exist. One precipitation pathway.
+  - **WA-COST: no cap for the pilot or for water alone.** **In force.**
+    Caps gate level 4. Part 10 is gated by OD3's 2× at 8 + 8 after the walk
+    fix (above).
+  - **WA-GATES.** **In force.** (a) Complete cancellation-safe accounting
+    of applied corrections and compartment legs is a condition of a
+    qualified water claim. Part 5 measures the absolute leg amounts, which
+    WP6's columns do not hold, and part 5 precedes part 10. (b) Coverage of
+    all "material" active rules is not a gate. It stays reported and is
+    revisited with OD9. (c) Initialization and fallback coverage joins
+    copies eligibility. Grid-rung stability is deferred to 12a. (d) The
+    Part 2 reading of OD5's contract sentence is accepted: the rows are
+    OD5's conditional evidence for "provenance bounded, not validated", not
+    a mathematical error bound.
+  - **The missing tolerances are deferred.** **In force.** No six-hour
+    origin tolerance, no 0M precipitation tolerance and no three-tag
+    endpoint tolerance is set. Any later value comes from a stated use and
+    is judged on a fresh pre-registered run, as W62's rule says. The pilot
+    scores the approved rows only.
+  - **The pilot's windows.** **In force.** OD2's row "TRMM_LBA 0M and 1M,
+    6 h" applies. Before scoring, the boundary reading on the untagged run
+    is recorded with its output cadence (the challenge of 2026-10-07
+    computed that 10-minute outputs end startup at 0 h and 30-minute
+    outputs never do). The pilot scores the first-hour row only, after
+    PX12's eligibility, labelled low power: the first hour's evaporation is
+    0.13% of the column's water, and rain starts near 3 h. No six-hour
+    tolerance.
+  - **EA-USE: the radiation record stays an unqualified diagnostic.** **In
+    force.** With zero stored tags there is no partition and no Θx, so the
+    closure growth row does not apply, the record row has no threshold and
+    no cost row fits it. Level 3 means tested origins, so a record-only
+    capability cannot be "qualified". The record is verified in part 11a
+    against the independent accepted-stage flux and reported.
+    Qualification effort goes to stored-source origins. EA-ACCURACY and
+    EA-COST lapse with this. If the owner later wants the pilot qualified,
+    its accuracy number and its cost cap are fixed before the deciding run.
+    The window wording in the contract's section 3 is accepted as wording.
+  - **EA-STATE: growth-only scoring, state reported.** **In force.** The
+    approved ΔG growth reading stays the scored row, with its limitation
+    stated. Endpoint and maximum state are reported beside it. A state
+    criterion is added only when a stored-inventory qualification is
+    proposed.
+  - **EA-C4: the reading is accepted as an amendment to E87.** **In
+    force.** On E87's archived output the C4 size equals, to 0.2%, the
+    offset of the day's surface precipitation, which the source tags carry
+    by sedimentation transport. The record-based opposite sign came from
+    counting subsidence water as mass and from a reversed `pr` sign. The
+    genuine per-layer C4 on E87 is about 1.2e-5 of Θx. The treatment,
+    document the size, is reconfirmed, and point 7 of 2026-10-02 is
+    annotated. Part 4 fixes the `pr` sign and the dropped first hourly
+    window in `process_budget.py`. Part 11b measures C4 per layer with the
+    surface term separated and states its single-column scope, since sphere
+    columns exchange mass. The OD9 to OD11 rationale "C4 prevents
+    convention-independent claims" is read with this amendment: the surface
+    part is attributed.
+  - **OD7 stays deferred, with no lean.** **In force.** E79 moved 0.288
+    under the same-sign rule and 0.289 under `\|m\|`, so neither rule reduces
+    movement for energy, and the fourfold gross residual is energy without
+    origin. Before the post-#139 site-23 long runs are scored, the owner
+    fixes the energy budget for criterion 1 of the registered rule, either
+    OD3's 0.2% of Θx or the design note's proposal. *Waiting:* that budget.
+  - **OD9 to OD11 stay proposed. Each pre-registration states its c.** **In
+    force.** The convention is not fixed ahead of the gated evidence. Every
+    G1 and G2 run used 110,495 J/kg, and Part 3 requires every test to state
+    c, which is the protection against fitting. Θx moves 1.7% and E71's
+    region tags up to 177% with c, so the value matters.
+  - **The seven-point levels, points 2, 3, 4 and 6: no numbers until 11b.**
+    **In force.** Warnings are not tolerances and stay off or reported.
+    Energy's aggregate level comes from its own post-#139 baseline with
+    water's construction, not water's number. Point 4 keeps firing in water
+    runs until then.
+  - **OD4's title gets a dated annotation.** **In force.** The decided Θx
+    moves 1.7% on E87's pair when c doubles, while the interim Θi does not.
+    The register row is annotated, not rewritten.
+  - **The authorization sentence.** **In force.** The Part 3 block's first
+    sentence reads "the owner", with the neutral wording of the patch.
+
 ## 2026-10-02
 
 The owner's walk-through of the open items. The owner chose the recommended
@@ -344,6 +478,11 @@ option on all five. The brief was
         registry row.
       + The PR also checks whether #137's Q5 rule already covers micro-1 in
         the microphysics hook.
+      + *Update 2026-10-05, a status note:* #146 is open at `33cbfd4f`,
+        built, with the owner's review points 1 and 3 answered in
+        `b702ff17`. Its closing step books a dedicated closing ledger, not
+        the rescale's ledgers named above. Whether that meets this decision
+        is **waiting** for the owner, at #146's merge.
   - **Criterion 9's rounding floor, set later on 2026-10-02.** **In force.**
     After W60's addendum (criterion 9 failed on the named parts at ten
     Newton iterations: Float32 3.2e-6 against 3.8e-13), the owner set the
@@ -370,6 +509,10 @@ option on all five. The brief was
       + Point 1: values on the interim are estimates.
       + Point 5: A5's "group sum" is the partition's sum.
       + Point 7: document C4's size, 0.55% of a day's Θx (E87).
+        *Annotated 2026-10-07 (EA-C4):* that size is the offset of the day's
+        surface precipitation, which the tags carry as transport. The genuine
+        per-layer C4 on E87 is about 1.2e-5 of Θx. The treatment, document,
+        is reconfirmed.
       + Point 4's form: a per-transport default.
       + **Waiting:** the levels for points 2, 3, 4 and 6 are set from
         post-#139 runs at G4's start.
