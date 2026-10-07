@@ -16,7 +16,9 @@ held-out and scope) keep a score from exiting 0 until their parts deliver.
 """
 
 import argparse
+import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -49,13 +51,17 @@ NEGATIVE_WATER_MAX = 1e-4
 NEWTON_MAX = 1e-3
 TEMPERATURE_FLOOR_K, TOP_CHANGE_K = 150.0, 5.0
 FLOAT32_FACTOR, FLOAT32_EPS_FACTOR = 10, 3
+# The second-12 h rule G(24) - G(12) <= G(12) - G(0) passes a tie within
+# rounding (decision of 2026-10-07). A reading of the approved rule, not a tolerance.
+SECOND_HALF_TIE = 1e-12  # normalized units
+# OD12's floors, one per source, each at most a quarter of the tolerance (G3_PLAN 6.1.3).
+OD12_FLOOR_SOURCES = ("source_injection", "initialization", "parent_solve", "contamination",
+                      "reference_discretization")
 # Criteria the owner excluded for a named case. A manifest declares an
 # exclusion in `excluded_criteria`, and only these declarations are accepted.
 APPROVED_EXCLUSIONS = {("water", "D4-W"): {5: "option D, 2026-10-02", 6: "option D, 2026-10-02"}}
 PILOT_LABEL = ("low power: the TRMM 0M 6 h pilot scores the first-hour row only "
                "(the first hour's evaporation is 0.13% of the water, rain starts near 3 h)")
-SPEC_ROOT = Path(__file__).resolve().parent.parent.parent
-SPEC_PATHS = ("G3_PLAN.md", "design/G4_CLAIM_CONTRACTS.md", "ROADMAP.md", "DECISIONS.md")
 SCORER_PATHS = ("score_acceptance.py", "acceptance_data.py", "manifest.py", "closure_verdict.py")
 
 
@@ -73,10 +79,35 @@ def float32_limit(float64_measure, steps):
     return max(FLOAT32_FACTOR * float64_measure, FLOAT32_EPS_FACTOR * 2 ** -23 * np.sqrt(steps))
 
 
+def approved_numbers():
+    """The scorer's named approved numbers, as a stable table."""
+    return {
+        "WATER_GROSS": WATER_GROSS, "ENERGY_GROSS": ENERGY_GROSS, "SMALL": SMALL, "SMALL_SHARE": SMALL_SHARE,
+        "ORIGIN_L1_DAY": ORIGIN_L1_DAY, "ORIGIN_LINF_DAY": ORIGIN_LINF_DAY,
+        "ORIGIN_L1_FIRST_HOUR": ORIGIN_L1_FIRST_HOUR, "ORIGIN_LINF_FIRST_HOUR": ORIGIN_LINF_FIRST_HOUR,
+        "LED_FIX_MAX": LED_FIX_MAX, "AGGREGATE_REPAIR_PER_DAY": AGGREGATE_REPAIR_PER_DAY,
+        "COMPARATOR_REPAIR_PER_DAY": COMPARATOR_REPAIR_PER_DAY, "COPIES_RESIDUAL_MAX": COPIES_RESIDUAL_MAX,
+        "COMPARATOR_REFINEMENT_MAX": COMPARATOR_REFINEMENT_MAX, "FLOOR_FRACTION_MAX": FLOOR_FRACTION_MAX,
+        "OD12_FLOOR_SOURCES": list(OD12_FLOOR_SOURCES), "PROCESS_WEIGHTED_MAX": PROCESS_WEIGHTED_MAX,
+        "NAMED_REMAINDER_MAX": NAMED_REMAINDER_MAX, "NEGATIVE_WATER_MAX": NEGATIVE_WATER_MAX,
+        "NEWTON_MAX": NEWTON_MAX, "TEMPERATURE_FLOOR_K": TEMPERATURE_FLOOR_K, "TOP_CHANGE_K": TOP_CHANGE_K,
+        "FLOAT32_FACTOR": FLOAT32_FACTOR, "FLOAT32_EPS_FACTOR": FLOAT32_EPS_FACTOR,
+        "SECOND_HALF_TIE": SECOND_HALF_TIE,
+        "APPROVED_EXCLUSIONS": {f"{family}/{case}": sorted(criteria)
+                                for (family, case), criteria in APPROVED_EXCLUSIONS.items()},
+    }
+
+
+def approved_numbers_sha256():
+    text = json.dumps(approved_numbers(), sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(text.encode()).hexdigest()
+
+
 def local_identities():
+    """The scorer files and the approved numbers. The planning commit is recorded, not verified."""
     return {
         "scorer_files": {p: sha256_file(Path(__file__).with_name(p)) for p in SCORER_PATHS},
-        "acceptance_files": {p: sha256_file(SPEC_ROOT / p) for p in SPEC_PATHS if (SPEC_ROOT / p).is_file()},
+        "approved_numbers_sha256": approved_numbers_sha256(),
     }
 
 
@@ -371,7 +402,7 @@ class Scorer:
         i, m = at(f.time, 0), at(f.time, DAY / 2)
         first, second = float(g[m] - g[i]), float(g[j] - g[m])
         metrics.update(first_normalized_growth=first, second_normalized_growth=second)
-        return {"metrics": metrics, "meets": bool(g[j] <= WATER_GROSS and second <= first),
+        return {"metrics": metrics, "meets": bool(g[j] <= WATER_GROSS and second <= first + SECOND_HALF_TIE),
                 "normalization": "G(t)=total-residual gross / raw untagged water at t"}
 
     def exact_scale(self, start, end, role="candidate"):
@@ -503,11 +534,20 @@ class Scorer:
         unshared = detail.get("independent_rules", [])
         require(isinstance(unshared, list) and all(isinstance(r, str) for r in unshared),
                 "independent_rules must be a list of rule names")
-        floor = detail.get("floor_fraction_of_tolerance")
-        if floor is None or detail.get("converged") is None:
-            raise NotAssessable("reference floors/convergence evidence is unavailable")
+        producer = ref.get("producer")
+        require(isinstance(producer, dict) and isinstance(producer.get("script"), str) and producer["script"] and
+                isinstance(producer.get("sha256"), str) and re.fullmatch(r"[0-9a-f]{64}", producer["sha256"]),
+                "the manifest must record the eligibility file's producing script and its sha256")
+        require(detail.get("producer") == producer, "the eligibility file does not name the manifest's producer")
+        floors = detail.get("floors")
+        require(isinstance(floors, dict) and set(floors) == set(OD12_FLOOR_SOURCES) and
+                all(isinstance(v, (float, int)) and np.isfinite(v) for v in floors.values()),
+                "eligibility needs one floor per OD12 source: " + ", ".join(OD12_FLOOR_SOURCES))
+        if detail.get("converged") is None:
+            raise NotAssessable("reference convergence evidence is unavailable")
+        floor = max(floors.values())
         eligible = (bool(set(unshared) & set(self.s.get("active_rules", []))) and detail.get("converged") is True and
-                    isinstance(floor, (float, int)) and 0 <= floor <= FLOOR_FRACTION_MAX and
+                    all(0 <= v <= FLOOR_FRACTION_MAX for v in floors.values()) and
                     detail.get("mirrors_complete") is True and detail.get("jacobian_complete") is True)
         if ref.get("kind") == "copies":
             if self.family == "water":
@@ -541,17 +581,18 @@ class Scorer:
             residual, repair, ratios = None, None, None
         return {"metrics": {"independent_rules": unshared,
                             "untested_or_shared_rules": sorted(set(self.s.get("active_rules", [])) - set(unshared)),
-                            "floor_fraction_of_tolerance": floor, "copies_residual": residual,
-                            "copies_repair": repair, "refinement": ratios},
-                "reference_eligibility": "eligible for named independent rules" if eligible else "ineligible",
+                            "floors": floors, "largest_floor_fraction": floor, "copies_residual": residual,
+                            "copies_repair": repair, "refinement": ratios,
+                            "eligibility_source": f"eligibility as declared by {producer['script']} {producer['sha256']}"},
+                "reference_eligibility": ("eligible for named independent rules" if eligible else "ineligible") +
+                f": eligibility as declared by {producer['script']} {producer['sha256']}",
                 "meets": bool(eligible)}
 
     def active_rule_coverage(self):
         """Coverage of every active rule by an independent reference.
 
-        Water reports it and does not gate on it (WA-GATES (b), revisited
-        with OD9). Energy keeps it as a gate, since G4's per-tag row makes
-        absent independent rule coverage not assessable.
+        Reported for water and energy. It gates nothing until OD9 (WA-GATES (b),
+        and the owner's decision of 2026-10-07 for energy).
         """
         ref = self.s.get("reference", {})
         if not ref.get("evidence"):
@@ -566,10 +607,7 @@ class Scorer:
         result = {"metrics": {"tested_active_rules": sorted(tested), "untested_or_shared_rules": missing},
                   "meets": bool(active) and not missing,
                   "limitation": "endpoint agreement cannot validate untested/shared active origins" if missing or not active else ""}
-        if self.family == "water":
-            result["limitation"] = ("reported, not a gate (WA-GATES (b)). " + result["limitation"]).rstrip(". ")
-        else:
-            result["verdict"] = "PASS" if active and not missing else "NOT ASSESSABLE"
+        result["limitation"] = ("reported, not a gate until OD9. " + result["limitation"]).rstrip(". ")
         return result
 
     def profile(self, tag, time):
@@ -793,9 +831,9 @@ class Scorer:
         extra_times = self.s.get("profile_times", [])
         require(isinstance(extra_times, list) and all(isinstance(t, (int, float)) for t in extra_times),
                 "profile_times must be a list of seconds")
-        for key in ("scorer_files", "acceptance_files"):
+        for key in ("scorer_files", "approved_numbers_sha256"):
             if self.s.get(key) != identities[key]:
-                errors.append(f"{key}: pinned files differ from evaluator/specification")
+                errors.append(f"{key}: the pinned scorer files or approved numbers differ from this scorer")
         try:
             self.excluded = self.exclusions()
         except DataError as exc:
@@ -817,20 +855,28 @@ class Scorer:
             reference_parity = self.row("REFERENCE.PARENT_PARITY", lambda: self.parity("reference"),
                                         decision="approved" if self.s.get("same_parent_comparisons") is True else "reported-only",
                                         dependency="same-parent reference capture / fixed-parent E for different parents")
-            water = self.family == "water"
-            coverage = self.row("REFERENCE.ACTIVE_RULE_COVERAGE", self.active_rule_coverage,
-                                decision="reported-only" if water else "approved", required=not water,
-                                dependency="revisited with OD9 (WA-GATES (b))" if water else
-                                "Part 11a independent coverage of every named active origin rule")
+            self.row("REFERENCE.ACTIVE_RULE_COVERAGE", self.active_rule_coverage, required=False,
+                     dependency="revisited with OD9 (WA-GATES (b), and for energy the decision of 2026-10-07)")
         self.row("COMMON.PARENT_TEMPERATURE", self.temperature, decision="approved",
                  threshold={"minimum_K": TEMPERATURE_FLOOR_K, "top_change_K": TOP_CHANGE_K}, dependency="Parts 8/11b/12")
         newton = self.row("COMMON.NEWTON_TRIAL", self.newton_trial, decision="approved", threshold=NEWTON_MAX,
                           dependency="Parts 6/11a reference trials")
+        def accounting(row):
+            # Failed or exported-only parity blocks the origin rows only. Closure
+            # and intervention are the run's accounting, with the parity state
+            # recorded beside them (decision of 2026-10-07).
+            row["parent_parity"] = parity["verdict"]
+            if parity["verdict"] != "PASS":
+                row["limitation"] = (f"parent parity {parity['verdict']}: scored as the run's accounting. " +
+                                     row["limitation"]).rstrip(". ")
+            return row
+
         if self.family == "water":
-            self.row("WATER.CLOSURE", self.water_closure, decision="approved", threshold=WATER_GROSS,
-                     prerequisites=(parity, validity, roster), dependency="Part 5 completeness / Parts 8/10 data")
-            self.row("WATER.NAMED_REMAINDER", self.named_remainder, decision="approved", threshold=NAMED_REMAINDER_MAX,
-                     prerequisites=(parity, validity), dependency="Parts 5/8/9 complete named parts")
+            accounting(self.row("WATER.CLOSURE", self.water_closure, decision="approved", threshold=WATER_GROSS,
+                                prerequisites=(validity, roster), dependency="Part 5 completeness / Parts 8/10 data"))
+            accounting(self.row("WATER.NAMED_REMAINDER", self.named_remainder, decision="approved",
+                                threshold=NAMED_REMAINDER_MAX, prerequisites=(validity,),
+                                dependency="Parts 5/8/9 complete named parts"))
             self.row("WATER.PRECIP_INSTANTANEOUS", self.precipitation, required=False,
                      dependency="Part 7 independent references for the giving pool")
         if not self.windows:
@@ -845,25 +891,23 @@ class Scorer:
                     why = "no established interval exists (OD2)"
                 else:
                     why = "the run ends before the 1 h sensitivity start"
-                self.block("COMMON.WINDOW." + name, why, "OD2 physical window evidence")
+                # A missing or zero-length OD2 window is not applicable and blocks
+                # nothing (decision of 2026-10-07).
+                why += ". Not applicable, it blocks nothing"
+                window_ids = ["COMMON.WINDOW." + name]
                 if self.family != "radiation_record":
-                    blocked_ids = [("REFERENCE.ELIGIBILITY." + name, None), (family + ".AGGREGATE_REPAIR." + name, None),
-                                   (family + ".PROCESS_WEIGHTED." + name, 5)]
-                    blocked_ids += [(family + "." + mechanism + "." + tag["name"] + "." + name, None)
-                                    for tag in self.tags for mechanism in ("LED_FIX", "LED_INC")]
+                    window_ids += ["REFERENCE.ELIGIBILITY." + name, family + ".AGGREGATE_REPAIR." + name,
+                                   family + ".PROCESS_WEIGHTED." + name]
+                    window_ids += [family + "." + mechanism + "." + tag["name"] + "." + name
+                                   for tag in self.tags for mechanism in ("LED_FIX", "LED_INC")]
                     if self.family == "energy_source":
-                        blocked_ids.append(("ENERGY.CLOSURE_GROWTH." + name, None))
-                    for row_id, criterion in blocked_ids:
-                        unavailable = self.block(row_id, why, "OD2 physical window evidence", criterion=criterion)
-                        if row_id.startswith("REFERENCE."):
-                            eligibility_rows.append(unavailable)
+                        window_ids.append("ENERGY.CLOSURE_GROWTH." + name)
                 if self.family in ("energy_source", "radiation_record"):
-                    self.block("ENERGY.CORRECTED_RECORD_ESTIMATE." + name, why,
-                               "OD2 physical window evidence", decision="reported-only", required=False)
+                    window_ids.append("ENERGY.CORRECTED_RECORD_ESTIMATE." + name)
                 if self.family == "water":
-                    self.block("WATER.PRECIP_INTEGRATED." + name, why,
-                               "OD2 / Part 5 paired accumulation", decision="reported-only",
-                               required=self.s.get("claim", {}).get("precipitation") is True)
+                    window_ids.append("WATER.PRECIP_INTEGRATED." + name)
+                for row_id in window_ids:
+                    self.inapplicable(row_id, why, "OD2 physical window evidence")
                 continue
             if self.family != "radiation_record":
                 eligible = self.row("REFERENCE.ELIGIBILITY." + name,
@@ -872,24 +916,26 @@ class Scorer:
                                     prerequisites=(reference_parity,) if self.s.get("same_parent_comparisons") is True else ())
                 eligibility_rows.append(eligible)
                 for tag in self.tags:
-                    self.row(family + ".LED_FIX." + tag["name"] + "." + name,
-                             lambda t=tag, a=start, b=end: self.ledger_metric(t, a, b), decision="approved", threshold=LED_FIX_MAX,
-                             window_name=[start, end], prerequisites=(parity, validity, roster), dependency="Part 5 accepted correction activity")
-                    self.row(family + ".LED_INC." + tag["name"] + "." + name,
-                             lambda t=tag, a=start, b=end: self.ledger_metric(t, a, b, "led_inc"), window_name=[start, end],
-                             prerequisites=(parity, validity, roster),
-                             dependency="Parts 6/11a refinement, no repair threshold on the correction after each solve")
-                self.row(family + ".AGGREGATE_REPAIR." + name,
+                    accounting(self.row(
+                        family + ".LED_FIX." + tag["name"] + "." + name,
+                        lambda t=tag, a=start, b=end: self.ledger_metric(t, a, b), decision="approved", threshold=LED_FIX_MAX,
+                        window_name=[start, end], prerequisites=(validity, roster), dependency="Part 5 accepted correction activity"))
+                    accounting(self.row(
+                        family + ".LED_INC." + tag["name"] + "." + name,
+                        lambda t=tag, a=start, b=end: self.ledger_metric(t, a, b, "led_inc"), window_name=[start, end],
+                        prerequisites=(validity, roster),
+                        dependency="Parts 6/11a refinement, no repair threshold on the correction after each solve"))
+                accounting(self.row(family + ".AGGREGATE_REPAIR." + name,
                          lambda a=start, b=end: self.aggregate_repair(a, b), window_name=[start, end],
                          decision="approved" if self.family == "water" else "proposed",
                          threshold=AGGREGATE_REPAIR_PER_DAY if self.family == "water" else None,
-                         prerequisites=(parity, validity, roster),
+                         prerequisites=(validity, roster),
                          dependency="Part 5 accounting" if self.family == "water" else
-                         "Part 5 accounting / energy aggregate level from Part 11b's own baseline")
+                         "Part 5 accounting / energy aggregate level from Part 11b's own baseline"))
                 if self.family == "energy_source":
-                    self.row("ENERGY.CLOSURE_GROWTH." + name, lambda a=start, b=end: self.energy_closure(a, b),
-                             decision="approved", threshold=ENERGY_GROSS, window_name=[start, end],
-                             prerequisites=(parity, validity, roster), dependency="valid exact accepted-step Θx")
+                    accounting(self.row("ENERGY.CLOSURE_GROWTH." + name, lambda a=start, b=end: self.energy_closure(a, b),
+                                        decision="approved", threshold=ENERGY_GROSS, window_name=[start, end],
+                                        prerequisites=(validity, roster), dependency="valid exact accepted-step Θx"))
                 self.row(family + ".PROCESS_WEIGHTED." + name,
                          lambda a=start, b=end: self.process_weighted(a, b), decision="approved",
                          threshold=PROCESS_WEIGHTED_MAX, criterion=5, window_name=[start, end],
@@ -909,10 +955,10 @@ class Scorer:
             # The pilot scores the first-hour row only (DECISIONS 2026-10-07).
             required_times = [FIRST_HOUR] if self.pilot else [FIRST_HOUR, DAY]
             profile_times = required_times + [t for t in extra_times if not (self.pilot and t == DAY)]
-            # Every window's eligibility row is a prerequisite: any required
-            # reference check fails eligibility (G3_PLAN 6.1.2). Water reports
-            # active-rule coverage and does not gate on it (WA-GATES (b)).
-            ref_prereqs = (tuple(eligibility_rows) + (() if self.family == "water" else (coverage,)) +
+            # Every existing window's eligibility row is a prerequisite: any
+            # required reference check fails eligibility (G3_PLAN 6.1.2).
+            # Active-rule coverage is reported and gates nothing until OD9.
+            ref_prereqs = (tuple(eligibility_rows) +
                            (() if self.s.get("same_parent_comparisons") is True else (newton,)))
             for t in dict.fromkeys(float(t) for t in profile_times):
                 for tag in self.tags:
@@ -1000,7 +1046,7 @@ class Scorer:
             evidence["data_status"], evidence["verdict"] = "DATA FAILURE", "FAIL"
         result = {"schema_version": 1, "claim": self.s.get("claim", {}), "model_commit": self.b.manifest.get("head_sha"),
                   "experiment_commit": self.s.get("experiment_commit"), "scorer_commit": self.s.get("scorer_commit"),
-                  "acceptance_commit": self.s.get("acceptance_commit"), **identities,
+                  "planning_commit": self.s.get("planning_commit"), **identities,
                   "artifacts": dict(sorted(self.b.used.items())), "rows": self.rows,
                   "scientific_qualification": "NOT QUALIFIED",
                   "limitation": "offline implementation/fixtures do not supply physical qualification evidence"}
@@ -1042,9 +1088,9 @@ def main(argv=None):
         if args.mode == "validate":
             errors = bundle.validate()
             identities = local_identities()
-            for key in ("scorer_files", "acceptance_files"):
+            for key in ("scorer_files", "approved_numbers_sha256"):
                 if bundle.spec.get(key) != identities[key]:
-                    errors.append(f"{key}: pinned files differ from evaluator/specification")
+                    errors.append(f"{key}: the pinned scorer files or approved numbers differ from this scorer")
             try:
                 bundle.reverify()
             except DataError as exc:

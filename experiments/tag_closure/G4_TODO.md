@@ -3,7 +3,7 @@
 ## Part 4 software handoff (2026-10-07)
 
 [Common evidence/scoring](analysis/evidence/README.md) now validates distinct
-model/experiment/scorer/spec identities and computes density-corrected record
+model/experiment/scorer identities, the approved-numbers hash and the planning commit, and computes density-corrected record
 variation, valid Θx window growth, separately reported residual state,
 per-tag window correction ratios, eligible-reference gates and required-field
 parity. [Coverage and tests](analysis/evidence/PART4.md) name the explicit

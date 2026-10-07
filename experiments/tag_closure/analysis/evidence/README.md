@@ -47,8 +47,8 @@ The extension records these fields:
 | Field | Meaning |
 |:--|:--|
 | `artifacts` | Map of every named bundle-relative artifact to its SHA256. Hashes prove identity, not physical sufficiency. |
-| `experiment_commit`, `scorer_commit`, `acceptance_commit` | Keep experiment/config, analysis implementation and specification identities distinct from original `head_sha`. An unpublished scorer uses `local-uncommitted` plus exact file hashes. |
-| `scorer_files`, `acceptance_files` | Exact current evaluator and contract file hashes, as returned by `local_identities()`. The evaluator rejects a different pinned implementation/specification. |
+| `experiment_commit`, `scorer_commit`, `planning_commit` | Keep experiment/config, analysis implementation and planning-tree identities distinct from original `head_sha`. An unpublished scorer uses `local-uncommitted` plus exact file hashes. `planning_commit` is recorded information. The scorer does not verify it. |
+| `scorer_files`, `approved_numbers_sha256` | Exact scorer file hashes and the sha256 of the scorer's named approved numbers as a stable table, as returned by `local_identities()`. A changed approved number invalidates the manifest. An edit to the planning files, DECISIONS.md included, does not. |
 | `submission_files` | Original config and recorded environment/untracked names mapped to archived artifacts. Hashes must match submission identities. |
 | `resolved_settings`, `precision`, `process_count` | Declared solver, seed, physics, diagnostics, tag definitions and environment scope. Do not fill unavailable legacy facts with guesses. |
 | `claim`, `case`, `geometry_kind`, `end_seconds` | Family (`water`, `energy_source`, `radiation_record`), declared use, native column/sphere geometry and physical duration. No count/time/device scope promotion. |
@@ -58,7 +58,7 @@ The extension records these fields:
 | `tags`, `compartments` | Named kind (`region`/`source`) and partition membership. Source overlays never enter pure-region closure. Compartments are `total` or complete `N,R,S`. |
 | `required_parent_fields`, `parent_capture_scope` | Frozen required-state inventory. `exported` parity is reported but cannot pass full parent parity. `all-state` requires the actual complete capture inventory from the relevant model setup. |
 | `accepted_step_seconds`, `throughput_accumulation` | Step cadence for deriving cell-step ledger variation. Exact stored Θx identifies `accepted_step` accumulation independently of output cadence. |
-| `reference`, `active_rules` | Named, scope-specific eligibility artifact: tested independent rules, shared/untested rules, convergence/floors, active mirrors/Jacobian and copies repair/refinement. |
+| `reference`, `active_rules` | Named, scope-specific eligibility artifact and its `producer` (`script` and `sha256`). The file names the same producer and declares tested independent rules, convergence, `floors` with one entry per OD12 source (`source_injection`, `initialization`, `parent_solve`, `contamination`, `reference_discretization`), active mirrors/Jacobian and copies refinement. A single scalar floor or a missing producer fails the eligibility row as a data failure. The row records "eligibility as declared by <producer> <hash>". Active-rule coverage is reported and gates nothing until OD9. |
 | `record_processes`, `expected_record_processes` | Complete predeclared process roster. A missing active record cannot be silently skipped. Duplicate process names are rejected. |
 
 A field descriptor names `path`, `key`, `units`, `representation`, `sampling`,
@@ -132,7 +132,7 @@ claim, so its scientific blockers select exit 3. The exit codes:
 | 0 | No required row failed or is blocked. A score cannot reach it today: the convergence, refinement, accepted-application, restart, held-out and scope rows stay blocked until their parts deliver. Validation exit 0 means bundle integrity only. |
 | 1 | A measured required approved row failed. |
 | 2 | Required evidence is missing, corrupt or inconsistent. A water row with a data failure fails, labelled DATA FAILURE, and so does the evidence row. An energy row with absent data is not assessable (G4 section 5). |
-| 3 | A required scientific approval, reference or prerequisite is unavailable. |
+| 3 | A required scientific approval, reference or prerequisite is unavailable. Failed or exported-only parity blocks the origin rows only. Closure and intervention rows are scored with `parent_parity` recorded. A missing or zero-length OD2 window is not applicable and blocks nothing. |
 | 4 | Nothing was evaluated: the result path exists, the command line is invalid, or the scorer raised an error. A scorer error is not a data failure. |
 
 Required failures are never averaged across tags/windows. Proposed

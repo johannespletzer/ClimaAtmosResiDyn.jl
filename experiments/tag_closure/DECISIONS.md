@@ -442,6 +442,23 @@ and an adversarial check of the review's recommendations
     The register row is annotated, not rewritten.
   - **The authorization sentence.** **In force.** The Part 3 block's first
     sentence reads "the owner", with the neutral wording of the patch.
+  - **Part 4's offline scorer: six choices after PR #150's review.** **In
+    force.** (1) Coverage of every active rule is reported for energy as
+    for water, and gates nothing until OD9. The G4 contract's sentence is
+    read with this. (2) The second-12-hour closure rule passes a tie within
+    rounding: `G(24) − G(12) ≤ G(12) − G(0) + 1e-12` in normalized units.
+    That is a reading of the approved rule, not a tolerance. (3) Failed or
+    exported-only parity blocks the origin rows only. Closure and
+    intervention are scored as the run's accounting. A missing or
+    zero-length OD2 window is not applicable and blocks nothing. (4)
+    Reference eligibility may be declared in an evidence file, with one
+    floor per source under OD12's quarter rule and the producing script
+    named and hashed in the manifest. (5) The manifest records the planning
+    tree's commit and verifies a hash of the scorer's named constants, not
+    the whole specification files. (6) A follow-up Part 4 PR builds the
+    converter from model output to the scorer's bundle, with a name table
+    and one test on an archived real output, before any scoring claim. PR
+    #150 merges without it.
 
 ## 2026-10-02
 

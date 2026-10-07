@@ -324,8 +324,8 @@ class Bundle:
         check(submission_identity)
         check(lambda: require(self.spec.get("scorer_commit") and self.spec.get("scorer_files"),
                               "missing scorer identity"))
-        check(lambda: require(self.spec.get("acceptance_commit") and self.spec.get("acceptance_files"),
-                              "missing acceptance specification identity"))
+        check(lambda: require(self.spec.get("planning_commit") and self.spec.get("approved_numbers_sha256"),
+                              "missing planning commit or approved-numbers hash"))
         check(lambda: require(self.spec.get("claim", {}).get("family") in
                               ("water", "energy_source", "radiation_record"), "unknown claim family"))
         check(lambda: require(self.spec.get("geometry_kind") in ("column", "sphere"), "unknown native geometry"))

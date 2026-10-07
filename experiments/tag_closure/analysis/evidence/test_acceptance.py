@@ -99,8 +99,10 @@ class AcceptanceTests(unittest.TestCase):
 
     def test_required_parent_inventory(self):
         self.edit_spec(lambda s: s["runs"]["untagged"]["fields"].pop("temperature"))
-        self.assertEqual(self.row("COMMON.PARENT_PARITY")["data_status"], "DATA FAILURE")
-        self.assertNotEqual(self.row("WATER.CLOSURE")["verdict"], "PASS")
+        result = self.evaluate()
+        self.assertEqual(self.row("COMMON.PARENT_PARITY", result)["data_status"], "DATA FAILURE")
+        self.assertEqual(self.row("WATER.CLOSURE", result)["parent_parity"], "FAIL")
+        self.assertEqual(self.row("WATER.ORIGINS.pbl.86400", result)["verdict"], "NOT ASSESSABLE")
 
     def test_exported_temperature_is_not_full_parent_parity(self):
         self.edit_spec(lambda s: s.update(required_parent_fields=["temperature"], parent_capture_scope="exported"))
@@ -141,8 +143,12 @@ class AcceptanceTests(unittest.TestCase):
     def test_no_established_window_is_not_relabelled(self):
         self.array("water_parent", lambda a: np.repeat((100 + np.arange(25))[:, None], 2, axis=1), role="untagged")
         result = self.evaluate()
-        self.assertEqual(self.row("COMMON.WINDOW.established", result)["verdict"], "NOT ASSESSABLE")
-        self.assertEqual(self.row("WATER.LED_FIX.pbl.established", result)["verdict"], "NOT ASSESSABLE")
+        # Decision of 2026-10-07: a missing window is not applicable and blocks nothing.
+        for name in ("COMMON.WINDOW.established", "WATER.LED_FIX.pbl.established",
+                     "REFERENCE.ELIGIBILITY.established"):
+            self.assertEqual(self.row(name, result)["verdict"], "NOT APPLICABLE")
+        self.assertFalse(any(r["id"].endswith("sensitivity_1h") and r["verdict"] == "NOT APPLICABLE"
+                             for r in result["rows"]))
 
     def test_signed_source_burden_and_region_positive_precondition(self):
         self.array("tag_evap", lambda a: np.tile([1.0, -1.0], (25, 1)))
@@ -236,20 +242,22 @@ class AcceptanceTests(unittest.TestCase):
         row = scorer.row("proposed", lambda: {"verdict": "PASS", "meets": True}, decision="proposed")
         self.assertEqual(row["verdict"], "NOT ASSESSABLE")
 
-    def test_failed_parent_parity_blocks_dependent_measured_rows(self):
+    def test_failed_parent_parity_blocks_origin_rows_only(self):
+        # Decision of 2026-10-07: closure and intervention are the run's accounting.
         for family in ("water", "energy_source"):
             if family == "energy_source":
                 self.energy()
             self.array("temperature", lambda a: a + 1, role="untagged")
             result = self.evaluate()
             self.assertEqual(self.row("COMMON.PARENT_PARITY", result)["verdict"], "FAIL")
-            ids = [family.upper() + ".LED_FIX.pbl.established",
-                   family.upper() + ".PROCESS_WEIGHTED.established",
-                   family.upper() + ".ORIGINS.pbl.86400"]
-            if family == "energy_source":
-                ids.append("ENERGY.CLOSURE_GROWTH.established")
-            for name in ids:
+            for name in (family.upper() + ".PROCESS_WEIGHTED.established", family.upper() + ".ORIGINS.pbl.86400"):
                 self.assertEqual(self.row(name, result)["verdict"], "NOT ASSESSABLE")
+            scored = [family.upper() + ".LED_FIX.pbl.established"]
+            scored.append("WATER.CLOSURE" if family == "water" else "ENERGY.CLOSURE_GROWTH.established")
+            for name in scored:
+                row = self.row(name, result)
+                self.assertEqual((row["verdict"], row["parent_parity"]), ("PASS", "FAIL"))
+                self.assertIn("parent parity FAIL", row["limitation"])
 
     def test_process_error_absolute_value_is_inside_weighted_sum(self):
         self.array("process_share", lambda a: np.where(np.arange(25)[:, None] % 2, 0.7, 0.5))
@@ -394,12 +402,14 @@ class AcceptanceTests(unittest.TestCase):
         self.assertEqual(coverage["metrics"]["untested_or_shared_rules"], ["sink"])
         self.assertEqual(self.row("WATER.ORIGINS.pbl.86400", result)["verdict"], "PASS")
 
-    def test_energy_keeps_active_rule_coverage_as_origin_gate(self):
+    def test_energy_reports_active_rule_coverage_without_gating(self):
+        # Decision of 2026-10-07: reported for energy as for water, no gate until OD9.
         self.energy()
         self.set_rules(["transport"], ["transport", "sink"])
         result = self.evaluate()
-        self.assertEqual(self.row("REFERENCE.ACTIVE_RULE_COVERAGE", result)["verdict"], "NOT ASSESSABLE")
-        self.assertEqual(self.row("ENERGY_SOURCE.ORIGINS.pbl.86400", result)["verdict"], "NOT ASSESSABLE")
+        coverage = self.row("REFERENCE.ACTIVE_RULE_COVERAGE", result)
+        self.assertEqual((coverage["verdict"], coverage["required"]), ("REPORTED ONLY", False))
+        self.assertEqual(self.row("ENERGY_SOURCE.ORIGINS.pbl.86400", result)["verdict"], "PASS")
 
     def test_native_precipitation_requires_column_scalar_convention(self):
         self.edit_spec(lambda s: s.update(geometry_kind="sphere"))
@@ -473,8 +483,10 @@ class AcceptanceTests(unittest.TestCase):
         self.array("newton_error", lambda a: a * 0)
         self.array("newton_error", lambda a: -np.zeros_like(a), role="untagged")
         self.edit_spec(lambda s: s["required_parent_fields"].append("newton_error"))
-        self.assertEqual(self.row("COMMON.PARENT_PARITY")["verdict"], "FAIL")
-        self.assertNotEqual(self.row("WATER.CLOSURE")["verdict"], "PASS")
+        result = self.evaluate()
+        self.assertEqual(self.row("COMMON.PARENT_PARITY", result)["verdict"], "FAIL")
+        self.assertEqual(self.row("WATER.CLOSURE", result)["parent_parity"], "FAIL")
+        self.assertEqual(self.row("WATER.ORIGINS.pbl.86400", result)["verdict"], "NOT ASSESSABLE")
 
     def test_restart_reader_continuation_reset_and_boundary_faults(self):
         def f(time, value):
@@ -718,8 +730,33 @@ class AcceptanceTests(unittest.TestCase):
         self.edit_spec(lambda s: s["artifacts"].update({p.name: sha256_file(p)}))
 
     def test_reference_floor_above_a_quarter_is_ineligible(self):
-        self.reference_detail(floor_fraction_of_tolerance=0.3)
+        floors = {source: 0.1 for source in sa.OD12_FLOOR_SOURCES}
+        self.reference_detail(floors=floors)
+        row = self.row("REFERENCE.ELIGIBILITY.established")
+        self.assertEqual(row["verdict"], "PASS")
+        self.assertEqual(row["metrics"]["eligibility_source"],
+                         "eligibility as declared by make_acceptance_fixture.py " + "0" * 64)
+        self.assertIn("eligibility as declared by make_acceptance_fixture.py", row["reference_eligibility"])
+        self.reference_detail(floors=dict(floors, contamination=0.3))
         self.assertEqual(self.row("REFERENCE.ELIGIBILITY.established")["verdict"], "FAIL")
+
+    def test_scalar_floor_or_missing_producer_is_a_data_failure(self):
+        p = self.root / "reference_evidence.json"
+        detail = json.loads(p.read_text())
+        detail.pop("floors")
+        detail["floor_fraction_of_tolerance"] = 0.0
+        p.write_text(json.dumps(detail))
+        self.edit_spec(lambda s: s["artifacts"].update({p.name: sha256_file(p)}))
+        row = self.row("REFERENCE.ELIGIBILITY.established")
+        self.assertEqual((row["verdict"], row["data_status"]), ("FAIL", "DATA FAILURE"))
+        self.assertIn("one floor per OD12 source", row["limitation"])
+        self.manifest = write_fixture(self.root.with_name("producer"))
+        self.root = self.manifest.parent
+        self.reference_detail(producer=None)
+        row = self.row("REFERENCE.ELIGIBILITY.established")
+        self.assertEqual((row["verdict"], row["data_status"]), ("FAIL", "DATA FAILURE"))
+        self.edit_spec(lambda s: s["reference"].pop("producer"))
+        self.assertIn("producing script", self.row("REFERENCE.ELIGIBILITY.established")["limitation"])
 
     def test_copies_residual_limit(self):
         with np.load(self.root / "reference.npz", allow_pickle=False) as archive:
@@ -904,6 +941,66 @@ class AcceptanceTests(unittest.TestCase):
             row = self.row(name, result)
             self.assertEqual((row["verdict"], row["required"]), ("NOT ASSESSABLE", True))
 
+
+    def test_approved_second_half_tie_1e_12(self):
+        self.assertEqual(sa.SECOND_HALF_TIE, 1e-12)
+
+    def closure_with(self, g):
+        bundle = Bundle(self.manifest)
+        tag = bundle.field("candidate", "tag_pbl")
+        tag.values[:] = tag.values * (0.6 - np.asarray(g)[:, None]) / 0.6
+        return Scorer(bundle).water_closure()
+
+    def test_flat_closure_within_rounding_meets_the_second_half_rule(self):
+        result = self.closure_with(np.full(25, 1.9e-3))
+        self.assertTrue(result["meets"])
+
+    def test_second_half_growth_above_the_tie_fails(self):
+        g = np.zeros(25)
+        g[12], g[24] = 5e-4, 1e-3 + 2e-12
+        result = self.closure_with(g)
+        self.assertAlmostEqual(result["metrics"]["second_normalized_growth"] -
+                               result["metrics"]["first_normalized_growth"], 2e-12, delta=1e-14)
+        self.assertFalse(result["meets"])
+
+    def test_exported_only_parity_blocks_origins_and_scores_accounting(self):
+        self.edit_spec(lambda s: s.update(required_parent_fields=["temperature"], parent_capture_scope="exported"))
+        result = self.evaluate()
+        closure = self.row("WATER.CLOSURE", result)
+        self.assertEqual((closure["verdict"], closure["parent_parity"]), ("PASS", "NOT ASSESSABLE"))
+        self.assertEqual(self.row("WATER.LED_FIX.pbl.established", result)["verdict"], "PASS")
+        self.assertEqual(self.row("WATER.ORIGINS.pbl.3600", result)["verdict"], "NOT ASSESSABLE")
+
+    def test_zero_length_startup_lets_the_pilot_score_its_first_hour_row(self):
+        self.pilot()
+        # Quiet from the start, then a burst in the fifth hour: the OD2 boundary is 0 s.
+        rates = np.ones(6)
+        rates[4] = 100
+        mass = 100 + np.concatenate(([0.0], np.cumsum(rates)))
+        for role in ("candidate", "reference", "untagged"):
+            self.array("water_parent", lambda a: np.repeat((mass / 2)[:, None], 2, axis=1), role=role)
+        result = self.evaluate()
+        self.assertEqual(self.row("COMMON.OD2_WINDOWS", result)["metrics"]["startup_end"], 0)
+        for name in ("COMMON.WINDOW.startup", "REFERENCE.ELIGIBILITY.startup"):
+            self.assertEqual(self.row(name, result)["verdict"], "NOT APPLICABLE")
+        self.assertEqual(self.row("WATER.ORIGINS.pbl.3600", result)["verdict"], "PASS")
+        self.assertEqual(result["exit_code"], 3)
+
+    def test_changed_approved_number_invalidates_the_manifest(self):
+        with mock.patch.object(sa, "LED_FIX_MAX", 0.2):
+            evidence = self.row("COMMON.EVIDENCE")
+        self.assertEqual(evidence["verdict"], "FAIL")
+        self.assertTrue(any("approved_numbers_sha256" in e for e in evidence["metrics"]["validation_errors"]))
+
+    def test_planning_files_and_commit_do_not_pin_the_score(self):
+        # The identities read only the scorer files, never DECISIONS.md or the plans.
+        with mock.patch.object(sa, "sha256_file", wraps=sha256_file) as spy:
+            sa.local_identities()
+        self.assertEqual(sorted(Path(c.args[0]).name for c in spy.call_args_list), sorted(sa.SCORER_PATHS))
+        self.edit_spec(lambda s: s.update(planning_commit="another-planning-commit"))
+        result = self.evaluate()
+        self.assertEqual(self.row("COMMON.EVIDENCE", result)["verdict"], "PASS")
+        self.assertEqual(result["planning_commit"], "another-planning-commit")
 
     def test_endpoint_formula_compatibility_with_existing_WP0(self):
         # Compile only the old pure metric function; the optional NetCDF environment

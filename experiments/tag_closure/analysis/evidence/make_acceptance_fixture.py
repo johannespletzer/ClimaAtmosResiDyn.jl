@@ -14,10 +14,12 @@ from pathlib import Path
 import numpy as np
 
 from manifest import sha256_file
-from score_acceptance import local_identities
+from score_acceptance import OD12_FLOOR_SOURCES, local_identities
 
 
 BASE = "5dd23a8309e174592984da7d60912a4a9daaf08a"
+# The eligibility file's producing script, as the manifest records it.
+PRODUCER = {"script": "make_acceptance_fixture.py", "sha256": "0" * 64}
 
 
 def write_fixture(root, family="water", hours=24):
@@ -116,7 +118,8 @@ def write_fixture(root, family="water", hours=24):
     reference = {"identity": "analytic-independent-reference", "active_rules": ["transport"],
                  "tag_names": [t["name"] for t in tags], "end_seconds": hours * 3600, "model_commit": BASE,
                  "independent_rules": ["transport"], "converged": True,
-                 "floor_fraction_of_tolerance": 0.0, "mirrors_complete": True,
+                 "floors": {source: 0.0 for source in OD12_FLOOR_SOURCES}, "producer": PRODUCER,
+                 "mirrors_complete": True,
                  "jacobian_complete": True, "repair_refinement_ratios": {"dt": 0.5, "newton": 0.5},
                  "not_a_model_run": True}
     if family == "radiation_record":
@@ -141,7 +144,7 @@ def write_fixture(root, family="water", hours=24):
         if role != "candidate":
             runs[role].update(manifest="submission.json", model_commit=BASE, config_sha256=config_hash)
     spec = {"schema_version": 1, "experiment_commit": "local-uncommitted", "scorer_commit": "local-uncommitted",
-            "acceptance_commit": BASE, **local_identities(), "artifacts": artifact_hashes,
+            "planning_commit": BASE, **local_identities(), "artifacts": artifact_hashes,
             "resolved_settings": {"fixture": True, "solver": "analytic", "seed": "none", "physics": "none",
                                   "diagnostics": list(fields), "tag_definitions": tags},
             "submission_files": {"config": metadata.name},
@@ -155,7 +158,7 @@ def write_fixture(root, family="water", hours=24):
             "throughput_accumulation": "accepted_step", "energy_ledger_per_tag": True,
             "energy_offset": 0, "active_rules": ["transport"],
             "named_parts": ["analytic zero remainder"], "reference": {"identity": reference["identity"],
-            "evidence": "reference_evidence.json", "kind": "copies" if family != "radiation_record" else "independent",
+            "evidence": "reference_evidence.json", "producer": PRODUCER, "kind": "copies" if family != "radiation_record" else "independent",
             "energy_offset": 0}, "record_processes": ["radiation"], "expected_record_processes": ["radiation"]}
     (root / "extension.json").write_text(json.dumps(spec, sort_keys=True, indent=2) + "\n")
     (root / "manifest.json").write_text(json.dumps({**submission, "acceptance": spec}, sort_keys=True, indent=2) + "\n")

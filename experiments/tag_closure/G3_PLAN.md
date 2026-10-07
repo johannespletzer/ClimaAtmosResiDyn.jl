@@ -937,7 +937,9 @@ R5 and R7). `w` is `ρ_ref Δz`, and `total_ref` is the reference's
   - A non-finite value or a missing hour is a failure. The 6 h and 12 h
     outputs are reported, not judged.
   - The gross residual is `G(t) = Σ |q_tag_res| w / total_ref`. "The second
-    12 h add no more than the first" means `G(24) − G(12) ≤ G(12) − G(0)`.
+    12 h add no more than the first" means `G(24) − G(12) ≤ G(12) − G(0)`. A tie
+    within rounding passes: the margin is 1e-12 in normalized units (the
+    owner, 2026-10-07, a reading of the rule, not a tolerance).
   - The remainder after the named parts is taken over a list of fields,
     since the parts' output names are fixed later.
   - The precipitation audit over the day needs averaged or accumulated
