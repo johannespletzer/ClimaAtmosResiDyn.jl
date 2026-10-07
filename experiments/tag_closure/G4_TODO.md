@@ -59,7 +59,7 @@ orders of magnitude.
 The canonical [energy acceptance matrix](design/G4_CLAIM_CONTRACTS.md#5-energy-acceptance-matrix)
 now defines the equations and evidence for stored source tags, signed process
 records and the parent budget. Common approved thresholds remain in ROADMAP.
-[Part 3 owner proposals](DECISIONS.md#part-3-proposals-2026-10-06-waiting)
+[Part 3 owner proposals](DECISIONS.md#part-3-proposals-2026-10-06-decided-2026-10-07)
 are not approvals. The proposed first workflow is the non-EDMF DYCOMS RF02
 radiation record alone. A record-only pass cannot qualify stored origins.
 
@@ -70,8 +70,8 @@ Concrete remaining work, retaining all G4.n/PX obligations below:
     file/time/active process. Separate offline Θi rosters from runtime fallback,
     preserve legacy estimates, and use valid window Θx for new tag acceptance.
     Preserve approved window-growth closure while reporting residual
-    state/endpoints/max/change separately. Any new scored state criterion waits
-    for EA-STATE. Replace any use of
+    state/endpoints/max/change separately. No new scored state criterion is added
+    (EA-STATE, 2026-10-07). Replace any use of
     absolute net `repair_moved` as retained activity. Recompute per-tag window
     ratios from amount endpoints and correct denominator, with explicit
     positive-region and small-tag behavior. Share-normalization fallback counts
@@ -79,7 +79,7 @@ Concrete remaining work, retaining all G4.n/PX obligations below:
     only if needed for the claimed transport. Native weights, aligned geometry,
     restart deduplication/stitching, process-weighted share comparisons and
     row-by-row missing/inapplicable verdicts are required. No silent historical
-    rescore or approval of a new normalization. Fix the scripts' known defects first: `process_budget.py` adds `∫pr dt` as if `pr` were positive downward, `tag_correctness.py` weights by `np.gradient(z)` and floors denominators at `1e-300`, and `g411_eligibility.py`'s docstring still calls the interim a lower bound.
+    rescore or approval of a new normalization. Fix the scripts' known defects first: `process_budget.py` adds `∫pr dt` as if `pr` were positive downward and drops the first hourly window (2026-10-07), `tag_correctness.py` weights by `np.gradient(z)` and floors denominators at `1e-300`, and `g411_eligibility.py`'s docstring still calls the interim a lower bound.
   - [ ] **Part 5, energy activity:** demonstrate opposing source/stage and
     repair/follower applications. Accepted-step Θx and retained variation are
     exact for their recorded grouping, not eventwise activity. Distinguish
@@ -96,7 +96,7 @@ Concrete remaining work, retaining all G4.n/PX obligations below:
     own prerequisites. A simple record reference does not qualify those rules.
   - [ ] **Part 11b, process/integrated baseline:** post-#139 parity and raw
     validity, record reference evidence, native process budget/remainders,
-    repeated C4 size with the surface-precipitation offset `c·∫pr dt` separated (EA-C4), the G4.6 A5 investigation, eligibility/mirror/cross-block
+    repeated C4 size per layer with the surface-precipitation offset `c·∫pr dt` separated, in a stated single-column scope (EA-C4, decided 2026-10-07), the G4.6 A5 investigation, eligibility/mirror/cross-block
     inventory, actual gross refinement, restart and matched cost. G4.1/11/16
     code already present is reused, not recreated from historical checkboxes.
     Prior E84/E86/E87/E89 are labelled prior evidence. Decide seven-point

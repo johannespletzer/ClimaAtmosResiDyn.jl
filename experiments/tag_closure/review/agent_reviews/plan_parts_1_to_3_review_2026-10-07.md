@@ -5,6 +5,8 @@ agents: for each PR a Sonnet first pass (`worker`, high effort) and an Opus
 confirmation (`clima-reviewer` for #147, `clima-numerics-reviewer` at xhigh
 for #148 and #149), plus a Sonnet worker per PR for the semicolon rewrite.
 Mechanical checks ran as scripts, kept in `review/checks/plan_docs/`.
+Section F records the challenge of the review's recommendations and the
+owner's decisions of 2026-10-07.
 
 The three PRs are documentation only, stacked on `claude/plan-rev2`
 (58d3535): #147 reconciles the plan into capability increments and adds
@@ -527,3 +529,51 @@ O1 changes the scientific reading of E87, so I recommend the owner sees it befor
 - the owner accepts C46 and C25 as wording only. The window choice itself stays inside EA-USE (F24).
 
 Still owner choices after merge, all left as proposals: EA-USE, EA-ACCURACY, EA-COST, EA-STATE, EA-C4 (O1), OD7, OD9-11, the seven-point levels, and whether to annotate the OD4 question title "offset-invariant" (F19). On E87's pair the decided Θx moves 1.7% when c doubles, while the interim Θi does not move. The `process_budget.py` sign and the `tag_correctness.py` weights are Part 4 code fixes (C50) and are not part of this PR.
+
+## F. The challenge of the recommendations and the owner's decisions of 2026-10-07
+
+After the three reviews, the overseer recommended an answer for every open
+owner decision, favouring origin traceability first and fewer rules and
+numbers second. A second reviewer (`clima-numerics-reviewer`, Opus at xhigh
+effort, 325k tokens, 99 tool calls) was asked to break each recommendation
+with a cited line or a computed number. Its numbers came from E87's archived
+output and the TRMM 0M untagged run. Of 25 items, 12 stood, 10 were weakened
+and 3 were broken. The owner adopted the revised recommendations as decisions
+on 2026-10-07 (`DECISIONS.md`, section 2026-10-07, and the register CSV).
+
+| Item | Recommendation as first given | Challenge | Decision recorded |
+|:--|:--|:--|:--|
+| 147-1 adoption | Adopt parts 1 to 12d as delivery boundaries. | Weakened. Adopting the parts also adopts levels 0 to 4 (ROADMAP "Each level requires the levels below it", level 3 means tested origins), and Part 9's "No upstream-model changes". | Adopted as delivery boundaries. Levels 0 to 4 stay proposed. |
+| 147-2 energy timing | Parts 3 and 11a now, 11b to 11d after part 8. | Weakened. Part 8 changes no code, so waiting for it saves no rerun. Only part 9's shared-code PRs and the walk fix touch energy code or cost. | Parts 3 and 11a now. 11b after part 9's shared-code PRs and any walk fix, and 11b measures the 8 + 8 cost. |
+| 147-3 forecast | Flush forecast stays in 11b, reported only. | Stands. The contract already calls it descriptive, not a residence time. | As recommended. |
+| 147-4a cost | Keep 2×, fix the walks before part 10, qualify water alone at 8 tags. | Broken. OD3's row is "8 + 8", the count OD1 and OD8 intend, so a water-only pass transplants it. W52's 1.43× has no rain or snow parts, and with them 8 water tags cross the 32-field limit. A perfect fix leaves the halves adding to about 2.0×. The parity doc says upstream defects are fixed upstream. | OD3's 2× at 8 + 8 stays and gates part 10. Fix in ClimaCore or upstream ClimaAtmos. A fork patch only as a named departure, tested bit for bit. Post-fix measurement pre-registered. No cap for water alone. |
+| 147-4b sphere | 90-day sphere after 12b and 12c, 12a only if Float32 is needed. | Weakened. The kept sphere configuration is Float32 (`configs/g2_v2_sphere_n2.yml`), so 12a is required. | After 12a, 12b and 12c. The 1-2-day pilot stays before M5. |
+| 147-4c M5 default | Part 10 selects the explicit-1M default. | Weakened. WP5b-V needs a precipitating 1M column. Part 10 as scoped has none. | Decided beside part 7 by WP5b-V's rule on a named 1M case, after W33 is revisited. |
+| 147 #146 ledger | Accept the dedicated ledger if the closure table sums it. | Stands. The per-tag part of the decision is met at 33cbfd4f. | As recommended, at #146's merge. |
+| 148-1 WA-GATES | Accept a, reject b as a gate, accept the initialization half of c. | Weakened. WP6's columns do not hold the absolute leg amounts, which part 5 must measure, so a is new work before part 10. b and c stand. | a is a condition, delivered by part 5. b reported only, revisited with OD9. c's initialization and fallback half accepted, grid rungs deferred to 12a. d accepted. |
+| 148-2 OD5 reading | Accept. | Stands. | Accepted. |
+| 148-3 tolerances | Defer, narrow the claims. | Stands, with the W62 rule added: any later value is judged on a fresh pre-registered run. | Deferred under W62's rule. |
+| 148-4 windows | First-hour row only, no OD2 row exists for TRMM 0M. | Weakened. The OD2 row "TRMM_LBA 0M and 1M, 6 h" exists. The boundary depends on output cadence (10-minute outputs end startup at 0 h, 30-minute outputs never). The first hour carries little information (evaporation 0.13% of the column's water, rain from about 3 h). PX12 comes first. OD14 wants the held-out case named before tuning. | Boundary reading recorded with its cadence before scoring. First-hour row only, after PX12, labelled low power. The 24 h development case and the held-out case are named before PX11 (still waiting for the names). |
+| 148-5 WA-SCOPE | No three-tag or six-hour qualified scope. | Stands. | As recommended. |
+| 148-6 WA-PRECIP | Criterion 7 reported, origins only under 1M. | Stands. | As recommended. |
+| 148-7 WA-COST | No new cap, OD3 rows as they stand. | Broken. "As they stand" judges part 10 at 8 + 8, which contradicted 147-4a. | No cap for the pilot or water alone. Part 10 gated by OD3's 2× at 8 + 8 after the walk fix. |
+| 149-1 authorization | Keep the neutral wording, "the owner". | Stands. | Reworded to "the owner". |
+| 149-2 EA-C4 | Accept the reading, keep "document the size". | Weakened. The arithmetic holds to 4e-14 kg m⁻². But "keep the treatment" silently replaces the recorded 0.55% of Θx. The genuine per-layer C4 on E87 is 1.24e-5 of Θx. The column argument holds for one column only. The script also drops the first hourly window. | Accepted as an amendment to E87. Point 7 of 2026-10-02 annotated. Part 4 fixes the sign and the dropped window. 11b measures per layer in a stated single-column scope. |
+| 149-3 window wording | Accept as wording. | Stands. | Accepted. |
+| 149-4 EA-USE | Record-only pilot scored against the stage flux and the closure growth row. | Weakened. With zero tags there is no partition and no Θx, so no closure row applies. The record row has no threshold. Checking the record against the model's own flux tests event capture, not origin. | The record stays an unqualified diagnostic, verified in 11a and reported. |
+| 149-5 EA-ACCURACY | No number now. | Weakened. "A user" is never named, so the record stays reported indefinitely. | Lapses with EA-USE. If the pilot is reopened, the number is fixed before the deciding run. |
+| 149-6 EA-COST | No cap for the pilot. | Broken. The contract says a missing pilot cap makes EA-COST not assessable, which blocks the claim. | Lapses with EA-USE. A cap is set before any deciding run. |
+| 149-7 EA-STATE | Growth-only scoring, state reported. | Stands. | As recommended. |
+| 149-8 OD7 | Keep deferred, lean to the same-sign rule. | Weakened. E79 moved 0.288 under same sign and 0.289 under the abs(m) rule, so same sign reduces nothing for energy, and the fourfold gross residual is energy without origin. | Deferred, no lean. The owner fixes criterion 1's energy budget before the long runs are scored. |
+| 149-9 OD9 to OD11 | Fix c now at 110,495 J/kg. | Weakened. It reverses the choice of 2026-10-02 to keep OD11 proposed. The protection already exists: every G1 and G2 run used that c, and Part 3 requires every test to state c. Θx moves 1.7% and E71's region tags up to 177% with c. | OD9 to OD11 stay proposed. Each pre-registration states its c. |
+| 149-10 levels | No numbers until 11b. | Stands. | As recommended. |
+| 149-11 OD4 title | Add a one-sentence note. | Stands, as a dated annotation beside the row. | Annotated. |
+
+The challenge's numbers that entered the record: Θx(2c)/Θx(c) = 1.0168 to
+1.0172 at 1 to 24 h on E87's pair, B(2c) − B(c) equal to c times the
+surface-flux water record to 4e-14 kg m⁻², M_U within 0.2% to 0.7% of the
+hourly surface precipitation, the per-layer sum of abs(I(2c) − I(c)) of
+260 J m⁻² (1.24e-5 of Θx), the additive 8 + 8 cost of 1.97× to 2.02× after a
+perfect walk fix, TRMM's lhf above 10% of its peak from 0.57 h to 9.93 h, and
+first-hour evaporation of 0.072 of 56.3 kg m⁻². The field counts behind the
+32-field argument are an inference from E90, not a measurement.

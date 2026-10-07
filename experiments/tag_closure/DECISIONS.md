@@ -1,10 +1,11 @@
 # The owner's decisions
 
-## Part 3 proposals (2026-10-06, waiting)
+## Part 3 proposals (2026-10-06, decided 2026-10-07)
 
-The user authorized preparation and independent review of the Part 3 energy
-documentation. This approves no scientific tolerance, default, run or
-publication.
+The owner asked for the Part 3 energy documentation and its independent
+review (2026-10-06). That approved no scientific tolerance, default, run or
+publication. The owner decided the questions below on 2026-10-07 (section
+2026-10-07). The rows keep their proposal text.
 The [canonical energy matrix](design/G4_CLAIM_CONTRACTS.md#5-energy-acceptance-matrix)
 interprets approved decisions and identifies these still-needed choices.
 
@@ -392,6 +393,55 @@ and an adversarial check of the review's recommendations
     PX12's eligibility, labelled low power: the first hour's evaporation is
     0.13% of the column's water, and rain starts near 3 h. No six-hour
     tolerance.
+  - **EA-USE: the radiation record stays an unqualified diagnostic.** **In
+    force.** With zero stored tags there is no partition and no Θx, so the
+    closure growth row does not apply, the record row has no threshold and
+    no cost row fits it. Level 3 means tested origins, so a record-only
+    capability cannot be "qualified". The record is verified in part 11a
+    against the independent accepted-stage flux and reported.
+    Qualification effort goes to stored-source origins. EA-ACCURACY and
+    EA-COST lapse with this. If the owner later wants the pilot qualified,
+    its accuracy number and its cost cap are fixed before the deciding run.
+    The window wording in the contract's section 3 is accepted as wording.
+  - **EA-STATE: growth-only scoring, state reported.** **In force.** The
+    approved ΔG growth reading stays the scored row, with its limitation
+    stated. Endpoint and maximum state are reported beside it. A state
+    criterion is added only when a stored-inventory qualification is
+    proposed.
+  - **EA-C4: the reading is accepted as an amendment to E87.** **In
+    force.** On E87's archived output the C4 size equals, to 0.2%, the
+    offset of the day's surface precipitation, which the source tags carry
+    by sedimentation transport. The record-based opposite sign came from
+    counting subsidence water as mass and from a reversed `pr` sign. The
+    genuine per-layer C4 on E87 is about 1.2e-5 of Θx. The treatment,
+    document the size, is reconfirmed, and point 7 of 2026-10-02 is
+    annotated. Part 4 fixes the `pr` sign and the dropped first hourly
+    window in `process_budget.py`. Part 11b measures C4 per layer with the
+    surface term separated and states its single-column scope, since sphere
+    columns exchange mass. The OD9 to OD11 rationale "C4 prevents
+    convention-independent claims" is read with this amendment: the surface
+    part is attributed.
+  - **OD7 stays deferred, with no lean.** **In force.** E79 moved 0.288
+    under the same-sign rule and 0.289 under `\|m\|`, so neither rule reduces
+    movement for energy, and the fourfold gross residual is energy without
+    origin. Before the post-#139 site-23 long runs are scored, the owner
+    fixes the energy budget for criterion 1 of the registered rule, either
+    OD3's 0.2% of Θx or the design note's proposal. *Waiting:* that budget.
+  - **OD9 to OD11 stay proposed. Each pre-registration states its c.** **In
+    force.** The convention is not fixed ahead of the gated evidence. Every
+    G1 and G2 run used 110,495 J/kg, and Part 3 requires every test to state
+    c, which is the protection against fitting. Θx moves 1.7% and E71's
+    region tags up to 177% with c, so the value matters.
+  - **The seven-point levels, points 2, 3, 4 and 6: no numbers until 11b.**
+    **In force.** Warnings are not tolerances and stay off or reported.
+    Energy's aggregate level comes from its own post-#139 baseline with
+    water's construction, not water's number. Point 4 keeps firing in water
+    runs until then.
+  - **OD4's title gets a dated annotation.** **In force.** The decided Θx
+    moves 1.7% on E87's pair when c doubles, while the interim Θi does not.
+    The register row is annotated, not rewritten.
+  - **The authorization sentence.** **In force.** The Part 3 block's first
+    sentence reads "the owner", with the neutral wording of the patch.
 
 ## 2026-10-02
 
@@ -459,6 +509,10 @@ option on all five. The brief was
       + Point 1: values on the interim are estimates.
       + Point 5: A5's "group sum" is the partition's sum.
       + Point 7: document C4's size, 0.55% of a day's Θx (E87).
+        *Annotated 2026-10-07 (EA-C4):* that size is the offset of the day's
+        surface precipitation, which the tags carry as transport. The genuine
+        per-layer C4 on E87 is about 1.2e-5 of Θx. The treatment, document,
+        is reconfirmed.
       + Point 4's form: a per-transport default.
       + **Waiting:** the levels for points 2, 3, 4 and 6 are set from
         post-#139 runs at G4's start.

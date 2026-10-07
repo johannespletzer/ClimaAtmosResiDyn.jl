@@ -1,4 +1,12 @@
 date,decided_by,decision,doc,section,still_in_force,superseded_by
+2026-10-07,owner,"EA-USE: the signed radiation record stays an unqualified diagnostic, verified in part 11a and reported. EA-ACCURACY and EA-COST lapse with it. If the pilot is reopened, its accuracy number and cost cap are fixed before the deciding run.",DECISIONS.md,2026-10-07,yes,
+2026-10-07,owner,"EA-STATE: growth-only scoring stays, endpoint and maximum state are reported. A state criterion is added only when a stored-inventory qualification is proposed.",DECISIONS.md,2026-10-07,yes,
+2026-10-07,owner,"EA-C4: E87's C4 size is the offset of the surface precipitation, which the tags carry as transport (amendment to E87). The treatment, document the size, is reconfirmed. Part 4 fixes the pr sign and the dropped first window in process_budget.py. 11b measures C4 per layer in a stated single-column scope.",DECISIONS.md,2026-10-07,yes,
+2026-10-07,owner,"OD7 stays deferred with no lean. Before the post-#139 site-23 long runs are scored, the owner fixes the energy budget for criterion 1 of the registered rule.",DECISIONS.md,2026-10-07,yes,
+2026-10-07,owner,"OD9 to OD11 stay proposed. Each pre-registration states the c it uses (110,495 J/kg so far).",DECISIONS.md,2026-10-07,yes,
+2026-10-07,owner,"Seven-point levels for points 2, 3, 4 and 6: no numbers until 11b's post-#139 baseline. Warnings stay off or reported.",DECISIONS.md,2026-10-07,yes,
+2026-10-07,owner,"OD4's register row is annotated: the decided Theta_x moves 1.7% on E87's pair when c doubles, the interim Theta_i does not.",DECISIONS.md,2026-10-07,yes,
+2026-10-07,owner,"The Part 3 authorization sentence in DECISIONS reads 'the owner', with the review patch's neutral wording.",DECISIONS.md,2026-10-07,yes,
 2026-10-07,owner,"WA-SCOPE: no three-tag or six-hour qualified scope. Qualification stays at eight tags on the approved rows. Inventory claim first (pbl/free labels, evap overlay), precipitation claim waits for OD15. The 24 h development case and the held-out case are named before PX11.",DECISIONS.md,2026-10-07,yes,
 2026-10-07,owner,"WA-PRECIP: criterion 7 stays reported accounting. Precipitation origin is scored only under 1M at PX25 under OD15.",DECISIONS.md,2026-10-07,yes,
 2026-10-07,owner,"WA-COST: no cap for the pilot or for water alone. Part 10 is gated by OD3's 2x at 8 + 8 after the walk fix.",DECISIONS.md,2026-10-07,yes,
