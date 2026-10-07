@@ -1,5 +1,23 @@
 # G4: the energy source tags, after G3
 
+## Part 4 software handoff (2026-10-07)
+
+[Common evidence/scoring](analysis/evidence/README.md) now validates distinct
+model/experiment/scorer/spec identities and computes density-corrected record
+variation, valid Θx window growth, separately reported residual state,
+per-tag window correction ratios, eligible-reference gates and required-field
+parity. [Coverage and tests](analysis/evidence/PART4.md) name the explicit
+unsupported/missing-evidence dependencies. Independent review is complete
+and its findings are resolved.
+
+Legacy Θi/runtime fallback algorithms and historical results remain unchanged.
+New source acceptance requires valid Θx; record-only radiation receives no
+copies/source-throughput gate and no transplanted source thresholds. Part 5
+accepted-application activity, 11a independent references, 11b actual scoped
+integration/restart/cost and 11d qualification/owner gates remain open.
+EA-STATE is proposed; approved closure growth, OD7 and OD9–11 are preserved.
+
+
 ## Active delivery queue (2026-10-05)
 
 [ROADMAP's execution order](ROADMAP.md#the-execution-order) governs delivery;

@@ -1,5 +1,23 @@
 # G3: water tags under EDMF
 
+## Part 4 software handoff (2026-10-07)
+
+[Common evidence/scoring](analysis/evidence/README.md) now computes native
+water partition/named closure, exact-time profile norms, OD2 plus the decided
+1-hour sensitivity, eligible-reference checks and region/source R8 window
+ratios from actual ledgers/inventories. It validates complete compartment and
+parent inventories and paired precipitation evidence, with explicit data
+failures and scientific blockers. [Coverage and tests](analysis/evidence/PART4.md)
+record the implementation and its remaining dependencies. Independent review
+is complete and its findings are resolved; no physical G3 completion is claimed.
+
+WP0/PX0 and WP8 reuse the existing manifest/archive workflow. Parts 5/6/7/8/9/10/12
+retain their accounting, independent-reference, integration, cost/restart and
+qualification obligations. WA-SCOPE/WA-PRECIP/WA-COST, option D, the limited
+Float32 rule, eight-tag/full-duration targets and every historical failure
+remain as recorded. Missing observations are not inferred as zero.
+
+
 ## Active delivery queue (2026-10-05)
 
 Use [ROADMAP's execution order](ROADMAP.md#the-execution-order), with

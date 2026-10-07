@@ -2236,3 +2236,26 @@ owner choices remain outstanding.
 | G4.12, OD5 and OD9–14 | Applicable row-by-row acceptance, independent active-rule coverage and held-out hygiene retained. Historical conditional bounded verdict is no mathematical bound. | Part 11d after evidence/cost/owner decisions; OD9–11 proposal status and accepted OD12–14 gates unchanged. |
 | G4.13/14, OD1/6/8, M4 and WP9 | Production count/90-day scope and numerical-loss diagnostic gates preserved; record pilot has its own pending cost. | Part 11b measured pilot/full-count cost before selection; Part 12 precision/restart/production, 12d long sphere. No residence-time/air-age extension. |
 | All other G4.n and energy M1–M5/archived items | Original pinned row, owner status, historical result and trigger retained; Part 3 creates no implementation/qualification evidence. | Existing destination and source gate remain authoritative. |
+
+## Part 4 implementation dispositions (2026-10-07)
+
+This addition preserves every prior source mapping and completion record.
+The [evidence coverage matrix](analysis/evidence/PART4.md) and
+[commands](analysis/evidence/README.md) define the implemented offline path.
+No software result substitutes for missing scientific evidence.
+
+| Source obligation | Part 4 implementation | Remaining destination |
+|:--|:--|:--|
+| G3 criteria 1/12; WP0/PX0/WP8; G4 evidence/reproducibility | Existing submission manifest extended without overwrite; artifact/config/environment/spec/scorer hashes; deterministic row verdict/data/applicability | Actual records and workflows in 8/10/11b/12 |
+| OD2; Part 2 TRMM windows/R8 | Untagged physical boundary and 1-hour sensitivity; window numerator differences; source burdens/positive regions/small scales | Complete intervention/application evidence in 5; measured baselines in 8 |
+| G3 criterion 4 and complete compartment accounting | Raw vs positive-target scales; total residual score and separate part grosses; normalized growth and named remainder | Parts 5/8/9/10 named-mechanism/physical evidence |
+| G3 criterion 5/6; eligible active independent references | Endpoint L1/L∞/small-tag tests, comparator residual/repair/refinement/mirrors, scientific ineligibility blockers | Parts 6/7/10; option D excludes D4-W origins/convergence |
+| G3 criterion 7; Part 2 C7 and transfer references | Instantaneous/no-rain defects; strict paired applied averages/accumulators; process-weighted donor errors | Parts 5/7/9/12; WA-PRECIP/OD15 |
+| G4.3 OD4 scale and stored source convention | Exact Θx required for new growth/repair percentages; separately named density-corrected record estimate and process roster | Part 5 finer activity; 11a/11b references/current records; legacy results preserved |
+| G4.4/5 residual and intervention | ΔG score plus endpoints/max/state change, correct per-tag window ratios; proposed energy/state rows cannot pass | Owner energy aggregate/EA-STATE choices; Parts 5/11b/11d |
+| Part 3 radiation-record first use | Corrected record and independent stage-divergence differences without copies/source gate | 11a/11b; EA-USE/EA-ACCURACY/EA-COST |
+| G3 criteria 2/3/9; G4 restart/precision | Required-parent bit comparator, checked segment reader, fresh Float32 rule and historical immutability | Actual state/capture/restart/precision evidence in 9/10/11b/12 |
+| Intended-count aggregation, cost, held-out and final qualification | Reported group metrics and explicit unassessable gate rows; no hidden omission/averaging | 6/7/8/10/11a–d/12 and existing owner decisions |
+
+Independent actual-diff review is complete. Its findings are resolved and
+all 49 offline analytic/fault tests pass; no physical qualification is implied.

@@ -4,6 +4,13 @@
                          [--extra FILE ...] [--julia BIN] [--julia-channel +1.11]
                          [--command "..."] --out PATH.json
     python3 manifest.py --verify PATH.json
+    python3 manifest.py --attach-acceptance ORIGINAL.json --acceptance SPEC.json
+                         --out NEW_MANIFEST.json
+
+The attachment mode preserves every submission field and adds the optional
+`acceptance` extension naming immutable output evidence. It refuses to
+overwrite either the original or an existing result. Bundle validation and
+scientific row scoring are separate commands in `score_acceptance.py`.
 
 Compute nodes on terrabyte have no git, which is why a run's provenance.txt
 reads `commit_dirty: unknown` (G3_TODO.md 1.1). This tool runs on the login
@@ -428,6 +435,21 @@ def verify(json_path):
     return 1 if any_changed else 0
 
 
+def attach_acceptance(original, extension, output):
+    """Preserve submission provenance and write a separately identified evaluation input."""
+    out = Path(output)
+    if out.exists() or out.resolve() == Path(original).resolve():
+        die("output exists; keep historical manifest immutable and choose a new evaluation path")
+    recorded = json.loads(Path(original).read_text())
+    if "acceptance" in recorded:
+        die("original already has an acceptance extension; preserve it and use the original submission manifest")
+    spec = json.loads(Path(extension).read_text())
+    if spec.get("schema_version") != 1:
+        die("unsupported acceptance extension schema")
+    recorded["acceptance"] = spec
+    out.write_text(json.dumps(recorded, indent=2, sort_keys=True, allow_nan=False) + "\n")
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--repo", help="the git worktree to inspect")
@@ -439,11 +461,19 @@ def parse_args():
     parser.add_argument("--command", default=None, help="the submit command string, recorded verbatim")
     parser.add_argument("--out", help="write the manifest here as JSON")
     parser.add_argument("--verify", default=None, help="verify a previously written manifest instead of building one")
+    parser.add_argument("--attach-acceptance", default=None, help="existing immutable submission manifest to extend in a new file")
+    parser.add_argument("--acceptance", default=None, help="acceptance-extension JSON; only for --attach-acceptance")
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
+    if args.attach_acceptance or args.acceptance:
+        if not args.attach_acceptance or not args.acceptance or not args.out or args.verify or args.repo:
+            die("use --attach-acceptance ORIGINAL --acceptance SPEC --out NEW, without --repo/--verify")
+        attach_acceptance(args.attach_acceptance, args.acceptance, args.out)
+        print(f"extended manifest written: {Path(args.out).resolve()}; validate with score_acceptance.py")
+        return
     if args.verify:
         sys.exit(verify(args.verify))
 
