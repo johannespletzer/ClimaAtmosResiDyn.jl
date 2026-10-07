@@ -72,6 +72,7 @@ import ...TracerNonnegativityVaporTendency
 import ...TracerNonnegativityVaporConstraint
 import ...TracerNonnegativityElementConstraint
 import ...TracerNonnegativityVerticalWaterBorrowing
+import ...has_water_tag_precipitation
 # The adapter asks the space whether it performs DSS.
 import ...do_dss
 # The parent budget's half of the applied-update event. The functions are
