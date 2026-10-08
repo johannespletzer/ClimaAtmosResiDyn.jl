@@ -125,6 +125,18 @@ end
     @test CA.has_water_tag_precipitation(model)
     @test CA.follows_water_increment(model)
 
+    # The follow and the rescale are compiled before the first step. On Julia
+    # 1.10, a first step that also infers the follow's call tree peaks about
+    # 8 GiB higher than one that reuses it, and the column then needs more
+    # than the 16 GB of a GitHub runner. The rescale runs here only in item 10.
+    # Compiled now, while the heap is small, it needs less memory than after
+    # the four builds. Neither call runs the code, so no result changes.
+    @test precompile(CA.follow_water_tag_precipitation!, (typeof(Y), typeof(p)))
+    @test precompile(
+        CA.rescale_water_tags!,
+        (typeof(Y), typeof(p), typeof(copy(Y.c.ρq_tot))),
+    )
+
     # 1. The start: each part is its masked share of its compartment.
     @testset "The parts at the start" begin
         start = closure(Y)
