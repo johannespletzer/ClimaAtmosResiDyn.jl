@@ -9,9 +9,9 @@ normalization and remaining dependency. See [PART4.md](PART4.md) for the
 reuse inventory, coverage and verification record.
 The optional weighted-application path and its production gaps are recorded
 in [PART5.md](PART5.md). Its offline implementation does not complete Part 5.
-The narrow independent water reference adapter and its frozen development
-cases are documented in [PART6.md](PART6.md); they do not complete physical
-water qualification.
+The independent water references, the producer of their declared
+eligibility and their frozen development cases are documented in
+[PART6.md](PART6.md). They do not complete physical water qualification.
 
 The input is a separately identified extended manifest, not a second
 submission record format. Attach a predeclared extension to an archived
@@ -47,14 +47,17 @@ python3 -m unittest discover -s experiments/tag_closure/analysis/evidence \
   -p 'test_water_transport_reference.py' -v
 ```
 
-Both output roots must be absent. Exit 0 means this development fixture's
-eligible-reference equation/profile, prescribed exported-parent trajectory,
-partition-closure and wrong-origin checks passed. Exit 1 records a failed
-fixture check. Exit 3 records an ineligible selected reference; no candidate
-ranking or pass is inferred from it. Invalid evidence raises a data error.
-The analytic configuration has five eligible equation cases. The numerical
-configuration retains four ineligible upwind references and one eligible
-exchange reference, so its expected exit is 3 under the unchanged floors.
+Both output roots must be absent. The exit codes follow the scorer's. Exit 0
+means every case's profile, prescribed exported-parent trajectory, partition
+closure and wrong-origin checks passed against an eligible reference. Exit 1
+records a failed fixture check. Exit 2 records missing, corrupt or
+inconsistent evidence. Exit 3 records an ineligible selected reference. Its
+candidate is not assessable, and no ranking or pass is inferred from it.
+Exit 4 means nothing was evaluated: the output exists, the command line is
+invalid or the driver raised an error. The analytic configuration has five
+cases with constructed eligibility and exits 0. The numerical configuration
+retains four ineligible upwind references and one eligible exchange
+reference, so its expected exit is 3.
 
 Each case directory contains the original `submission.json`, an existing-format
 `extension.json` and `manifest.json`, a separate `manifest_origin_swap.json`,
@@ -65,21 +68,28 @@ quadrature rungs remain available. Raw per-tag 1 h/24 h L1, specific Linf,
 small/zero-tag absolute errors, parent/closure defects, conservation/boundary
 accounts and executed Newton diagnostics are reported beside OD12 eligibility.
 
-`reference.kind="water_transport"` routes through the existing Bundle/scorer.
-The adapter reconstructs every archived rung from independent equations,
-checks exact native faces/weights/time/dtype and source/config/model identity,
-requires explicit zero arrays for excluded processes, and measures every
-applicable floor in the same norm as OD3. Eligibility booleans in submitted
-metadata are not used. Partition sums exclude source overlays. A numerical
-reference's same-parent status follows actual `rho`/`water_parent` bits,
-including fixed-parent inflow and exchange. Specific-profile agreement alone
+`water_transport_adapter.py` is the producing script of the declared
+eligibility file. It reconstructs every archived rung from independent
+equations, checks exact native faces/weights/time/dtype and
+source/config/model identity, requires explicit zero arrays for excluded
+processes, and measures every applicable floor in the same norm as OD3. It
+then writes the producer's name and sha256, one floor per OD12 source,
+`converged`, `mirrors_complete` and `jacobian_complete` into
+`water_reference_evidence.json`, each with its basis. The manifest's
+`reference.producer` names and hashes the same script. The scorer reads the
+declaration through its own eligibility reader, unchanged, and does not
+import the adapter. The driver reruns the adapter on the finished bundle,
+which refuses a declaration that differs from its recompute, and requires
+the scorer's reading to agree with it. Partition sums exclude source
+overlays. A numerical reference's same-parent status follows actual
+`rho`/`water_parent` bits, including fixed-parent inflow and exchange. Specific-profile agreement alone
 cannot hide a changed prescribed parent trajectory or a broken partition sum.
 The archived mutant must perform the registered origin swap while preserving
-the initial state, parent and source overlays; other origin-failing changes
+the initial state, parent and source overlays. Other origin-failing changes
 do not verify that mutation.
 
 The full production scorer continues to emit its other missing-prerequisite
-rows; the driver does not manufacture those prerequisites. Its five labels
+rows. The driver does not manufacture those prerequisites. Its five labels
 include two partition origins and overlay/tiny/zero source diagnostics. It
 does not supply an eight-tag atmospheric reference or validate model parent
 physics. PX1/PX8/PX7/PX11/PX24/PX12, copies' native residual/repair/mirror/

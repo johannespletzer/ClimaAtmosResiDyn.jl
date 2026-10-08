@@ -1,26 +1,25 @@
 # G3: water tags under EDMF
 
-## Part 6 local reference handoff (2026-10-08)
+## Part 6 offline references (2026-10-08)
 
 The [frozen independent-reference design](analysis/evidence/PART6.md) is
 implemented as bounded native analytic, quadrature, upwind and implicit-Newton
 development fixtures through the existing evidence workflow. The five
-analytic cases detect wrong-origin swaps despite exact total closure. Every
-numerical/integration rung is retained: the four upwind selected references
-are ineligible under unchanged OD12; the exchange reference is eligible.
-Twenty-two focused tests and the selected 127-test offline regression suite pass.
-Independent actual-diff review is complete and its findings are resolved
-in the local handoff; this does not complete the physical Part 6 item below.
+analytic cases detect wrong-origin swaps despite exact total closure, with
+constructed eligibility. Every numerical/integration rung is retained. The
+four upwind selected references are ineligible under unchanged OD12, and the
+exchange reference is eligible on a measured floor. The adapter declares the
+eligibility file that the reviewed scorer reads. This does not complete the
+physical Part 6 item below. Five choices wait for the owner, listed in
+PART6's obligations table.
 
 PX1 then PX8 remain required regardless of an hourly screen, followed by
 OD13's PP-SUB branch only when triggered. PX7 lag/structure discrimination,
 clean Soares PX11/PX24 and TRMM PX12 including KI4-COPIES/UP1 still need native
 accepted-step evidence, eligible references at actual count/window and
 their original refinement/repair/mirror/Jacobian gates. Part 5 has no verified
-runtime producer; Julia/prepared runtime and netCDF4-dependent tests are
-unavailable here. Option D, OD3/12/13/14, owner choices and all historical
+runtime producer. Option D, OD3/12/13/14, owner choices and all historical
 failure/completion records keep their existing meaning.
-
 
 ## Part 4 software handoff (2026-10-07)
 
@@ -103,19 +102,19 @@ is promoted by preparing this documentation.
         transfers. Paired signed precipitation uses identical updates. The
         production obligation stays open, as [PART5](analysis/evidence/PART5.md)
         states.
-- [ ] **Part 6 / PX11-PX24 / PX12:** establish floors and eligibility at the
-  actual tag count/window, including copies grid/updraft residuals, repair,
-  mirrors/Jacobian, KI4-COPIES/UP1 and E/refinement per rung. Known-answer
-  transport/mixing checks must detect a label swap despite exact closure.
-  Preserve PX1→PX8 and OD13's PP-SUB trigger. Clean transport excludes moist
-  precipitation claims; do not reopen D4-W references under option D.
-  - Offline known-answer implementation and frozen inventory are saved in
-    [PART6](analysis/evidence/PART6.md), with reproducible
-    [commands](analysis/evidence/README.md#independent-water-known-answer-fixtures).
-    Analytic cells, signed density/boundary conventions, every measured floor
-    and closure-preserving origin mutants are checked. These development
-    fixtures do not fill the missing runtime/copies/held-out/count evidence
-    or qualify the eight-tag production target.
+  - [ ] **Part 6 / PX11-PX24 / PX12:** establish floors and eligibility at the
+    actual tag count/window, including copies grid/updraft residuals, repair,
+    mirrors/Jacobian, KI4-COPIES/UP1 and E/refinement per rung. Known-answer
+    transport/mixing checks must detect a label swap despite exact closure.
+    Preserve PX1→PX8 and OD13's PP-SUB trigger. Clean transport excludes moist
+    precipitation claims. Do not reopen D4-W references under option D.
+      + Offline known-answer implementation and frozen inventory are saved in
+        [PART6](analysis/evidence/PART6.md), with reproducible
+        [commands](analysis/evidence/README.md#independent-water-known-answer-fixtures).
+        Analytic cells, signed density/boundary conventions, every measured
+        floor and closure-preserving origin mutants are checked. These
+        development fixtures do not fill the missing runtime/copies/held-out/count
+        evidence or qualify the eight-tag production target.
   - [ ] **Part 7 / PX14-PX25 / WP4b:** independently test directed transfers
     between distinct donor compositions, opposing transfers, empty/negative
     donors and actual falling rain/snow owners. Resolve OD15 at preregistration.

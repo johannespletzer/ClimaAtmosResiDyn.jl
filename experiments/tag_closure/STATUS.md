@@ -7,23 +7,26 @@ now have runnable native cell-average known answers for signed periodic
 translation with advected nonuniform density, signed labelled inflow on
 nonuniform cells and conservative two-reservoir exchange. Independent
 quadrature and conservative upwind / implicit-Newton references report every
-registered rung. The existing Bundle/scorer checks native geometry, exact
-times, source/config/model hashes, active rules and actual per-norm floors.
+registered rung. The adapter is the producer of a declared eligibility file,
+as the decision of 2026-10-07 allows. The manifest names and hashes it, and
+the reviewed scorer reads the declaration through its own reader, unchanged.
 Wrong-origin label swaps preserve total closure and fail the origin rows.
 Fixture PASS also requires candidate partition closure and the prescribed
-exported-parent trajectory; same-parent status comes from the actual parent
+exported-parent trajectory. Same-parent status comes from the actual parent
 values. Mutant verification checks the registered swap and unchanged initial
 state, parent and source overlays.
 
-Fresh analytic fixtures pass all five equation cases and label-swap checks.
-The numerical fixture suite correctly returns exit 3: all four upwind
-references exceed OD12's quarter-tolerance floor and cannot judge candidates;
-the exchange reference is eligible. Every one of the 45 numerical and 18
-quadrature rungs is retained, including failures. Twenty-two focused equation/
-fault tests and the selected 127-test acceptance/accounting/reference suite
-pass. Independent actual-diff review is complete and its findings are
-resolved in the local handoff. [Commands](analysis/evidence/README.md)
-reproduce the bounded work without launching a model run.
+The analytic fixtures pass all five equation cases and label-swap checks.
+Their eligibility is constructed, not measured: the candidate equals the
+closed form, and the floor is a constructed roundoff bound, plus a measured
+quadrature floor in the smooth cases. The numerical fixture suite returns
+exit 3. All four upwind references exceed OD12's quarter rule, and none
+converges along the frozen dt ladder, which raises the upwind floor. The
+exchange reference is eligible on a measured floor. Every one of the 45
+numerical and 18 quadrature rungs is retained, including failures. The 36
+focused tests and the whole evidence directory pass.
+[Commands](analysis/evidence/README.md) reproduce the bounded work without
+launching a model run.
 
 **Part 6 physical qualification remains incomplete.** These five-label
 manufactured development cases establish implementation checks only. They
@@ -31,18 +34,9 @@ supply no atmospheric PX1/PX8/PX7/PX11/PX24/PX12 execution, actual copies
 grid/updraft residual/repair/mirror/Jacobian/fallback evidence, KI4-COPIES/UP1
 verdict, eight-tag/full-window reference, OD14 held-out result or production
 origin qualification. Part 5's verified runtime-producer registry remains
-empty. Julia/prepared runtime is unavailable; netCDF4-dependent comparison,
-energy-throughput fallback and increment tests remain execution blockers.
-No parent model, default, dependency, CI or approved tolerance changes are
-supplied; residence-time and energy-reference work stay deferred.
-
-Source inspection for this increment recorded PR146 merged on main at
-`12377fb885149d5180031c0e6a41d8dc8041e4ef`. The exact dependency remains
-Part 5 commit `1b04926582941740f2599a92c57acb3ad0abb1c6`; it does not include
-those divergent runtime changes. Older dated PR states below are history.
-The local work is a source materialization, with no branch, commit, push or
-published pull request supplied by this increment.
-
+empty. No parent model, default, dependency, CI or approved tolerance changes
+are supplied. Residence-time and energy-reference work stay deferred. Five
+choices wait for the owner, listed in PART6's obligations table.
 
 ## Part 5 offline accounting layer (2026-10-07)
 

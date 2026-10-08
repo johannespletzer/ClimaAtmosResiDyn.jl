@@ -63,8 +63,7 @@ OD12_FLOOR_SOURCES = ("source_injection", "initialization", "parent_solve", "con
 APPROVED_EXCLUSIONS = {("water", "D4-W"): {5: "option D, 2026-10-02", 6: "option D, 2026-10-02"}}
 PILOT_LABEL = ("low power: the TRMM 0M 6 h pilot scores the first-hour row only "
                "(the first hour's evaporation is 0.13% of the water, rain starts near 3 h)")
-SCORER_PATHS = ("score_acceptance.py", "acceptance_data.py", "correction_accounting.py", "manifest.py", "closure_verdict.py",
-                "water_transport_reference.py", "water_transport_adapter.py")
+SCORER_PATHS = ("score_acceptance.py", "acceptance_data.py", "correction_accounting.py", "manifest.py", "closure_verdict.py")
 
 
 def origin_limits(kind, time):
@@ -524,9 +523,6 @@ class Scorer:
 
     def reference_eligibility(self, start, end):
         ref = self.s.get("reference", {})
-        if self.family == "water" and ref.get("kind") == "water_transport":
-            from water_transport_adapter import evaluate_water_transport
-            return evaluate_water_transport(self.b, start, end)
         if not ref.get("identity") or not ref.get("evidence"):
             raise NotAssessable("no independent reference has been supplied for this scope")
         detail = self.json_artifact(ref["evidence"])
@@ -600,13 +596,6 @@ class Scorer:
         and the owner's decision of 2026-10-07 for energy).
         """
         ref = self.s.get("reference", {})
-        if self.family == "water" and ref.get("kind") == "water_transport":
-            from water_transport_adapter import evaluate_water_transport
-            result = evaluate_water_transport(self.b)
-            return {"metrics": {"tested_active_rules": result["metrics"]["independent_rules"],
-                                "untested_or_shared_rules": []}, "meets": result["meets"],
-                    "verdict": "PASS" if result["meets"] else "NOT ASSESSABLE",
-                    "limitation": result["limitation"]}
         if not ref.get("evidence"):
             raise NotAssessable("independent active-rule coverage evidence unavailable")
         detail = self.json_artifact(ref["evidence"])

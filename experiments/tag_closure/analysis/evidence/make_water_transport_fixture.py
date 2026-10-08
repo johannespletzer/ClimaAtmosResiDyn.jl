@@ -4,24 +4,30 @@
 
 These are synthetic known answers, not atmospheric model runs. All numerical
 rungs, including ineligible ones, are retained. Existing outputs are refused.
+
+Exit codes follow the scorer's. 0: every case's checks passed with an
+eligible reference. 1: a fixture check failed. 2: evidence is missing,
+corrupt or inconsistent. 3: a selected reference is ineligible, so its
+candidate is not assessable. 4: nothing was evaluated. The output exists,
+the command line is invalid, or the driver itself raised an error.
 """
 
 import argparse
 import copy
-import difflib
 import hashlib
 import json
 import shutil
+import sys
 from pathlib import Path
 
 import numpy as np
 
-from acceptance_data import Bundle, require, same_bits
+from acceptance_data import Bundle, DataError, require, same_bits
 from manifest import sha256_file
-from score_acceptance import Scorer, local_identities
+from score_acceptance import DAY, Scorer, local_identities
 from water_transport_adapter import (
-    FIXTURE_SCOPE, SOURCE_FILES, evaluate_water_transport, evaluator_identities,
-    read_native, regenerate, rungs,
+    DECLARED_FIELDS, FIXTURE_SCOPE, SOURCE_FILES, evaluate_water_transport,
+    evaluator_identities, producer_identity, read_native, regenerate, rungs,
 )
 from water_transport_reference import (
     BASE_COMMIT, DESIGN_PATH, DESIGN_SHA256, FIELD_NAMES, analytic, case_by_id,
@@ -29,8 +35,23 @@ from water_transport_reference import (
 )
 
 
+# Written after the artifact inventory, so they are not listed in it.
+MANIFEST_FILES = ("extension.json", "manifest.json", "manifest_origin_swap.json")
+
+
 def write_json(path, value):
     path.write_text(json.dumps(value, sort_keys=True, indent=2, allow_nan=False) + "\n")
+
+
+def write_manifests(root, submission, spec, runs):
+    spec["artifacts"] = {path.name: sha256_file(path) for path in sorted(root.iterdir())
+                         if path.is_file() and path.name not in MANIFEST_FILES}
+    write_json(root / "extension.json", spec)
+    write_json(root / "manifest.json", {**submission, "acceptance": spec})
+    mutant = copy.deepcopy(spec)
+    mutant["runs"]["candidate"] = copy.deepcopy(runs["origin_swap"])
+    mutant["runs"]["candidate"].pop("manifest", None)
+    write_json(root / "manifest_origin_swap.json", {**submission, "acceptance": mutant})
 
 
 def archive_state(path, state, excluded=()):
@@ -95,21 +116,16 @@ def write_fixture(root, case_id, comparison_grid=64, reference_mode="analytic", 
         fields = archive_state(root / (role + ".npz"), state,
                                design["excluded_processes"] if role in ("candidate", "origin_swap") else ())
         runs[role] = {"fields": fields}
-    # A dirty offline evaluator has exact file hashes, never a fabricated git branch.
-    current = Path(__file__).with_name("score_acceptance.py")
-    original = current.parents[5] / "original" / current.relative_to(current.parents[4])
-    patch = ("".join(difflib.unified_diff(original.read_text().splitlines(True),
-                                         current.read_text().splitlines(True),
-                                         fromfile="a/experiments/tag_closure/analysis/evidence/score_acceptance.py",
-                                         tofile="b/experiments/tag_closure/analysis/evidence/score_acceptance.py"))
-             if original.is_file() else "offline fixture; scorer identity pinned by SHA256\n")
+    # No model runs, so there is no working-tree diff. The scorer files are
+    # pinned by their SHA256 in the acceptance extension.
+    patch = "offline fixture, scorer identity pinned by SHA256\n"
     identities = evaluator_identities()
     untracked = [{"path": name, "sha256": identities[name]} for name in SOURCE_FILES]
-    submission = {"head_sha": BASE_COMMIT, "status_lines": ["offline partial source materialization; no local git branch"],
+    submission = {"head_sha": BASE_COMMIT, "status_lines": ["offline partial source materialization, no local git branch"],
                   "diff": patch, "diff_sha256": hashlib.sha256(patch.encode()).hexdigest(),
                   "untracked": {"count": len(untracked), "files": untracked},
                   "config": {"path": "resolved_config.json", "sha256": sha256_file(root / "resolved_config.json")},
-                  "buildkite_files": {}, "julia_version": "not executed; known-answer Python fixture",
+                  "buildkite_files": {}, "julia_version": "not executed, known-answer Python fixture",
                   "hostname": "offline-known-answer-fixture", "env_vars": {}, "julia_binary": "not executed",
                   "julia_channel": "not executed", "loaded_modules": [], "model_runtime_executed": False}
     write_json(root / "submission.json", submission)
@@ -126,9 +142,8 @@ def write_fixture(root, case_id, comparison_grid=64, reference_mode="analytic", 
               "shared_rules": [], "rungs": declarations,
               "limitation": "Candidate is a manufactured exact answer. Agreement is not production coverage."}
     write_json(root / "water_reference_evidence.json", detail)
-    artifacts = {path.name: sha256_file(path) for path in sorted(root.iterdir()) if path.is_file()}
     spec = {"schema_version": 1, "experiment_commit": "local-uncommitted", "scorer_commit": "local-uncommitted",
-            "acceptance_commit": BASE_COMMIT, **local_identities(), "artifacts": artifacts,
+            "planning_commit": BASE_COMMIT, **local_identities(),
             "submission_files": {"config": "resolved_config.json", **sources},
             "resolved_settings": {"solver": "independent offline analytic/upwind/implicit-Newton",
                                   "seed": "none", "physics": case, "diagnostics": list(FIELD_NAMES),
@@ -139,20 +154,25 @@ def write_fixture(root, case_id, comparison_grid=64, reference_mode="analytic", 
             "parent_capture_scope": "exported", "same_parent_comparisons": same_parent,
             "end_seconds": 86400, "profile_times": [3600, 86400], "active_rules": [rule_for(case)],
             "reference": {"identity": design["identity"], "evidence": "water_reference_evidence.json",
-                          "kind": "water_transport"}}
-    write_json(root / "extension.json", spec)
-    write_json(root / "manifest.json", {**submission, "acceptance": spec})
-    mutant = copy.deepcopy(spec)
-    mutant["runs"]["candidate"] = copy.deepcopy(runs["origin_swap"])
-    mutant["runs"]["candidate"].pop("manifest", None)
-    write_json(root / "manifest_origin_swap.json", {**submission, "acceptance": mutant})
+                          "kind": "water_transport", "producer": producer_identity()}}
+    write_manifests(root, submission, spec, runs)
+    # The producer measures the finished rungs, then declares the eligibility
+    # file that the scorer's own reader reads. The inventory is then rewritten.
+    measured = evaluate_water_transport(Bundle(root / "manifest.json"), declared=False)
+    detail.update({key: measured["declaration"][key] for key in DECLARED_FIELDS})
+    write_json(root / "water_reference_evidence.json", detail)
+    write_manifests(root, submission, spec, runs)
     return root / "manifest.json"
 
 
 def evaluate_fixture(manifest):
     bundle = Bundle(manifest)
+    # The producer's internal check, then the scorer's reading of the declaration.
     measured = evaluate_water_transport(bundle)
     scorer = Scorer(bundle)
+    eligibility = scorer.reference_eligibility(0, DAY)
+    require(eligibility["meets"] == measured["meets"],
+            "the scorer's reading of the declaration differs from the producer's")
     profiles = [{"tag": tag["name"], "endpoint_seconds": time, **scorer.profile(tag, time)}
                 for time in (3600, 86400) for tag in bundle.spec["tags"]]
     mutant_bundle = Bundle(Path(manifest).with_name("manifest_origin_swap.json"))
@@ -169,6 +189,7 @@ def evaluate_fixture(manifest):
                                        read_native(bundle, "candidate", truth), design)
     result = {"schema_version": 1, "scope": FIXTURE_SCOPE, "scientific_qualification": "NOT QUALIFIED",
               "manifest": Path(manifest).name, "measured_reference": measured,
+              "scorer_reference_eligibility": eligibility,
               "candidate_profiles": profiles,
               "candidate_verdict": ("PASS" if measured["metrics"]["candidate_closure"]["meets"] and
                                     measured["metrics"]["candidate_parent_trajectory"]["meets"] and
@@ -209,21 +230,40 @@ def run_suite(root, config):
                         "candidate_verdict": result["candidate_verdict"],
                         "origin_swap_verified": result["origin_swap"]["mutation_verified"],
                         "result": case_id + "/known_answer_results.json"})
-    code = (1 if any(row["candidate_verdict"] == "FAIL" or row["origin_swap_verified"] is False for row in results)
-            else 3 if any(not row["reference_eligible"] for row in results) else 0)
-    report = {"schema_version": 1, "design_sha256": DESIGN_SHA256, "cases": results, "exit_code": code,
+    report = {"schema_version": 1, "design_sha256": DESIGN_SHA256, "cases": results,
+              "exit_code": suite_exit_code(results),
               "scientific_qualification": "NOT QUALIFIED", "scope": FIXTURE_SCOPE,
-              "limitation": "Every output is synthetic; native atmospheric runtime/producer obligations remain open."}
+              "limitation": "Every output is synthetic. Native atmospheric runtime/producer obligations remain open."}
     write_json(root / "suite_results.json", report)
     return report
 
 
+def suite_exit_code(results):
+    """1 for a failed check, else 3 for an ineligible reference, else 0."""
+    if any(row["candidate_verdict"] == "FAIL" or row["origin_swap_verified"] is False for row in results):
+        return 1
+    return 3 if any(not row["reference_eligible"] for row in results) else 0
+
+
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("directory")
     parser.add_argument("--config", required=True)
-    args = parser.parse_args(argv)
-    report = run_suite(args.directory, json.loads(Path(args.config).read_text()))
+    try:
+        args = parser.parse_args(argv)
+    except SystemExit as exc:
+        return 0 if exc.code == 0 else 4
+    if Path(args.directory).exists():
+        print("not evaluated: the output directory exists. Choose a new one", file=sys.stderr)
+        return 4
+    try:
+        report = run_suite(args.directory, json.loads(Path(args.config).read_text()))
+    except (DataError, json.JSONDecodeError, UnicodeDecodeError, OSError) as exc:
+        print("DATA FAILURE: " + str(exc), file=sys.stderr)
+        return 2
+    except Exception as exc:  # A driver error is reported as such, never as bad data.
+        print(f"DRIVER ERROR: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return 4
     print(json.dumps(report, sort_keys=True, indent=2))
     return report["exit_code"]
 
