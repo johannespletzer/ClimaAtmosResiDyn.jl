@@ -68,6 +68,31 @@ def field(key, var, reduction="inst"):
     return t, values * rho[: len(t)] * dz
 
 
+def downward_precipitation(rate, bounds, end):
+    """The surface precipitation over [0, end], kg/m², positive downward.
+
+    `pr` is upward-positive, so falling precipitation is negative. Each average
+    covers its interval in `time_bnds`. Every interval counts, the first hour
+    included, and the intervals must tile [0, end] without gaps.
+    """
+    keep = bounds[:, 1] <= end
+    b = bounds[keep]
+    if not len(b) or b[0, 0] != 0 or b[-1, 1] != end or np.any(b[1:, 0] != b[:-1, 1]):
+        raise SystemExit(f"process_budget: the pr averages do not tile 0 to {end:g} s")
+    return -float(np.sum(rate[keep] * (b[:, 1] - b[:, 0])))
+
+
+def surface_precipitation(key, end):
+    """`downward_precipitation` from a run's hourly `pr` averages, or None."""
+    path = glob.glob(os.path.join(out_dir(RUNS[key]), "pr_1h_average.nc"))
+    if not path:
+        return None
+    with nc.Dataset(path[0]) as ds:
+        rate = np.asarray(ds["pr"][:], dtype=np.float64).reshape(len(ds["time"]), -1)[:, 0]
+        bounds = np.asarray(ds["time_bnds"][:], dtype=np.float64)
+    return downward_precipitation(rate, bounds, end)
+
+
 def at(t, values, time):
     k = int(np.argmin(np.abs(t - time)))
     if abs(t[k] - time) > 1e-6:
@@ -190,11 +215,10 @@ def report():
         t_q, q = field("c", f"q_prc_{p}")
         if q is not None:
             q_terms.append(float(np.sum(at(t_q, q, day))))
-    t_pr, pr = field("c", "pr", "average")
-    if pr is not None and q_terms:
-        # `pr` is the hour's average rate, positive downward, kg/m²/s.
-        surface = float(np.sum(pr[1:, 0] * np.diff(t_pr)))
-        print(f"   from the records: c·(ΔM − Σ q_prc + ∫pr dt) "
+    surface = surface_precipitation("c", day)
+    if surface is not None and q_terms:
+        print(f"   surface precipitation over the day, positive downward: {surface:+.4e} kg/m²")
+        print(f"   from the records: c·(ΔM − Σ q_prc + P_down) "
               f"{OFFSET['c'] * (dM - sum(q_terms) + surface):+.4e} J/m²")
 
     # The verdicts.

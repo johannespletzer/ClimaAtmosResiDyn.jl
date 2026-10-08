@@ -436,7 +436,7 @@ def verify(json_path):
 
 
 def attach_acceptance(original, extension, output):
-    """Preserve submission provenance and write a separately identified evaluation input."""
+    """Keep the submission record unchanged and write a separately identified evaluation input."""
     out = Path(output)
     if out.exists() or out.resolve() == Path(original).resolve():
         die("output exists; keep historical manifest immutable and choose a new evaluation path")
