@@ -339,6 +339,34 @@ plan-rev2.
     the review session.** **In force.** An Opus agent writes it against the
     reviewed scorer, with a test on the archived W58 and E87 outputs, as a
     PR for the owner's review.
+  - **Part 6 delivers known-answer references for label arithmetic.** **In
+    force.** The reference integrates the continuum equation with
+    first-order upwind of `ρχ`. The code's transport operators (van Leer on
+    specific `χ`, the spectral horizontal operator, the water increment
+    follower) are not tested by it. Operator fidelity belongs to the PX
+    runs of Part 7. Decided after the review of PR #154.
+  - **The Part 6 ladder refines at fixed CFL, with the scorer's tie.** **In
+    force.** `Δx` and `Δt` refine together, so upwind converges at first
+    order. The `Δt`-only ladder and the 128 eps tie multiplier are dropped.
+    Recorded as a Part 6 convention, since no contract named a ladder.
+  - **Part 6's register row is amended.** **In force.** Part 6 is the
+    known-answer references of PR #154. The PX runs (PX1/PX8, PX7,
+    PX11/PX24, PX12) and the reuse of the existing mixing tests move to
+    Part 7, where the model runs.
+  - **The design hash shows integrity only.** **In force.** A fixture's
+    design hash proves the design file is unchanged, not that it was fixed
+    before the results. No "frozen before results" claim is made.
+  - **Inapplicable completeness flags are true with a stated basis.** **In
+    force.** A clarification of the declared eligibility format of
+    2026-10-07: a condition a reference does not have (source mirrors, the
+    Jacobian, convergence of an analytic case) is declared complete with
+    the basis "inapplicable". Read as false, every analytic fixture would
+    be ineligible.
+  - **Parity blocks the origin rows only. The eligibility rows are
+    reported.** **In force.** The reviewed scorer also blocked the
+    `REFERENCE.ELIGIBILITY` rows under exported-only parity. Eligibility is
+    a producer property, so the scorer is fixed in a follow-up on plan-rev2
+    to read those rows from the declared file whatever the parity state.
 
 ## 2026-10-07
 
