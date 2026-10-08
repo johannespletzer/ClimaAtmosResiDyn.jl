@@ -21,24 +21,22 @@ registers below also retain items already completed or outside this roadmap.
 An unassigned outside item remains explicitly deferred pending classification,
 not silently discarded or activated.
 
-## Part 7 local implementation routing (2026-10-08)
+## Part 7 implementation routing (2026-10-08)
 
-This supplement reports the bounded implementation; the immutable baseline
-rows below and their source gates keep their existing meaning. See the
-[complete obligation map](analysis/evidence/PART7.md#full-part7-obligation-mapping).
+This supplement reports the bounded implementation. The baseline rows below
+and their source gates keep their meaning. See the
+[obligation map](analysis/evidence/PART7.md#full-part7-obligation-mapping).
 
-| Existing route | Local evidence | Remaining obligation |
-|:--|:--|:--|
-| Part 7 / WP4a-V/J / WP4b-D | Actual mechanism inventory; existing split/Jacobian/design evidence reused; no shared production helper used by the new oracle | Original rain-out/copies/EDMF scope and stage-2/3 support gates |
-| Part 7 / PX14 / WR12–14 | Independent directed equations, actual label-owner sedimentation/export, full frozen 1/4/16/64 RK4 and separate pool replay, registered donor/net/reset controls | Real rain window, accepted native flows/rate state and temporal capture; replay does not validate rates |
-| Part 7 / PX25 / OD15 / PT15–16 | 16 tagged arms plus eight matched parents; effective quadrature key, void-arm guard, signed/gross audit and proposed-only trend helper | Owner OD15 decision, second established-rain case, short-window applicability, runtime/cost/held-out evidence |
-| Parts 4/5 / correction and precipitation | Existing Bundle, native application/lifecycle and same-update paired reader reused; synthetic amounts independently match owner exports | Empty production registry; actual applications/minima/corrections/fallback/bounds and physical restart/parity |
-| Part 7 / review and handoff | 33 focused and 131 selected supported regression checks pass; final-code suites, fresh-hash review probes and logs retained | Supplemental review closes directed-amount/roster findings; reconcile 26 later Part 6 commits before merge; physical Part 7 and Parts 8–10 remain open |
+| Existing route                           | Evidence here                                                                                                                                                                    | Remaining obligation                                                                                                       |
+|:---------------------------------------- |:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |:-------------------------------------------------------------------------------------------------------------------------- |
+| Part 7 / WP4a-V/J / WP4b-D               | Mechanism inventory. Existing split, Jacobian and design evidence reused. The new oracle uses no production helper                                                               | Original rain-out, copies and EDMF scope and the stage 2 and 3 gates                                                       |
+| Part 7 / PX14 / WR12–14                  | Independent directed equations, label-owner sedimentation and export, the 1/4/16/64 RK4 ladder and a separate pool replay, wrong-donor, erased-exchange and owner-reset controls | Real rain window, accepted native flows and rate state. Replay does not validate rates                                     |
+| Part 7 / PX25 / OD15 / PT15–16           | Draft pending the owner: 16 tagged arms and 8 matched parents, the effective substep key, a void-arm guard, signed and gross audit and a proposed-only trend helper              | OD15, the second established-rain case, short-window applicability, OD14 held-out independence from RICO, runtime and cost |
+| Parts 4/5 / correction and precipitation | Existing Bundle, application reader and paired precipitation reader reused. The paired row stays reported accounting (WA-PRECIP)                                                 | Empty production registry, actual applications, corrections and bounds, physical restart and parity                        |
+| Part 6 / declared eligibility            | The transfer adapter is the producer of a declared eligibility file. The scorer is unchanged                                                                                     | Physical Part 7 and Parts 8 to 10 remain open                                                                              |
 
-The full transport/closure regression still has one existing missing
-`netCDF4` error; the supported subset is not described as that suite passing.
 No baseline row, accepted tolerance, historical failure, owner decision,
-option D restriction or deferred energy/residence-time item is changed.
+option D restriction or deferred energy or residence-time item is changed.
 
 ## Historical execution steps
 

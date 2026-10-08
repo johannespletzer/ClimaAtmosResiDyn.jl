@@ -2,53 +2,37 @@
 
 ## Part 7 independent water-transfer software (2026-10-08)
 
-The [frozen transfer design and obligation inventory](analysis/evidence/PART7.md)
+The [transfer design and obligation inventory](analysis/evidence/PART7.md)
 have runnable independent donor-composition equations for one-way transfer,
 opposing net-zero exchange, a three-compartment cycle, unequal compositions,
-empty/depleted donors and separate rain/snow column exports. A separate
-declared negative-water map is an engineering test, not a physical negative
-composition. Pool replay and pool/net audit spread remain distinct from
-reference error. Registered wrong-donor, erased-exchange and owner-reset
-controls fail origins while preserving the parent and total partition.
+empty and depleted donors, zero activity and separate rain and snow column
+exports. A declared negative-water map is an engineering test, not a
+physical negative composition. Pool replay and pool/net audit spread stay
+apart from reference error. The wrong-donor, erased-exchange and owner-reset
+controls keep the parent and every total and fail an origin row.
 
-Both complete nine-case exact/RK4 offline suites return exit 0. Each retains
-36 RK4 and 28 pool diagnostic rungs, including coarse failures. All selected
-64-substep floors are eligible under the frozen quarter-tolerance rule; the
-largest combined floor fraction is `8.310061860770055e-5`. Zero activity
-gives no donor-rule coverage. Thirty-three focused tests, complete 49-test
-acceptance and 56-test accounting modules, and an explicitly selected
-26-test transport/closure subset pass. The retained full 27-test
-transport/closure run has one error from missing `netCDF4` in the existing
-energy-throughput fallback; it is not a full-suite pass. Earlier truncated
-logs are inconclusive. [Commands](analysis/evidence/README.md#independent-water-transfer-fixtures)
-reproduce this bounded work. Independent supplemental actual-diff review
-closes its fresh-hash directed-amount/roster findings; correct endpoint
-profiles cannot conceal inconsistent applied labels. Its mathematical and
-performance passes cover the offline evaluator, with runtime gaps retained.
+The adapter follows Part 6's reviewed pattern. It is the producer of a
+declared eligibility file that the unchanged scorer reads. Both nine-case
+suites, exact and RK4, retain 36 RK4 and 28 pool rungs and exit 3. Eight
+cases have eligible rung-64 references, the largest floor fraction being
+`8.310061860770055e-5`. The zero-activity reference covers no rule, so its
+candidate is not assessable. [Commands](analysis/evidence/README.md#independent-water-transfer-fixtures)
+reproduce this work. The whole evidence directory passes.
 
 **Part 7 physical qualification remains incomplete.** These six-label
-prescribed-rate development cases validate conditional attribution equations,
-not model microphysics rates, atmospheric PX14/PX25 or precipitation/EDMF
-stages 2/3. The 16-tagged/8-parent [PX25 draft matrix](configs/part7_px25_draft/README.md)
-is planning only: OD15 is proposed/pending, the 1500 s case has no approved
-hour/day score, the second established-rain case is unselected and OD14
-held-out independence remains unresolved. Actual accepted rates/substeps,
-corrections/minima/fallback/bounds, Part 5 production capture, eight-tag/full
-windows, parity/restart/device/cost and the original WP4a/WP4b gates remain
-required. The full acceptance scorer on a development fixture keeps
-`NOT QUALIFIED` and exit 2 for missing evidence.
-
-The reviewed dependency is Part 6 commit
-`9344147c69f4c58eb1197adf84f3b7b98df65440`. Initial saved ref/PR receipts
-record PR154 open/unmerged and main divergent. Publication inspection found
-Part 6 advanced 26 commits to `da991fffa09d85567cab23cdb99deb13e9c779d0`;
-reconciliation with that later scorer/contracts/tests is required before
-merge. The source patch remains pinned to its verified base and contains
-no later-main closing/order implementation. No model/default, dependency/CI/
-tolerance, historical-result, runtime campaign, energy-reference or
-residence-time change is supplied. Julia/prepared runtime and `netCDF4`
-remain unavailable. Older dated records below retain their scope.
-
+prescribed-rate development cases check conditional attribution equations,
+not model microphysics rates, atmospheric PX14 or PX25, or precipitation and
+EDMF stages 2 and 3. The [PX25 draft matrix](configs/part7_px25_draft/README.md)
+of 16 tagged arms and 8 parents is a draft pending the owner. OD15 is
+proposed. The 1500 s case has no approved hour or day score, and the second
+established-rain case is unselected. Its PrecipitatingColumn starts from
+RICO's profiles, and RICO 1M 24 h is the held-out case (WA-SCOPE), so OD14
+independence is an owner item. Accepted rates and substeps, corrections,
+Part 5 production capture, eight tags and full windows, parity, restart,
+device and cost remain required. The full acceptance scorer on a development
+fixture keeps `NOT QUALIFIED` and exit 2. No model, default, tolerance,
+dependency or CI change is supplied. Older dated records below retain their
+scope.
 
 ## Part 6 independent water reference software (2026-10-08)
 

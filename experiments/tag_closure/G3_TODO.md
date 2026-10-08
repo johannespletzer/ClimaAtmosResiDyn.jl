@@ -1,30 +1,23 @@
 # G3: water tags under EDMF
 
-## Part 7 local transfer-reference handoff (2026-10-08)
+## Part 7 transfer references (2026-10-08)
 
-The [independent transfer design](analysis/evidence/PART7.md) is implemented
-through the existing Bundle/scorer with nine prescribed-rate development
-cases, native compartment/owner/export diagnostics, every 1/4/16/64 rung
-and measured same-norm floors. Both exact and RK4 suites pass their bounded
-equation checks and registered origin controls. The 33 focused tests and
-131 explicitly supported acceptance/accounting/transport/closure checks
-pass; the unmasked full transport/closure run retains its one missing
-`netCDF4` error. Independent supplemental review closes the malformed
-directed-amount/roster findings with fresh hashes and retains correct
-wrong-origin discrimination. The patch is reviewed against Part 6
-`9344147c69f4c58eb1197adf84f3b7b98df65440`; reconcile the 26 later commits
-through `da991fffa09d85567cab23cdb99deb13e9c779d0` before merge.
+The [independent transfer design](analysis/evidence/PART7.md) runs through
+the existing Bundle with nine prescribed-rate development cases, native
+compartment, owner and export diagnostics, every 1/4/16/64 rung and measured
+same-norm floors. The adapter is the producer of a declared eligibility file
+that the unchanged scorer reads, as in Part 6. Eight cases have eligible
+references, passing candidates and verified origin controls. The
+zero-activity reference covers no rule, so both suites exit 3.
 
 This completes no physical checkbox below. PX14's real rain window, native
-accepted gross flows and evolving donor/substep samples are missing. The
-PX25 draft has 16 tagged arms and eight own-setting untagged parents, but
-OD15 remains proposed/pending; no 1 h/12 h/24 h criterion is applied to its
-1500 s case. Part 5's production registry stays empty. WP4a-V/J evidence is
-reused within its original scope; WP4b stages 2/3, actual parity/restart/cost,
-intended count/windows and OD14 held-out evidence remain open. No runtime
-model, approved tolerance, default, dependency or CI change is supplied.
-
-
+accepted gross flows and evolving donor and substep samples are missing. The
+PX25 draft has 16 tagged arms and 8 own-setting untagged parents. It is a
+draft pending the owner. OD15 is proposed, and no 1 h, 12 h or 24 h
+criterion is applied to its 1500 s case. Part 5's production registry stays
+empty. WP4b stages 2 and 3, parity, restart, cost, the intended count and
+windows and OD14 held-out evidence remain open. No runtime model, approved
+tolerance, default, dependency or CI change is supplied.
 
 ## Part 6 offline references (2026-10-08)
 
@@ -146,15 +139,15 @@ is promoted by preparing this documentation.
     donors and actual falling rain/snow owners. Resolve OD15 at preregistration.
     A shared-rule rate audit is accounting. Current separate rain/snow tags
     refuse EDMF/copies. Support and validation of stages 2/3 remain required.
-    - Offline equation/known-owner checks and preregistration planning are
-      saved in [PART7](analysis/evidence/PART7.md), with reproducible
-      [commands](analysis/evidence/README.md#independent-water-transfer-fixtures).
-      Origin mutants expose wrong donors, erased opposing exchange and local
-      owner resets despite closed totals. Complete RK4/pool ladders, native
-      process/profile/export errors, distinct signed/gross/retained audit
-      activity and paired synthetic accepted precipitation are retained.
-      Prescribed-rate replay cannot validate actual evolving model rates;
-      runtime capture, OD15, atmospheric PX14/PX25 and stages 2/3 stay open.
+      + Offline equation/known-owner checks and preregistration planning are
+        saved in [PART7](analysis/evidence/PART7.md), with reproducible
+        [commands](analysis/evidence/README.md#independent-water-transfer-fixtures).
+        Origin mutants expose wrong donors, erased opposing exchange and local
+        owner resets despite closed totals. Complete RK4 and pool ladders,
+        native process, profile and export errors, signed, gross and retained
+        audit activity and paired synthetic accepted precipitation are retained.
+        Prescribed-rate replay cannot validate evolving model rates. Runtime
+        capture, OD15, atmospheric PX14 and PX25 and stages 2 and 3 stay open.
   - [ ] **Parts 8/9/10:** measure integrated error and matched build/step/memory
     with required diagnostics before selection. Fix only evidenced defects,
     then qualify the owner-fixed scope with every required row and independent
