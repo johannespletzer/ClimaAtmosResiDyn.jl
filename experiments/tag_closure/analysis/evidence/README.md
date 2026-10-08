@@ -104,8 +104,8 @@ equivalence.
 ## Weighted applications and cancellation
 
 For one fixed mechanism/tag/compartment and native volume, signed window S is
-the integral of the endpoint ledger difference; retained H sums the absolute
-native-cell ledger changes at every accepted step; accepted A sums absolute
+the integral of the endpoint ledger difference. Retained H sums the absolute
+native-cell ledger changes at every accepted step. Accepted A sums absolute
 weighted native-cell contributions at every accepted application. Absolute
 value precedes cells, applications and compartments for A. A complete additive
 decomposition satisfies abs(S) <= H <= A up to a reported rounding allowance.
@@ -115,7 +115,7 @@ allowance is not a scientific activity tolerance.
 It uses per-step/native-cell quantities with the same density units and the
 least precise native dtype, including the sum of absolute weighted
 contributions before cancellation. This covers native addition roundoff
-between opposing stages; an unrelated dense cell or atmospheric density
+between opposing stages. An unrelated dense cell or atmospheric density
 cannot enlarge another cell's correction allowance.
 Below the native normal range, the allowance also includes the local loss
 when a weighted contribution rounds to its native dtype. Specific-ledger
@@ -127,8 +127,8 @@ representable subnormal update into a zero density ledger is rejected.
 An application is a final additive contribution with its integration weight.
 The receipt pins `unconstrained_imex_ark`, `ClimaTimeSteppers` version,
 `b_exp`, `b_imp` and `implicit_diagonal`. Explicit/implicit tendency weights
-are dt times the corresponding accepted b coefficient; post-Newton map
-increments use b_imp/gamma; final accepted maps have weight 1. Nonadditive
+are dt times the corresponding accepted b coefficient. Post-Newton map
+increments use b_imp/gamma. Final accepted maps have weight 1. Nonadditive
 pre-solve stage observations are refused. A distinct final evaluation ID must
 replace repeated Newton evaluations. Rejected/superseded evaluations cannot
 enter A. `attempted_coefficient` is optional: supply it only for an actual trial
@@ -155,10 +155,10 @@ The extension uses this shape inside the existing `acceptance` object:
 }
 ```
 
-The required roster is the declared accounting scope; it must cover every
+The required roster is the declared accounting scope. It must cover every
 active mechanism/tag/compartment needed for the claim, not a convenient subset.
 It is checked against the runtime validation's active-roster evidence before a
-production completeness pass. `inactive` requires a reason and pinned evidence;
+production completeness pass. `inactive` requires a reason and pinned evidence.
 `unsupported`/`missing` block completeness and never receive a zero. Every
 observed channel must have an applied record at every accepted step, including
 an explicit measured zero. Empty rosters cannot pass.
@@ -179,41 +179,46 @@ and, for each prefix, `PREFIX__values` (native Float32/Float64 record x cell),
 `__record_ids`, embedded `__quantity`/`__units`, native `__event_scale` and
 integer arrays `__fallback`, `__bound`, `__clamp`, `__zero_normalization`.
 Missing counters are data failures. Values are density increments or density
-tendencies as explicitly named; final coefficients are applied before absolute
+tendencies as explicitly named. Final coefficients are applied before absolute
 value. The event convention is a stored native node per element per weighted
-application above max(1e-12,16 eps(native dtype))*abs(parent total).
+application above max(1e-12,16 eps(native dtype)) times the absolute value of
+`__event_scale`, the writer's own scale. That scale differs by writer, as
+[PART5.md](PART5.md) lists.
 Existing retained cell-step and attempted cache-count conventions stay separate.
 
-Optional `directed_transfers` pairs name an `id`, donor and receiver channel.
+Optional `directed_transfers` pairs name an `id`, a `donor` channel (the giving
+leg) and a `receiver` channel.
 The reader requires identical applications/native cells and equal opposite
 legs. It reports transfer Q once and summed leg activity 2Q. Aggregate signed
-closure is never used as a substitute for either amount or a provenance bound.
+closure is never used as a substitute for either amount or an origin bound.
 Fine energy sources remain separate from OD4's accepted-step partition source
 variation. No retained tolerance is transplanted onto A.
 
 For `precipitation_applications`, use `schema_version: 1`, a receipt,
-`channels` keyed by `parent` and every partition tag, `required_channels`, and
+`channels` keyed by `parent` and every partition tag, and
 `sign_convention: "upward_positive"`. Each channel descriptor names a native
 `precipitation_flux` in kg m^-2 s^-1. Identical parent/tag application/evaluation/
 trial/coefficient identities are required. Column amounts use one unit-weighted
-surface; native sphere amounts use m^2 area weights. Signed downward, positive
+surface. Native sphere amounts use m^2 area weights. Signed downward, positive
 downward and negative downward amounts are reported separately. Instantaneous
-precipitation diagnostics remain available. No donor reference or precipitation
-accuracy tolerance is supplied by this arithmetic.
+precipitation diagnostics remain available. No reference for the giving pool
+or precipitation accuracy tolerance is supplied by this arithmetic. The row
+stays reported accounting. An unverified producer is a stated limitation and
+never turns the row into a not-assessable one.
 
 Production completeness additionally needs a pinned `lifecycle_evidence`
 artifact of kind `runtime_validation`, exact model/diff identity, producer
 source and scope roster, and PASS checks with commands/environment/hashed logs
 for accepted weights, rollback, Newton replacement, complete active roster,
-parent bitwise parity and all-channel checkpoint/restart. The producer ID,
-source hash and timestepper version must also match the implementation's
-verified-producer registry. **That registry is empty in this handoff:** no
-runtime producer has been implemented or verified. Users cannot register one
-through manifest metadata, and arbitrary hashed files or declared PASS logs
-cannot clear the gate. A future registry entry is a code change after actual
-source/lifecycle/parity/restart review and validation. Synthetic submission/
-receipt identities cannot clear the gate. All current production scopes remain
-NOT ASSESSABLE while their measured arithmetic is reported.
+parent bitwise parity and all-channel checkpoint/restart. The proof's roster
+must equal the roster the reader evaluated. The producer ID, source hash and
+timestepper version must also match the implementation's verified-producer
+registry, which is empty, so no submission clears the gate today
+([PART5.md](PART5.md)).
+
+The scorer scores completeness in `COMMON.ACCEPTED_APPLICATION_ACTIVITY` and
+reports each window's activity in `COMMON.APPLICATION_ACTIVITY.<window>`, a
+reported row that never passes.
 
 The cancellation example is reproducible and separate from all historical runs:
 
@@ -227,8 +232,8 @@ python3 -m unittest discover -s experiments/tag_closure/analysis/evidence -p tes
 ```
 
 Every hour applies +1 and -1 in each of two unit-thickness cells. Over 24 h
-S=0, H=0 and A=96 kg m^-2. Production completeness stays NOT ASSESSABLE;
-scoring exits 3 for the remaining scientific gates. No simulation is run.
+S=0, H=0 and A=96 kg m^-2. Production completeness stays NOT ASSESSABLE.
+Scoring exits 3 for the remaining scientific gates. No simulation is run.
 
 ## Reproducible analytic example and tests
 
@@ -251,7 +256,7 @@ norms, comparator checks, parent parity and ledger ratios. It also reports:
 COMMON.SCOPE_APPROVAL: NOT ASSESSABLE / COMPLETE
   qualification stays at eight tags on the approved rows (WA-SCOPE)
 COMMON.ACCEPTED_APPLICATION_ACTIVITY: NOT ASSESSABLE / COMPLETE
-  cell-step variation can hide cancelling applications/legs
+  missing accepted application/leg accounting
 WATER.PRECIP_INTEGRATED.established: NOT ASSESSABLE / DATA FAILURE
   snapshots are insufficient for paired integrated precipitation
 qualification: NOT QUALIFIED, exit 3

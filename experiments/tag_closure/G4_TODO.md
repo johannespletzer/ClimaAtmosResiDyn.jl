@@ -108,6 +108,11 @@ Concrete remaining work, retaining all G4.n/PX obligations below:
     Preserve count conventions, cancellation visibility and checkpoints. Use
     OD13's probe gates rather than unsolicited state fields. No propagated
     attribution-error bound from these activity totals alone.
+      + Offline reader and tests implemented. They read accepted weighted
+        source, repair and follower applications separately from OD4, with
+        native signed, retained, activity and counter reports. The exact
+        accepted-step source denominator stays unchanged. The production
+        obligation stays open, as [PART5](analysis/evidence/PART5.md) states.
   - [ ] **Part 11a, independent energy references:** design the
     [discriminating cases](design/G4_CLAIM_CONTRACTS.md#6-discriminating-reference-work-for-later-parts),
     including stage-weighted radiative flux/divergence versus the signed record,
@@ -136,48 +141,6 @@ Concrete remaining work, retaining all G4.n/PX obligations below:
     OD8 target count and cost, then OD1/OD6 long production scope with its
     short cost pilot before commissioning. G4.13 is 12d. G4.14/PX19 retain
     numerical-loss gates. No residence-time or air-age work.
-
-- [ ] **Part 5, energy activity:** demonstrate opposing source/stage and
-  repair/follower applications. Accepted-step Θx and retained variation are
-  exact for their recorded grouping, not eventwise activity. Distinguish
-  signed, cell-step, column-gross, attempted and accepted-application amounts;
-  preserve count conventions, cancellation visibility and checkpoints. Use
-  OD13's probe gates rather than unsolicited state fields. No propagated
-  attribution-error bound from these activity totals alone.
-  - Offline consumer/test layer implemented: [PART5](analysis/evidence/PART5.md)
-    reads accepted weighted source/repair/follower applications separately
-    from OD4, with native signed/retained/activity/counter reports. The exact
-    accepted-step source denominator and old results remain unchanged. Real
-    accepted tag capture, complete active counters and physical checkpoint/
-    parent parity verification remain open; no production completion is claimed.
-- [ ] **Part 11a, independent energy references:** design the
-  [discriminating cases](design/G4_CLAIM_CONTRACTS.md#6-discriminating-reference-work-for-later-parts),
-  including stage-weighted radiative flux/divergence versus the signed record,
-  and wrong-origin mutants that preserve total energy. Declare shared rules,
-  independent mechanisms, numerical floors, refinement and inactive exclusions
-  under OD12. PX22/15, copy mirrors and source-tag conventions retain their
-  own prerequisites; a simple record reference does not qualify those rules.
-- [ ] **Part 11b, process/integrated baseline:** post-#139 parity and raw
-  validity, record reference evidence, native process budget/remainders,
-  repeated C4 size and failed-A5 investigation, eligibility/mirror/cross-block
-  inventory, actual gross refinement, restart and matched cost. G4.1/11/16
-  code already present is reused, not recreated from historical checkboxes.
-  Prior E84/E86/E87/E89 are labelled prior evidence. Decide seven-point
-  point 2/3/4/6 levels only from this evidence, with owner approval.
-- [ ] **Part 11c, bounded fixes:** one demonstrated defect per PR, preserving
-  parent parity, guard/refusal scope and independent regression. No automatic
-  same-sign energy follower, offset change, comparator promotion or relaxation
-  of a tolerance. OD7 remains the owner's choice after its recorded long-run
-  prerequisites; C4's decided treatment is to document the size.
-- [ ] **Part 11d, scoped energy qualification:** apply the canonical matrix
-  only after owner accuracy/scope/cost choices and eligible evidence; report
-  record-only and source-provenance outcomes separately. OD14 freezes the
-  independent held-out case/window/metrics before tuning. OD5's historical
-  conditional verdict remains separate from validated provenance.
-- [ ] **Part 12, expanded operation:** stated precision/device/restart range,
-  OD8 target count and cost, then OD1/OD6 long production scope with its
-  short cost pilot before commissioning. G4.13 is 12d; G4.14/PX19 retain
-  numerical-loss gates; no residence-time or air-age work.
 
 Part 3 is a reviewed documentation deliverable. Completing these definitions
 supplies no run evidence. Remaining owner/evidence gaps do not prevent the

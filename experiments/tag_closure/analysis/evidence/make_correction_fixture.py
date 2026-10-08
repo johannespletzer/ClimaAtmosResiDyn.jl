@@ -3,7 +3,8 @@
     python3 make_correction_fixture.py NEW_DIRECTORY [--family water|energy_source]
 
 Every accepted hour contains +1 then -1 in each of two unit-volume cells.
-Over 24 hours signed S and retained H are zero; accepted application A is 96.
+Over 24 hours signed S and retained H are zero
+accepted application A is 96.
 The production completeness gate remains blocked because this is synthetic.
 """
 
@@ -23,7 +24,8 @@ def attach_fixture(manifest, *, records=None, ledgers=None, family="water", dtyp
     """Attach explicitly supplied native ledgers/records to an analytic bundle.
 
     Tests supply ledger arrays independently of their application arrays.
-    This routine assembles files; it is not an expected-value oracle.
+    This routine assembles files
+    it is not an expected-value oracle.
     """
     manifest = Path(manifest)
     root = manifest.parent

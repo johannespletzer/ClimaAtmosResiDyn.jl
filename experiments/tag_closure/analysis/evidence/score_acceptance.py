@@ -28,7 +28,7 @@ from acceptance_data import (Bundle, DataError, NotAssessable, aligned, at,
                              cumulative_amount, density, finite, integrate,
                              od2_start, require, retained, same_bits, window)
 from closure_verdict import ENERGY_GROSS, WATER_GROSS
-from correction_accounting import evaluate_accounting, paired_precipitation
+from correction_accounting import application_activity, evaluate_accounting, paired_precipitation
 from manifest import sha256_file
 
 
@@ -911,6 +911,9 @@ class Scorer:
                     window_ids.append("WATER.PRECIP_INTEGRATED." + name)
                 for row_id in window_ids:
                     self.inapplicable(row_id, why, "OD2 physical window evidence")
+                if self.family != "radiation_record":
+                    self.inapplicable("COMMON.APPLICATION_ACTIVITY." + name, why, "OD2 physical window evidence",
+                                      required=False)
                 continue
             if self.family != "radiation_record":
                 eligible = self.row("REFERENCE.ELIGIBILITY." + name,
@@ -935,10 +938,11 @@ class Scorer:
                          prerequisites=(validity, roster),
                          dependency="Part 5 accounting" if self.family == "water" else
                          "Part 5 accounting / energy aggregate level from Part 11b's own baseline"))
-                self.row("COMMON.APPLICATION_ACTIVITY." + name,
-                         lambda a=start, b=end: evaluate_accounting(self.b, a, b), window_name=[start, end],
-                         required=False, prerequisites=(validity, roster),
-                         dependency="Part 5 production application/leg coverage. Absolute amounts have no scientific tolerance")
+                accounting(self.row("COMMON.APPLICATION_ACTIVITY." + name,
+                                    lambda a=start, b=end: application_activity(self.b, a, b), window_name=[start, end],
+                                    required=False, prerequisites=(validity, roster),
+                                    dependency="Part 5 production application/leg coverage. "
+                                    "Absolute amounts have no scientific tolerance"))
                 if self.family == "energy_source":
                     accounting(self.row("ENERGY.CLOSURE_GROWTH." + name, lambda a=start, b=end: self.energy_closure(a, b),
                                         decision="approved", threshold=ENERGY_GROSS, window_name=[start, end],
@@ -986,10 +990,14 @@ class Scorer:
                        "must be at most 0.75 of the coarser rung's, and above 0.9 flags a structural cause. "
                        "The time-step and Newton ladders are not in this bundle", "Parts 6/11a ladders, 8/11b baselines, 12")
             self.row("COMMON.AGGREGATION", self.aggregation, required=False, dependency="Parts 6/11a/12 intended-count group runs")
-            self.row("COMMON.ACCEPTED_APPLICATION_ACTIVITY",
-                     lambda: evaluate_accounting(self.b, 0, self.s.get("end_seconds")),
-                     decision="approved", prerequisites=(validity, roster),
-                     dependency="Part 5 complete production acceptance/rollback, active channels and checkpoint evidence")
+            # Complete accounting is a condition of a qualified water claim
+            # (WA-GATES (a)). For energy, missing activity leaves the full
+            # intervention claim not assessable (G4 contract, section 5).
+            accounting(self.row("COMMON.ACCEPTED_APPLICATION_ACTIVITY",
+                                lambda: evaluate_accounting(self.b, 0, self.s.get("end_seconds")),
+                                decision="approved", prerequisites=(validity, roster),
+                                dependency="Part 5 complete production acceptance/rollback, active channels and "
+                                "checkpoint evidence (WA-GATES (a) for water)"))
         else:
             for name, start, end in self.windows:
                 if start is not None and start < end:

@@ -76,6 +76,11 @@ is promoted by preparing this documentation.
     or applied accumulations. Check signed rates and every checkpointed
     numerator/latch/count. Do not reinterpret approved retained thresholds as a
     different observable without an owner decision.
+      + Offline reader and tests implemented. Native weighted receipts expose
+        opposing applications, cells and parts, counts, trials and directed
+        transfers. Paired signed precipitation uses identical updates. The
+        production obligation stays open, as [PART5](analysis/evidence/PART5.md)
+        states.
   - [ ] **Part 6 / PX11-PX24 / PX12:** establish floors and eligibility at the
     actual tag count/window, including copies grid/updraft residuals, repair,
     mirrors/Jacobian, KI4-COPIES/UP1 and E/refinement per rung. Known-answer
@@ -96,42 +101,6 @@ is promoted by preparing this documentation.
     intended eight-plus-eight cost and the ninety-day 60-level sphere. W60's
     failure and W62's narrower floor result stand. Numerical flush/loss
     diagnostics retain their gates and do not introduce age work.
-
-- [ ] **Part 5 / WP6 / WP4b accounting:** measure absolute accepted applied
-  corrections and directed compartment legs, per-tag copies repair,
-  attempted/retained activity, fallback/bound events and missing channels.
-  Test cancellation within a step and between parts beside existing cell-step
-  retained grosses. Supply paired parent/tag precipitation interval averages
-  or applied accumulations; check signed rates and every checkpointed
-  numerator/latch/count. Do not reinterpret approved retained thresholds as a
-  different observable without an owner decision.
-  - Offline consumer/test layer implemented: [PART5](analysis/evidence/PART5.md)
-    inventories the exact-base writers and acceptance limits. Native weighted
-    receipts expose opposing applications/cells/parts, counts, trials and
-    directed transfers; paired signed precipitation uses identical updates.
-    The production obligation stays open: complete runtime capture, active
-    N/R/S/copies/fallback coverage and physical checkpoint/parity evidence are
-    unavailable. A synthetic receipt cannot make this item complete.
-- [ ] **Part 6 / PX11-PX24 / PX12:** establish floors and eligibility at the
-  actual tag count/window, including copies grid/updraft residuals, repair,
-  mirrors/Jacobian, KI4-COPIES/UP1 and E/refinement per rung. Known-answer
-  transport/mixing checks must detect a label swap despite exact closure.
-  Preserve PX1→PX8 and OD13's PP-SUB trigger. Clean transport excludes moist
-  precipitation claims; do not reopen D4-W references under option D.
-- [ ] **Part 7 / PX14-PX25 / WP4b:** independently test directed transfers
-  between distinct donor compositions, opposing transfers, empty/negative
-  donors and actual falling rain/snow owners. Resolve OD15 at preregistration.
-  A shared-rule rate audit is accounting. Current separate rain/snow tags
-  refuse EDMF/copies; support and validation of stages 2/3 remain required.
-- [ ] **Parts 8/9/10:** measure integrated error and matched build/step/memory
-  with required diagnostics before selection; fix only evidenced defects,
-  then qualify the owner-fixed scope with every required row and independent
-  held-out case, without retuning. W52's cost failures are not closed here.
-- [ ] **Part 12:** retain eight-tag/deep/held-out accuracy, precision,
-  column/sphere and both-mode restarts, full precipitation/EDMF support,
-  intended eight-plus-eight cost and the ninety-day 60-level sphere. W60's
-  failure and W62's narrower floor result stand; numerical flush/loss
-  diagnostics retain their gates and do not introduce age work.
 
 The owner set G3 on 2026-09-23 and re-scoped it the same day: **G3 brings the
 tagged water tracers to work under prognostic EDMF, operational in the
