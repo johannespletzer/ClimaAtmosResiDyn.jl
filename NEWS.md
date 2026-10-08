@@ -3,6 +3,14 @@ ClimaAtmos.jl Release Notes
 
 main
 ----
+- The offline tag-closure tools include independent directed water-transfer
+  and rain/snow owner/export known answers. Native compartment, process and
+  boundary errors, every frozen RK4/pool rung and measured floors are retained;
+  wrong-donor, erased-exchange and owner-reset controls discriminate origins
+  despite closed totals. The existing evidence/scorer and paired applied-flux
+  reader retain development-only scope. A matched-parent precipitation matrix
+  is a pending-decision draft. These tools supply no atmospheric rate or
+  production qualification and change no model behavior or approved tolerance.
 - The offline tag-closure tools include independent native water translation,
   labelled-inflow and conservative-exchange known answers, with every frozen
   numerical/integration rung and measured OD12 floor retained. The existing

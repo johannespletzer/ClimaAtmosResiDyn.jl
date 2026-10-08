@@ -12,6 +12,8 @@ in [PART5.md](PART5.md). Its offline implementation does not complete Part 5.
 The narrow independent water reference adapter and its frozen development
 cases are documented in [PART6.md](PART6.md); they do not complete physical
 water qualification.
+The directed transfer/owner/export adapter and its frozen development cases
+are documented in [PART7.md](PART7.md); actual PX14/PX25 remains unqualified.
 
 The input is a separately identified extended manifest, not a second
 submission-provenance format. Attach a predeclared extension to an archived
@@ -88,6 +90,113 @@ capture, physical restart/parity/device/cost and OD14 held-out evidence remain
 required. The two-reservoir linear Newton test cannot establish the model's
 nonlinear solver floor. Part 5's verified runtime-producer registry is empty.
 No missing channel is inferred as zero outside these manufactured cases.
+
+## Independent water-transfer fixtures
+
+Run both complete frozen configurations into absent output directories from
+the repository root. These commands execute only bounded offline equations:
+
+```sh
+python3 experiments/tag_closure/analysis/evidence/make_water_transfer_fixture.py \
+  NEW/transfer-exact --config experiments/tag_closure/configs/water_transfer_exact.json
+python3 experiments/tag_closure/analysis/evidence/make_water_transfer_fixture.py \
+  NEW/transfer-rk4 --config experiments/tag_closure/configs/water_transfer_rk4.json
+python3 -m unittest discover -s experiments/tag_closure/analysis/evidence \
+  -p 'test_water_transfer_reference.py' -v
+```
+
+Both configurations cover all nine preregistered cases and retain 36 RK4
+rungs plus 28 distinct declared-pool diagnostic rungs. Exit 0 means eligible
+reference floors, candidate profile/process/export errors, prescribed native
+parent trajectory, complete label conservation/partition closure, directed
+endpoint consistency and the registered origin-control checks passed within
+the development scope. Exit 1 records a failed fixture check; exit 3 records
+an ineligible selected reference and forbids candidate ranking. Invalid
+evidence is a data error. All rungs and failures remain in the new directory.
+No finer unregistered rung or favorable pair is selected after results.
+
+Each case saves `submission.json`, the existing-format extension/manifests,
+a separate origin-mutant manifest, native exported fields and exact amount
+sidecars, source/config/design identities, every application/rung archive,
+`known_answer_results.json` and the complete `suite_results.json`. The adapter
+reconstructs every reference rung and checks native geometry/units/precision,
+exact physical times, all three compartment and separate rain/snow export
+owners, rate/config/model/source stamps, excluded zero channels and scope.
+Origins, closure, reference floors and pool/net spread are distinct results.
+Source overlays never enter partition closure.
+
+The candidate's declared temporal convention is the exact integrated
+synthetic interval: its archived application list is empty, and the reader
+reconstructs one applied mean-share record per directed edge per saved
+interval from native cumulative amounts. Candidate water amounts reproduce
+the pinned prescribed rates. A nonempty pseudo record cannot replace that
+coverage or suppress activity. RK4 archives retain every weighted stage and
+its donor sampling time; pool archives retain their separately declared
+substep mean. Water accumulators start at zero, are nonnegative and monotone;
+label accumulators start at zero and are finite. Native parent/label endpoint
+changes reconcile to directed incidence sums with only their own operated
+magnitudes in the arithmetic allowance. Label amounts are free to expose a
+wrong donor, erased exchange or declared corruption control; they are never
+forced to the oracle. Zero transfer activity is not donor-rule coverage.
+
+The sedimentation case stores instantaneous upward-positive precipitation
+separately from exact integrated exterior amounts. Synthetic paired
+parent/tag interval rates equal those independent amounts divided by their
+own interval and share the same accepted application. The existing Part 5
+reader checks them; snapshots are never integrated as applied precipitation.
+A synthetic receipt cannot populate the empty verified-producer registry.
+
+`reference.kind="water_transfer"` uses the existing Bundle/scorer. To inspect
+a fresh fixture with the complete production scorer:
+
+```sh
+python3 experiments/tag_closure/analysis/evidence/score_acceptance.py \
+  validate NEW/transfer-exact/rain_snow_sedimentation/manifest.json \
+  --json NEW/transfer-validation.json
+python3 experiments/tag_closure/analysis/evidence/score_acceptance.py \
+  score NEW/transfer-exact/single_transfer/manifest.json \
+  --json NEW/transfer-full-score.json
+```
+
+Validation-only exit 0 certifies evidence integrity. The full scorer keeps
+`NOT QUALIFIED` and exit 2 for the deliberately missing native runtime rows;
+fixture PASS is not production qualification. The six-label manufactured
+suite validates conditional label equations, not atmospheric model rates,
+evolving microphysics capture, real PX14/PX25, EDMF/copies stages 2/3,
+eight-tag/full-duration/held-out accuracy or physical parity/restart/cost.
+
+The [PX25 draft](../../configs/part7_px25_draft/README.md) records sixteen
+tagged arms and eight own-setting untagged parents. Its effective quadrature
+substep key and void-parent guard are planning checks only. OD15, actual
+established rain and the second case remain pending. No hourly/day score or
+approved audit trend is inferred for its 1500 s case, and no launch occurs.
+
+Supported affected modules can be run explicitly from this directory:
+
+```sh
+python3 -m unittest -v test_acceptance
+python3 -m unittest -v test_correction_accounting
+python3 -m unittest -v test_water_transport_reference \
+  test_closure_verdict.WaterTests \
+  test_closure_verdict.EnergyTests.test_exact_scale \
+  test_closure_verdict.EnergyTests.test_the_audit_carries_the_throughput
+```
+
+The last command is an explicitly selected supported subset. The full
+`test_water_transport_reference test_closure_verdict` execution retains one
+existing `netCDF4` import error in energy-throughput fallback in this
+environment. That full suite is not reported as passing, and no dependency
+or test was changed to hide the error. Julia/prepared runtime is unavailable.
+
+Final-code verification passes 33 focused, 49 acceptance, 56 accounting and
+26 explicitly supported transport/closure tests. Both complete nine-case
+configurations return exit 0 with all 36 RK4/28 pool rungs per configuration
+retained; the largest selected-64 floor/tolerance fraction is
+`8.310061860770055e-5`. Independent supplemental actual-diff review closes
+the malformed directed-amount/roster findings using fresh hashes and checks
+correct endpoint profiles with inconsistent labels. Valid wrong-origin
+controls remain discriminatory. See [PART7.md](PART7.md) for final source
+identities and the required reconciliation with the advanced Part 6 branch.
 
 ## Minimum evidence layout and extension
 

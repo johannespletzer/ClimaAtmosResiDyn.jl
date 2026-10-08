@@ -49,6 +49,16 @@ atmospheric producer, production reference, copies qualification, held-out
 result or full parent-state parity follows from them. Runtime setup and
 approved cluster submissions below still apply to actual simulations.
 
+The [independent water-transfer fixtures](analysis/evidence/README.md#independent-water-transfer-fixtures)
+add nine bounded prescribed-rate cases for directed donor attribution and
+separate rain/snow export owners. Both exact and selected-RK4 configurations
+retain every registered RK4/pool diagnostic rung and measured floor. Their
+[design and remaining gates](analysis/evidence/PART7.md) distinguish origin
+error, compartment closure and proposed pool/net audit spread. They supply
+no atmospheric rate validation or PX14/PX25 campaign score. The
+[PX25 draft matrix](configs/part7_px25_draft/README.md) requires OD15 and native
+runtime evidence before any scoring or authorized cluster submission.
+
 ## Setup, once
 
 From the repository root:

@@ -1,0 +1,29 @@
+{
+  "FLOAT_TYPE": "Float64",
+  "approximate_linear_solve_iters": 2,
+  "cloud_model": "grid_scale",
+  "config": "column",
+  "dt": "5secs",
+  "dt_save_state_to_disk": "10secs",
+  "implicit_diffusion": true,
+  "implicit_microphysics": true,
+  "initial_condition": "PrecipitatingColumn",
+  "job_id": "part7_px25_draft_vanleer_limiter_dt5p0",
+  "microphysics_model": "1M",
+  "microphysics_n_substeps": 3,
+  "microphysics_n_substeps_quadrature": 2,
+  "output_default_diagnostics": false,
+  "reproducibility_test": false,
+  "surface_setup": "DefaultMoninObukhov",
+  "t_end": "1500secs",
+  "toml": [
+    "toml/single_column_precipitation_test.toml"
+  ],
+  "tracer_upwinding": "vanleer_limiter",
+  "turbconv": null,
+  "use_sgs_quadrature": true,
+  "vert_diff": "DecayWithHeightDiffusion",
+  "z_elem": 30,
+  "z_max": 6000.0,
+  "z_stretch": false
+}

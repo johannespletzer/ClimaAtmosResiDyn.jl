@@ -30,7 +30,8 @@ SMALL = 2e-4
 SPEC_ROOT = Path(__file__).resolve().parent.parent.parent
 SPEC_PATHS = ("G3_PLAN.md", "design/G4_CLAIM_CONTRACTS.md", "ROADMAP.md", "DECISIONS.md")
 SCORER_PATHS = ("score_acceptance.py", "acceptance_data.py", "correction_accounting.py", "manifest.py", "closure_verdict.py",
-                "water_transport_reference.py", "water_transport_adapter.py")
+                "water_transport_reference.py", "water_transport_adapter.py",
+                "water_transfer_reference.py", "water_transfer_adapter.py")
 
 
 def local_identities():
@@ -389,6 +390,9 @@ class Scorer:
 
     def reference_eligibility(self, start, end):
         ref = self.s.get("reference", {})
+        if self.family == "water" and ref.get("kind") == "water_transfer":
+            from water_transfer_adapter import evaluate_water_transfer
+            return evaluate_water_transfer(self.b, start, end)
         if self.family == "water" and ref.get("kind") == "water_transport":
             from water_transport_adapter import evaluate_water_transport
             return evaluate_water_transport(self.b, start, end)
@@ -446,6 +450,17 @@ class Scorer:
 
     def active_rule_coverage(self):
         ref = self.s.get("reference", {})
+        if self.family == "water" and ref.get("kind") == "water_transfer":
+            from water_transfer_adapter import evaluate_water_transfer
+            result = evaluate_water_transfer(self.b)
+            if not result["metrics"]["independent_rules"]:
+                return {"metrics": {"tested_active_rules": [], "untested_or_shared_rules": []},
+                        "meets": None, "verdict": "NOT APPLICABLE",
+                        "limitation": "zero transfer activity does not test a donor rule"}
+            return {"metrics": {"tested_active_rules": result["metrics"]["independent_rules"],
+                                "untested_or_shared_rules": []}, "meets": result["meets"],
+                    "verdict": "PASS" if result["meets"] else "NOT ASSESSABLE",
+                    "limitation": result["limitation"]}
         if self.family == "water" and ref.get("kind") == "water_transport":
             from water_transport_adapter import evaluate_water_transport
             result = evaluate_water_transport(self.b)
