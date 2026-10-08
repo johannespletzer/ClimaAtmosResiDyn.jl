@@ -107,7 +107,8 @@ class Synthetic:
             if short not in skip:
                 write_field(d / f"{short}_30m_inst.nc", short, values, units)
         if tags:
-            for short, rate in (("pr", -2e-4), ("pr_tag_pbl", -1.2e-4), ("pr_tag_free", -0.8e-4)):
+            for short, rate in (("pr", -2e-4), ("pr_tag_pbl", -1.2e-4), ("pr_tag_free", -0.8e-4),
+                                ("pr_tag_evap", -0.1e-4)):
                 if short not in skip:
                     write_field(d / f"{short}_30m_inst.nc", short, np.full(5, rate), "kg m^-2 s^-1", dims=("time",))
             closure = {"time": TIMES, "negative_water_void": np.zeros(5)}
@@ -121,24 +122,26 @@ class Synthetic:
             write_table(d / "water_tag_audit.csv", audit)
         return d
 
-    def energy_run(self, name, tags=True):
+    def energy_run(self, name, tags=True, copies=False):
         d = self.root / name / "output_0000"
         d.mkdir(parents=True)
         (d / "manifest.json").write_text(json.dumps(self.manifest()))
         lines = ['config: "column"', "z_max: 700.0", 'dt: "120secs"', 't_end: "2hours"', 'FLOAT_TYPE: "Float64"',
                  "energy_source_tag_offset: 1000.0", "energy_source_tag_ledger_per_tag: true",
+                 f"energy_source_tag_updraft_copy: {'true' if copies else 'false'}",
                  "energy_process_record:", '  - "radiation"', '  - "microphysics"']
         if tags:
             lines += ["energy_source_tags:", '  - name: "low"', "    region:", '      type: "tanh_altitude"',
                       '  - name: "high"', "    region:", '      type: "tanh_altitude"',
-                      '  - name: "rad"', '    source: "radiation"']
+                      '  - name: "rad"', '    source: "radiation"',
+                      '  - name: "mix"', '    source: "all"', "    region:", '      type: "tanh_altitude"']
         (d / (name + ".yml")).write_text("\n".join(lines) + "\n")
         (d / "provenance.txt").write_text("ntasks: 1\n")
         fields = {"rhoa": native(1.0, 1e-3), "hus": native(0.01, 1e-4), "ta": native(280.0, 0.1)}
         units = {"rhoa": "kg m^-3", "hus": "kg kg^-1", "ta": "K"}
         if tags:
-            for short in ("e_src_low", "e_src_high", "e_src_rad", "e_src_res", "e_src_led_src_low",
-                          "e_src_led_src_high", "e_src_led_src_rad", "e_prc_radiation"):
+            for short in ("e_src_low", "e_src_high", "e_src_rad", "e_src_mix", "e_src_res", "e_src_led_src_low",
+                          "e_src_led_src_high", "e_src_led_src_rad", "e_src_led_src_mix", "e_prc_radiation"):
                 fields[short], units[short] = native(100.0, 1.0), "J kg^-1"
         for short, values in fields.items():
             write_field(d / f"{short}_30m_inst.nc", short, values, units[short])
@@ -447,7 +450,11 @@ class ConverterTests(unittest.TestCase):
         self.assertEqual((spec["energy_offset"], spec["energy_ledger_per_tag"]), (1000.0, True))
         self.assertEqual((spec["accepted_step_seconds"], spec["end_seconds"]), (120.0, 7200.0))
         self.assertEqual(spec["process_count"], 1)
-        self.assertEqual([t["partition"] for t in spec["tags"]], [True, True, False])
+        self.assertEqual(spec["tags"], [{"name": "low", "kind": "region", "partition": True},
+                                        {"name": "high", "kind": "region", "partition": True},
+                                        {"name": "rad", "kind": "source", "partition": False},
+                                        {"name": "mix", "kind": "source", "partition": False}])
+        self.assertIs(spec["same_parent_comparisons"], False)
         self.assertIn("DATA FAILURE: candidate record_microphysics (e_prc_microphysics)", text)
         self.assertIn("DATA FAILURE: untagged energy_parent (no model variable)", text)
         rows = {r["id"]: r for r in Scorer(Bundle(out / "manifest.json")).run()["rows"]}
@@ -455,6 +462,70 @@ class ConverterTests(unittest.TestCase):
         self.assertEqual(growth["theta_x"], 200.0)
         self.assertIn("missing/incorrect expected active process roster",
                       rows["ENERGY.CORRECTED_RECORD_ESTIMATE.startup"]["limitation"])
+
+
+    def test_tag_kinds_and_partition_follow_the_config(self):
+        out, _, _ = self.water()
+        spec = json.loads((out / "manifest.json").read_text())["acceptance"]
+        self.assertEqual(spec["tags"], [{"name": "pbl", "kind": "region", "partition": True},
+                                        {"name": "free", "kind": "region", "partition": True},
+                                        {"name": "evap", "kind": "source", "partition": False}])
+        self.assertEqual(spec["compartments"], ["total"])
+
+    def test_same_parent_is_only_declared_on_request(self):
+        out, _, _ = self.water()
+        self.assertIs(json.loads((out / "manifest.json").read_text())["acceptance"]["same_parent_comparisons"], False)
+        out2 = self.root / "bundle2"
+        convert(out2, candidate=self.root / "cand/output_0000", same_parent=True)
+        self.assertIs(json.loads((out2 / "manifest.json").read_text())["acceptance"]["same_parent_comparisons"], True)
+
+    def test_a_reference_without_copies_has_no_copies_rows(self):
+        out = self.root / "bundle"
+        convert(out, candidate=self.s.water_run("cand"), reference=self.s.water_run("plain_ref"))
+        r = record(out)
+        self.assertNotIn(("reference", "repair_retained"), r)
+        self.assertNotIn(("reference", "copy_residual"), r)
+        self.assertIn(("reference", "tag_evap"), r)
+
+    def test_energy_reference_reads_its_scale_and_residual(self):
+        out = self.root / "bundle"
+        convert(out, family="energy_source", candidate=self.s.energy_run("ecand"),
+                reference=self.s.energy_run("eref", copies=True))
+        fields = json.loads((out / "manifest.json").read_text())["acceptance"]["runs"]["reference"]["fields"]
+        for name in ("tag_low", "residual", "led_src_low", "led_src_mix", "throughput", "source_partition_valid",
+                     "repair_retained", "repair_attempted"):
+            self.assertIn(name, fields)
+        for name in ("led_fix_low", "record_radiation", "newton_error"):
+            self.assertNotIn(name, fields)
+
+    def test_fields_on_different_levels_are_refused(self):
+        d = self.s.water_run("cand")
+        write_field(d / "ta_30m_inst.nc", "ta", native(280.0, 0.1), "K", z=np.array([50.0, 200.0, 501.0]))
+        code, err = convert(self.root / "bundle", candidate=d)
+        self.assertEqual(code, 2)
+        self.assertIn("native fields have different z coordinates", err)
+
+    def test_surface_and_level_fields_are_not_mixed(self):
+        d = self.s.water_run("cand")
+        write_field(d / "pr_30m_inst.nc", "pr", native(0.0, 1e-5), "kg m^-2 s^-1")
+        write_field(d / "rhoa_30m_inst.nc", "rhoa", np.full(5, 1.0), "kg m^-3", dims=("time",))
+        out = self.root / "bundle"
+        convert(out, candidate=d)
+        r = record(out)
+        self.assertIn("expected a surface field", r[("candidate", "precip_parent")]["reason"])
+        self.assertIn("expected the model's levels", r[("candidate", "rho")]["reason"])
+        self.assertNotIn("precip_parent", npz(out / "candidate.npz"))
+
+    def test_unreadable_table_values_are_named(self):
+        d = self.s.water_run("cand")
+        text = (d / "water_tag_audit.csv").read_text().splitlines()
+        cells = text[2].split(",")
+        cells[text[0].split(",").index("led_repair_retained")] = "n/a"
+        text[2] = ",".join(cells)
+        (d / "water_tag_audit.csv").write_text("\n".join(text) + "\n")
+        out = self.root / "bundle"
+        convert(out, candidate=d)
+        self.assertIn("is not numeric", record(out)[("candidate", "repair_retained")]["reason"])
 
 
 class SphereTests(unittest.TestCase):

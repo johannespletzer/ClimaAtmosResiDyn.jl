@@ -202,7 +202,7 @@ def faces_and_thickness(z_centres, z_max):
 
 
 class Run:
-    """One output directory and its config, manifest and provenance."""
+    """One output directory with its config, manifest and provenance.txt."""
 
     def __init__(self, role, directory):
         self.role = role
@@ -216,18 +216,17 @@ class Run:
         refuse(len(ymls) == 1, f"{role}: expected one merged config *.yml, found {[p.name for p in ymls]}")
         self.yml_path = ymls[0]
         self.yml = self.yml_path.read_text()
-        self.provenance = {}
+        self.header = {}
         if (self.dir / "provenance.txt").is_file():
             for line in (self.dir / "provenance.txt").read_text().splitlines():
                 key, _, value = line.partition(":")
-                self.provenance[key.strip()] = value.strip()
+                self.header[key.strip()] = value.strip()
         self.files = {}
         for path in self.dir.glob("*.nc"):
             m = FILE_RE.match(path.name)
             if m:
                 self.files[(m["short"], m["period"], m["reduction"])] = path
         self.period = None
-        self.z = None
 
     def config(self, key):
         value = yaml_flat_scalar(self.yml, key)
@@ -340,6 +339,8 @@ def read_field(run, short, units):
             return None, f"{short} has fill values"
         values = np.moveaxis(np.asarray(raw), var.dimensions.index("time"), 0)
         dims = tuple(d for d in var.dimensions if d != "time")
+        if "z" in dims and str(getattr(ds["z"], "units", "")) != "m":
+            return None, f"{short}: its z coordinate is not in m"
         coords = {d: np.asarray(ds[d][:]) for d in dims}
         time = np.asarray(ds["time"][:], dtype=np.float64)
     return {"time": time, "values": values.reshape(len(time), -1), "dims": dims, "coords": coords,
@@ -359,8 +360,11 @@ def read_column(run, table, column, requires=""):
         flags = [r.get(requires) for r in rows]
         if any(f is None or float(f) != 1.0 for f in flags):
             return None, f"{path.name}: {requires} is not 1 at every row, so {column} is not exact per accepted step"
-    time = np.array([float(r["time"]) for r in rows])
-    values = np.array([[float(r[column])] for r in rows])
+    try:
+        time = np.array([float(r["time"]) for r in rows])
+        values = np.array([[float(r[column])] for r in rows])
+    except (KeyError, TypeError, ValueError) as exc:
+        return None, f"{path.name}: column {column} or time is not numeric at every row ({exc})"
     return {"time": time, "values": values, "dims": (), "coords": {}, "file": path.name}, None
 
 
@@ -466,7 +470,8 @@ def convert(args):
                     if name.source in ("field", "surface"):
                         data, reason = read_field(run, model, units)
                         if data is not None and (("z" in data["dims"]) != (name.source == "field")):
-                            data, reason = None, f"{model} has dimensions {data['dims']}, not a {name.source} field"
+                            expected = "the model's levels" if name.source == "field" else "a surface field"
+                            data, reason = None, f"{model} has dimensions {data['dims']}, expected {expected}"
                     else:
                         data, reason = read_column(run, name.source, model, name.requires)
                     if data is None:
@@ -514,7 +519,7 @@ def convert(args):
         artifacts.update({rel: None for rel in submission.values()})
         dt = seconds(cand.config("dt"), "dt")
         end = args.end_seconds if args.end_seconds is not None else seconds(cand.config("t_end"), "t_end")
-        ntasks = cand.provenance.get("ntasks")
+        ntasks = cand.header.get("ntasks")
         spec = {
             "schema_version": 1, "experiment_commit": cand.manifest.get("head_sha"),
             "scorer_commit": args.scorer_commit, "planning_commit": args.planning_commit,

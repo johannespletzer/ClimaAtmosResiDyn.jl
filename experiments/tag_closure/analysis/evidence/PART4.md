@@ -60,8 +60,17 @@ Float32 history preservation, deterministic results and manifest attachment.
 Each approved number has a test that names it. Verdict tests pin the
 second-12 h rule, the small-tag rule, the precipitation sign, OD2's three
 quiet outputs and pulse condition, option D, L∞ on specific fields and the
-reference density. The whole evidence directory runs 149 tests, including
-the legacy NetCDF tests, with the `python/3.12` module.
+reference density. At PR #150 the whole evidence directory ran 149 tests,
+including the legacy NetCDF tests, with the `python/3.12` module.
+
+The converter's tests (`test_convert_output.py`, 26 tests) pin the name
+table, the bit copies, the weights and each refusal on synthetic runs, and
+convert W58 and E87 when their output is present. With the converter and the
+production gate binding, the whole evidence directory runs 259 tests, or 257
+and 2 skipped without the archived output. 48 single-point mutants of the
+converter's name table, weights and readers and 17 of the gate's three checks
+and its registry were each killed. The 48 converter mutants were also killed
+without the pinned-table test and without the archived output.
 
 The existing legacy scoring files and historical RUNS/FINDINGS/results are
 unchanged. No historical reanalysis was performed. Actual atmospheric runs
