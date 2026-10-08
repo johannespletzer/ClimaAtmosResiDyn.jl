@@ -42,6 +42,9 @@ def px25_matrix(base):
             "default_substeps":default,"parents":parents,"tagged_arms":tagged,"jobs":24,
             "cross_parent_provenance":"not assessable","first_order":"another scheme, not a rung",
             "second_case":"unselected; OD2 established-rain measurement and OD14 independence required",
+            "held_out_overlap":"PrecipitatingColumn starts from RICO's theta and q_tot profiles. RICO 1M 24 h is the "
+                               "held-out case (WA-SCOPE, 2026-10-08). Whether a 1M rule developed on this column keeps "
+                               "RICO held out is an owner decision under OD14",
             "score_status":"BLOCKED by OD15 and missing runtime accepted application producer"}
 
 
@@ -74,6 +77,25 @@ def proposed_audit_trend(values):
             "verdict":"NOT ASSESSABLE","substeps":"reported only; non-doubling counts have no adopted trend rule"}
 
 
+DRAFT_README = """# PX25 draft configurations
+
+This is a draft pending the owner. These 24 JSON-compatible YAML configs are
+planning artifacts only. Sixteen tagged arms have eight separately matched
+untagged parents. OD15 is proposed, not decided. The OD2 rain windows and the
+accepted capture, lifecycle and parity evidence are missing, so no campaign
+is authorized or scored. No hourly, 12 h or 24 h rule applies to the 1500 s
+output. The second established-rain case is unselected.
+
+PrecipitatingColumn starts from RICO's theta and q_tot profiles. RICO 1M 24 h
+is the held-out case (WA-SCOPE, 2026-10-08). Whether a 1M rule developed on
+this column keeps RICO held out is an owner decision under OD14.
+
+The files are written by `save_px25_draft` in
+`analysis/evidence/water_transfer_preregistration.py`. No launch command is
+recorded here. A run needs a prepared checkout and a separately approved job.
+"""
+
+
 def save_px25_draft(root):
     root=Path(root);root.mkdir(parents=True,exist_ok=False)
     base={"config":"column","initial_condition":"PrecipitatingColumn","surface_setup":"DefaultMoninObukhov",
@@ -92,5 +114,5 @@ def save_px25_draft(root):
         setting=copy.deepcopy(arm["settings"]);setting["job_id"]="part7_px25_draft_"+arm["id"]
         (root/(arm["id"]+".yml")).write_text(json.dumps(setting,sort_keys=True,indent=2)+"\n")
     (root/"preregistration.json").write_text(json.dumps(matrix,sort_keys=True,indent=2)+"\n")
-    (root/"README.md").write_text("# PX25 draft configurations\n\nThese 24 JSON-compatible YAML configs are planning artifacts only. Sixteen tagged arms have eight separately matched untagged parents. OD15, actual OD2 rain windows and accepted capture/lifecycle/parity evidence are missing, so no campaign is authorized or scored. No hourly/12h/24h rule applies to the 1500 s output. The second established-rain case remains unselected. Launch commands are saved in the Part7 handoff for a prepared full checkout and separately approved cluster job.\n")
+    (root/"README.md").write_text(DRAFT_README)
     return matrix
