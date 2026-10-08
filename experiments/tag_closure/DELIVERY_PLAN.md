@@ -68,22 +68,25 @@ Rules that apply at every stage:
 
 ## 3. Sequence and gates
 
-| Part | PR base                          | Starts when                                                                                            | Blocked today by                                                                                    | Estimate      |
-|:---- |:-------------------------------- |:------------------------------------------------------------------------------------------------------ |:--------------------------------------------------------------------------------------------------- |:------------- |
-| 8    | `plan-rev2`                      | Part 7 merged. PX12 run, since it gates the first-hour row.                                            | Part 7 not started. W58 not archived. PROCESS_WEIGHTED rows blocked behind REFERENCE.PARENT_PARITY. | 0.9M + 0.3M   |
-| 9    | `main`, follow-up on `plan-rev2` | Part 8's dominant-error table. Reference-demonstrated small fixes may start after parts 6 and 7.       | Part 8. The walk fix goes upstream by the owner's decision.                                         | 1.2M per fix  |
-| 10   | `plan-rev2`                      | Part 9's queue done and the post-fix cost measured. PX11 and PX24 before PX23.                         | Parts 8 and 9. Criterion 10 at 4.16x against OD3's 2x.                                              | 0.9M + 0.3M   |
-| 11a  | `plan-rev2`                      | Now, beside the water parts.                                                                           | Nothing. Floors and the accepted-stage flux reference are its own deliverables.                     | 0.9M          |
-| 11b  | `plan-rev2`                      | Part 9's shared-code PRs and the walk fix merged. 11a merged.                                          | Parts 9 and 11a. Converter producers for E87 (source_partition_valid, six of eight tags).           | 0.9M + 0.3M   |
-| 11c  | `main`, follow-up on `plan-rev2` | 11b's defect table.                                                                                    | 11b. OD7 for the follower.                                                                          | 1.2M per fix  |
-| 11d  | `plan-rev2`                      | 11b and 11c done. Owner's accuracy, scope and cost choices for energy made.                            | 11b, 11c. EA-ACCURACY and EA-COST lapsed with EA-USE, so a stored-source claim needs fresh choices. | 0.8M + 0.3M   |
-| 12a  | `plan-rev2`, `main` if code      | Part 10 or 11d delivered.                                                                              | 10, 11d. Rain/snow Float32 closure waits for WP4b stage 2.                                          | 0.8M + 0.3M   |
-| 12b  | `main`, follow-up on `plan-rev2` | Relevant qualification. Multi-node approval for MP1 beyond two nodes.                                  | 10. Multi-node not approved.                                                                        | 0.9M          |
-| 12c  | `main`, follow-up on `plan-rev2` | Part 8's cost pilot delivered. The walk fix landed upstream or was accepted as a named fork departure. | 8. Walk fix placement (ClimaCore or ClimaAtmos) undecided.                                          | 1.0M per item |
-| 12d  | `plan-rev2`                      | The 1-2-day pilot after part 8's contract exists. The 90-day run after 12a, 12b and 12c.               | 8 for the pilot. 12a to 12c and the run approval for the 90 days.                                   | 0.8M + 0.3M   |
+| Part | PR base                          | Starts when                                                                                               | Blocked today by                                                                                    | Estimate      |
+|:---- |:-------------------------------- |:--------------------------------------------------------------------------------------------------------- |:--------------------------------------------------------------------------------------------------- |:------------- |
+| 8    | `plan-rev2`                      | Part 7 merged. PX12 run, since it gates the first-hour row.                                               | Part 7 not started. W58 not archived. PROCESS_WEIGHTED rows blocked behind REFERENCE.PARENT_PARITY. | 0.9M + 0.3M   |
+| 9    | `main`, follow-up on `plan-rev2` | Part 8's dominant-error table. Reference-demonstrated small fixes may start after parts 6 and 7.          | Part 8. The walk fix goes upstream by the owner's decision.                                         | 1.2M per fix  |
+| 10   | `plan-rev2`                      | Part 9's queue done, including the walk fix and its post-fix cost measurement. PX11 and PX24 before PX23. | Parts 8 and 9. Criterion 10 at 4.16x against OD3's 2x until the walk fix is measured.               | 0.9M + 0.3M   |
+| 11a  | `plan-rev2`                      | Now, beside the water parts.                                                                              | Nothing. Floors and the accepted-stage flux reference are its own deliverables.                     | 0.9M          |
+| 11b  | `plan-rev2`                      | Part 9's shared-code PRs and the walk fix merged. 11a merged.                                             | Parts 9 and 11a. Converter producers for E87 (source_partition_valid, six of eight tags).           | 0.9M + 0.3M   |
+| 11c  | `main`, follow-up on `plan-rev2` | 11b's defect table.                                                                                       | 11b. OD7 for the follower.                                                                          | 1.2M per fix  |
+| 11d  | `plan-rev2`                      | 11b and 11c done. Owner's accuracy, scope and cost choices for energy made.                               | 11b, 11c. EA-ACCURACY and EA-COST lapsed with EA-USE, so a stored-source claim needs fresh choices. | 0.8M + 0.3M   |
+| 12a  | `plan-rev2`, `main` if code      | Part 10 or 11d delivered.                                                                                 | 10, 11d. Rain/snow Float32 closure waits for WP4b stage 2.                                          | 0.8M + 0.3M   |
+| 12b  | `main`, follow-up on `plan-rev2` | Relevant qualification. Multi-node approval for MP1 beyond two nodes.                                     | 10. Multi-node not approved.                                                                        | 0.9M          |
+| 12c  | `main`, follow-up on `plan-rev2` | Part 10 delivered. The walk fix is part 9's item, not 12c's.                                              | 10.                                                                                                 | 1.0M per item |
+| 12d  | `plan-rev2`                      | The 1-2-day pilot after part 8's contract exists. The 90-day run after 12a, 12b and 12c.                  | 8 for the pilot. 12a to 12c and the run approval for the 90 days.                                   | 0.8M + 0.3M   |
 
 Reading the table: 11a starts now. Part 8 starts after part 7. Everything else
-waits for a baseline or a qualification. The chain 10 to 12a to 12d and 10 to
+waits for a baseline or a qualification. The walk fix has one place: it is an
+item of part 9's queue, with its post-fix cost measurement, because part 10
+needs that measurement for criterion 10 and 11b starts after it. Part 12c holds
+the remaining optimizations after part 10. The chain 10 to 12a to 12d and 10 to
 12c to 12d is serial by the owner's 2026-10-07 decision, so the 90-day run is
 last.
 
@@ -186,10 +189,13 @@ without breaking parity.
 
 **Scope.** The defect comes from part 8's ranked table or from a reference in
 parts 6 and 7 that demonstrated it. The PR states the mechanism, the change,
-the regression test that fails before and passes after, bit-for-bit parity of
-the untagged run and of the tags-off run, a restart check where state changes,
-and the 1.10 memory of the precipitation group, since the #146 precedent raised
-its peak to 20.8 GiB on this fork.
+the regression test that fails before and passes after, and parent parity: a
+matched tags-on against tags-off comparison of the parent prognostic fields in
+the same configuration, precision and rank count, under the comparison rule
+the contract prescribes. Two untagged runs do not show it. Where state or
+checkpoint behaviour changes, a restart check. And the 1.10 memory of the
+precipitation group, since the #146 precedent raised its peak to 20.8 GiB on
+this fork.
 
 **Queue, seeded from the inventory, in part 8's order once known.**
 
@@ -200,9 +206,11 @@ its peak to 20.8 GiB on this fork.
   - WP4a-J and UP1 after PX12's result, by UP1's own rule.
   - The refusals of WP1, retained until supported.
   - WP2 shared helpers only where a fix needs them.
-  - The walk fix: upstream in ClimaCore or ClimaAtmos by the owner's decision.
-    A fork patch only as a second named departure, bit-for-bit tested, with its
-    measurement pre-registered first.
+  - The walk fix, as this queue's item and nowhere else: upstream in ClimaCore
+    or ClimaAtmos by the owner's decision, with the post-fix measurement
+    pre-registered under WP9's spread rule and the OD3 copies row re-measured.
+    A fork patch only as a second named departure, bit-for-bit tested. Part 10
+    scores criterion 10 on that measurement.
   - PP-SUB and the probe PRs only after PX8 and OD13.
 
 **Inputs with defaults.** WP5's `increment` default under EDMF, unconfirmed:
@@ -252,8 +260,14 @@ the owner's approval. Over 12 jobs goes to the owner first as a set.
 **Out of scope.** Retuning on held-out cases. Any level raise above what the
 rows show. The sphere.
 
-**Acceptance.** Every applicable criterion has a row with pass, fail or not
-assessable and a source. Unresolved origins are listed, not waved through.
+**Acceptance.** Two outcomes, recorded separately. Assessment complete: every
+applicable criterion has a row with pass, fail or not assessable, each with a
+source. Configuration qualified: every mandatory gate passes for the declared
+scope, including independent provenance evidence, the cancellation-safe
+correction accounting in force since 2026-10-08, parity, restart coverage and
+the applicable cost criteria. A failed assessment publishes its limitations and
+unlocks no production expansion for the failed scope. Unresolved origins are
+listed, not waved through.
 
 **Budget.** 0.9M plus 0.3M.
 
@@ -264,8 +278,13 @@ flux reference, built offline like part 6, so that energy origins can be tested
 rather than only closed.
 
 **Scope.** The eight cases of G4_CLAIM_CONTRACTS section 6 as known-answer
-tools under `analysis/evidence/`, each stating the fixed c of 110 495 J/kg, the
-OD4 discrete scales and cΔρ. The radiation record against an independent
+tools under `analysis/evidence/`. Each declares its convention c and freezes it
+before any deciding evidence is evaluated. 110 495 J/kg is the convention of
+the previous runs, a historical baseline, not an approved universal choice,
+and the decision record notes the sensitivity of the energy scale and the
+regional tags to c. cΔρ and the OD4 discrete scales apply only to the cases for
+which they are defined. Stored-energy references and radiation-record
+references are kept apart. The radiation record against an independent
 accepted-stage flux, with the density conversion. The G4.7 ladder and G4.8
 pulse reused as scoped. PX22's design with stored-tag eligibility under OD7 and
 OD11. Floors, shared rules and inactive exclusions declared under OD12 and
@@ -338,6 +357,13 @@ inherited from water.
 **Deliverables.** `design/PART11D_ENERGY_QUALIFICATION.md`, job scripts, the
 limitations statement, the STATUS row.
 
+**Acceptance.** The same two outcomes as part 10. Assessment complete when
+every energy row has a source. Configuration qualified only when every
+mandatory gate passes for the declared scope, including the energy
+cancellation-safe accounting in force since 2026-10-08, independent provenance
+evidence, parity, restart coverage and cost. A failed assessment publishes its
+limitations and unlocks nothing.
+
 **Runs.** Per-run approval. **Budget.** 0.8M plus 0.3M.
 
 ### Part 12a: Precision and refinement
@@ -374,10 +400,10 @@ approval. Multi-node needs its own. **Budget.** 0.9M.
 
 **Goal.** One bounded optimization per PR with unchanged qualified answers.
 
-**Scope.** The walk fix first, upstream, with the post-fix measurement
-pre-registered under WP9's spread rule and the OD3 copies row re-measured.
-Then the WP9 sub-items: the plume growth in default mode, the 32-tag tuple map,
-copies at 32 tags. P2 and P3 only if the profile shows them. GPU stays gated.
+**Scope.** After part 10, with the walk fix already measured in part 9. The
+WP9 sub-items: the plume growth in default mode, the 32-tag tuple map, copies
+at 32 tags. P2 and P3 only if the profile shows them. Each with its own
+pre-registered measurement under WP9's spread rule. GPU stays gated.
 
 **Deliverables.** Per PR: the change, the measurement, the parity evidence.
 **Budget.** 1.0M per item.
