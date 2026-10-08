@@ -916,10 +916,12 @@ class Scorer:
                                       required=False)
                 continue
             if self.family != "radiation_record":
+                # Eligibility is the declared file's verdict whatever the parity
+                # state (2026-10-08). Reference parity blocks the rows that use it.
+                same_parent = (reference_parity,) if self.s.get("same_parent_comparisons") is True else ()
                 eligible = self.row("REFERENCE.ELIGIBILITY." + name,
                                     lambda a=start, b=end: self.reference_eligibility(a, b), decision="approved",
-                                    window_name=[start, end], dependency="Part 6 (water) / 11a (energy)",
-                                    prerequisites=(reference_parity,) if self.s.get("same_parent_comparisons") is True else ())
+                                    window_name=[start, end], dependency="Part 6 (water) / 11a (energy)")
                 eligibility_rows.append(eligible)
                 for tag in self.tags:
                     accounting(self.row(
@@ -950,7 +952,7 @@ class Scorer:
                 self.row(family + ".PROCESS_WEIGHTED." + name,
                          lambda a=start, b=end: self.process_weighted(a, b), decision="approved",
                          threshold=PROCESS_WEIGHTED_MAX, criterion=5, window_name=[start, end],
-                         prerequisites=(parity, validity, roster, eligible),
+                         prerequisites=(parity, validity, roster, eligible, *same_parent),
                          dependency="Parts 5/6/7/11a applied transfers from the giving pool")
             if self.family in ("energy_source", "radiation_record"):
                 self.row("ENERGY.CORRECTED_RECORD_ESTIMATE." + name,
@@ -970,7 +972,7 @@ class Scorer:
             # required reference check fails eligibility (G3_PLAN 6.1.2).
             # Active-rule coverage is reported and gates nothing until OD9.
             ref_prereqs = (tuple(eligibility_rows) +
-                           (() if self.s.get("same_parent_comparisons") is True else (newton,)))
+                           ((reference_parity,) if self.s.get("same_parent_comparisons") is True else (newton,)))
             for t in dict.fromkeys(float(t) for t in profile_times):
                 for tag in self.tags:
                     limits = origin_limits(tag["kind"], t) if t in (FIRST_HOUR, DAY) else (None, None)
