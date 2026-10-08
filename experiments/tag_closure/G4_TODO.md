@@ -1,5 +1,26 @@
 # G4: the energy source tags, after G3
 
+## Part 4 software handoff (2026-10-07)
+
+[Common evidence/scoring](analysis/evidence/README.md) now validates distinct
+model/experiment/scorer identities, the approved-numbers hash and the planning commit, and computes density-corrected record
+variation, valid Θx window growth, separately reported residual state,
+per-tag window correction ratios, eligible-reference gates and required-field
+parity. [Coverage and tests](analysis/evidence/PART4.md) name the explicit
+unsupported/missing-evidence dependencies. Reviewed on 2026-10-07, see the
+PR's review comment. `process_budget.py`'s `pr` sign and its dropped first
+hourly window are fixed (EA-C4's Part 4 duty).
+
+Legacy Θi/runtime fallback algorithms and historical results remain unchanged.
+New source acceptance requires valid Θx. The radiation record is an
+unqualified diagnostic (EA-USE, 2026-10-07): no copies/source-throughput gate,
+no transplanted source thresholds and no accuracy, cost or scope row. Part 5
+accepted-application activity, 11a independent references, 11b actual scoped
+integration/restart/cost and 11d qualification/owner gates remain open.
+EA-STATE is decided (2026-10-07): growth-only scoring, state reported. OD7
+and OD9–11 are preserved. Energy's aggregate level waits for Part 11b's own
+baseline.
+
 ## Active delivery queue (2026-10-05)
 
 [ROADMAP's execution order](ROADMAP.md#the-execution-order) governs delivery.
@@ -79,7 +100,7 @@ Concrete remaining work, retaining all G4.n/PX obligations below:
     only if needed for the claimed transport. Native weights, aligned geometry,
     restart deduplication/stitching, process-weighted share comparisons and
     row-by-row missing/inapplicable verdicts are required. No silent historical
-    rescore or approval of a new normalization. Fix the scripts' known defects first: `process_budget.py` adds `∫pr dt` as if `pr` were positive downward and drops the first hourly window (2026-10-07), `tag_correctness.py` weights by `np.gradient(z)` and floors denominators at `1e-300`, and `g411_eligibility.py`'s docstring still calls the interim a lower bound.
+    rescore or approval of a new normalization. Fix the scripts' known defects first. `process_budget.py`'s `pr` sign and its dropped first hourly window (2026-10-07) are fixed in Part 4: on E87's archived output it now reads 1.038 kg m⁻² of surface precipitation. Still open: `tag_correctness.py` weights by `np.gradient(z)` and floors denominators at `1e-300`, and `g411_eligibility.py`'s docstring still calls the interim a lower bound.
   - [ ] **Part 5, energy activity:** demonstrate opposing source/stage and
     repair/follower applications. Accepted-step Θx and retained variation are
     exact for their recorded grouping, not eventwise activity. Distinguish

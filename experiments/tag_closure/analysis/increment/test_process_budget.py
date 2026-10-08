@@ -110,6 +110,16 @@ class ProcessBudgetTests(unittest.TestCase):
             self.assertIn("not assessable: parity fails for g46_d4_budget_2c", text)
             self.assertNotIn("A2:", text)
 
+    def test_surface_precipitation_is_downward_over_every_hour(self):
+        import process_budget
+        bounds = np.column_stack((T[:-1], T[1:]))
+        # `pr` is upward-positive. The first hour counts, at twice the rate.
+        rate = np.full(24, -1e-5)
+        rate[0] = -2e-5
+        self.assertAlmostEqual(process_budget.downward_precipitation(rate, bounds, 86400.0), 25e-5 * 3600)
+        with self.assertRaises(SystemExit):
+            process_budget.downward_precipitation(rate[1:], bounds[1:], 86400.0)
+
 
 if __name__ == "__main__":
     unittest.main()

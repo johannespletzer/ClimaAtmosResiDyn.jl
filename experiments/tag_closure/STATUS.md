@@ -1,5 +1,23 @@
 # Status
 
+## Part 4 offline evidence and scoring (2026-10-07)
+
+The common manifest extension, strict native readers and deterministic
+water/energy row scorer are implemented in
+[analysis/evidence](analysis/evidence/README.md). The
+[coverage matrix](analysis/evidence/PART4.md) identifies measured rows and
+explicit remaining scientific gates. All 89 offline analytic/fault tests pass.
+Reviewed on 2026-10-07, see the PR's review comment.
+
+This raises software capability only. No simulation, physical qualification,
+new default, tolerance, dependency or CI change is supplied. Historical
+scorers and results remain unchanged. Missing accepted-application accounting
+is Part 5. Independent water/transfer/energy references are Parts 6/7/11a.
+Actual integrated/cost/restart/held-out qualification evidence remains in
+8/10/11b–d/12, with the existing owner approvals still required. The radiation
+record is an unqualified diagnostic (EA-USE, 2026-10-07): reported, with no
+stored-source throughput/copies gate and no accuracy, cost or scope row.
+
 ## Current delivery entry point (2026-10-06)
 
 The active plan is [ROADMAP.md](ROADMAP.md#the-execution-order).

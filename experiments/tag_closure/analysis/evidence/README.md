@@ -1,4 +1,144 @@
-# G3 phase 1: the evidence pipeline
+# Common evidence validation and acceptance scoring
+
+`score_acceptance.py` evaluates the optional `acceptance` section of the
+existing submission manifest. It computes supported water and energy
+metrics from named immutable artifacts and emits deterministic row results.
+Each row separates applicability, data completeness, scientific verdict,
+approved/proposed/reported status, reference eligibility, units, window,
+normalization and remaining dependency. See [PART4.md](PART4.md) for the
+reuse inventory, coverage and verification record.
+
+The input is a separately identified extended manifest, not a second
+submission record format. Attach a predeclared extension to an archived
+manifest without changing the original:
+
+```sh
+python3 experiments/tag_closure/analysis/evidence/manifest.py \
+  --attach-acceptance BUNDLE/submission.json \
+  --acceptance BUNDLE/extension.json --out BUNDLE/manifest-new.json
+python3 experiments/tag_closure/analysis/evidence/score_acceptance.py \
+  validate BUNDLE/manifest-new.json --json BUNDLE/validation-new.json
+python3 experiments/tag_closure/analysis/evidence/score_acceptance.py \
+  score BUNDLE/manifest-new.json --json BUNDLE/score-new.json
+```
+
+All evidence paths in the extension are relative to the new manifest's
+directory. Existing result paths are refused. Keep the original manifest,
+scorer hash, score and interpretation. A corrected score is a new reanalysis,
+not a simulation rerun. The legacy tools below retain their original CLIs
+and historical algorithms.
+
+## Minimum evidence layout and extension
+
+```text
+BUNDLE/
+  submission.json           # original manifest.py output
+  extension.json            # acceptance schema_version: 1
+  manifest-new.json         # original fields plus acceptance extension
+  resolved.yml / TOML / Manifest / machine records
+  candidate.npz or explicit native NetCDF/CSV artifacts
+  reference.npz / reference-submission.json / reference-eligibility.json
+  untagged.npz / untagged-submission.json
+  exact checkpoint artifacts and segment records, when used
+```
+
+The extension records these fields:
+
+| Field | Meaning |
+|:--|:--|
+| `artifacts` | Map of every named bundle-relative artifact to its SHA256. Hashes prove identity, not physical sufficiency. |
+| `experiment_commit`, `scorer_commit`, `planning_commit` | Keep experiment/config, analysis implementation and planning-tree identities distinct from original `head_sha`. An unpublished scorer uses `local-uncommitted` plus exact file hashes. `planning_commit` is recorded information. The scorer does not verify it. |
+| `scorer_files`, `approved_numbers_sha256` | Exact scorer file hashes and the sha256 of the scorer's named approved numbers as a stable table, as returned by `local_identities()`. A changed approved number invalidates the manifest. An edit to the planning files, DECISIONS.md included, does not. |
+| `submission_files` | Original config and recorded environment/untracked names mapped to archived artifacts. Hashes must match submission identities. |
+| `resolved_settings`, `precision`, `process_count` | Declared solver, seed, physics, diagnostics, tag definitions and environment scope. Do not fill unavailable legacy facts with guesses. |
+| `claim`, `case`, `geometry_kind`, `end_seconds` | Family (`water`, `energy_source`, `radiation_record`), declared use, native column/sphere geometry and physical duration. No count/time/device scope promotion. |
+| `pilot_first_hour` | `true` declares the TRMM 0M 6 h pilot (2026-10-07): a water run that ends after 1 h and before 24 h. Only the first-hour origin rows are scored, labelled low power. The 24 h origin rows are not applicable, and closure and the named remainder are reported at the run's end. |
+| `excluded_criteria` | Criteria the owner excluded for this `case`, such as `[5, 6]` on D4-W under option D. The scorer accepts only approved exclusions and makes every row of those criteria not applicable. Any other declaration fails the evidence row. |
+| `runs` | Candidate/reference/untagged field inventories. Reference/untagged runs name separately hashed submission manifests and matching model/config identities. |
+| `tags`, `compartments` | Named kind (`region`/`source`) and partition membership. Source overlays never enter pure-region closure. Compartments are `total` or complete `N,R,S`. |
+| `required_parent_fields`, `parent_capture_scope` | Frozen required-state inventory. `exported` parity is reported but cannot pass full parent parity. `all-state` requires the actual complete capture inventory from the relevant model setup. |
+| `accepted_step_seconds`, `throughput_accumulation` | Step cadence for deriving cell-step ledger variation. Exact stored Θx identifies `accepted_step` accumulation independently of output cadence. |
+| `reference`, `active_rules` | Named, scope-specific eligibility artifact and its `producer` (`script` and `sha256`). The file names the same producer and declares tested independent rules, convergence, `floors` with one entry per OD12 source (`source_injection`, `initialization`, `parent_solve`, `contamination`, `reference_discretization`), active mirrors/Jacobian and copies refinement. A single scalar floor or a missing producer fails the eligibility row as a data failure. The row records "eligibility as declared by <producer> <hash>". Active-rule coverage is reported and gates nothing until OD9. |
+| `record_processes`, `expected_record_processes` | Complete predeclared process roster. A missing active record cannot be silently skipped. Duplicate process names are rejected. |
+
+A field descriptor names `path`, `key`, `units`, `representation`, `sampling`,
+`dimensions` (native dimensions excluding time), and `weight_units`.
+It also declares an output `cadence` or exact `expected_times` (interval
+fields may instead supply contiguous bounds). Missing/extra samples cannot
+be hidden by taking a common prefix.
+Native NPZ exports include `time`, `time_units="s"`, `geometry`, `weights`,
+`weight_units`, and each field's embedded `KEY__units`, `KEY__representation`,
+`KEY__sampling`, `KEY__dimensions`. Arrays have time first, then native cells.
+Scalar integrated amounts use one weight of 1 and `weight_units="1"`. Extra
+geometric weighting is rejected. The required 1 h and 24 h origin rows remain
+present even when an optional `profile_times` list is empty.
+Alternative time/geometry/weight keys may be explicitly named.
+
+Existing NetCDF reading uses named dimensions, finite unmasked values, exact
+physical-second time units, native coordinates and a named native weights
+variable. It requires the verifier environment's existing `netCDF4`. No
+dependency is added here. A remapped sphere grid cannot replace native
+volume integrals. There is no implicit centre/face reconstruction, remapping,
+interpolation, extrapolation or common-prefix truncation.
+
+CSV scalar columns name a pinned `metadata_source` for their units and
+sampling convention. Do not relabel a rate as an amount. Interval averages
+also name exact contiguous bounds. Cumulative scalar gross fields name
+their `accumulator_kind`. Ratios are not cumulative amounts. Paired
+precipitation is integrated only from applied-flux interval averages or
+accepted applied accumulators. Hourly snapshots remain instantaneous reports.
+
+`segments` in a run declare unique IDs, parent ID, input/output checkpoint
+SHA256 and their corresponding `_artifact` paths, per-field artifact
+overrides, cadence and accumulator continuation/reset metadata. Shared
+endpoint values must agree exactly before deduplication. A reset amount or
+density accumulator requires an explicit native-cell offset. Reset specific
+ledgers must be reconstructed to density before stitching. Attempted and
+retained fields remain distinct. A reader test does not prove model restart
+equivalence.
+
+## Reproducible analytic example and tests
+
+These commands create a **synthetic fixture**, with separate candidate,
+reference and untagged artifacts. They do not run ClimaAtmos:
+
+```sh
+python3 experiments/tag_closure/analysis/evidence/make_acceptance_fixture.py /tmp/acceptance-example
+python3 experiments/tag_closure/analysis/evidence/score_acceptance.py \
+  validate /tmp/acceptance-example/manifest.json --json /tmp/acceptance-example/validation.json
+python3 experiments/tag_closure/analysis/evidence/score_acceptance.py \
+  score /tmp/acceptance-example/manifest.json --json /tmp/acceptance-example/score.json
+python3 -m unittest discover -s experiments/tag_closure/analysis/evidence -p test_acceptance.py -v
+```
+
+The example has genuine calculated PASS rows for exact water closure, tag
+norms, comparator checks, parent parity and ledger ratios. It also reports:
+
+```text
+COMMON.SCOPE_APPROVAL: NOT ASSESSABLE / COMPLETE
+  qualification stays at eight tags on the approved rows (WA-SCOPE)
+COMMON.ACCEPTED_APPLICATION_ACTIVITY: NOT ASSESSABLE / COMPLETE
+  cell-step variation can hide cancelling applications/legs
+WATER.PRECIP_INTEGRATED.established: NOT ASSESSABLE / DATA FAILURE
+  snapshots are insufficient for paired integrated precipitation
+qualification: NOT QUALIFIED, exit 3
+```
+
+The precipitation data gap is outside this inventory-only fixture's required
+claim, so its scientific blockers select exit 3. The exit codes:
+
+| Exit | Meaning |
+|:--|:--|
+| 0 | No required row failed or is blocked. A score cannot reach it today: the convergence, refinement, accepted-application, restart, held-out and scope rows stay blocked until their parts deliver. Validation exit 0 means bundle integrity only. |
+| 1 | A measured required approved row failed. |
+| 2 | Required evidence is missing, corrupt or inconsistent. A water row with a data failure fails, labelled DATA FAILURE, and so does the evidence row. An energy row with absent data is not assessable (G4 section 5). |
+| 3 | A required scientific approval, reference or prerequisite is unavailable. Failed or exported-only parity blocks the origin rows only. Closure and intervention rows are scored with `parent_parity` recorded. A missing or zero-length OD2 window is not applicable and blocks nothing. |
+| 4 | Nothing was evaluated: the result path exists, the command line is invalid, or the scorer raised an error. A scorer error is not a data failure. |
+
+Required failures are never averaged across tags/windows. Proposed
+thresholds and reported-only quantities never become scientific passes.
+
+## Legacy G3 phase 1 evidence pipeline
 
 Four standalone tools (`compare_runs.py`, `test_compare_runs.py`,
 `manifest.py`, `inventory.py`), built for G3_TODO.md phase 1, items 1.1-1.5,
