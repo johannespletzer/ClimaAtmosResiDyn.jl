@@ -438,7 +438,7 @@ after the owner's explicit run approval. **Budget.** 0.8M plus 0.3M.
 | Option C questions Q2 to Q9                 | 12d           | Open. The 6 h pilot is unaffected.                  |
 | Seven-point levels 2, 3, 4 and 6            | 11b           | Proposed from 11b's evidence.                       |
 | Levels 0 to 4 of the roadmap                | all           | Proposed. Status rows report evidence, not a level. |
-| Walk fix placement, ClimaCore or ClimaAtmos | 10, 11b, 12c  | Upstream. No fork patch without a second decision.  |
+| Walk fix placement, ClimaCore or ClimaAtmos | 9, 10, 11b    | Upstream. No fork patch without a second decision.  |
 | Multi-node, GPU, the 90-day sphere          | 12b, 12c, 12d | Not approved.                                       |
 | The three-tag pilot to eight-tag claim path | 10            | The part 10 design proposes it.                     |
 | The unregistered `wp9_cost_namewalk` runs   | housekeeping  | Named as unregistered until the owner says.         |
