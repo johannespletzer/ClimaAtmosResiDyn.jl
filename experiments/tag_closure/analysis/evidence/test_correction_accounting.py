@@ -811,10 +811,18 @@ class CorrectionTests(unittest.TestCase):
     GATE_CHECKS = ("accepted_weights", "trial_rollback", "newton_replacement", "complete_active_roster",
                    "parent_bitwise_parity", "all_channel_checkpoint_restart")
 
-    def open_gate(self, registry_version=None, **changes):
+    LOG_PATTERN = r"^CHECK (?P<check>[a-z_]+): (?P<result>[A-Z]+)$"
+
+    def registry_entry(self, version):
+        return {"cts_version": version, "source_sha256": sha256_file(self.root / "producer.jl"),
+                "roster_key": "instrumented_roster", "inactive_arrays": {"values": "values", "mark": "inactive"},
+                "check_log_pattern": self.LOG_PATTERN}
+
+    def open_gate(self, registry_version=None, log=None, roster=("fix.pbl.total",), **changes):
         data = json.loads(self.manifest.read_text())
         (self.root / "producer.jl").write_text("# test producer source\n")
-        (self.root / "check.log").write_text("PASS\n")
+        (self.root / "check.log").write_text(log if log is not None else
+                                             "".join(f"CHECK {k}: PASS\n" for k in self.GATE_CHECKS))
         pin = json.loads((self.root / "application_receipt.json").read_text())["integrator_pin"]
         proof = {"kind": "runtime_validation", "model_commit": data["head_sha"],
                  "model_diff_sha256": data["diff_sha256"], "producer_id": "test-producer",
@@ -830,9 +838,11 @@ class CorrectionTests(unittest.TestCase):
             spec["artifacts"][name] = sha256_file(self.root / name)
         spec["correction_accounting"]["lifecycle_evidence"] = "runtime_validation.json"
         self.manifest.write_text(json.dumps(data) + "\n")
-        self.file("application_receipt.json", lambda r: r.update(kind="runtime_capture"))
-        registry = {"test-producer": {"cts_version": registry_version or pin["version"],
-                                      "source_sha256": sha256_file(self.root / "producer.jl")}}
+        receipt = {"kind": "runtime_capture"}
+        if roster is not None:
+            receipt["instrumented_roster"] = list(roster)
+        self.file("application_receipt.json", lambda r: r.update(receipt))
+        registry = {"test-producer": self.registry_entry(registry_version or pin["version"])}
         patcher = mock.patch.dict(correction_accounting.VERIFIED_PRODUCERS, registry)
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -874,7 +884,6 @@ class CorrectionTests(unittest.TestCase):
                    "unregistered": ({"producer_id": "other"}, "no verified runtime application producer")}
         refused = {"no log": ({"checks": no_log}, "lacks command/environment/log"),
                    "absent log": ({"checks": absent}, "missing artifact"),
-                   "roster": ({"scope_roster": ["other"]}, "does not cover declared accounting scope"),
                    "pin": ({"integrator_pin": {"version": "other"}}, "timestepper pin differs"),
                    "registry version": ({"registry_version": "other"}, "timestepper pin differs"),
                    "source": ({"producer_source": "check.log"}, "source differs"),
@@ -888,6 +897,118 @@ class CorrectionTests(unittest.TestCase):
                 self.open_gate(**changes)
                 with self.assertRaisesRegex(DataError, message):
                     self.result()
+
+    # The owner's decision of 2026-10-08: before any producer is registered the
+    # gate reads the producer's own roster, the inactive channels' content and
+    # the check logs' named results. Each test breaks one of them alone, on a
+    # fresh fixture whose other two checks pass.
+
+    def fresh(self):
+        self.count = getattr(self, "count", 0) + 1
+        self.root = Path(self.temp.name) / f"gate{self.count}"
+        self.manifest = write_fixture(self.root)
+        attach_fixture(self.manifest)
+
+    def test_registry_refuses_an_entry_without_its_declarations(self):
+        (self.root / "producer.jl").write_text("# test producer source\n")
+        for key in ("roster_key", "inactive_arrays", "check_log_pattern"):
+            with self.subTest(key=key):
+                entry = self.registry_entry("1.0")
+                entry.pop(key)
+                with self.assertRaisesRegex(DataError, "lacks declarations: " + key):
+                    correction_accounting.register_producer("incomplete", entry)
+                self.assertNotIn("incomplete", correction_accounting.VERIFIED_PRODUCERS)
+        bad = {"inactive_arrays": {"values": "values"}, "check_log_pattern": "(?P<check>x)",
+               "roster_key": ""}
+        for key, value in bad.items():
+            with self.subTest(malformed=key):
+                with self.assertRaises(DataError):
+                    correction_accounting.register_producer("malformed", {**self.registry_entry("1.0"), key: value})
+        with mock.patch.dict(correction_accounting.VERIFIED_PRODUCERS, {}):
+            correction_accounting.register_producer("complete", self.registry_entry("1.0"))
+            self.assertIn("complete", correction_accounting.VERIFIED_PRODUCERS)
+
+    def test_gate_refuses_a_registered_entry_without_declarations(self):
+        for key in ("roster_key", "inactive_arrays", "check_log_pattern"):
+            with self.subTest(key=key):
+                self.fresh()
+                self.open_gate()
+                correction_accounting.VERIFIED_PRODUCERS["test-producer"].pop(key)
+                with self.assertRaisesRegex(DataError, "lacks declarations: " + key):
+                    self.result()
+
+    def test_gate_reads_the_roster_the_producer_wrote(self):
+        # The submitted proof's roster is not read. The producer's receipt is.
+        self.fresh()
+        self.open_gate(scope_roster=["other"])
+        self.assertEqual(self.result()["verdict"], "PASS")
+        cases = {"absent": (None, "pins no instrumented roster under instrumented_roster"),
+                 "extra channel": (("fix.pbl.total", "fix.free.total"), "differs from the roster the producer instrumented"),
+                 "duplicate": (("fix.pbl.total", "fix.pbl.total"), "pins no instrumented roster"),
+                 "empty": ((), "pins no instrumented roster")}
+        for name, (roster, message) in cases.items():
+            with self.subTest(name=name):
+                self.fresh()
+                self.open_gate(roster=roster)
+                with self.assertRaisesRegex(DataError, message):
+                    self.result()
+
+    def add_inactive_channel(self, arrays):
+        channel = "upfilter.pbl.copy1"
+        np.savez(self.root / "inactive.npz", **{"upfilter_pbl_copy1__" + k: v for k, v in arrays.items()})
+
+        def inactive(s):
+            section = s["correction_accounting"]
+            section["required_channels"].append(channel)
+            section["coverage"].append({"id": channel, "mechanism": "upfilter", "tag": "pbl", "compartment": "copy1",
+                                        "status": "inactive", "reason": "copies disabled", "evidence": "inactive.npz"})
+            s["artifacts"]["inactive.npz"] = sha256_file(self.root / "inactive.npz")
+        self.spec(inactive)
+
+    def test_gate_reads_inactive_channel_content(self):
+        roster = ("fix.pbl.total", "upfilter.pbl.copy1")
+        passing = {"explicit zero": {"values": np.zeros((24, 2))},
+                   "mark": {"inactive": np.ones(24, dtype=np.int8)},
+                   "both": {"values": np.zeros(3), "inactive": np.ones(3, dtype=bool)}}
+        for name, arrays in passing.items():
+            with self.subTest(name=name):
+                self.fresh()
+                self.open_gate(roster=roster)
+                self.add_inactive_channel(arrays)
+                self.assertEqual(self.result()["verdict"], "PASS")
+        refused = {"activity": ({"values": np.array([0.0, 1e-30])}, "is not an explicit zero"),
+                   "nan": ({"values": np.array([0.0, np.nan])}, "is not an explicit zero"),
+                   "unmarked": ({"inactive": np.array([1, 0])}, "is not an inactive mark"),
+                   "contradicted": ({"values": np.ones(2), "inactive": np.ones(2)}, "is not an explicit zero"),
+                   "empty": ({"values": np.zeros(0)}, "is not an explicit zero"),
+                   "other arrays": ({"other": np.zeros(2)}, "holds neither upfilter_pbl_copy1__values")}
+        for name, (arrays, message) in refused.items():
+            with self.subTest(name=name):
+                self.fresh()
+                self.open_gate(roster=roster)
+                self.add_inactive_channel(arrays)
+                with self.assertRaisesRegex(DataError, message):
+                    self.result()
+
+    def test_gate_parses_each_check_log(self):
+        complete = "".join(f"CHECK {k}: PASS\n" for k in self.GATE_CHECKS)
+        cases = {"bare PASS": ("PASS\n", "records no named result for accepted_weights"),
+                 "one check unnamed": (complete.replace("CHECK trial_rollback: PASS\n", ""),
+                                       "records no named result for trial_rollback"),
+                 "one check failed": (complete + "CHECK newton_replacement: FAIL\n",
+                                      "records newton_replacement as FAIL, PASS, not PASS"),
+                 "not a whole line": (complete.replace("CHECK parent_bitwise_parity: PASS",
+                                                       "CHECK parent_bitwise_parity: PASS later"),
+                                      "records no named result for parent_bitwise_parity")}
+        for name, (log, message) in cases.items():
+            with self.subTest(name=name):
+                self.fresh()
+                self.open_gate(log=log)
+                with self.assertRaisesRegex(DataError, message):
+                    self.result()
+        self.fresh()
+        self.open_gate(log="noise\n" + complete)
+        self.assertEqual(self.result()["verdict"], "PASS")
 
 
 if __name__ == "__main__":
