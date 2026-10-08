@@ -185,9 +185,13 @@ class AcceptanceTests(unittest.TestCase):
         detail["repair_refinement_ratios"]["dt"] = 2
         p.write_text(json.dumps(detail))
         self.edit_spec(lambda s: s["artifacts"].update({p.name: sha256_file(p)}))
-        row = self.row("WATER.ORIGINS.pbl.86400")
+        result = self.evaluate()
+        row = self.row("WATER.ORIGINS.pbl.86400", result)
         self.assertEqual(row["metrics"]["L1"], 0)
         self.assertEqual(row["verdict"], "NOT ASSESSABLE")
+        weighted = self.row("WATER.PROCESS_WEIGHTED.established", result)
+        self.assertEqual(weighted["verdict"], "NOT ASSESSABLE")
+        self.assertIn("REFERENCE.ELIGIBILITY.established", weighted["limitation"])
 
     def test_constant_energy_residual_preserves_growth_pass_and_reports_state(self):
         self.energy()
@@ -970,6 +974,32 @@ class AcceptanceTests(unittest.TestCase):
         self.assertEqual((closure["verdict"], closure["parent_parity"]), ("PASS", "NOT ASSESSABLE"))
         self.assertEqual(self.row("WATER.LED_FIX.pbl.established", result)["verdict"], "PASS")
         self.assertEqual(self.row("WATER.ORIGINS.pbl.3600", result)["verdict"], "NOT ASSESSABLE")
+
+    def test_exported_only_parity_reports_declared_eligibility(self):
+        # Eligibility is a producer property. Parity blocks the origin rows only (2026-10-08).
+        self.edit_spec(lambda s: s.update(required_parent_fields=["temperature"], parent_capture_scope="exported"))
+        floors = {source: 0.1 for source in sa.OD12_FLOOR_SOURCES}
+        for declared, verdict, label in ((floors, "PASS", "eligible for"),
+                                         (dict(floors, contamination=0.3), "FAIL", "ineligible:")):
+            self.reference_detail(floors=declared)
+            result = self.evaluate()
+            self.assertEqual(self.row("REFERENCE.PARENT_PARITY", result)["verdict"], "NOT ASSESSABLE")
+            row = self.row("REFERENCE.ELIGIBILITY.established", result)
+            self.assertEqual(row["verdict"], verdict)
+            self.assertTrue(row["reference_eligibility"].startswith(label))
+            for origin in ("WATER.ORIGINS.pbl.3600", "WATER.ORIGINS.pbl.86400"):
+                self.assertEqual(self.row(origin, result)["verdict"], "NOT ASSESSABLE")
+
+    def test_failed_reference_parity_still_blocks_the_origin_rows(self):
+        self.array("temperature", lambda a: a + 1, role="reference")
+        result = self.evaluate()
+        self.assertEqual(self.row("COMMON.PARENT_PARITY", result)["verdict"], "PASS")
+        self.assertEqual(self.row("REFERENCE.PARENT_PARITY", result)["verdict"], "FAIL")
+        self.assertEqual(self.row("REFERENCE.ELIGIBILITY.established", result)["verdict"], "PASS")
+        for name in ("WATER.ORIGINS.pbl.86400", "WATER.PROCESS_WEIGHTED.established"):
+            row = self.row(name, result)
+            self.assertEqual(row["verdict"], "NOT ASSESSABLE")
+            self.assertIn("REFERENCE.PARENT_PARITY", row["limitation"])
 
     def test_zero_length_startup_lets_the_pilot_score_its_first_hour_row(self):
         self.pilot()
