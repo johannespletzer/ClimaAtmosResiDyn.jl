@@ -454,7 +454,6 @@ end
         ᶜw = zero.(Y.c.ρ) .+ 3.0
         ᶜinv_ρ̂ = zero.(Y.c.ρ) .+ 1.0
         ᶠJ = CA.Fields.local_geometry_field(Y.f).J
-        α_lat = 1.0
         ᶜq_rain = ᶜsgsʲ.q_rai .+ 1e-6
         ᶜinflow = Y.c.ρ .* 1e-6
         ᶜzero = zero.(Y.c.ρ)
@@ -474,7 +473,6 @@ end
                 ᶜw,
                 ᶜa,
                 ᶜρ⁰w⁰q⁰,
-                α_lat,
                 ᶜinv_ρ̂,
                 ᶠJ,
             )
@@ -488,7 +486,6 @@ end
                     ᶜqʲ .* getproperty(up, name),
                     ᶠJ,
                     ᶜρ⁰w⁰q⁰ .* getproperty(env, name),
-                    α_lat,
                 )
                 ᶜχₜ = getproperty(Yₜ.c.sgsʲs.:(1), Symbol(:q_tag_, name))
                 @test maximum(abs, parent(ᶜχₜ)) > 0

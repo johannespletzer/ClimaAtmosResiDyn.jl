@@ -12,11 +12,15 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import numpy as np
 
 from acceptance_data import Bundle, DataError, Field, stitch
-from correction_accounting import evaluate_accounting, paired_precipitation
+import correction_accounting
+from correction_accounting import (HALF_QUANTUM, LEDGER_EXTRA_OPERATIONS, ROUNDING_ULPS, TAG_EVENT_THRESHOLD,
+                                   TAG_EVENT_ULPS, TRANSFER_OPERATIONS, application_activity, close,
+                                   evaluate_accounting, paired_precipitation, rounding_allowance)
 from make_acceptance_fixture import write_fixture
 from make_correction_fixture import attach_fixture
 from manifest import sha256_file
@@ -76,20 +80,23 @@ class CorrectionTests(unittest.TestCase):
         self.assertFalse(self.result()["metrics"]["production_complete"])
 
     def test_opposing_successive_steps_preserve_retained_activity(self):
-        ledger = np.zeros((25, 2)); ledger[1] = 1
+        ledger = np.zeros((25, 2))
+        ledger[1] = 1
         attach_fixture(self.manifest, records={"fix.pbl.total": self.steps([{"values": [1, 1]}], [{"values": [-1, -1]}])},
                        ledgers={"fix.pbl.total": ledger})
         m = self.metric(self.result(0, 7200))
         self.assertEqual((m["signed"], m["retained_activity"], m["accepted_activity"]), (0, 4, 4))
 
     def test_opposing_cells_do_not_cancel_before_absolute_value(self):
-        ledger = np.zeros((25, 2)); ledger[1:] = [1, -1]
+        ledger = np.zeros((25, 2))
+        ledger[1:] = [1, -1]
         attach_fixture(self.manifest, records={"fix.pbl.total": self.steps([{"values": [1, -1]}])}, ledgers={"fix.pbl.total": ledger})
         m = self.metric()
         self.assertEqual((m["signed"], m["retained_activity"], m["accepted_activity"]), (0, 2, 2))
 
     def test_directed_transfer_is_once_and_legs_twice(self):
-        donor = np.zeros((25, 2)); donor[1:] = -2
+        donor = np.zeros((25, 2))
+        donor[1:] = -2
         receiver = -donor
         attach_fixture(self.manifest,
                        records={"follow.pbl.rain": self.steps([{"values": [-2, -2]}]),
@@ -100,11 +107,15 @@ class CorrectionTests(unittest.TestCase):
         pair = result["metrics"]["directed_transfers"][0]
         self.assertEqual(pair["absolute_transfer_amount"], 4)
         self.assertEqual(pair["summed_leg_activity"], 8)
+        # The giving leg loses 4, so the amount moved forward is +4.
+        self.assertEqual(pair["signed_forward_amount"], 4)
         self.assertEqual(sum(m["signed"] for m in result["metrics"]["channels"].values()), 0)
 
     def test_invalid_directed_pair_does_not_hide_missing_water(self):
-        donor = np.zeros((25, 2)); donor[1:] = -2
-        receiver = np.zeros((25, 2)); receiver[1:] = 1
+        donor = np.zeros((25, 2))
+        donor[1:] = -2
+        receiver = np.zeros((25, 2))
+        receiver[1:] = 1
         attach_fixture(self.manifest,
                        records={"follow.pbl.rain": self.steps([{"values": [-2, -2]}]),
                                 "follow.pbl.snow": self.steps([{"values": [1, 1]}])},
@@ -114,7 +125,8 @@ class CorrectionTests(unittest.TestCase):
             self.result()
 
     def test_simultaneous_closing_part_corrections_have_nonzero_activity(self):
-        rain = np.zeros((25, 2)); rain[1:] = 3
+        rain = np.zeros((25, 2))
+        rain[1:] = 3
         snow = -rain
         attach_fixture(self.manifest,
                        records={"close.pbl.rain": self.steps([{"values": [3, 3]}]),
@@ -145,7 +157,8 @@ class CorrectionTests(unittest.TestCase):
             self.result()
 
     def test_repeated_newton_evaluation_is_replaced(self):
-        ledger = np.zeros((25, 2)); ledger[1:] = 1
+        ledger = np.zeros((25, 2))
+        ledger[1:] = 1
         raw = self.steps([{"values": [9, 9], "application_id": "newton", "evaluation_id": "iterate1", "disposition": "superseded", "attempted_coefficient": None},
                           {"values": [1, 1], "application_id": "newton", "evaluation_id": "final", "attempted_coefficient": None}])
         attach_fixture(self.manifest, records={"fix.pbl.total": raw}, ledgers={"fix.pbl.total": ledger})
@@ -230,7 +243,7 @@ class CorrectionTests(unittest.TestCase):
 
     def test_missing_observation_in_one_step_is_not_inferred_zero(self):
         self.file("application_receipt.json", lambda r: r["steps"][3].update(applications=[]))
-        with self.assertRaisesRegex(DataError, "explicit zero"):
+        with self.assertRaisesRegex(DataError, "[Ee]xplicit zero"):
             self.result()
 
     def test_mismatched_native_geometry_is_rejected(self):
@@ -387,7 +400,7 @@ class CorrectionTests(unittest.TestCase):
         output = self.root / "float32-score.json"
         with contextlib.redirect_stdout(io.StringIO()):
             exit_code = main(["score", str(self.manifest), "--json", str(output)])
-        # This fixture compares a Float32 candidate to Float64 references;
+        # This fixture compares a Float32 candidate to Float64 references.
         # required same-dtype parent evidence is incomplete. Serialization must finish.
         self.assertEqual(exit_code, 2)
         result = json.loads(output.read_text())
@@ -432,7 +445,9 @@ class CorrectionTests(unittest.TestCase):
         for name, values in tracks.items():
             with self.subTest(name=name):
                 a = Field(np.array([0., 1., 2.]), np.array(values[:3])[:, None], np.ones(1), np.zeros((1, 1)), "1", "amount", "cumulative", "1", ("scalar",), ("left",))
-                b = copy.deepcopy(a); b.time = np.array([2., 3.]); b.values = np.array(values[2:])[:, None]
+                b = copy.deepcopy(a)
+                b.time = np.array([2., 3.])
+                b.values = np.array(values[2:])[:, None]
                 segments = [{"id": "left", "output_checkpoint": "cp", "accumulators": {name: {"mode": "continued"}}},
                             {"id": "right", "parent_id": "left", "input_checkpoint": "cp", "accumulators": {name: {"mode": "continued"}}}]
                 whole = stitch([a, b], segments, name)
@@ -502,7 +517,7 @@ class CorrectionTests(unittest.TestCase):
             with contextlib.redirect_stdout(io.StringIO()):
                 self.assertEqual(main([mode, str(self.manifest), "--json", str(self.root / (mode + ".json"))]), 2)
 
-    def precipitation_fixture(self, sphere=False, rates=(-1.0, 0.25)):
+    def precipitation_fixture(self, sphere=False, rates=(-1.0, 0.25), shares=(1, .6, .4), step_scale=False):
         data = json.loads(self.manifest.read_text())
         spec = data["acceptance"]
         cells = 2 if sphere else 1
@@ -511,7 +526,7 @@ class CorrectionTests(unittest.TestCase):
         receipt = json.loads((self.root / "application_receipt.json").read_text())
         receipt["integrator_pin"].update(b_exp=[0.5, 0.5], b_imp=[1, 1], implicit_diagonal=[1, 1])
         channels = {}
-        for name, share in (("parent", 1), ("pbl", .6), ("free", .4)):
+        for name, share in zip(("parent", "pbl", "free"), shares):
             ids = []
             values = []
             for n, step in enumerate(receipt["steps"]):
@@ -523,7 +538,8 @@ class CorrectionTests(unittest.TestCase):
                                                   "application_id": f"flux{m}", "evaluation_id": f"stage{m}",
                                                   "disposition": "applied", "role": "explicit", "stage": m + 1,
                                                   "coefficient": 1800, "coefficient_units": "s", "attempted_coefficient": None})
-                    ids.append(rid); values.append([rate * share] * cells)
+                    ids.append(rid)
+                    values.append([rate * share * (n + 1 if step_scale else 1)] * cells)
             archive[name + "__values"] = np.asarray(values, dtype=np.float64)
             archive[name + "__record_ids"] = np.asarray(ids)
             archive[name + "__quantity"] = np.array("precipitation_flux")
@@ -549,7 +565,10 @@ class CorrectionTests(unittest.TestCase):
         self.assertEqual(p, {"signed_downward_amount": 1350, "positive_downward_amount": 1800, "negative_downward_amount": -450})
         self.assertEqual(result["metrics"]["paired_amounts"]["pbl"]["signed_downward_amount"], 810)
         self.assertEqual(result["metrics"]["signed_defect"], 0)
-        self.assertEqual(result["verdict"], "NOT ASSESSABLE")
+        # WA-PRECIP keeps the row reported. The closed gate is a limitation, not a verdict.
+        self.assertNotIn("verdict", result)
+        self.assertFalse(result["metrics"]["production_complete"])
+        self.assertIn("synthetic application evidence", result["limitation"])
 
     def test_paired_no_rain_is_an_exact_zero_amount(self):
         self.precipitation_fixture(rates=(0., 0.))
@@ -591,7 +610,8 @@ class CorrectionTests(unittest.TestCase):
             paired_precipitation(Bundle(self.manifest), 0, 3600)
 
     def test_directed_legs_with_different_hook_roles_are_not_a_pair(self):
-        donor = np.zeros((25, 2)); donor[1:] = -2
+        donor = np.zeros((25, 2))
+        donor[1:] = -2
         receiver = -donor
         attach_fixture(self.manifest,
                        records={"follow.pbl.rain": self.steps([{"values": [-2, -2]}]),
@@ -609,7 +629,7 @@ class CorrectionTests(unittest.TestCase):
 
     def test_paired_precipitation_window_crosses_restart_without_duplicate_boundary(self):
         self.precipitation_fixture()
-        # Two accepted intervals around an exact checkpoint time; a duplicate
+        # Two accepted intervals around an exact checkpoint time. A duplicate
         # endpoint is not a second application or a third interval.
         m = paired_precipitation(Bundle(self.manifest), 3600, 10800)["metrics"]
         self.assertEqual(m["accepted_steps"], 2)
@@ -625,6 +645,370 @@ class CorrectionTests(unittest.TestCase):
         integrated = scorer.precipitation(0, 3600)
         self.assertIn("max_absolute_rate_defect", instantaneous["metrics"])
         self.assertEqual(integrated["metrics"]["signed_downward_amount"], 1350)
+
+    # Windows that start after zero, and the sign conventions.
+
+    def test_window_after_start_reads_only_its_steps(self):
+        # Step n applies +(n + 1) and then -(n + 1)/2 in both unit cells.
+        records = {"fix.pbl.total": [[{"values": [n + 1, n + 1]}, {"values": [-(n + 1) / 2, -(n + 1) / 2]}]
+                                     for n in range(24)]}
+        ledger = np.zeros((25, 2))
+        ledger[1:] = np.cumsum([(n + 1) / 2 for n in range(24)])[:, None]
+        attach_fixture(self.manifest, records=records, ledgers={"fix.pbl.total": ledger})
+        m = self.metric(self.result(7200, 14400))
+        # Steps 2 and 3 only: A = 2 x (3 + 1.5 + 4 + 2), and H = S = 2 x (1.5 + 2).
+        self.assertEqual((m["signed"], m["retained_activity"], m["accepted_activity"]), (7, 7, 21))
+        self.assertEqual(m["retained_activity_from_applications"], 7)
+        self.assertEqual(m["applied_records"], 4)
+
+    def test_paired_window_after_start_reads_only_its_steps(self):
+        self.precipitation_fixture(step_scale=True)
+        result = paired_precipitation(Bundle(self.manifest), 3600, 10800)
+        # Steps 1 and 2 carry the rates times 2 and 3: (1 - 0.25) x 1800 s x (2 + 3).
+        self.assertEqual(result["metrics"]["signed_downward_amount"], 6750)
+        self.assertEqual(result["metrics"]["accepted_steps"], 2)
+        self.assertEqual(result["units"], "kg m^-2")
+
+    def test_declared_paired_evidence_keeps_the_required_row_reported(self):
+        # WA-PRECIP: criterion 7 stays reported accounting. A closed production
+        # gate is a limitation and never turns the required row not assessable.
+        self.precipitation_fixture()
+        self.spec(lambda s: s["claim"].update(precipitation=True))
+        rows = {r["id"]: r for r in Scorer(Bundle(self.manifest)).run()["rows"]}
+        row = rows["WATER.PRECIP_INTEGRATED.established"]
+        self.assertTrue(row["required"])
+        self.assertEqual((row["verdict"], row["data_status"]), ("REPORTED ONLY", "COMPLETE"))
+        self.assertIn("synthetic application evidence", row["limitation"])
+
+    def test_paired_signed_defect_is_parent_minus_tags_downward(self):
+        self.precipitation_fixture(shares=(1, .5, .25))
+        m = paired_precipitation(Bundle(self.manifest), 0, 3600)["metrics"]
+        # The tags carry 0.75 of the parent's 1350 downward, so 337.5 is missing downward.
+        self.assertEqual(m["signed_defect"], 337.5)
+        self.assertEqual(m["absolute_application_defect"], 562.5)
+
+    # The rounding constants. No contract sets them. Each test states the reading.
+
+    def test_rounding_ulps_reads_sixteen_eps_per_operation(self):
+        self.assertEqual(ROUNDING_ULPS, 16)
+        eps = float(np.finfo(np.float64).eps)
+        one = np.ones(1)
+        self.assertEqual(rounding_allowance(one)[0], 16 * eps)
+        self.assertEqual(rounding_allowance(one, operations=3)[0], 48 * eps)
+        close(one, one + 16 * eps)
+        with self.assertRaisesRegex(DataError, "do not match"):
+            close(one, one + 18 * eps)
+        # An exact zero scale receives no allowance, even with a quantization term.
+        self.assertEqual(rounding_allowance(np.zeros(1), quantization=1.0)[0], 0)
+
+    def test_ledger_extra_operations_reads_three_roundings_per_step(self):
+        # One application plus the two endpoint reconstructions and their
+        # difference: 16 eps x 4 = 64 eps of a unit change.
+        self.assertEqual(LEDGER_EXTRA_OPERATIONS, 3)
+        eps = float(np.finfo(np.float64).eps)
+        for offset, accepted in ((60, True), (66, False)):
+            with self.subTest(offset=offset):
+                ledger = np.zeros((25, 2))
+                ledger[1:] = [1 + offset * eps, 1]
+                attach_fixture(self.manifest, records={"fix.pbl.total": self.steps([{"values": [1, 1]}])},
+                               ledgers={"fix.pbl.total": ledger})
+                if accepted:
+                    self.assertEqual(self.metric()["accepted_activity"], 2)
+                else:
+                    with self.assertRaisesRegex(DataError, "do not match"):
+                        self.result()
+
+    def test_transfer_operations_reads_one_rounding_per_leg(self):
+        # Two legs of size 2: 16 eps x 2 x 2 = 64 eps.
+        self.assertEqual(TRANSFER_OPERATIONS, 2)
+        eps = float(np.finfo(np.float64).eps)
+        for offset, accepted in ((62, True), (66, False)):
+            with self.subTest(offset=offset):
+                giving = np.zeros((25, 2))
+                giving[1:] = -2
+                receiving = np.zeros((25, 2))
+                receiving[1:] = 2 + offset * eps
+                attach_fixture(self.manifest,
+                               records={"follow.pbl.rain": self.steps([{"values": [-2, -2]}]),
+                                        "follow.pbl.snow": self.steps([{"values": [2 + offset * eps] * 2}])},
+                               ledgers={"follow.pbl.rain": giving, "follow.pbl.snow": receiving})
+                self.spec(lambda s: s["correction_accounting"].update(directed_transfers=[
+                    {"id": "rain_to_snow", "donor": "follow.pbl.rain", "receiver": "follow.pbl.snow"}]))
+                if accepted:
+                    self.assertEqual(self.result()["metrics"]["directed_transfers"][0]["absolute_transfer_amount"], 4)
+                else:
+                    with self.assertRaisesRegex(DataError, "do not match"):
+                        self.result()
+
+    def test_half_quantum_reads_round_to_nearest_at_each_endpoint(self):
+        # A specific export at density 10 may lose half the smallest Float32
+        # subnormal at each endpoint: 10 x 0.5 + 10 x 0.5 = 10 quanta.
+        self.assertEqual(HALF_QUANTUM, 0.5)
+        smallest = float(np.nextafter(np.float32(0), np.float32(1)))
+        for quanta, accepted in ((10, True), (11, False)):
+            with self.subTest(quanta=quanta):
+                attach_fixture(self.manifest, dtype=np.float32,
+                               records={"fix.pbl.total": self.steps([{"values": [quanta * smallest, 0]}])},
+                               ledgers={"fix.pbl.total": np.zeros((25, 2), dtype=np.float32)})
+                def change(a):
+                    a["rho"][:] = 10
+                    a["application_ledger_fix_pbl_total__units"] = np.array("kg kg^-1")
+                    a["application_ledger_fix_pbl_total__representation"] = np.array("specific")
+                self.file("candidate.npz", change)
+                self.spec(lambda s: s["runs"]["candidate"]["fields"]["application_ledger_fix_pbl_total"].update(
+                    units="kg kg^-1", representation="specific"))
+                if accepted:
+                    self.assertEqual(self.metric()["retained_activity"], 0)
+                else:
+                    with self.assertRaisesRegex(DataError, "do not match"):
+                        self.result()
+
+    def test_tag_event_threshold_copies_tag_event(self):
+        # tag_event counts a change above max(1e-12, 16 eps) times its scale.
+        # The fixture exports a writer scale of 100. A change at the floor is no event.
+        self.assertEqual((TAG_EVENT_THRESHOLD, TAG_EVENT_ULPS), (1e-12, 16))
+        eps32 = 2.0 ** -23
+        for dtype, at_floor, above in ((np.float64, 1e-12 * 100.0, 1.5e-10),
+                                       (np.float32, 1600 * eps32, 1650 * eps32)):
+            for value, events in ((at_floor, 0), (above, 2)):
+                with self.subTest(dtype=dtype, value=value):
+                    ledger = np.zeros((25, 2), dtype=dtype)
+                    ledger[1:] = value
+                    attach_fixture(self.manifest, dtype=dtype,
+                                   records={"fix.pbl.total": self.steps([{"values": [value, value]}])},
+                                   ledgers={"fix.pbl.total": ledger})
+                    self.assertEqual(self.metric()["accepted_cell_application_events"], events)
+
+    # The validation hook and the scorer rows.
+
+    def test_validation_reads_the_accounting_extension(self):
+        self.assertEqual(Bundle(self.manifest).validate(), [])
+        self.file("applications.npz", lambda a: a["fix_pbl_total__values"].__setitem__((0, 0), np.nan))
+        self.assertTrue(any("application values" in e for e in Bundle(self.manifest).validate()))
+
+    def test_validation_reads_a_precipitation_extension_alone(self):
+        self.precipitation_fixture()
+        self.spec(lambda s: s.pop("correction_accounting"))
+        self.assertEqual(Bundle(self.manifest).validate(), [])
+        self.file("precip_apps.npz", lambda a: a["parent__values"].__setitem__((0, 0), np.nan))
+        self.assertTrue(any("application values" in e for e in Bundle(self.manifest).validate()))
+
+    def test_zero_length_window_gives_a_not_applicable_activity_row(self):
+        # Quiet from the start, then a burst in the fifth hour: the OD2 boundary is 0 s.
+        rates = np.ones(24)
+        rates[4] = 100
+        mass = 100 + np.concatenate(([0.0], np.cumsum(rates)))
+        self.file("untagged.npz", lambda a: a.__setitem__("water_parent", np.repeat((mass / 2)[:, None], 2, axis=1)))
+        rows = {r["id"]: r for r in Scorer(Bundle(self.manifest)).run()["rows"]}
+        row = rows["COMMON.APPLICATION_ACTIVITY.startup"]
+        self.assertEqual(row["verdict"], "NOT APPLICABLE")
+        self.assertFalse(row["required"])
+        self.assertIn("zero length", row["limitation"])
+
+    # The production gate's pass path, through a test registry entry. This is
+    # not runtime evidence. It checks what the gate reads once a producer exists.
+
+    GATE_CHECKS = ("accepted_weights", "trial_rollback", "newton_replacement", "complete_active_roster",
+                   "parent_bitwise_parity", "all_channel_checkpoint_restart")
+
+    LOG_PATTERN = r"^CHECK (?P<check>[a-z_]+): (?P<result>[A-Z]+)$"
+
+    def registry_entry(self, version):
+        return {"cts_version": version, "source_sha256": sha256_file(self.root / "producer.jl"),
+                "roster_key": "instrumented_roster", "inactive_arrays": {"values": "values", "mark": "inactive"},
+                "check_log_pattern": self.LOG_PATTERN}
+
+    def open_gate(self, registry_version=None, log=None, roster=("fix.pbl.total",), **changes):
+        data = json.loads(self.manifest.read_text())
+        (self.root / "producer.jl").write_text("# test producer source\n")
+        (self.root / "check.log").write_text(log if log is not None else
+                                             "".join(f"CHECK {k}: PASS\n" for k in self.GATE_CHECKS))
+        pin = json.loads((self.root / "application_receipt.json").read_text())["integrator_pin"]
+        proof = {"kind": "runtime_validation", "model_commit": data["head_sha"],
+                 "model_diff_sha256": data["diff_sha256"], "producer_id": "test-producer",
+                 "producer_source": "producer.jl", "scope_roster": ["fix.pbl.total"], "integrator_pin": pin,
+                 "checks": {k: {"result": "PASS", "command": "run", "environment": "test", "log": "check.log"}
+                            for k in self.GATE_CHECKS}}
+        proof.update(changes)
+        (self.root / "runtime_validation.json").write_text(json.dumps(proof) + "\n")
+        data["julia_version"] = "1.11.0"
+        spec = data["acceptance"]
+        spec["resolved_settings"]["fixture"] = False
+        for name in ("producer.jl", "check.log", "runtime_validation.json"):
+            spec["artifacts"][name] = sha256_file(self.root / name)
+        spec["correction_accounting"]["lifecycle_evidence"] = "runtime_validation.json"
+        self.manifest.write_text(json.dumps(data) + "\n")
+        receipt = {"kind": "runtime_capture"}
+        if roster is not None:
+            receipt["instrumented_roster"] = list(roster)
+        self.file("application_receipt.json", lambda r: r.update(receipt))
+        registry = {"test-producer": self.registry_entry(registry_version or pin["version"])}
+        patcher = mock.patch.dict(correction_accounting.VERIFIED_PRODUCERS, registry)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_registered_producer_opens_the_production_gate(self):
+        self.open_gate()
+        result = self.result(0, 86400)
+        self.assertEqual(result["verdict"], "PASS")
+        self.assertTrue(result["metrics"]["production_complete"])
+        self.assertTrue(result["limitation"].startswith("Note: a dedicated closing ledger"))
+        # The window row reports activity. It never passes.
+        self.assertEqual(application_activity(Bundle(self.manifest), 0, 3600)["verdict"], "REPORTED ONLY")
+        rows = {r["id"]: r for r in Scorer(Bundle(self.manifest)).run()["rows"]}
+        final = rows["COMMON.ACCEPTED_APPLICATION_ACTIVITY"]
+        self.assertEqual((final["verdict"], final["parent_parity"]), ("PASS", "PASS"))
+        for name in ("startup", "established", "sensitivity_1h"):
+            row = rows["COMMON.APPLICATION_ACTIVITY." + name]
+            self.assertEqual((row["verdict"], row["parent_parity"]), ("REPORTED ONLY", "PASS"))
+
+    def test_each_synthetic_marker_alone_keeps_the_gate_closed(self):
+        markers ={"receipt": lambda: self.file("application_receipt.json", lambda r: r.update(kind="synthetic")),
+                   "fixture": lambda: self.spec(lambda s: s["resolved_settings"].update(fixture=True)),
+                   "julia": lambda: self.manifest.write_text(json.dumps(
+                       {**json.loads(self.manifest.read_text()), "julia_version": "not-run (fixture)"}) + "\n")}
+        for marker, apply in markers.items():
+            with self.subTest(marker=marker):
+                self.open_gate()
+                apply()
+                self.assertIn("synthetic application evidence", self.result()["limitation"])
+
+    def test_gate_reads_every_runtime_check(self):
+        failed = {k: {"result": "PASS", "command": "run", "environment": "test", "log": "check.log"}
+                  for k in self.GATE_CHECKS}
+        failed["trial_rollback"] = {"result": "FAIL", "command": "run", "environment": "test", "log": "check.log"}
+        no_log = dict(failed, trial_rollback={"result": "PASS", "command": "run", "environment": "test"})
+        absent = dict(failed, trial_rollback={"result": "PASS", "command": "run", "environment": "test",
+                                              "log": "absent.log"})
+        limited = {"failed check": ({"checks": failed}, "unverified production lifecycle check: trial_rollback"),
+                   "unregistered": ({"producer_id": "other"}, "no verified runtime application producer")}
+        refused = {"no log": ({"checks": no_log}, "lacks command/environment/log"),
+                   "absent log": ({"checks": absent}, "missing artifact"),
+                   "pin": ({"integrator_pin": {"version": "other"}}, "timestepper pin differs"),
+                   "registry version": ({"registry_version": "other"}, "timestepper pin differs"),
+                   "source": ({"producer_source": "check.log"}, "source differs"),
+                   "identity": ({"model_commit": "other"}, "identity differs")}
+        for name, (changes, message) in limited.items():
+            with self.subTest(name=name):
+                self.open_gate(**changes)
+                self.assertIn(message, self.result()["limitation"])
+        for name, (changes, message) in refused.items():
+            with self.subTest(name=name):
+                self.open_gate(**changes)
+                with self.assertRaisesRegex(DataError, message):
+                    self.result()
+
+    # The owner's decision of 2026-10-08: before any producer is registered the
+    # gate reads the producer's own roster, the inactive channels' content and
+    # the check logs' named results. Each test breaks one of them alone, on a
+    # fresh fixture whose other two checks pass.
+
+    def fresh(self):
+        self.count = getattr(self, "count", 0) + 1
+        self.root = Path(self.temp.name) / f"gate{self.count}"
+        self.manifest = write_fixture(self.root)
+        attach_fixture(self.manifest)
+
+    def test_registry_refuses_an_entry_without_its_declarations(self):
+        (self.root / "producer.jl").write_text("# test producer source\n")
+        for key in ("roster_key", "inactive_arrays", "check_log_pattern"):
+            with self.subTest(key=key):
+                entry = self.registry_entry("1.0")
+                entry.pop(key)
+                with self.assertRaisesRegex(DataError, "lacks declarations: " + key):
+                    correction_accounting.register_producer("incomplete", entry)
+                self.assertNotIn("incomplete", correction_accounting.VERIFIED_PRODUCERS)
+        bad = {"inactive_arrays": {"values": "values"}, "check_log_pattern": "(?P<check>x)",
+               "roster_key": ""}
+        for key, value in bad.items():
+            with self.subTest(malformed=key):
+                with self.assertRaises(DataError):
+                    correction_accounting.register_producer("malformed", {**self.registry_entry("1.0"), key: value})
+        with mock.patch.dict(correction_accounting.VERIFIED_PRODUCERS, {}):
+            correction_accounting.register_producer("complete", self.registry_entry("1.0"))
+            self.assertIn("complete", correction_accounting.VERIFIED_PRODUCERS)
+
+    def test_gate_refuses_a_registered_entry_without_declarations(self):
+        for key in ("roster_key", "inactive_arrays", "check_log_pattern"):
+            with self.subTest(key=key):
+                self.fresh()
+                self.open_gate()
+                correction_accounting.VERIFIED_PRODUCERS["test-producer"].pop(key)
+                with self.assertRaisesRegex(DataError, "lacks declarations: " + key):
+                    self.result()
+
+    def test_gate_reads_the_roster_the_producer_wrote(self):
+        # The submitted proof's roster is not read. The producer's receipt is.
+        self.fresh()
+        self.open_gate(scope_roster=["other"])
+        self.assertEqual(self.result()["verdict"], "PASS")
+        cases = {"absent": (None, "pins no instrumented roster under instrumented_roster"),
+                 "extra channel": (("fix.pbl.total", "fix.free.total"), "differs from the roster the producer instrumented"),
+                 "duplicate": (("fix.pbl.total", "fix.pbl.total"), "pins no instrumented roster"),
+                 "empty": ((), "pins no instrumented roster")}
+        for name, (roster, message) in cases.items():
+            with self.subTest(name=name):
+                self.fresh()
+                self.open_gate(roster=roster)
+                with self.assertRaisesRegex(DataError, message):
+                    self.result()
+
+    def add_inactive_channel(self, arrays):
+        channel = "upfilter.pbl.copy1"
+        np.savez(self.root / "inactive.npz", **{"upfilter_pbl_copy1__" + k: v for k, v in arrays.items()})
+
+        def inactive(s):
+            section = s["correction_accounting"]
+            section["required_channels"].append(channel)
+            section["coverage"].append({"id": channel, "mechanism": "upfilter", "tag": "pbl", "compartment": "copy1",
+                                        "status": "inactive", "reason": "copies disabled", "evidence": "inactive.npz"})
+            s["artifacts"]["inactive.npz"] = sha256_file(self.root / "inactive.npz")
+        self.spec(inactive)
+
+    def test_gate_reads_inactive_channel_content(self):
+        roster = ("fix.pbl.total", "upfilter.pbl.copy1")
+        passing = {"explicit zero": {"values": np.zeros((24, 2))},
+                   "mark": {"inactive": np.ones(24, dtype=np.int8)},
+                   "both": {"values": np.zeros(3), "inactive": np.ones(3, dtype=bool)}}
+        for name, arrays in passing.items():
+            with self.subTest(name=name):
+                self.fresh()
+                self.open_gate(roster=roster)
+                self.add_inactive_channel(arrays)
+                self.assertEqual(self.result()["verdict"], "PASS")
+        refused = {"activity": ({"values": np.array([0.0, 1e-30])}, "is not an explicit zero"),
+                   "nan": ({"values": np.array([0.0, np.nan])}, "is not an explicit zero"),
+                   "unmarked": ({"inactive": np.array([1, 0])}, "is not an inactive mark"),
+                   "contradicted": ({"values": np.ones(2), "inactive": np.ones(2)}, "is not an explicit zero"),
+                   "empty": ({"values": np.zeros(0)}, "is not an explicit zero"),
+                   "other arrays": ({"other": np.zeros(2)}, "holds neither upfilter_pbl_copy1__values")}
+        for name, (arrays, message) in refused.items():
+            with self.subTest(name=name):
+                self.fresh()
+                self.open_gate(roster=roster)
+                self.add_inactive_channel(arrays)
+                with self.assertRaisesRegex(DataError, message):
+                    self.result()
+
+    def test_gate_parses_each_check_log(self):
+        complete = "".join(f"CHECK {k}: PASS\n" for k in self.GATE_CHECKS)
+        cases = {"bare PASS": ("PASS\n", "records no named result for accepted_weights"),
+                 "one check unnamed": (complete.replace("CHECK trial_rollback: PASS\n", ""),
+                                       "records no named result for trial_rollback"),
+                 "one check failed": (complete + "CHECK newton_replacement: FAIL\n",
+                                      "records newton_replacement as FAIL, PASS, not PASS"),
+                 "not a whole line": (complete.replace("CHECK parent_bitwise_parity: PASS",
+                                                       "CHECK parent_bitwise_parity: PASS later"),
+                                      "records no named result for parent_bitwise_parity")}
+        for name, (log, message) in cases.items():
+            with self.subTest(name=name):
+                self.fresh()
+                self.open_gate(log=log)
+                with self.assertRaisesRegex(DataError, message):
+                    self.result()
+        self.fresh()
+        self.open_gate(log="noise\n" + complete)
+        self.assertEqual(self.result()["verdict"], "PASS")
 
 
 if __name__ == "__main__":

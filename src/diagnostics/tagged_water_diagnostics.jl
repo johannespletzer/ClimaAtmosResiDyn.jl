@@ -180,7 +180,7 @@ function compute_q_tag_fix!(out, state, cache, time, ρq_tag_name)
     end
 end
 
-# A gross twin per unit mass, or a count as it is, in the model's float type.
+# A tag's gross per unit mass, or a count as it is, in the model's float type.
 # The cache holds both in Float64 (`tag_throughput.jl`).
 function compute_tag_throughput!(out, state, fields, name, per_mass::Bool)
     ᶜfield = getproperty(fields, name)
@@ -221,7 +221,7 @@ during simulation setup rather than at package load time:
     over `q_tot - q_rai - q_sno`;
 
   - `q_tag_res`: closure residual `(max(ρq_tot, 0) - Σᵢ ρq_tag_i) / ρ`, where
-    the sum runs over the pure region tags (only registered when at least one
+    the sum runs over the region tags (only registered when at least one
     exists), and under `water_tag_precipitation: true` over their three parts.
     The tags partition the parent's non-negative water. Under the key that is
     the sum of the three compartments' non-negative parts;
@@ -250,14 +250,15 @@ during simulation setup rather than at package load time:
     grosses are registered with the other state ledgers
     (`register_tag_ledger_diagnostics!`).
 
-  - `q_tag_fix_<name>`: water that the limiters and state constraints have moved
-    into or out of each tag, cumulative since the start of the simulation
-    segment. It separates "the numerics moved water" from "the transport
-    operators disagree", which `q_tag_res` alone would conflate.
+  - `q_tag_fix_<name>`: the fix ledger. It holds the water that the limiters, the
+    state constraints and the partition repair have moved into or out of each
+    tag, cumulative since the start of the run. The checkpoint carries it
+    through a restart. It separates "the numerics moved water" from "the
+    transport operators disagree", which `q_tag_res` alone would conflate.
 
     Two mechanisms write to it. `repair_water_tag_partition!` runs every step
     from `constrain_state!` and contributes whenever transport has driven a
-    partition tag negative, so this is generally nonzero even under stock
+    region tag negative, so this is generally nonzero even under stock
     settings. `rescale_water_tags!` contributes only when a limiter or state
     constraint actually corrects `ρq_tot`, which requires one of
     `apply_sem_quasimonotone_limiter: true`,
@@ -367,6 +368,7 @@ function register_water_tagging_diagnostics!(::Nothing)
 end
 function register_water_tagging_diagnostics!(model::WaterTaggingModel)
     precipitation = has_water_tag_precipitation(model)
+    audit = has_water_tag_precipitation_audit(model)
     for tag in model.tags
         name = tag_name(tag)
         ρq_tag_name = Symbol(:ρq_tag_, name)
@@ -464,7 +466,9 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
             ),
         )
             delete!(ALL_DIAGNOSTICS, short_name)
-            precipitation || continue
+            # The audit's fields are in the state only under its own key.
+            (is_water_tag_audit_name(field_name) ? audit : precipitation) ||
+                continue
             add_diagnostic_variable!(;
                 short_name,
                 units = "kg kg^-1",
@@ -508,9 +512,9 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
                            "run and carried through a restart, so the " *
                            "change over an interval is the difference of two " *
                            "outputs, and a time average of this variable is " *
-                           "not meaningful. For a partition tag (a region, no " *
-                           "source), partition repair writes here whenever " *
-                           "transport has driven any partition tag negative, " *
+                           "not meaningful. For a region tag, partition " *
+                           "repair writes here whenever " *
+                           "transport has driven any region tag negative, " *
                            "even with no limiter configured. A source tag gets " *
                            "only the rescale that follows a limiter, " *
                            "nonnegativity constraint or prescribed flow " *
@@ -525,8 +529,8 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
             )
         end
 
-        # The gross twin and the count of `q_tag_fix_<name>`, keyed by the tag
-        # name alone, as the ledger is.
+        # The gross and the count of `q_tag_fix_<name>`, keyed by the tag name
+        # alone, as the ledger is.
         for (short_name, what, per_mass, units) in (
             (
                 "q_tag_fixgross_$name",
@@ -590,7 +594,7 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
                     compute_q_tag_upfix!(out, u, p, t, ρq_tag_name),
             )
         end
-        # Its gross twin and count, under the same conditions.
+        # Its gross and count, under the same conditions.
         for (short_name, per_mass, units) in (
             ("q_tag_upfixgross_$name", true, "kg kg^-1"),
             ("q_tag_upfixcount_$name", false, "1"),
@@ -671,8 +675,8 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
                        "unit mass of grid-mean air, in closed form from the " *
                        "state. It is the raw difference: the path's tendency " *
                        "of the tags' sum minus its tendency of total water. " *
-                       "It is taken where the partition is closed to option " *
-                       "C's target, max(ρq_tot, 0), and on the updrafts' " *
+                       "It is taken where the partition is closed to its " *
+                       "target, max(ρq_tot, 0), and on the updrafts' " *
                        "paths max(q_totʲ, 0). The path moves the tags " *
                        "on their whole value, and total water only by the " *
                        "water that diffuses, without rain and snow. The " *
@@ -721,7 +725,7 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
             "gave the tags, or took from them, because the parent's negative " *
             "part changed: the tags partition max(ρq_tot, 0), whose column " *
             "total grows by the negative water a solve creates. Zero where " *
-            "the parent stays non-negative (known issue 7, option C). It " *
+            "the parent stays non-negative. It " *
             "also holds the positive part of a crossing whose gain the rule " *
             "withheld inside the solve, which the tags take in that cell." *
             (
@@ -773,8 +777,8 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
             comments = "The non-negative part of the parent's " *
                        "$(lowercase(title)) less the sum of the region " *
                        "tags' parts of it, per unit mass of moist air. The " *
-                       "parts partition that non-negative part (known issue " *
-                       "7, option C, per compartment). Only under " *
+                       "parts partition that non-negative part, per " *
+                       "compartment. Only under " *
                        "water_tag_precipitation: true.",
             compute! = (out, u, p, t) -> compute_q_tag_part_res!(
                 out,
@@ -804,7 +808,7 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
             comments = "The parent's negative water, min(ρq_tot, 0) / ρ. " *
                        "The region tags partition the non-negative part, " *
                        "max(ρq_tot, 0), so this is the remainder they leave, " *
-                       "beside q_tag_res (known issue 7, option C). Zero " *
+                       "beside q_tag_res. Zero " *
                        "wherever q_tot is not negative." *
                        (
                            precipitation ?

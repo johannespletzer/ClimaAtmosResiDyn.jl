@@ -2,14 +2,13 @@
 ##### Parent budget: the κ calibration table
 #####
 ##### The tolerance's arithmetic term carries a factor κ that covers reduction
-##### order and rank dependence. The contract says it is calibrated and never
-##### chosen. A named configuration is run for a fixed number of accepted
-##### steps with every term of the parent identity measured. The largest ratio
-##### of the residual to the arithmetic term evaluated with κ = 1 is recorded.
-##### κ is four times that ratio, rounded up to a power of two. The table has
-##### one row per backend, state float type and rank count. Each row is
-##### committed with the configuration, the commit and the date. A run whose
-##### row is missing has no tolerance and every numeric verdict is blocked.
+##### order and rank dependence. κ is calibrated and never chosen. A named
+##### configuration runs for a fixed number of accepted steps with every term of
+##### the parent identity measured. κ is four times the largest ratio of the
+##### residual to the arithmetic term at κ = 1, rounded up to a power of two.
+##### The table has one row per backend, state float type and rank count. A run
+##### whose row is missing has no tolerance, and every numeric verdict is
+##### blocked.
 
 """
     CALIBRATION_TABLE_PATH
@@ -29,7 +28,8 @@ const CALIBRATION_STEPS = 50
     CalibrationRow
 
 One row of the table: the backend, the state float type and the rank count it
-applies to, the κ it fixes, and the provenance the protocol requires.
+applies to, the κ it fixes, and the run that measured it (`configuration`,
+`steps`, `worst_ratio`, `commit` and `date`).
 """
 struct CalibrationRow
     backend::String
@@ -56,7 +56,7 @@ function read_calibration_table(path = CALIBRATION_TABLE_PATH)
     )
     rows = CalibrationRow[]
     for entry in table["rows"]
-        # The loader types a date and a bare hash for us; the row keeps strings.
+        # The loader types a date and a bare hash. The row keeps strings.
         row = CalibrationRow(
             string(entry["backend"]),
             string(entry["float_type"]),

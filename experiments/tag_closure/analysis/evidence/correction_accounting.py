@@ -7,6 +7,7 @@ acceptance, and export native arrays before any signed aggregation.
 """
 
 import json
+import re
 from dataclasses import dataclass
 from zipfile import BadZipFile
 
@@ -29,7 +30,79 @@ QUANTITIES = {
 # No verified runtime producer is supplied by this offline implementation.
 # Registration is an implementation change after actual source/lifecycle,
 # parent-parity and all-channel restart validation, never a manifest setting.
+# Use register_producer. Besides its timestepper version and source hash, an
+# entry declares how the gate reads the producer's own output (the owner's
+# decision of 2026-10-08):
+#   roster_key: the receipt key under which the producer writes the roster of
+#     channels it instrumented. The gate reads the roster there, not from the
+#     submitted manifest or proof.
+#   inactive_arrays: {"values": suffix, "mark": suffix}, the arrays of an
+#     inactive channel's evidence file, `<channel>__<suffix>` with the channel
+#     ID's dots as underscores. Values must all be an explicit zero and marks
+#     all 1. A file hash alone does not show a channel inactive.
+#   check_log_pattern: a regular expression with the groups `check` and
+#     `result`. Each check's log must record that check by name as PASS.
 VERIFIED_PRODUCERS = {}
+PRODUCER_DECLARATIONS = ("cts_version", "source_sha256", "roster_key", "inactive_arrays", "check_log_pattern")
+
+
+def producer_entry(producer_id, entry):
+    """A registry entry with its declarations checked. An entry without them is refused."""
+    require(isinstance(entry, dict), f"verified producer {producer_id}: the entry must be an object")
+    absent = [k for k in PRODUCER_DECLARATIONS if k not in entry]
+    require(not absent, f"verified producer {producer_id} lacks declarations: {', '.join(absent)}")
+    require(text(entry["cts_version"]) and text(entry["source_sha256"]) and text(entry["roster_key"]),
+            f"verified producer {producer_id}: version, source hash and roster key must be names")
+    arrays = entry["inactive_arrays"]
+    require(isinstance(arrays, dict) and set(arrays) == {"values", "mark"} and all(text(v) for v in arrays.values()),
+            f"verified producer {producer_id}: inactive_arrays must name a values and a mark suffix")
+    try:
+        pattern = re.compile(entry["check_log_pattern"], re.MULTILINE)
+    except (re.error, TypeError) as exc:
+        raise DataError(f"verified producer {producer_id}: invalid check_log_pattern: {exc}") from exc
+    require({"check", "result"} <= set(pattern.groupindex),
+            f"verified producer {producer_id}: check_log_pattern needs the groups check and result")
+    return {**entry, "check_log_pattern": pattern}
+
+
+def register_producer(producer_id, entry):
+    """Add a verified producer after its runtime validation. Refuses an incomplete entry."""
+    require(text(producer_id), "a verified producer needs an ID")
+    producer_entry(producer_id, entry)
+    VERIFIED_PRODUCERS[producer_id] = dict(entry)
+
+# Numerical consistency constants. No contract sets them. Each is a reading of
+# native rounding, not a scientific tolerance, and a test pins each one.
+# ROUNDING_ULPS: each native addition may be off by this many eps of its scale.
+# It is the factor tag_event uses.
+ROUNDING_ULPS = 16
+# LEDGER_EXTRA_OPERATIONS: beyond one rounding per application, a ledger step
+# rounds at its two endpoint density reconstructions and at their difference.
+LEDGER_EXTRA_OPERATIONS = 3
+# TRANSFER_OPERATIONS: a directed pair's sum rounds once per leg.
+TRANSFER_OPERATIONS = 2
+# HALF_QUANTUM: round to nearest loses at most half the smallest subnormal at
+# each specific-ledger endpoint.
+HALF_QUANTUM = 0.5
+# TAG_EVENT_THRESHOLD and TAG_EVENT_ULPS copy tag_event in tag_throughput.jl.
+# An application is an event above max(1e-12, 16 eps) times its writer's scale.
+TAG_EVENT_THRESHOLD = 1e-12
+TAG_EVENT_ULPS = 16
+EVENT_CONVENTION = ("native node per element per weighted application above "
+                    "max(1e-12, 16 eps(native dtype)) times the absolute writer scale "
+                    "exported as __event_scale. That scale differs by writer")
+
+# A dedicated closing ledger for rain and snow parts is accepted only if the
+# closure table sums it with the rescale's ledgers. This reader checks that
+# once the closing channel exists on this base.
+CLOSING_LEDGER_NOTE = ("a dedicated closing ledger (q_tag_led_close) counts only if the closure table "
+                       "sums it with the rescale's ledgers. This reader checks that once the closing "
+                       "channel exists on this base")
+
+
+def text(value):
+    """A nonempty string, the only accepted identifier type in the metadata."""
+    return isinstance(value, str) and bool(value)
 
 
 def read_json(bundle, path):
@@ -44,7 +117,8 @@ def read_json(bundle, path):
 def rounding_allowance(*arrays, operations=1, precision=None, quantization=None):
     """A numerical consistency allowance, never a scientific tolerance.
 
-    Native Float32 ledgers round on each addition; receipts may sum in Float64.
+    Native Float32 ledgers round on each addition
+    receipts may sum in Float64.
     Scales have one physical unit and one native-cell grouping. Native
     precision is supplied separately after density reconstruction. Never mix
     density, an unweighted tendency or a different cell into this allowance.
@@ -54,7 +128,7 @@ def rounding_allowance(*arrays, operations=1, precision=None, quantization=None)
     dtypes = precision or [a.dtype for a in arrays]
     epsilon = max(float(np.finfo(dtype).eps) for dtype in dtypes)
     scale = np.maximum.reduce([np.abs(a.astype(np.float64)) for a in arrays])
-    relative = 16 * epsilon * np.maximum(1, operations) * scale
+    relative = ROUNDING_ULPS * epsilon * np.maximum(1, operations) * scale
     if quantization is None:
         return relative
     return relative + np.where(scale > 0, quantization, 0)
@@ -69,7 +143,7 @@ def close(a, b, *scales, operations=1, precision=None, quantization=None):
 
 
 def amount(values, weights):
-    """A finite native amount; overflow is a data failure, not a JSON crash."""
+    """A finite native amount. Overflow is a data failure, not a JSON crash."""
     with np.errstate(over="ignore", invalid="ignore"):
         total = np.sum(integrate(values, weights), dtype=np.float64)
     finite(total, "integrated application amount")
@@ -103,7 +177,10 @@ def read_receipt(bundle, path, channel_ids):
             "missing supported timestepper lifecycle pin")
     coefficients = {}
     for name in ("b_exp", "b_imp", "implicit_diagonal"):
-        value = np.asarray(pin.get(name), dtype=np.float64)
+        raw = pin.get(name)
+        require(isinstance(raw, list) and all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in raw),
+                "invalid accepted tableau pin")
+        value = np.asarray(raw, dtype=np.float64)
         require(value.ndim == 1 and len(value) > 0 and np.isfinite(value).all(), "invalid accepted tableau pin")
         coefficients[name] = value
     require(len({len(v) for v in coefficients.values()}) == 1, "accepted tableau dimensions differ")
@@ -134,7 +211,7 @@ def read_receipt(bundle, path, channel_ids):
             trial_ids.add(tid)
             decisions[tid] = decision
         require(sum(v == "accepted" for v in decisions.values()) == 1, "step must have one accepted trial")
-        require(step.get("accepted_trial") in decisions and
+        require(text(step.get("accepted_trial")) and step["accepted_trial"] in decisions and
                 decisions[step["accepted_trial"]] == "accepted", "accepted trial identity differs")
         applications = step.get("applications")
         require(isinstance(applications, list), "missing application inventory")
@@ -142,9 +219,9 @@ def read_receipt(bundle, path, channel_ids):
         for app in applications:
             require(isinstance(app, dict), "invalid application receipt")
             c, rid, tid = app.get("channel"), app.get("record_id"), app.get("trial")
-            require(c in records and isinstance(rid, str) and rid and rid not in record_ids,
+            require(text(c) and c in records and text(rid) and rid not in record_ids,
                     "unknown channel or missing/duplicate application record")
-            require(tid in decisions, "application has unknown trial")
+            require(text(tid) and tid in decisions, "application has unknown trial")
             aid, eid = app.get("application_id"), app.get("evaluation_id")
             require(isinstance(aid, str) and aid and isinstance(eid, str) and eid,
                     "missing application/evaluation identity")
@@ -159,7 +236,8 @@ def read_receipt(bundle, path, channel_ids):
             require(isinstance(coefficient, (int, float)) and not isinstance(coefficient, bool) and
                     np.isfinite(coefficient), "missing/nonfinite final integration coefficient")
             require(app.get("coefficient_units") in ("1", "s"), "missing integration coefficient units")
-            require(app.get("role") in ROLES, "nonadditive stage observation cannot be an accepted application")
+            require(text(app.get("role")) and app["role"] in ROLES,
+                    "nonadditive stage observation cannot be an accepted application")
             if disposition == "applied":
                 akey = (c, tid, aid)
                 require(akey not in seen_applied, "multiple Newton evaluations counted as accepted application")
@@ -188,7 +266,7 @@ def read_receipt(bundle, path, channel_ids):
             record_ids.add(rid)
             records[c].append({**app, "step_index": index})
         require(observed == set(channel_ids),
-                "missing observed channel in accepted step; explicit zero application required")
+                "missing observed channel in accepted step. Explicit zero application required")
     return Receipt(r, np.asarray(bounds, dtype=np.float64), records)
 
 
@@ -209,8 +287,9 @@ class Applications:
 
 def read_applications(bundle, descriptor, records, native=None):
     """Read one channel before aggregating cells, signs or applications."""
+    require(isinstance(descriptor, dict), "invalid application descriptor")
     quantity = descriptor.get("quantity")
-    require(quantity in QUANTITIES, "unknown application quantity")
+    require(text(quantity) and quantity in QUANTITIES, "unknown application quantity")
     units, coefficient_units = QUANTITIES[quantity]
     require(descriptor.get("units") == units, "application units differ")
     path = bundle.artifact(descriptor.get("path"))
@@ -262,7 +341,7 @@ def read_applications(bundle, descriptor, records, native=None):
     finite(attempted, "attempted contributions")
     applied = np.asarray([r["disposition"] == "applied" for r in records])
     attempted_mask = np.asarray([r.get("attempted_coefficient") is not None for r in records])
-    floor = max(1e-12, 16 * np.finfo(values.dtype).eps)
+    floor = max(TAG_EVENT_THRESHOLD, TAG_EVENT_ULPS * np.finfo(values.dtype).eps)
     events = np.abs(weighted) > floor * np.abs(total.astype(np.float64))
     return Applications(values, weighted, attempted, events, counters, applied,
                         attempted_mask, records, weights, geometry, weight_units)
@@ -293,7 +372,7 @@ def totals(apps, receipt, start, end):
         "evaluation_only_records": int(np.count_nonzero(inside & ~apps.attempted_mask)),
         "accepted_counters": {k: count_total(v[selected]) for k, v in apps.counters.items()},
         "attempted_update_counters": {k: count_total(v[attempted]) for k, v in apps.counters.items()},
-        "event_convention": "native node per element per weighted application; max(1e-12,16 eps(native dtype))*abs(parent total)",
+        "event_convention": EVENT_CONVENTION,
     }
     step_delta = np.zeros((j - i, apps.values.shape[1]), dtype=np.float64)
     for n in range(i, j):
@@ -304,7 +383,8 @@ def totals(apps, receipt, start, end):
 
 
 def channel_metrics(bundle, channel, receipt, start, end):
-    ledger = bundle.field("candidate", channel.get("ledger"))
+    require(text(channel.get("ledger")), "missing accounting ledger name")
+    ledger = bundle.field("candidate", channel["ledger"])
     rho = bundle.field("candidate", "rho")
     aligned(ledger, rho, "accounting ledger density")
     family = bundle.spec.get("claim", {}).get("family")
@@ -344,11 +424,12 @@ def channel_metrics(bundle, channel, receipt, start, end):
         # endpoint. Convert each half-subnormal quantum back to density units
         # with its own density. Density-ledger exports have no such division.
         quantum = float(np.nextafter(ledger.values.dtype.type(0), ledger.values.dtype.type(1)))
-        quantization += (quantum * rho.values[i:j].astype(np.float64) * 0.5 +
-                         quantum * rho.values[i + 1:j + 1].astype(np.float64) * 0.5)
+        quantization += (quantum * rho.values[i:j].astype(np.float64) * HALF_QUANTUM +
+                         quantum * rho.values[i + 1:j + 1].astype(np.float64) * HALF_QUANTUM)
         precision += (rho.values.dtype,)
     finite(quantization, "native underflow allowance")
-    operations = (np.bincount(step_indices[apps.applied], minlength=len(receipt.bounds))[i:j] + 3)[:, None]
+    operations = (np.bincount(step_indices[apps.applied], minlength=len(receipt.bounds))[i:j] +
+                  LEDGER_EXTRA_OPERATIONS)[:, None]
     allowance = close(step_delta, native_delta, edges_scale, step_activity, operations=operations,
                       precision=precision, quantization=quantization)
     signed = amount(values[j] - values[i], ledger.weights)
@@ -360,29 +441,38 @@ def channel_metrics(bundle, channel, receipt, start, end):
             "same-decomposition |signed| <= retained <= accepted activity failed")
     result.update(signed=signed, retained_activity=retained,
                   consistency_allowance=integral_allowance,
-                  grouping="one mechanism/tag/compartment; absolute before applications and native cells",
+                  grouping="one mechanism/tag/compartment. Absolute before applications and native cells",
                   mechanism=channel.get("mechanism"), tag=channel.get("tag"),
                   compartment=channel.get("compartment"))
     return result, apps
 
 
-def production_gate(bundle, receipt, section):
-    """Require runtime validation evidence; synthetic arithmetic cannot qualify it."""
+def production_gate(bundle, receipt, section, roster):
+    """Require runtime validation evidence. Synthetic arithmetic cannot qualify it.
+
+    `roster` is the one the reader evaluated. The gate compares it with the
+    roster the producer wrote into its own receipt, reads every inactive
+    channel's arrays, and parses each check's log for the check's named
+    result, as the producer's registry entry declares.
+    """
     if (receipt.metadata.get("kind") == "synthetic" or
             bundle.spec.get("resolved_settings", {}).get("fixture") is True or
             str(bundle.manifest.get("julia_version", "")).startswith("not-run")):
-        return "synthetic application evidence validates arithmetic only; production acceptance/rollback hooks remain unavailable"
+        return "synthetic application evidence validates arithmetic only. Production acceptance/rollback hooks remain unavailable"
     lifecycle = section.get("lifecycle_evidence")
     if not lifecycle:
         return "missing verified producer acceptance/rollback, parent parity and restart evidence"
     proof = read_json(bundle, lifecycle)
+    require(text(proof.get("producer_id")) and isinstance(proof.get("checks", {}), dict),
+            "runtime lifecycle validation lacks a producer ID or checks table")
     require(proof.get("kind") == "runtime_validation" and
             proof.get("model_commit") == bundle.manifest["head_sha"] and
             proof.get("model_diff_sha256") == bundle.manifest["diff_sha256"],
             "runtime lifecycle validation identity differs")
     supported = VERIFIED_PRODUCERS.get(proof.get("producer_id"))
     if supported is None:
-        return "no verified runtime application producer is registered; metadata/log declarations cannot establish acceptance semantics"
+        return "no verified runtime application producer is registered. Metadata/log declarations cannot establish acceptance semantics"
+    supported = producer_entry(proof["producer_id"], supported)
     require(proof.get("integrator_pin") == receipt.metadata.get("integrator_pin") and
             receipt.metadata["integrator_pin"]["version"] == supported["cts_version"],
             "runtime producer timestepper pin differs from verified implementation")
@@ -395,19 +485,52 @@ def production_gate(bundle, receipt, section):
     checks = proof.get("checks", {})
     for key in required:
         check = checks.get(key, {})
+        require(isinstance(check, dict), "invalid runtime lifecycle check: " + key)
         if check.get("result") != "PASS":
             return "unverified production lifecycle check: " + key
         require(check.get("command") and check.get("environment") and check.get("log"),
                 "runtime lifecycle result lacks command/environment/log: " + key)
-        bundle.artifact(check["log"])
-    require(proof.get("scope_roster") == section.get("required_channels"),
-            "runtime validation does not cover declared accounting scope")
+        try:
+            log = bundle.artifact(check["log"]).read_text()
+        except (UnicodeDecodeError, OSError) as exc:
+            raise DataError(f"unreadable runtime lifecycle log {check['log']}: {exc}") from exc
+        results = [m["result"] for m in supported["check_log_pattern"].finditer(log) if m["check"] == key]
+        require(results, f"runtime lifecycle log {check['log']} records no named result for {key}")
+        require(all(r == "PASS" for r in results),
+                f"runtime lifecycle log {check['log']} records {key} as {', '.join(sorted(set(results)))}, not PASS")
+    pinned = receipt.metadata.get(supported["roster_key"])
+    require(isinstance(pinned, list) and pinned and all(text(c) for c in pinned) and len(set(pinned)) == len(pinned),
+            f"the producer's receipt pins no instrumented roster under {supported['roster_key']}")
+    require(set(pinned) == set(roster),
+            "the declared accounting scope differs from the roster the producer instrumented")
+    for channel in section.get("coverage", []):
+        if channel.get("status") == "inactive":
+            inactive_content(bundle, channel, supported["inactive_arrays"])
     return ""
+
+
+def inactive_content(bundle, channel, arrays):
+    """An inactive channel's evidence must show it inactive in its arrays, not by its hash."""
+    prefix = channel["id"].replace(".", "_")
+    keys = {kind: prefix + "__" + suffix for kind, suffix in arrays.items()}
+    try:
+        with bundle.artifact(channel["evidence"]).open("rb") as stream, np.load(stream, allow_pickle=False) as archive:
+            found = {kind: archive[key].copy() for kind, key in keys.items() if key in archive.files}
+    except (BadZipFile, EOFError, ValueError, OSError) as exc:
+        raise DataError(f"inactive channel {channel['id']}: unreadable evidence: {exc}") from exc
+    require(found, f"inactive channel {channel['id']}: its evidence holds neither {keys['values']} nor {keys['mark']}")
+    for kind, value in found.items():
+        expected = 0 if kind == "values" else 1
+        require(value.size > 0 and value.dtype.kind in "biuf" and np.all(value == expected),
+                f"inactive channel {channel['id']}: {keys[kind]} is not {'an explicit zero' if expected == 0 else 'an inactive mark'} "
+                "everywhere")
 
 
 def transfer_metrics(bundle, pair, channels, receipt, start, end):
     """Keep only the current pair's application buffers while checking its legs."""
-    d, r = channels.get(pair.get("donor")), channels.get(pair.get("receiver"))
+    require(isinstance(pair, dict) and text(pair.get("donor")) and text(pair.get("receiver")),
+            "directed transfer needs a giving and a receiving channel ID")
+    d, r = channels.get(pair["donor"]), channels.get(pair["receiver"])
     require(d is not None and r is not None, "directed transfer lacks one observed leg")
     donor = read_applications(bundle, d["applications"], receipt.records[d["id"]], bundle.field("candidate", d["ledger"]))
     receiver = read_applications(bundle, r["applications"], receipt.records[r["id"]], bundle.field("candidate", r["ledger"]))
@@ -419,9 +542,10 @@ def transfer_metrics(bundle, pair, channels, receipt, start, end):
             "directed transfer legs have different applications")
     require(np.array_equal(donor.applied, receiver.applied), "directed leg acceptance differs")
     close(donor.weighted + receiver.weighted, np.zeros_like(donor.weighted),
-          np.maximum(np.abs(donor.weighted), np.abs(receiver.weighted)), operations=2,
+          np.maximum(np.abs(donor.weighted), np.abs(receiver.weighted)), operations=TRANSFER_OPERATIONS,
           precision=(donor.values.dtype, receiver.values.dtype))
     result, _ = totals(donor, receipt, start, end)
+    # The giving leg loses what moves forward, so the forward amount is minus its signed change.
     return {"id": pair.get("id"), "signed_forward_amount": -result["signed"],
             "absolute_transfer_amount": result["accepted_activity"],
             "summed_leg_activity": 2 * result["accepted_activity"],
@@ -431,17 +555,22 @@ def transfer_metrics(bundle, pair, channels, receipt, start, end):
 def evaluate_accounting(bundle, start, end):
     section = bundle.spec.get("correction_accounting")
     if section is None:
-        raise NotAssessable("missing accepted application/leg accounting; existing retained/attempted amounts cannot exclude cancellation")
+        raise NotAssessable("missing accepted application/leg accounting. Existing retained/attempted amounts cannot exclude cancellation")
     require(isinstance(section, dict) and section.get("schema_version") == 1, "invalid correction-accounting extension")
     required = section.get("required_channels")
     coverage = section.get("coverage")
-    require(isinstance(required, list) and required and len(set(required)) == len(required), "empty/duplicate required accounting roster")
+    require(isinstance(required, list) and required and all(text(c) for c in required) and
+            len(set(required)) == len(required), "empty/duplicate required accounting roster")
     require(isinstance(coverage, list) and all(isinstance(c, dict) for c in coverage), "invalid accounting coverage table")
     ids = [c.get("id") for c in coverage]
-    require(len(set(ids)) == len(ids) and set(ids) == set(required), "accounting coverage differs from required roster")
+    require(all(text(i) for i in ids) and len(set(ids)) == len(ids) and set(ids) == set(required),
+            "accounting coverage differs from required roster")
+    transfers = section.get("directed_transfers", [])
+    require(isinstance(transfers, list), "directed transfers must be a list")
     observed, unavailable, inactive = [], [], []
     for c in coverage:
-        require(c.get("mechanism") and c.get("tag") and c.get("compartment"), "missing mechanism/tag/compartment identity")
+        require(text(c.get("mechanism")) and text(c.get("tag")) and text(c.get("compartment")),
+                "missing mechanism/tag/compartment identity")
         status = c.get("status")
         require(status in ("observed", "inactive", "unsupported", "missing"), "unknown accounting channel status")
         if status == "observed":
@@ -466,17 +595,33 @@ def evaluate_accounting(bundle, start, end):
             del _
         channels = {c["id"]: c for c in observed}
         metrics["directed_transfers"] = [transfer_metrics(bundle, pair, channels, receipt, start, end)
-                                         for pair in section.get("directed_transfers", [])]
-        limitation = production_gate(bundle, receipt, section)
+                                         for pair in transfers]
+        limitation = production_gate(bundle, receipt, section, required)
     else:
         limitation = "no observed accepted applications in declared accounting scope"
     if unavailable:
-        limitation = "missing/unsupported accounting channels: " + ", ".join(c["id"] for c in unavailable) + ("; " + limitation if limitation else "")
+        limitation = "missing/unsupported accounting channels: " + ", ".join(c["id"] for c in unavailable) + (". " + limitation if limitation else "")
     metrics["observed_data_complete"] = not unavailable and bool(observed)
     metrics["production_complete"] = not limitation
+    note = ""
+    if bundle.spec.get("claim", {}).get("family") == "water":
+        metrics["closing_ledger"] = CLOSING_LEDGER_NOTE
+        note = ". Note: " + CLOSING_LEDGER_NOTE if limitation else "Note: " + CLOSING_LEDGER_NOTE
     return {"metrics": metrics, "meets": not limitation,
-            "verdict": "NOT ASSESSABLE" if limitation else "PASS", "limitation": limitation,
-            "normalization": "absolute application amounts; approved retained ratios and OD4 remain separate"}
+            "verdict": "NOT ASSESSABLE" if limitation else "PASS", "limitation": limitation + note,
+            "normalization": "absolute application amounts. Approved retained ratios and OD4 remain separate"}
+
+
+def application_activity(bundle, start, end):
+    """The window's application activity, a reported row that never passes.
+
+    Absolute application amounts have no scientific tolerance. A complete
+    production scope is reported. An incomplete one stays not assessable.
+    """
+    result = evaluate_accounting(bundle, start, end)
+    if result["verdict"] == "PASS":
+        result["verdict"] = "REPORTED ONLY"
+    return result
 
 
 def paired_precipitation(bundle, start, end):
@@ -486,7 +631,8 @@ def paired_precipitation(bundle, start, end):
     channels = section.get("channels")
     partition = [t["name"] for t in bundle.spec.get("tags", []) if t.get("partition")]
     required = ["parent"] + partition
-    require(isinstance(channels, dict) and set(channels) == set(required), "paired precipitation partition roster incomplete")
+    require(isinstance(channels, dict) and set(channels) == set(required) and
+            all(isinstance(v, dict) for v in channels.values()), "paired precipitation partition roster incomplete")
     receipt = read_receipt(bundle, section.get("receipt"), required)
     require(all(channels[name].get("quantity") == "precipitation_flux" for name in required),
             "paired precipitation needs same-update surface flux rates")
@@ -520,7 +666,11 @@ def paired_precipitation(bundle, start, end):
         quantities[tag] = surface_amounts(other)
         defect -= other.weighted[masks]
         del other
-    limitation = production_gate(bundle, receipt, section)
+    limitation = production_gate(bundle, receipt, section, required)
+    # The defect is parent minus the tags' sum, in the downward convention of the amounts.
+    # WA-PRECIP keeps this row reported accounting. An unverified producer is a
+    # stated limitation, so declaring this evidence never turns the reported row
+    # into a not-assessable one. Malformed evidence is still a data failure.
     return {"metrics": {"paired_amounts": quantities,
                         "signed_downward_amount": quantities["parent"]["signed_downward_amount"],
                         "signed_defect": -amount(defect, parent.weights),
@@ -528,9 +678,10 @@ def paired_precipitation(bundle, start, end):
                         "interval_bounds_seconds": [start, end], "accepted_steps": j - i,
                         "source": "paired weighted accepted applications", "production_complete": not limitation},
             "units": "kg m^-2" if geometry_kind == "column" else "kg",
-            "normalization": "native signed surface amount; no precipitation accuracy tolerance added",
-            "limitation": limitation or "paired accounting alone does not validate independent donor provenance",
-            **({"verdict": "NOT ASSESSABLE"} if limitation else {})}
+            "normalization": "native signed surface amount. No precipitation accuracy tolerance added",
+            "limitation": ((limitation + ". ") if limitation else "") +
+                          "paired accounting alone does not validate precipitation origins against "
+                          "independent references for the giving pool"}
 
 
 def validate_extensions(bundle):

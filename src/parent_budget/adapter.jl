@@ -2,27 +2,24 @@
 ##### Parent budget: the timestepper adapter
 #####
 ##### The one place that knows how `ClimaTimeSteppers` builds an accepted step.
-##### The transaction and reconciliation code knows nothing about processes or
-##### tableaus, and the journal knows nothing about the integrator; everything
-##### timestepper-specific is here, so that a change in the pinned behaviour is
-##### a change to one file and to the trace test that fixes it.
+##### The transaction code and the journal know nothing about processes, tableaus
+##### or the integrator. A change in the stepper's behavior is a change to this
+##### file and to the trace test that fixes it.
 #####
-##### The adapter sees a step twice. During the step it sits behind the
-##### explicit tendency, the `lim!`, `dss!`, `constrain_state!`,
-##### `initialize_imp!` and `T_post_imp!` hooks as meters that read the state
-##### before and after each call and never write it, and in audit mode it
-##### listens to the applied-update events the tendency code brackets its
-##### processes with. After the step it runs as the first discrete callback: it
-##### reads the stage tendencies the stepper cache still holds, packs every
-##### reservoir's endpoint, every channel's envelope, the final maps, the
-##### process rows and whatever the meters measured into one buffer, reduces
-##### that buffer once, records the legs, commits the transaction, and opens
-##### the next one on the closing endpoint.
+##### During a step the adapter sits behind the explicit tendency and the `lim!`,
+##### `dss!`, `constrain_state!`, `initialize_imp!` and `T_post_imp!` hooks as
+##### meters. They read the state before and after each call and never write it.
+##### In audit mode it also listens to the applied-update events of the tendency
+##### code. After the step it runs as the first discrete callback. It reads the
+##### stage tendencies the stepper cache still holds and packs every endpoint,
+##### envelope, final map, process row and metered amount into one buffer. It
+##### reduces the buffer once, enters the legs in the journal, commits the
+##### transaction and opens the next one on the closing endpoint.
 #####
-##### Which hook call is the final map and which is a stage firing is decided
-##### by position in the step, never by time: the last stage and the final
-##### assembly share the same `t`. The positions come from a template built from
-##### the tableau and the constraint cadence, and the meters check the stepper
+##### Position in the step decides which hook call is the final map and which is a
+##### stage firing, never time, because the last stage and the final assembly
+##### share the same `t`. The positions come from a template built from the
+##### tableau and the constraint cadence, and the meters check the stepper
 ##### against it as it runs.
 
 # ============================================================================
@@ -40,11 +37,11 @@ How much the parent budget measures and keeps.
     long run uses.
   - `AuditMode`: everything `SummaryMode` measures, and more. It adds the
     process rows of every collected channel, read from the applied-update
-    events the tendency code brackets them with. It adds every intermediate
+    events the tendency code opens around them. It adds every intermediate
     hook firing as a stage observation, the algebraic solve defect and the
     post-implicit correction of every implicit stage, and every step's
-    reconciliations. It costs a copy of the parent tendency fields when a
-    bracket opens and six local integrals when it closes, the positive and
+    reconciliations. It costs a copy of the parent tendency fields when an
+    event opens and six local integrals when it closes, the positive and
     negative parts of three fields. Each implicit stage also costs one extra
     implicit tendency evaluation. Storage grows with the run. This is why it
     is not the default.
@@ -65,8 +62,8 @@ struct SummaryMode <: ParentBudgetMode end
 """
     AuditMode()
 
-Measure every firing, every bracketed process, the solve defect and the
-correction, and keep every commit. See `ParentBudgetMode`.
+Measure every firing, every process inside an applied-update event, the solve
+defect and the correction, and keep every commit. See `ParentBudgetMode`.
 """
 struct AuditMode <: ParentBudgetMode end
 
@@ -246,7 +243,7 @@ end
     HookTemplate
 
 The metered hook firings of one accepted step, in order, as
-`ClimaTimeSteppers` 0.10 runs them for an unconstrained IMEX-ARK tableau. Built
+`ClimaTimeSteppers` runs them for an unconstrained IMEX-ARK tableau. Built
 once from the tableau, the constraint cadence and which hooks are wired, and
 checked against the stepper as it runs: a hook that fires more often than the
 template says, or fewer times by the end of the step, is an error, because the
@@ -403,9 +400,9 @@ function push_measured_group!(slots, group::Symbol)
 end
 
 # Every roster row with a measured quantity is either metered at a hook or
-# named by an event that brackets it in the atmosphere's explicit or implicit
-# tendency. A row that is neither could never be recorded, and the schema
-# would block on it forever without saying why, so it is refused here.
+# named by an applied-update event around it in the atmosphere's explicit or
+# implicit tendency. A row that is neither could never be measured, and the
+# schema would block on it forever without saying why, so it is refused here.
 function check_roster_events(schema::BudgetSchema)
     for channel in COLLECTED_CHANNELS
         has_channel(schema, channel) || continue
@@ -432,9 +429,9 @@ function check_roster_events(schema::BudgetSchema)
     return nothing
 end
 
-# The labels whose brackets the adapter integrates: those measuring a roster
+# The labels whose events the adapter integrates: those measuring a roster
 # row or a transfer leg in this configuration. Every other label is checked
-# and skipped, so a bracket around a process the configuration does not run
+# and skipped, so an event around a process the configuration does not run
 # costs nothing.
 function active_events(schema::BudgetSchema)
     events = Set{Symbol}()
@@ -451,11 +448,11 @@ function active_events(schema::BudgetSchema)
 end
 
 # The evaluation a transfer leg is measured in follows the channel the schema
-# applies it through, and the bracket that measures it must fire there.
+# applies it through, and the event that measures it must fire there.
 leg_evaluation(spec::TransferEventSpec, reservoir::Symbol, leg::Symbol) =
     evaluation_kind(leg_channel(spec, reservoir, leg))
 
-# The channel a bracket's own total in one evaluation belongs to.
+# The channel an applied-update event's own total in one evaluation belongs to.
 evaluation_channel(kind::Symbol) = kind === :implicit ? :implicit : :explicit_main
 
 transfer_leg_group(event::Symbol, reservoir::Symbol, leg::Symbol, stage::Int) =
@@ -463,10 +460,10 @@ transfer_leg_group(event::Symbol, reservoir::Symbol, leg::Symbol, stage::Int) =
 bracket_group(label::Symbol, reservoir::Symbol, stage::Int) =
     Symbol("bracket.", label, ".", reservoir, ".", stage)
 
-# Every (label, reservoir) pair under which some declared transfer leg is read
-# from a flux field, with the evaluation it fires in: the bracket's own total
-# there is kept beside the legs as a check. A leg that is the bracket's total
-# needs no check against itself.
+# `bracket_totals` returns every (label, reservoir) pair under which some
+# declared transfer leg is read from a flux field, with the evaluation it fires
+# in. The event's own total there is kept beside the legs as a check. A leg that
+# is the event's total needs no check against itself.
 function bracket_totals(schema::BudgetSchema)
     totals = Dict{Tuple{Symbol, Symbol}, Symbol}()
     for spec in schema.transfer_events, (reservoir, leg) in spec.modeled_legs
@@ -486,12 +483,12 @@ end
 """
     TransferCheck
 
-The bracket's own total in one reservoir at one stage beside the sum of the
-transfer legs read from flux fields inside it, both weighted as they enter
-the accepted step: radiation's two crossings against what the atmosphere
-integrated, and the slab's turbulent, radiative and prescribed fluxes against
-what the slab tendency applied. Their difference is kept, never absorbed, and
-no identity reads it.
+The applied-update event's own total in one reservoir at one stage (field
+`bracket`) beside the sum of the transfer legs read from flux fields inside it,
+both weighted as they enter the accepted step. Radiation's two crossings are
+checked against what the atmosphere integrated, and the slab's turbulent,
+radiative and prescribed fluxes against what the slab tendency applied. Their
+difference is kept, never absorbed, and no identity reads it.
 """
 struct TransferCheck{FT}
     event::Symbol
@@ -562,11 +559,11 @@ transaction found when it compared the restored state with them. `events`
 are the applied-update labels that measure a roster row in this
 configuration. `evaluation`, `evaluation_stage`, `open_event` and `seen`
 say which tendency evaluation is being metered, if any, and which events it
-has opened. That is how a nested, repeated or unknown bracket is refused
+has opened. That is how a nested, repeated or unknown event is refused
 where it happens. `snapshot` holds the copies of the parent tendency fields an
 open event is differenced against, the slab's included when there is one.
 `legs` are the transfer legs read inside the events of the current step, and
-`last_transfer_checks` the bracket checks of the last one. `fault` is test
+`last_transfer_checks` the `TransferCheck`s of the last one. `fault` is test
 instrumentation, see `inject_fault!`.
 
 The mode is a field rather than a type parameter on purpose. The adapter rides
@@ -805,8 +802,8 @@ them.
 
 `attribution` is `:net` or `:gross`. `:gross` needs `AuditMode`, since the
 process rows it splits are collected there only, and is refused otherwise.
-`tolerances` overrides the committed κ calibration table, whose row for the
-run's backend, float type and rank count is used otherwise; a run with
+`tolerances` overrides the committed κ calibration table. Otherwise the row of
+that table for the run's backend, float type and rank count is used. A run with
 neither reports every numeric verdict as `blocked`.
 
 A restarted run passes `restart = true` and the endpoints its checkpoint
@@ -1250,17 +1247,17 @@ function open_parent_budget_event!(adapter::ParentBudgetAdapter, Yₜ, event::Sy
     adapter.evaluation === :none && return nothing
     event in REGISTRY_EVENTS || error(
         "The applied-update event $event is not one the coverage registry " *
-        "names. Add the process to the registry before bracketing it.",
+        "names. Add the process to the registry before opening its event.",
     )
     adapter.open_event === :none || error(
         "The applied-update event $event was opened while " *
-        "$(adapter.open_event) is open. Events do not nest: what a nested " *
-        "bracket measured would be counted by both.",
+        "$(adapter.open_event) is open. Events do not nest, because what a " *
+        "nested event measured would be counted by both.",
     )
     event in adapter.seen && error(
         "The applied-update event $event was opened twice in one " *
-        "$(adapter.evaluation) tendency evaluation. A process is bracketed " *
-        "once per evaluation; a second bracket would book its update twice.",
+        "$(adapter.evaluation) tendency evaluation. A process opens its event " *
+        "once per evaluation. Opening it again would book its update twice.",
     )
     adapter.open_event = event
     push!(adapter.seen, event)
@@ -1404,7 +1401,7 @@ end
 Make the adapter's half of the applied-update `event` misbehave in a named
 way, so a test can show what the parent budget does with a measurement that is
 missing or has the wrong sign. `kind` is `:missing`, which drops the event's
-increment, `:sign_reversed`, which negates it, `:leg_missing`, which drops the
+applied update, `:sign_reversed`, which negates it, `:leg_missing`, which drops the
 transfer legs the event measures, or `:leg_sign_reversed`, which negates them.
 This is test instrumentation. Nothing at runtime sets a fault.
 """
@@ -2306,7 +2303,7 @@ function record_process_legs!(
 end
 
 # One quantity of a measured row's leg at one stage. The registry's
-# disposition says what the bracket must have found: a measured quantity takes
+# disposition says what the event must have found: a measured quantity takes
 # the reduced amount, a quantity declared provably zero is required to have
 # moved by exactly zero, and one the atmosphere does not own is not applicable.
 # An unmeasured row is unknown in every owned quantity, with the reason, and
@@ -2432,8 +2429,8 @@ end
 # ============================================================================
 
 # Every declared transfer leg at every stage its channel is weighted at, from
-# the measurement the bracket took there, and the bracket's own totals beside
-# them. A leg the bracket did not read at a weighted stage keeps a zero slot
+# the measurement the event took there, and the event's own totals beside
+# them. A leg the event did not read at a weighted stage keeps a zero slot
 # and is recorded as unknown.
 function fill_transfer_slots!(
     packet::BudgetPacket,
@@ -2483,7 +2480,8 @@ function fill_transfer_slots!(
 end
 
 # One leg per declared transfer leg and weighted stage, from the packet, with
-# each quantity as the event declares it, and the bracket checks beside them.
+# each quantity as the event declares it, and the event's own total checked
+# against its legs beside them.
 function record_transfer_legs!(
     adapter::ParentBudgetAdapter,
     packet::BudgetPacket,
@@ -2577,7 +2575,7 @@ end
 # One quantity of a transfer leg at one stage: measured where the event
 # declares it measured, required to be exactly zero where it declares a zero,
 # not applicable where the reservoir does not own it, and unknown with the
-# reason where the bracket could not read it.
+# reason where the event could not read it.
 function transfer_component(
     adapter::ParentBudgetAdapter,
     spec::TransferEventSpec,
@@ -2625,7 +2623,7 @@ end
 """
     latest_transfer_checks(adapter) -> Vector{TransferCheck}
 
-Return the bracket checks of the last accepted step: each applied-update
+Return the `TransferCheck`s of the last accepted step: each applied-update
 event's own total in each reservoir beside the transfer legs it measured, per
 stage. Empty outside `AuditMode`.
 """

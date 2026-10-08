@@ -9,14 +9,15 @@ normalization and remaining dependency. See [PART4.md](PART4.md) for the
 reuse inventory, coverage and verification record.
 The optional weighted-application path and its production gaps are recorded
 in [PART5.md](PART5.md). Its offline implementation does not complete Part 5.
-The narrow independent water reference adapter and its frozen development
-cases are documented in [PART6.md](PART6.md); they do not complete physical
-water qualification.
-The directed transfer/owner/export adapter and its frozen development cases
-are documented in [PART7.md](PART7.md); actual PX14/PX25 remains unqualified.
+The independent water references, the producer of their declared
+eligibility and their frozen development cases are documented in
+[PART6.md](PART6.md). They do not complete physical water qualification.
+The directed transfer, owner and export adapter and its frozen development
+cases are documented in [PART7.md](PART7.md). Actual PX14 and PX25 evidence
+remains unqualified.
 
 The input is a separately identified extended manifest, not a second
-submission-provenance format. Attach a predeclared extension to an archived
+submission record format. Attach a predeclared extension to an archived
 manifest without changing the original:
 
 ```sh
@@ -31,7 +32,7 @@ python3 experiments/tag_closure/analysis/evidence/score_acceptance.py \
 
 All evidence paths in the extension are relative to the new manifest's
 directory. Existing result paths are refused. Keep the original manifest,
-scorer hash, score and interpretation; a corrected score is a new reanalysis,
+scorer hash, score and interpretation. A corrected score is a new reanalysis,
 not a simulation rerun. The legacy tools below retain their original CLIs
 and historical algorithms.
 
@@ -49,39 +50,49 @@ python3 -m unittest discover -s experiments/tag_closure/analysis/evidence \
   -p 'test_water_transport_reference.py' -v
 ```
 
-Both output roots must be absent. Exit 0 means this development fixture's
-eligible-reference equation/profile, prescribed exported-parent trajectory,
-partition-closure and wrong-origin checks passed. Exit 1 records a failed
-fixture check. Exit 3 records an ineligible selected reference; no candidate
-ranking or pass is inferred from it. Invalid evidence raises a data error.
-The analytic configuration has five eligible equation cases. The numerical
-configuration retains four ineligible upwind references and one eligible
-exchange reference, so its expected exit is 3 under the unchanged floors.
+Both output roots must be absent. The exit codes follow the scorer's. Exit 0
+means every case's profile, prescribed exported-parent trajectory, partition
+closure and wrong-origin checks passed against an eligible reference. Exit 1
+records a failed fixture check. Exit 2 records missing, corrupt or
+inconsistent evidence. Exit 3 records an ineligible selected reference. Its
+candidate is not assessable, and no ranking or pass is inferred from it.
+Exit 4 means nothing was evaluated: the output exists, the command line is
+invalid or the driver raised an error. The analytic configuration has five
+cases with constructed eligibility and exits 0. The numerical configuration
+retains four ineligible upwind references and one eligible exchange
+reference, so its expected exit is 3.
 
 Each case directory contains the original `submission.json`, an existing-format
 `extension.json` and `manifest.json`, a separate `manifest_origin_swap.json`,
 the frozen design/resolved config and hashed evaluator sources, every native
 rung archive, and `known_answer_results.json`. `suite_results.json` records
-each case without hiding an ineligible result. All 45 numerical and 18
+each case without hiding an ineligible result. All 21 numerical and 18
 quadrature rungs remain available. Raw per-tag 1 h/24 h L1, specific Linf,
 small/zero-tag absolute errors, parent/closure defects, conservation/boundary
 accounts and executed Newton diagnostics are reported beside OD12 eligibility.
 
-`reference.kind="water_transport"` routes through the existing Bundle/scorer.
-The adapter reconstructs every archived rung from independent equations,
-checks exact native faces/weights/time/dtype and source/config/model identity,
-requires explicit zero arrays for excluded processes, and measures every
-applicable floor in the same norm as OD3. Eligibility booleans in submitted
-metadata are not used. Partition sums exclude source overlays. A numerical
-reference's same-parent status follows actual `rho`/`water_parent` bits,
-including fixed-parent inflow and exchange. Specific-profile agreement alone
+`water_transport_adapter.py` is the producing script of the declared
+eligibility file. It reconstructs every archived rung from independent
+equations, checks exact native faces/weights/time/dtype and
+source/config/model identity, requires explicit zero arrays for excluded
+processes, and measures every applicable floor in the same norm as OD3. It
+then writes the producer's name and sha256, one floor per OD12 source,
+`converged`, `mirrors_complete` and `jacobian_complete` into
+`water_reference_evidence.json`, each with its basis. The manifest's
+`reference.producer` names and hashes the same script. The scorer reads the
+declaration through its own eligibility reader, unchanged, and does not
+import the adapter. The driver reruns the adapter on the finished bundle,
+which refuses a declaration that differs from its recompute, and requires
+the scorer's reading to agree with it. Partition sums exclude source
+overlays. A numerical reference's same-parent status follows actual
+`rho`/`water_parent` bits, including fixed-parent inflow and exchange. Specific-profile agreement alone
 cannot hide a changed prescribed parent trajectory or a broken partition sum.
 The archived mutant must perform the registered origin swap while preserving
-the initial state, parent and source overlays; other origin-failing changes
+the initial state, parent and source overlays. Other origin-failing changes
 do not verify that mutation.
 
 The full production scorer continues to emit its other missing-prerequisite
-rows; the driver does not manufacture those prerequisites. Its five labels
+rows. The driver does not manufacture those prerequisites. Its five labels
 include two partition origins and overlay/tiny/zero source diagnostics. It
 does not supply an eight-tag atmospheric reference or validate model parent
 physics. PX1/PX8/PX7/PX11/PX24/PX12, copies' native residual/repair/mirror/
@@ -90,113 +101,6 @@ capture, physical restart/parity/device/cost and OD14 held-out evidence remain
 required. The two-reservoir linear Newton test cannot establish the model's
 nonlinear solver floor. Part 5's verified runtime-producer registry is empty.
 No missing channel is inferred as zero outside these manufactured cases.
-
-## Independent water-transfer fixtures
-
-Run both complete frozen configurations into absent output directories from
-the repository root. These commands execute only bounded offline equations:
-
-```sh
-python3 experiments/tag_closure/analysis/evidence/make_water_transfer_fixture.py \
-  NEW/transfer-exact --config experiments/tag_closure/configs/water_transfer_exact.json
-python3 experiments/tag_closure/analysis/evidence/make_water_transfer_fixture.py \
-  NEW/transfer-rk4 --config experiments/tag_closure/configs/water_transfer_rk4.json
-python3 -m unittest discover -s experiments/tag_closure/analysis/evidence \
-  -p 'test_water_transfer_reference.py' -v
-```
-
-Both configurations cover all nine preregistered cases and retain 36 RK4
-rungs plus 28 distinct declared-pool diagnostic rungs. Exit 0 means eligible
-reference floors, candidate profile/process/export errors, prescribed native
-parent trajectory, complete label conservation/partition closure, directed
-endpoint consistency and the registered origin-control checks passed within
-the development scope. Exit 1 records a failed fixture check; exit 3 records
-an ineligible selected reference and forbids candidate ranking. Invalid
-evidence is a data error. All rungs and failures remain in the new directory.
-No finer unregistered rung or favorable pair is selected after results.
-
-Each case saves `submission.json`, the existing-format extension/manifests,
-a separate origin-mutant manifest, native exported fields and exact amount
-sidecars, source/config/design identities, every application/rung archive,
-`known_answer_results.json` and the complete `suite_results.json`. The adapter
-reconstructs every reference rung and checks native geometry/units/precision,
-exact physical times, all three compartment and separate rain/snow export
-owners, rate/config/model/source stamps, excluded zero channels and scope.
-Origins, closure, reference floors and pool/net spread are distinct results.
-Source overlays never enter partition closure.
-
-The candidate's declared temporal convention is the exact integrated
-synthetic interval: its archived application list is empty, and the reader
-reconstructs one applied mean-share record per directed edge per saved
-interval from native cumulative amounts. Candidate water amounts reproduce
-the pinned prescribed rates. A nonempty pseudo record cannot replace that
-coverage or suppress activity. RK4 archives retain every weighted stage and
-its donor sampling time; pool archives retain their separately declared
-substep mean. Water accumulators start at zero, are nonnegative and monotone;
-label accumulators start at zero and are finite. Native parent/label endpoint
-changes reconcile to directed incidence sums with only their own operated
-magnitudes in the arithmetic allowance. Label amounts are free to expose a
-wrong donor, erased exchange or declared corruption control; they are never
-forced to the oracle. Zero transfer activity is not donor-rule coverage.
-
-The sedimentation case stores instantaneous upward-positive precipitation
-separately from exact integrated exterior amounts. Synthetic paired
-parent/tag interval rates equal those independent amounts divided by their
-own interval and share the same accepted application. The existing Part 5
-reader checks them; snapshots are never integrated as applied precipitation.
-A synthetic receipt cannot populate the empty verified-producer registry.
-
-`reference.kind="water_transfer"` uses the existing Bundle/scorer. To inspect
-a fresh fixture with the complete production scorer:
-
-```sh
-python3 experiments/tag_closure/analysis/evidence/score_acceptance.py \
-  validate NEW/transfer-exact/rain_snow_sedimentation/manifest.json \
-  --json NEW/transfer-validation.json
-python3 experiments/tag_closure/analysis/evidence/score_acceptance.py \
-  score NEW/transfer-exact/single_transfer/manifest.json \
-  --json NEW/transfer-full-score.json
-```
-
-Validation-only exit 0 certifies evidence integrity. The full scorer keeps
-`NOT QUALIFIED` and exit 2 for the deliberately missing native runtime rows;
-fixture PASS is not production qualification. The six-label manufactured
-suite validates conditional label equations, not atmospheric model rates,
-evolving microphysics capture, real PX14/PX25, EDMF/copies stages 2/3,
-eight-tag/full-duration/held-out accuracy or physical parity/restart/cost.
-
-The [PX25 draft](../../configs/part7_px25_draft/README.md) records sixteen
-tagged arms and eight own-setting untagged parents. Its effective quadrature
-substep key and void-parent guard are planning checks only. OD15, actual
-established rain and the second case remain pending. No hourly/day score or
-approved audit trend is inferred for its 1500 s case, and no launch occurs.
-
-Supported affected modules can be run explicitly from this directory:
-
-```sh
-python3 -m unittest -v test_acceptance
-python3 -m unittest -v test_correction_accounting
-python3 -m unittest -v test_water_transport_reference \
-  test_closure_verdict.WaterTests \
-  test_closure_verdict.EnergyTests.test_exact_scale \
-  test_closure_verdict.EnergyTests.test_the_audit_carries_the_throughput
-```
-
-The last command is an explicitly selected supported subset. The full
-`test_water_transport_reference test_closure_verdict` execution retains one
-existing `netCDF4` import error in energy-throughput fallback in this
-environment. That full suite is not reported as passing, and no dependency
-or test was changed to hide the error. Julia/prepared runtime is unavailable.
-
-Final-code verification passes 33 focused, 49 acceptance, 56 accounting and
-26 explicitly supported transport/closure tests. Both complete nine-case
-configurations return exit 0 with all 36 RK4/28 pool rungs per configuration
-retained; the largest selected-64 floor/tolerance fraction is
-`8.310061860770055e-5`. Independent supplemental actual-diff review closes
-the malformed directed-amount/roster findings using fresh hashes and checks
-correct endpoint profiles with inconsistent labels. Valid wrong-origin
-controls remain discriminatory. See [PART7.md](PART7.md) for final source
-identities and the required reconciliation with the advanced Part 6 branch.
 
 ## Minimum evidence layout and extension
 
@@ -217,17 +121,19 @@ The extension records these fields:
 | Field | Meaning |
 |:--|:--|
 | `artifacts` | Map of every named bundle-relative artifact to its SHA256. Hashes prove identity, not physical sufficiency. |
-| `experiment_commit`, `scorer_commit`, `acceptance_commit` | Keep experiment/config, analysis implementation and specification identities distinct from original `head_sha`. An unpublished scorer uses `local-uncommitted` plus exact file hashes. |
-| `scorer_files`, `acceptance_files` | Exact current evaluator and contract file hashes, as returned by `local_identities()`. The evaluator rejects a different pinned implementation/specification. |
+| `experiment_commit`, `scorer_commit`, `planning_commit` | Keep experiment/config, analysis implementation and planning-tree identities distinct from original `head_sha`. An unpublished scorer uses `local-uncommitted` plus exact file hashes. `planning_commit` is recorded information. The scorer does not verify it. |
+| `scorer_files`, `approved_numbers_sha256` | Exact scorer file hashes and the sha256 of the scorer's named approved numbers as a stable table, as returned by `local_identities()`. A changed approved number invalidates the manifest. An edit to the planning files, DECISIONS.md included, does not. |
 | `submission_files` | Original config and recorded environment/untracked names mapped to archived artifacts. Hashes must match submission identities. |
 | `resolved_settings`, `precision`, `process_count` | Declared solver, seed, physics, diagnostics, tag definitions and environment scope. Do not fill unavailable legacy facts with guesses. |
 | `claim`, `case`, `geometry_kind`, `end_seconds` | Family (`water`, `energy_source`, `radiation_record`), declared use, native column/sphere geometry and physical duration. No count/time/device scope promotion. |
+| `pilot_first_hour` | `true` declares the TRMM 0M 6 h pilot (2026-10-07): a water run that ends after 1 h and before 24 h. Only the first-hour origin rows are scored, labelled low power. The 24 h origin rows are not applicable, and closure and the named remainder are reported at the run's end. |
+| `excluded_criteria` | Criteria the owner excluded for this `case`, such as `[5, 6]` on D4-W under option D. The scorer accepts only approved exclusions and makes every row of those criteria not applicable. Any other declaration fails the evidence row. |
 | `runs` | Candidate/reference/untagged field inventories. Reference/untagged runs name separately hashed submission manifests and matching model/config identities. |
 | `tags`, `compartments` | Named kind (`region`/`source`) and partition membership. Source overlays never enter pure-region closure. Compartments are `total` or complete `N,R,S`. |
 | `required_parent_fields`, `parent_capture_scope` | Frozen required-state inventory. `exported` parity is reported but cannot pass full parent parity. `all-state` requires the actual complete capture inventory from the relevant model setup. |
-| `accepted_step_seconds`, `throughput_accumulation` | Step cadence for deriving cell-step ledger variation; exact stored Θx identifies `accepted_step` accumulation independently of output cadence. |
-| `reference`, `active_rules` | Named, scope-specific eligibility artifact: tested independent rules, shared/untested rules, convergence/floors, active mirrors/Jacobian and copies repair/refinement. |
-| `record_processes`, `expected_record_processes` | Complete predeclared process roster. A missing active record cannot be silently skipped; duplicate process names are rejected. |
+| `accepted_step_seconds`, `throughput_accumulation` | Step cadence for deriving cell-step ledger variation. Exact stored Θx identifies `accepted_step` accumulation independently of output cadence. |
+| `reference`, `active_rules` | Named, scope-specific eligibility artifact and its `producer` (`script` and `sha256`). The file names the same producer and declares tested independent rules, convergence, `floors` with one entry per OD12 source (`source_injection`, `initialization`, `parent_solve`, `contamination`, `reference_discretization`), active mirrors/Jacobian and copies refinement. A single scalar floor or a missing producer fails the eligibility row as a data failure. The row records "eligibility as declared by <producer> <hash>". Active-rule coverage is reported and gates nothing until OD9. |
+| `record_processes`, `expected_record_processes` | Complete predeclared process roster. A missing active record cannot be silently skipped. Duplicate process names are rejected. |
 | `correction_accounting` | Versioned required-channel/coverage table, finalized trial receipt, native application arrays and optional directed leg pairs. Missing/unsupported channels remain explicit. |
 | `precipitation_applications` | Paired parent and every partition tag at identical accepted applications/weights/bounds/native surface. Signed fluxes are integrated before cancellations. |
 
@@ -239,22 +145,22 @@ be hidden by taking a common prefix.
 Native NPZ exports include `time`, `time_units="s"`, `geometry`, `weights`,
 `weight_units`, and each field's embedded `KEY__units`, `KEY__representation`,
 `KEY__sampling`, `KEY__dimensions`. Arrays have time first, then native cells.
-Scalar integrated amounts use one weight of 1 and `weight_units="1"`; extra
+Scalar integrated amounts use one weight of 1 and `weight_units="1"`. Extra
 geometric weighting is rejected. The required 1 h and 24 h origin rows remain
 present even when an optional `profile_times` list is empty.
 Alternative time/geometry/weight keys may be explicitly named.
 
 Existing NetCDF reading uses named dimensions, finite unmasked values, exact
 physical-second time units, native coordinates and a named native weights
-variable. It requires the verifier environment's existing `netCDF4`; no
+variable. It requires the verifier environment's existing `netCDF4`. No
 dependency is added here. A remapped sphere grid cannot replace native
 volume integrals. There is no implicit centre/face reconstruction, remapping,
 interpolation, extrapolation or common-prefix truncation.
 
 CSV scalar columns name a pinned `metadata_source` for their units and
-sampling convention; do not relabel a rate as an amount. Interval averages
+sampling convention. Do not relabel a rate as an amount. Interval averages
 also name exact contiguous bounds. Cumulative scalar gross fields name
-their `accumulator_kind`; ratios are not cumulative amounts. Paired
+their `accumulator_kind`. Ratios are not cumulative amounts. Paired
 precipitation is integrated only from applied-flux interval averages or
 accepted applied accumulators. Hourly snapshots remain instantaneous reports.
 
@@ -270,8 +176,8 @@ equivalence.
 ## Weighted applications and cancellation
 
 For one fixed mechanism/tag/compartment and native volume, signed window S is
-the integral of the endpoint ledger difference; retained H sums the absolute
-native-cell ledger changes at every accepted step; accepted A sums absolute
+the integral of the endpoint ledger difference. Retained H sums the absolute
+native-cell ledger changes at every accepted step. Accepted A sums absolute
 weighted native-cell contributions at every accepted application. Absolute
 value precedes cells, applications and compartments for A. A complete additive
 decomposition satisfies abs(S) <= H <= A up to a reported rounding allowance.
@@ -281,7 +187,7 @@ allowance is not a scientific activity tolerance.
 It uses per-step/native-cell quantities with the same density units and the
 least precise native dtype, including the sum of absolute weighted
 contributions before cancellation. This covers native addition roundoff
-between opposing stages; an unrelated dense cell or atmospheric density
+between opposing stages. An unrelated dense cell or atmospheric density
 cannot enlarge another cell's correction allowance.
 Below the native normal range, the allowance also includes the local loss
 when a weighted contribution rounds to its native dtype. Specific-ledger
@@ -293,8 +199,8 @@ representable subnormal update into a zero density ledger is rejected.
 An application is a final additive contribution with its integration weight.
 The receipt pins `unconstrained_imex_ark`, `ClimaTimeSteppers` version,
 `b_exp`, `b_imp` and `implicit_diagonal`. Explicit/implicit tendency weights
-are dt times the corresponding accepted b coefficient; post-Newton map
-increments use b_imp/gamma; final accepted maps have weight 1. Nonadditive
+are dt times the corresponding accepted b coefficient. Post-Newton map
+increments use b_imp/gamma. Final accepted maps have weight 1. Nonadditive
 pre-solve stage observations are refused. A distinct final evaluation ID must
 replace repeated Newton evaluations. Rejected/superseded evaluations cannot
 enter A. `attempted_coefficient` is optional: supply it only for an actual trial
@@ -321,10 +227,10 @@ The extension uses this shape inside the existing `acceptance` object:
 }
 ```
 
-The required roster is the declared accounting scope; it must cover every
+The required roster is the declared accounting scope. It must cover every
 active mechanism/tag/compartment needed for the claim, not a convenient subset.
 It is checked against the runtime validation's active-roster evidence before a
-production completeness pass. `inactive` requires a reason and pinned evidence;
+production completeness pass. `inactive` requires a reason and pinned evidence.
 `unsupported`/`missing` block completeness and never receive a zero. Every
 observed channel must have an applied record at every accepted step, including
 an explicit measured zero. Empty rosters cannot pass.
@@ -345,41 +251,61 @@ and, for each prefix, `PREFIX__values` (native Float32/Float64 record x cell),
 `__record_ids`, embedded `__quantity`/`__units`, native `__event_scale` and
 integer arrays `__fallback`, `__bound`, `__clamp`, `__zero_normalization`.
 Missing counters are data failures. Values are density increments or density
-tendencies as explicitly named; final coefficients are applied before absolute
+tendencies as explicitly named. Final coefficients are applied before absolute
 value. The event convention is a stored native node per element per weighted
-application above max(1e-12,16 eps(native dtype))*abs(parent total).
+application above max(1e-12,16 eps(native dtype)) times the absolute value of
+`__event_scale`, the writer's own scale. That scale differs by writer, as
+[PART5.md](PART5.md) lists.
 Existing retained cell-step and attempted cache-count conventions stay separate.
 
-Optional `directed_transfers` pairs name an `id`, donor and receiver channel.
+Optional `directed_transfers` pairs name an `id`, a `donor` channel (the giving
+leg) and a `receiver` channel.
 The reader requires identical applications/native cells and equal opposite
 legs. It reports transfer Q once and summed leg activity 2Q. Aggregate signed
-closure is never used as a substitute for either amount or a provenance bound.
+closure is never used as a substitute for either amount or an origin bound.
 Fine energy sources remain separate from OD4's accepted-step partition source
 variation. No retained tolerance is transplanted onto A.
 
 For `precipitation_applications`, use `schema_version: 1`, a receipt,
-`channels` keyed by `parent` and every partition tag, `required_channels`, and
+`channels` keyed by `parent` and every partition tag, and
 `sign_convention: "upward_positive"`. Each channel descriptor names a native
 `precipitation_flux` in kg m^-2 s^-1. Identical parent/tag application/evaluation/
 trial/coefficient identities are required. Column amounts use one unit-weighted
-surface; native sphere amounts use m^2 area weights. Signed downward, positive
+surface. Native sphere amounts use m^2 area weights. Signed downward, positive
 downward and negative downward amounts are reported separately. Instantaneous
-precipitation diagnostics remain available. No donor reference or precipitation
-accuracy tolerance is supplied by this arithmetic.
+precipitation diagnostics remain available. No reference for the giving pool
+or precipitation accuracy tolerance is supplied by this arithmetic. The row
+stays reported accounting. An unverified producer is a stated limitation and
+never turns the row into a not-assessable one.
 
 Production completeness additionally needs a pinned `lifecycle_evidence`
 artifact of kind `runtime_validation`, exact model/diff identity, producer
-source and scope roster, and PASS checks with commands/environment/hashed logs
-for accepted weights, rollback, Newton replacement, complete active roster,
-parent bitwise parity and all-channel checkpoint/restart. The producer ID,
-source hash and timestepper version must also match the implementation's
-verified-producer registry. **That registry is empty in this handoff:** no
-runtime producer has been implemented or verified. Users cannot register one
-through manifest metadata, and arbitrary hashed files or declared PASS logs
-cannot clear the gate. A future registry entry is a code change after actual
-source/lifecycle/parity/restart review and validation. Synthetic submission/
-receipt identities cannot clear the gate. All current production scopes remain
-NOT ASSESSABLE while their measured arithmetic is reported.
+source, and PASS checks with commands/environment/hashed logs for accepted
+weights, rollback, Newton replacement, complete active roster, parent bitwise
+parity and all-channel checkpoint/restart. The producer ID, source hash and
+timestepper version must match the implementation's verified-producer
+registry. The gate then reads the producer's own output, as its registry
+entry declares:
+
+  - the roster: the producer writes the channels it instrumented into its
+    receipt under the entry's `roster_key`. That roster must equal the one the
+    reader evaluated. A roster in the submitted manifest or proof is not read.
+  - inactive channels: each one's evidence file must hold
+    `<channel>__<values>` with every entry an explicit zero, or
+    `<channel>__<mark>` with every entry 1, or both. Its hash alone is not
+    enough. The channel ID's dots become underscores.
+  - check logs: each check's log must record the check by name as PASS,
+    read with the entry's `check_log_pattern` (groups `check` and `result`).
+    A log that is merely present, or that names the check otherwise, is
+    refused.
+
+`register_producer` refuses an entry without these three declarations, and
+the gate refuses such an entry too. The registry is empty, so no submission
+clears the gate today ([PART5.md](PART5.md)).
+
+The scorer scores completeness in `COMMON.ACCEPTED_APPLICATION_ACTIVITY` and
+reports each window's activity in `COMMON.APPLICATION_ACTIVITY.<window>`, a
+reported row that never passes.
 
 The cancellation example is reproducible and separate from all historical runs:
 
@@ -393,8 +319,8 @@ python3 -m unittest discover -s experiments/tag_closure/analysis/evidence -p tes
 ```
 
 Every hour applies +1 and -1 in each of two unit-thickness cells. Over 24 h
-S=0, H=0 and A=96 kg m^-2. Production completeness stays NOT ASSESSABLE;
-scoring exits 3 for the remaining scientific gates. No simulation is run.
+S=0, H=0 and A=96 kg m^-2. Production completeness stays NOT ASSESSABLE.
+Scoring exits 3 for the remaining scientific gates. No simulation is run.
 
 ## Reproducible analytic example and tests
 
@@ -415,20 +341,122 @@ norms, comparator checks, parent parity and ledger ratios. It also reports:
 
 ```text
 COMMON.SCOPE_APPROVAL: NOT ASSESSABLE / COMPLETE
-  pilot scope/accuracy owner choices remain proposals
+  qualification stays at eight tags on the approved rows (WA-SCOPE)
 COMMON.ACCEPTED_APPLICATION_ACTIVITY: NOT ASSESSABLE / COMPLETE
-  cell-step variation can hide cancelling applications/legs
+  missing accepted application/leg accounting
 WATER.PRECIP_INTEGRATED.established: NOT ASSESSABLE / DATA FAILURE
   snapshots are insufficient for paired integrated precipitation
-qualification: NOT QUALIFIED
+qualification: NOT QUALIFIED, exit 3
 ```
 
 The precipitation data gap is outside this inventory-only fixture's required
-claim, so its scientific blockers select exit 3. Exit 2 means missing/corrupt
-required evidence; exit 1 a measured required approved failure; exit 0 an
-unblocked completed evaluation. Validation exit 0 means bundle integrity
-only. Required failures are never averaged across tags/windows. Proposed
+claim, so its scientific blockers select exit 3. The exit codes:
+
+| Exit | Meaning |
+|:--|:--|
+| 0 | No required row failed or is blocked. A score cannot reach it today: the convergence, refinement, accepted-application, restart, held-out and scope rows stay blocked until their parts deliver. Validation exit 0 means bundle integrity only. |
+| 1 | A measured required approved row failed. |
+| 2 | Required evidence is missing, corrupt or inconsistent. A water row with a data failure fails, labelled DATA FAILURE, and so does the evidence row. An energy row with absent data is not assessable (G4 section 5). |
+| 3 | A required scientific approval, reference or prerequisite is unavailable. Failed or exported-only parity blocks the origin rows only. Closure and intervention rows are scored with `parent_parity` recorded. A missing or zero-length OD2 window is not applicable and blocks nothing. |
+| 4 | Nothing was evaluated: the result path exists, the command line is invalid, or the scorer raised an error. A scorer error is not a data failure. |
+
+Required failures are never averaged across tags/windows. Proposed
 thresholds and reported-only quantities never become scientific passes.
+
+## Converting model output: convert_output.py
+
+`convert_output.py` builds the bundle that the scorer reads from a run's
+output directories. Each directory is one `output_XXXX`: the NetCDF files the
+model wrote, the merged config `*.yml`, `provenance.txt`, the closure and
+audit tables, and the `manifest.json` from `manifest.py`.
+
+```sh
+python3 experiments/tag_closure/analysis/evidence/convert_output.py --family water \
+  --candidate RUNS/default/output_0000 --reference RUNS/copies/output_0000 \
+  --untagged RUNS/untagged/output_0000 --period 30m --pilot-first-hour --same-parent \
+  --planning-commit SHA --scorer-commit SHA [--git-repo CLONE] --out NEW_BUNDLE
+python3 experiments/tag_closure/analysis/evidence/score_acceptance.py \
+  score NEW_BUNDLE/manifest.json --json NEW_BUNDLE/score.json
+```
+
+The candidate's submission manifest becomes the bundle's record, with the
+`acceptance` extension added. The fields go into `<role>.npz` bit for bit,
+time first. `conversion.json` (also `acceptance.conversion`) lists each
+logical name with its model variable and whether it resolved, and pins the
+converter's and the name table's hashes. The tags come from the candidate's
+config. The reference must list the same tags. `--git-repo` reads a
+submission file from git at the submission commit when its worktree is gone.
+It is kept only if its hash matches the record.
+
+**Weights.** A column's weight is the cell thickness Δz in m. The faces are
+rebuilt from the `z` centres, `z_f[0] = 0` and `z_f[k+1] = 2 z_c[k] - z_f[k]`,
+as `compare_runs.py` does. The top face must match the config's `z_max` to
+1e-9. The density enters through `rho`, which the scorer multiplies in, so
+the integrand weight is ρ Δz (ρ_ref Δz at a profile row, G3_PLAN 6.1.1).
+A table column is already a domain integral and has one unit weight. A
+sphere needs a native cell-area variable in the output (`cell_area` in m^2).
+Its weight is then area × Δz in m^3.
+
+**The name table.** `<tag>` is each configured tag, `<process>` each entry of
+`energy_process_record`. Native fields are on the model's levels with Δz
+weights. Table columns and surface fields are column scalars with a unit
+weight. Amounts are kg m^-2 or J m^-2 on a column, and kg or J on a sphere.
+
+| Logical name | Model variable | Units | Native geometry | Weight source |
+|:--|:--|:--|:--|:--|
+| `rho` | `rhoa` | kg m^-3 | levels | Δz |
+| `water_parent` | `hus` | kg kg^-1 | levels | ρ Δz |
+| `temperature` | `ta` | K | levels | Δz |
+| `tag_<tag>` (water) | `q_tag_<tag>` | kg kg^-1 | levels | ρ Δz |
+| `parent_R`, `parent_S` (rain and snow key) | `husra`, `hussn` | kg kg^-1 | levels | ρ Δz |
+| `tag_N_<tag>`, `tag_R_<tag>`, `tag_S_<tag>` | `q_ntag_<tag>`, `q_rtag_<tag>`, `q_stag_<tag>` | kg kg^-1 | levels | ρ Δz |
+| `led_fix_<tag>`, `led_inc_<tag>` (water) | `q_tag_led_fix_<tag>`, `q_tag_led_inc_<tag>` | kg kg^-1, cumulative | levels | ρ Δz |
+| `led_fix_<tag>_applicable`, `led_inc_<tag>_applicable` | same columns of the audit table | 1 | column scalar | one |
+| `negative_water_void` | `negative_water_void`, water closure table | 1 | column scalar | one |
+| `repair_retained`, `repair_attempted` (water candidate) | `led_repair_retained`, `led_repair_attempted`, water audit | amount, cumulative | column scalar | one |
+| `repair_retained`, `repair_attempted` (copies reference) | `led_uprepair_retained`, `led_uprepair_attempted`, water audit | amount, cumulative | column scalar | one |
+| `precip_parent`, `precip_<tag>` (partition) | `pr`, `pr_tag_<tag>` | kg m^-2 s^-1 | surface | one |
+| `tag_<tag>` (energy) | `e_src_<tag>` | J kg^-1 | levels | ρ Δz |
+| `residual` | `e_src_res` | J kg^-1 | levels | ρ Δz |
+| `led_src_<tag>`, `led_fix_<tag>`, `led_inc_<tag>` (energy) | `e_src_led_src_<tag>`, `e_src_led_fix_<tag>`, `e_src_led_inc_<tag>` | J kg^-1, cumulative | levels | ρ Δz |
+| `source_partition_valid` | `source_partition_valid`, energy closure table | 1 | column scalar | one |
+| `throughput` (Θx) | `source_throughput`, energy closure table | amount, cumulative | column scalar | one |
+| `repair_retained`, `repair_attempted` (energy) | `led_repair_retained`, `led_repair_attempted`, energy audit | amount, cumulative | column scalar | one |
+| `record_<process>` | `e_prc_<process>` | J kg^-1, cumulative | levels | ρ Δz |
+| `export_<name>` | every other instantaneous field that is not a tag's | as written | as written | Δz or one |
+
+The audit's `*_retained` and `*_attempted` amounts are taken only where its
+`ledger_cadence_step` is 1 at every row, so they are exact per accepted step.
+The `export_<name>` fields, with `rho`, `water_parent` and `temperature`, are
+the exported parent fields compared bit for bit with the untagged twin
+(`parent_capture_scope: exported`).
+
+No model variable holds these, so they are always recorded as missing:
+`parent_N`, the water `copy_residual` (`q_tag_copy_res` is per unit mass of
+updraft air), `named_remainder`, `energy_parent`, `newton_error`,
+`process_amount` and `process_share`.
+
+**What it refuses**, writing nothing: a config other than `column` or
+`sphere`, topography other than `NoWarp`, a non-positive rebuilt thickness, a
+top face that differs from `z_max`, native fields with different `z`, a
+sphere without a native cell-area variable, a deep-atmosphere sphere, several
+output periods without `--period`, a run without `manifest.json` or with
+other than one `*.yml`, a candidate without tags, and a reference with
+different tags. An existing `--out` exits 4.
+
+**What it does not do.** A missing file, column or variable, wrong units or
+fill values are recorded as missing with the reason. The field is left out of
+the bundle, never zero-filled, so the scorer names it as a data failure. The
+converter does not interpolate, sum cells, derive differences, or stitch
+restart segments. It exits 2 when anything is missing and 0 otherwise.
+
+`test_convert_output.py` checks the table row by row, the bit copies, the
+weights on a stretched column and a sphere, each refusal and the named
+failures on synthetic runs. It also converts archived real output, W58's
+TRMM 0M pilot and E87's D4 process budget, when present
+(`TAG_CLOSURE_OUTPUT_ROOTS` overrides where it looks), and skips with the
+reason otherwise. On both, the rebuilt Δz reproduce the model's own column
+integrals to 1e-15.
 
 ## Legacy G3 phase 1 evidence pipeline
 

@@ -4,7 +4,7 @@
 
 Every item below remains in [PLAN_CROSSWALK.md](PLAN_CROSSWALK.md), including
 items outside the roadmap and optional housekeeping. Parts 12a–d route
-precision, MPI/restart, performance and production work; upstream-only work
+precision, MPI/restart, performance and production work. Upstream-only work
 keeps its owner/upstream gate. Deferred work is not automatically activated.
 Residence-time/air-age extensions and their feature-specific qualification
 are deferred. Existing stratospheric code is not removed. Parent parity
@@ -102,4 +102,3 @@ section 0. Not re-checked since.
   - R3 of that review: the committed `.buildkite` manifest keeps upstream's
     `project_hash`, so every setup rewrites two lines. They stay uncommitted
     unless the owner decides otherwise.
-

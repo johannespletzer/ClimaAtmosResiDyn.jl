@@ -2,18 +2,14 @@
 ##### Parent budget: the declaration layer
 #####
 ##### What a configuration is expected to produce, declared before anything is
-##### collected. The journal records what happened; this file says what should
-##### have. Reconciliation compares the two in both directions, so an expected
-##### channel that recorded nothing blocks rather than vanishing, and an entry
-##### this file does not declare is refused rather than becoming a new row.
-#####
-##### Deriving the expected set from the entries is the failure the separation
-##### exists to prevent. A process that never reported would remove itself from
-##### its own audit, and the report would close over whatever happened to arrive.
-#####
-##### Nothing here reads a leg, a packet, or a transaction. A schema is built
-##### once from the model configuration and never changes afterwards, which is
-##### also what makes the packet layout computable before the first entry.
+##### collected. The journal stores what happened and this file says what should
+##### have. Reconciliation compares the two in both directions. An expected
+##### channel with no entry blocks rather than vanishing, and an entry this file
+##### does not declare is refused. Deriving the expected set from the entries
+##### would let a process that never reported remove itself from its own audit.
+##### Nothing here reads a leg, a packet or a transaction. A schema is built
+##### once from the model configuration and never changes, so the packet layout
+##### can be computed before the first entry.
 
 # ============================================================================
 # Reservoirs
@@ -165,7 +161,7 @@ The labels a map applied to the accepted state may carry.
 A final map is a term of the primary identity and **not** an attribution
 channel. It contributes its raw before/after difference on the accepted state,
 and it has no envelope, no decomposition, and no attribution residual. Recording
-one therefore creates no requirement for a channel envelope; an operation
+one therefore creates no requirement for a channel envelope. An operation
 acquires that requirement only by being declared an accepted integrator channel.
 """
 const FINAL_STATE_MAPS = (:lim!, :dss!, :constrain_state!, :initialization)
@@ -174,7 +170,7 @@ const FINAL_STATE_MAPS = (:lim!, :dss!, :constrain_state!, :initialization)
     BUDGET_CHANNEL_LABELS
 
 Every label a leg's `channel` field may hold: the attribution channels and the
-final-map labels together. Membership alone places nothing; the leg's
+final-map labels together. Membership alone places nothing. The leg's
 `CollectionLevel` decides which identity it takes part in.
 """
 const BUDGET_CHANNEL_LABELS = (ATTRIBUTION_CHANNELS..., FINAL_STATE_MAPS...)
@@ -183,7 +179,7 @@ const BUDGET_CHANNEL_LABELS = (ATTRIBUTION_CHANNELS..., FINAL_STATE_MAPS...)
     UpdatePath
 
 What kind of update a leg records. This classifies the *nature* of a
-contribution; `CollectionLevel` says which identity it belongs to.
+contribution. `CollectionLevel` says which identity it belongs to.
 """
 abstract type UpdatePath end
 
@@ -251,8 +247,8 @@ struct ChannelEnvelope <: CollectionLevel end
 """
     ProcessDecomposition()
 
-One classified process's share of a channel. Explains an envelope; never added
-to one. See `CollectionLevel`.
+One classified process's share of a channel. It explains an envelope and is
+never added to one. See `CollectionLevel`.
 """
 struct ProcessDecomposition <: CollectionLevel end
 
@@ -333,7 +329,7 @@ struct InternalTransfer <: TransferTopology end
     CoupledTransfer()
 
 Both sides are modeled reservoirs, in different control volumes. Cancellation is
-expected only in a view holding all of them; in any other view the same event
+expected only in a view holding all of them. In any other view the same event
 crosses the boundary. See `TransferTopology`.
 """
 struct CoupledTransfer <: TransferTopology end
@@ -407,7 +403,7 @@ What the coverage registry can say a component of a declared row will be.
     entry and the claim it feeds stays blocked.
 
 This is the proof obligation half of what a schema declares. Applicability says
-whether a reservoir owns a quantity at all; a disposition says what a particular
+whether a reservoir owns a quantity at all. A disposition says what a particular
 channel, map or event is expected to do to it. A row that declares
 `:invariant_zero` and then measures something is a disagreement between the
 registry and the code, not a residual, so it is refused where it happens.
@@ -421,7 +417,7 @@ const EXPECTED_DISPOSITIONS =
 Every quantity `:open`: the default for a declaration whose proof obligations
 have not been established yet. It demands nothing of an entry and blocks every
 claim the declaration feeds, which is what the coverage registry's `open` rows
-mean: a sum over a row nothing has established proves nothing, however small it
+mean. A sum over a row nothing has established proves nothing, however small it
 comes out. A declaration passes only once its dispositions are declared.
 """
 const OPEN_DISPOSITIONS = ntuple(_ -> :open, length(BUDGET_QUANTITIES))
@@ -467,11 +463,13 @@ prove a zero the channel as a whole cannot: the post-implicit correction writes
 no `ρ` term while the implicit channel measures mass. See
 `EXPECTED_DISPOSITIONS`.
 
-`event` is the label the tendency code brackets the process with, or `nothing`
-for a row that is booked from its declaration alone because nothing in it is
-measured. A row with a measured quantity and no event cannot be recorded, so
-the adapter's `check_roster_events` refuses it, except for the stage rows the
-adapter meters at the hooks, which name no event.
+`event` is the label of the applied-update event that measures the process
+(`open_applied_update!` on the explicit path, `open_parent_budget_event!` on the
+implicit path), or `nothing` for a row that is booked from its declaration alone
+because nothing in it is measured. A row with a measured quantity and no event
+cannot be recorded, so the adapter's `check_roster_events` refuses it. The
+exception is the stage rows the adapter meters at the hooks, which name no
+event.
 """
 struct ProcessRowSpec
     process::Symbol
@@ -605,7 +603,7 @@ end
 A map applied to the accepted state that the configuration is expected to record.
 
 `name` is one of `FINAL_STATE_MAPS` and `reservoirs` names the reservoirs the map
-writes. `dispositions` says what each quantity of its legs is expected to be; a
+writes. `dispositions` says what each quantity of its legs is expected to be. A
 tag-only or category-only map declares `:invariant_zero` for all three, which is
 the proof obligation that it writes no parent field. It contributes directly to
 the primary identity and produces no attribution result of its own.

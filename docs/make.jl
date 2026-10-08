@@ -72,6 +72,7 @@ makedocs(;
         "How-to Guides" => [
             "Running Simulations" => [
                 "Running Single-Column Cases" => "single_column.md",
+                "Running Box Simulations" => "box_simulations.md",
                 "Running Global Simulations" => "global_simulations.md",
                 "Restarting and Checkpointing" => "restarts.md",
                 "Running on GPUs and MPI" => "gpu_and_mpi.md",
@@ -104,8 +105,12 @@ makedocs(;
                     "Discretization and Time Stepping" => "prophet_numerics.md",
                     "Horizontal Diffusion" => "prophet_horizontal_diffusion.md",
                 ],
+                "Diffusion" => "diffusion.md",
+                "Large-Eddy Simulation Closures" => "les_sgs.md",
                 "Microphysics" => "microphysics.md",
                 "Radiation" => "radiation.md",
+                "COSP Satellite Simulator" => "cosp.md",
+                "Forcings and Idealized Cases" => "forcings.md",
                 "Gravity Wave Drag" => [
                     "Non-orographic Gravity Waves" => "non_orographic_gravity_wave.md",
                     "Orographic Gravity Waves" => "orographic_gravity_wave.md",
@@ -127,8 +132,8 @@ makedocs(;
             "Tagged Water Tracers" => "tagged_water.md",
             "Tagged Water API" => "tagged_water_api.md",
             "Rain and Snow Tags" => "tagged_water_precipitation.md",
-            "Energy Source Tags" => "energy_source_tags.md",
             "Energy Source Tags: a user guide" => "energy_source_tags_guide.md",
+            "Energy Source Tags" => "energy_source_tags.md",
             "Process-Change Records" => "process_record.md",
             "Tag Closure Memo" => "tag_closure_memo.md",
             "Tag Closure Experiments" => "tag_closure_experiments.md",

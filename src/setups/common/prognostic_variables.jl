@@ -107,8 +107,9 @@ function grid_scale_center_variables(physical_state, local_geometry, params, atm
             atmos_model.energy_source_tagging_model,
         )...,
         # Uses the same `ρ * q_tot` that `moisture_variables` puts in the state,
-        # so that a partition-of-unity set of region tags sums to `ρq_tot`
-        # exactly at t = 0. Water tagging requires a moist model, which
+        # so that region tags whose masks sum to 1 sum to the partition's target,
+        # `max(ρq_tot, 0)`, exactly at t = 0. Water tagging requires a moist
+        # model, which
         # `check_water_tagging_supported` enforces at config-parse time. With
         # rain and snow parts (`water_tag_precipitation`) they take the same
         # `ρ * q_rai` and `ρ * q_sno` as `precip_variables`.

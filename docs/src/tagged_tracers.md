@@ -24,8 +24,8 @@ kinds of quantity.
     starts as the region's share of the energy present and receives every
     attributed process, weighted by its mask. The sum of a set of region tags
     can be checked against ``\rho e_\mathrm{tot}``.
-  - A **signed process tag** is a tag configured with `source`. It starts at
-    zero and accumulates the signed increment that one labeled process adds to
+  - A **[signed process tag](glossary.md)** is a tag configured with `source`. It starts at
+    zero and accumulates the signed tendency that one labeled process adds to
     ``\rho e_\mathrm{tot}``. Heating adds and cooling subtracts, so the value
     can be negative.
 
@@ -34,13 +34,14 @@ energy that is here now. Reading `e_tag_rad = -3.0e4` as "radiation supplied a
 negative amount of the local energy" is a misreading. It says radiation has
 removed that much more energy than it added since the tag started.
 
-A process tag is also not a process-change record. A tag is transported by the
-flow. A record is never transported and has one field per process, not per tag.
+A signed process tag is also not a process-change record. A tag is transported
+by the flow. A record is never transported and has one field per process, not
+per tag.
 See [Process-Change Records](process_record.md).
 
 The `source` key is spelled the same in `water_tracers`, but the rule differs.
 The water tags share out production by mask and take loss from each tag in
-proportion to what it holds. The energy tags apply the whole signed increment
+proportion to what it holds. The energy tags apply the whole signed tendency
 by mask.
 
 ## Enabling tags
@@ -93,7 +94,7 @@ spectral-element discretization a discontinuous mask produces Gibbs
 oscillations. Choose the `width` of the `tanh_polygon` comparable to or larger
 than the horizontal grid spacing.
 
-## Process tags
+## Signed process tags
 
 A tag with a `source` accumulates the tendency that a labeled process adds to
 ``\rho e_\mathrm{tot}``. The `source` labels and the groups that expand to
@@ -117,7 +118,7 @@ the tracer machinery. These are not taggable:
 These terms land in the closure residual, which is why the residual is
 monitored and not zero.
 
-A pure region tag receives every attributed process, weighted by its mask, so a
+A region tag receives every attributed process, weighted by its mask, so a
 partition of unity of region tags keeps tracking ``\rho e_\mathrm{tot}``. A tag
 with both `region` and `source` starts at zero and accumulates only its own
 processes, restricted to its region. The `region` restricts where the process
@@ -131,17 +132,17 @@ Each tag registers a diagnostic automatically:
     (J kg⁻¹);
   - `e_tag_res`: the closure residual
     ``(\rho e_\mathrm{tot} - \sum_i \rho e_{\mathrm{tag},i}) / \rho``, summed
-    over the pure region tags.
+    over the region tags.
 
 `e_tag_res` is a monitored residual, not a machine-precision identity.
 ``\rho e_\mathrm{tot}`` is transported as enthalpy, including pressure work, and
 has its own diffusion treatment, while the tags are passive scalars. If the
 region masks do not sum to 1, the run warns at initialization and `e_tag_res`
-is dominated by the overlap instead of by attribution leakage. Configure one
+is dominated by the overlap instead of by unattributed processes. Configure one
 partition of unity per run.
 
-Splitting a process tag across a partition gives a sharper check. With `rad`,
-`rad_stratosphere` and `rad_troposphere` tags, transport linearity gives
+Splitting a signed process tag across a partition gives a sharper check. With
+`rad`, `rad_stratosphere` and `rad_troposphere` tags, transport linearity gives
 ``e_{\mathrm{tag,rad\_strat}} + e_{\mathrm{tag,rad\_tropo}} = e_{\mathrm{tag,rad}}``
 to near machine precision at all times. A violation is a bug and not expected
 leakage. `config/model_configs/baroclinic_wave_tagged_tracers.yml` uses this
@@ -166,13 +167,13 @@ identity with the Held–Suarez source.
 
 Closure shows one thing: the included terms sum to the parent, as a signed
 discrete accounting. It does not show that the amounts are non-negative, that
-the provenance reading is valid, that results are independent of the energy
+the origin reading is valid, that results are independent of the energy
 reference, or that the set of tracked processes is physically complete. The
 tags are not counterfactual sensitivities. They say what contributed to the
 simulated energy, not what would change if a process were altered. That
 question needs perturbation or ensemble experiments. The mask weighting, the
 choice of attributed processes and the grouping of gains and losses within one
-bracket are modeling choices, and conclusions depend on them.
+attributed process are modeling choices, and conclusions depend on them.
 
 ### Tag values depend on the energy reference
 
@@ -182,9 +183,9 @@ tag holds, and changes every residual normalized by
 ``\max|\rho e_\mathrm{tot}|``. Such residuals are not comparable across
 configurations with different references.
 
-A process tag for a process that exchanges no mass is unaffected, because it
-accumulates increments and not shares. One that does exchange mass is affected.
-Under a shift `c`, the increment attributed to `precipitation`, or to the
+A signed process tag for a process that exchanges no mass is unaffected, because it
+accumulates tendencies and not shares. One that does exchange mass is affected.
+Under a shift `c`, the tendency attributed to `precipitation`, or to the
 moisture part of `surface_flux`, moves by `c` times the mass exchanged.
 
 Water has a physical zero and does not have this problem.

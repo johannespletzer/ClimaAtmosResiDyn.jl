@@ -1,10 +1,11 @@
 #####
-##### The gross throughput of the tags' cache ledgers
+##### The gross of the tags' cache ledgers
 #####
 ##### The cache ledgers `q_tag_fix_<name>`, `q_tag_upfix_<name>` and
 ##### `e_src_fix_<name>` are signed and cumulative. A correction of `+x` and
 ##### then `−x` reads zero, as does none at all.
-##### Beside each, a gross twin adds the absolute value of every change.
+##### Beside each, a gross sums the absolute value of every change, so opposite
+##### changes do not cancel.
 ##### A count adds one for every cell-event whose change exceeds rounding.
 ##### Both record what was attempted: every call, including calls inside a
 ##### step that the stepper later discards.
@@ -18,7 +19,7 @@
 A change counts as a cell-event where it exceeds this fraction of the cell's
 total, or 16 rounding units of the total's float type if that is larger. The
 copies' residual is nonzero at rounding level almost everywhere, so without a
-threshold the count would approach the number of cells times calls. In Float32
+bound the count would approach the number of cells times calls. In Float32
 the rounding floor, about 1.9e-6, is the larger one.
 """
 const TAG_EVENT_THRESHOLD = 1e-12
@@ -45,7 +46,7 @@ end
     tag_throughput_fields(ᶜρ, tags)
 
 One Float64 center field of zeros per tag, keyed like the state, for a gross
-twin or a count beside a cache ledger. `tag_entry` gives each tag family's
+or a count beside a cache ledger. `tag_entry` gives each tag family's
 key.
 """
 tag_throughput_fields(ᶜρ, ::Tuple{}) = (;)
@@ -58,7 +59,7 @@ tag_throughput_fields(ᶜρ, tags::Tuple) = merge(
     tag_ledger(fix, gross, count, state = nothing)
 
 The fields a correction writes for each tag: the signed ledger `fix`, its gross
-twin and its count, each a `NamedTuple` keyed like the state, and, where each
+and its count, each a `NamedTuple` keyed like the state, and, where each
 tag keeps its own state ledger, `state`, a [`TagLedgerView`](@ref) of the
 state, or `nothing`.
 """
@@ -74,8 +75,8 @@ tag_ledger_fields(ledger, tag) = (
 """
     tag_gross_total(fields)
 
-The integral over the domain of the gross twins, summed over the tags, for the
-audit: an amount, in the units of the ledger times volume. Collective, as
+The integral over the domain of the grosses beside the ledgers, summed over the
+tags, for the audit: an amount, in the units of the ledger times volume. Collective, as
 ClimaCore's `sum` is.
 """
 function tag_gross_total(fields)
@@ -134,6 +135,17 @@ const WATER_TAG_MECHANISM_NAMES = (
 const WATER_TAG_COPY_MECHANISM_NAMES = (:q_tag_led_uprepair, :q_tag_led_upfilter)
 const WATER_TAG_ALL_MECHANISM_NAMES =
     (WATER_TAG_MECHANISM_NAMES..., WATER_TAG_COPY_MECHANISM_NAMES...)
+
+"""
+    WATER_TAG_PRECIP_MECHANISM_NAMES
+
+The water tags' state ledger of the closing step under
+`water_tag_precipitation: true`: `q_tag_led_close`, what the closing step after
+each follow added to the partition's rain and snow parts, or took from them
+(`follow_water_tag_precipitation!`). Only with the key, so the state of other
+runs keeps its layout. The key and updraft copies are never on together.
+"""
+const WATER_TAG_PRECIP_MECHANISM_NAMES = (:q_tag_led_close,)
 
 """
     WATER_TAG_LEAK_MECHANISM_NAMES
@@ -199,10 +211,15 @@ The names of the water tags' state ledgers per mechanism, in state order, or
 `()` without water tags.
 """
 water_tag_mechanism_names(::Nothing) = ()
-water_tag_mechanism_names(model::WaterTaggingModel) =
-    _water_tag_mechanism_names(Val(has_water_tag_updraft_copies(model)))
-_water_tag_mechanism_names(::Val{false}) = WATER_TAG_MECHANISM_NAMES
-_water_tag_mechanism_names(::Val{true}) = WATER_TAG_ALL_MECHANISM_NAMES
+water_tag_mechanism_names(model::WaterTaggingModel) = _water_tag_mechanism_names(
+    Val(has_water_tag_updraft_copies(model)),
+    Val(has_water_tag_precipitation(model)),
+)
+_water_tag_mechanism_names(::Val{false}, ::Val{false}) = WATER_TAG_MECHANISM_NAMES
+_water_tag_mechanism_names(::Val{true}, ::Val{false}) =
+    WATER_TAG_ALL_MECHANISM_NAMES
+_water_tag_mechanism_names(::Val{false}, ::Val{true}) =
+    (WATER_TAG_MECHANISM_NAMES..., WATER_TAG_PRECIP_MECHANISM_NAMES...)
 
 """
     energy_source_mechanism_names(model)
@@ -227,7 +244,12 @@ water_tag_mechanism_variables(value, ::Nothing) = (;)
 water_tag_mechanism_variables(value, model::WaterTaggingModel) =
     _mechanism_zeros(
         value,
-        Val(_water_tag_mechanism_names(Val(has_water_tag_updraft_copies(model)))),
+        Val(
+            _water_tag_mechanism_names(
+                Val(has_water_tag_updraft_copies(model)),
+                Val(has_water_tag_precipitation(model)),
+            ),
+        ),
     )
 energy_source_mechanism_variables(value, ::Nothing) = (;)
 energy_source_mechanism_variables(value, ::EnergySourceTaggingModel) =
@@ -243,6 +265,7 @@ Whether `name` is a state ledger per mechanism of either family.
 is_tag_mechanism_ledger_name(name::Symbol) =
     name in WATER_TAG_MECHANISM_NAMES ||
     name in WATER_TAG_COPY_MECHANISM_NAMES ||
+    name in WATER_TAG_PRECIP_MECHANISM_NAMES ||
     name in ENERGY_SOURCE_MECHANISM_NAMES
 
 """
@@ -286,8 +309,8 @@ call added, including calls on stage values that the stepper discards;
 `before`, per ledger per mechanism, the ledger kept before a call; and
 `cadence`, the run's `update_constrain_state_every`, which
 [`set_tag_ledger_cadence!`](@ref) sets. Each tag's own ledger of the limiters'
-and the repair's corrections has no `attempted`: the cache ledger's gross twin
-takes the same changes. Under `water_tag_precipitation: true` the gross twin
+and the repair's corrections has no `attempted`: the gross beside the cache
+ledger takes the same changes. Under `water_tag_precipitation: true` that gross
 also counts the moves between a tag's own parts, which leave the tag's own
 ledger unchanged. So a water tag's `attempted` exceeds its retained gross by
 those moves too.
@@ -719,7 +742,7 @@ Each water tag's own state ledgers, in state order, under
   - `q_tag_led_fix_<name>` for every tag: what the limiters' rescale and the
     partition repair changed it by.
   - `q_tag_led_inc_<name>` under `water_tag_transport: increment`: what the
-    follower moved into or out of it.
+    correction after each solve moved into or out of it.
   - `q_tag_led_leak_<name>` under `water_tag_leak_correction: true`: what the
     diffusion leak's correction gave it.
   - `q_tag_led_upleak_<name>` under `water_tag_leak_correction: true` with
@@ -764,16 +787,14 @@ Each energy source tag's own state ledgers, in state order, under
 `e_src_led_fix_<name>` for every tag, what the repair changed it by; under
 `energy_source_tag_transport: enthalpy_increment`, `e_src_led_inc_<name>`, what
 the correction after each solve moved into or out of it; and
-`e_src_led_src_<name>` for every tag, what the sources' brackets
+`e_src_led_src_<name>` for every tag, what the sources
 (`attribute_energy_source_tags!`) put into it or took out of it. The per-step
-gross of the last one is the sources' gross throughput
-(`energy_source_throughput`).
+gross of the last one is the source throughput (`energy_source_throughput`).
 
 The source ledgers end with `e_src_led_src_res`, the residual's own: what the
-brackets did to `e_src_res`, the part of the total the partition's tags did
-not take. It is the net residual source attribution. Only where the
-pure region tags' masks are a verified partition is its per-step gross the
-loss rule's flush of the residual. The tag name `res` is refused, so the name
+sources did to `e_src_res`, the part of the total the region tags did not take.
+Only where the region tags' masks are a verified partition is its per-step gross
+the loss rule's flush of the residual. The tag name `res` is refused, so the name
 cannot collide with a tag's.
 """
 energy_source_ledger_fix_names(::Nothing) = ()
@@ -866,10 +887,10 @@ energy_source_inc_ledger_view(Yₜ, model) =
 """
     energy_source_src_ledger_view(Yₜ, model)
 
-The [`TagLedgerView`](@ref) of `Yₜ.c` that the sources' brackets write each
-energy source tag's change into, `e_src_led_src_<name>`, or `nothing` where the
-tags keep no ledger per tag. The brackets add to the tags' tendencies, so the
-ledger is a tendency too: the stepper integrates it as it integrates the tag.
+The [`TagLedgerView`](@ref) of `Yₜ.c` that the sources write each energy source
+tag's change into, `e_src_led_src_<name>`, or `nothing` where the tags keep no
+ledger per tag. The attribution adds to the tags' tendencies, so the ledger is a
+tendency too. The stepper integrates it as it integrates the tag.
 """
 energy_source_src_ledger_view(Yₜ, model) =
     has_energy_source_ledger_per_tag(model) ? TagLedgerView{:src}(Yₜ.c) :
@@ -979,7 +1000,7 @@ and the family's parent scale `parent_scale`, which is `NaN` where the run has
 none:
 
   - `inventory_fraction`: `retained / inventory`, where `inventory > 0`. The
-    ratio for a pure region tag, whose precondition is a positive inventory. It
+    ratio for a region tag, whose precondition is a positive inventory. It
     is ill-conditioned when a tag's positive and negative parts nearly cancel.
   - `burden_fraction`: `retained / burden`, where `burden > 0`. The ratio for a
     source-labelled tag and for any tag with negative parts. For a tag without
@@ -1022,9 +1043,9 @@ prefix. Over the domain, as `scale` is:
   - `<L>_attempted`, `<L>_attempted_relative`: what the writers of `L` added,
     in absolute value, over every call, including stage values the stepper
     discards. For a tag's own ledger of the limiters' and the repair's
-    corrections, the cache ledger's gross twin `fix_gross`, which takes the
+    corrections, the gross beside the cache ledger, `fix_gross`, which takes the
     same changes. `NaN` for the leak correction's ledgers, a tendency's,
-    which have none. Under `water_tag_precipitation: true` the gross twin also
+    which have none. Under `water_tag_precipitation: true` that gross also
     counts the moves between a tag's own parts, which leave the tag's own
     ledger unchanged. So a water tag's `led_fix_<name>_attempted` exceeds
     `_retained` by those moves too;
@@ -1137,14 +1158,14 @@ end
 The gross energy the sources put into the energy source tags, over the domain
 and since the start of the run. It is the sum over the partition's tags, the
 region tags without sources, of the per-step gross of each tag's source ledger,
-`Σ_steps |Δ e_src_led_src_<name>|`, integrated. The partition's tags receive
+`Σ_steps |Δ e_src_led_src_<name>|`, integrated. The region tags receive
 every source in full, gains by their masks and losses by their shares, so each
-unit of source energy counts once; the source tags overlay it and are left out.
+unit of source energy counts once. The source tags overlay them and are left out.
 That holds only where their masks sum to one, a verified partition
 ([`energy_source_partition_verified`](@ref)). A strict subset counts too
 little and an overlap too much, so the tables write `NaN` there. This function
-returns the sum either way. A window's throughput is the difference of two
-values. `nothing` where the tags keep no ledger per tag. Collective, as `sum`
+returns the sum either way. A window's source throughput is the difference of
+two values. `nothing` where the tags keep no ledger per tag. Collective, as `sum`
 is.
 """
 energy_source_throughput(Y, p, model) =
@@ -1166,7 +1187,7 @@ end
 
 The tags' accumulators a checkpoint carries, as a vector of
 `name => field`: the cache ledgers `ᶜwater_fix`, `ᶜwater_upfix` and
-`ᶜenergy_source_fix` with their gross twins and counts, and, per state ledger,
+`ᶜenergy_source_fix` with their grosses and counts, and, per state ledger,
 the per-step gross, column gross, events and attempted. `ᶜprev` is not carried:
 it is the ledger itself, which the state carries. With water tags, last, the
 parent's negative water accumulator, `tag_ledger.negative_water.amount` and

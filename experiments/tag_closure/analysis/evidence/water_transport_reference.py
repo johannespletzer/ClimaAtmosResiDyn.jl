@@ -1,8 +1,12 @@
 """Bounded independent water references on native unit-area cells.
 
-The continuum equations and all refinement rungs are frozen in the sibling
+The continuum equations and all refinement rungs are fixed in the sibling
 design file. This offline module calls no model transport, copies or tag
 kernel. Its known answers do not qualify an atmospheric origin claim.
+
+The OD3 profile limits, the small-tag rule and OD12's quarter rule are the
+scorer's named constants, imported here. The design file repeats them for the
+record only, and a test checks that the two agree.
 """
 
 import hashlib
@@ -13,9 +17,13 @@ from pathlib import Path
 import numpy as np
 from numpy.polynomial.legendre import leggauss
 
+from acceptance_data import require
+from score_acceptance import SMALL, SMALL_SHARE, origin_limits
 
-BASE_COMMIT = "1b04926582941740f2599a92c57acb3ad0abb1c6"
-DESIGN_SHA256 = "c1af334b03727c3017810c46d2f826eff51dbdccccac55bb3c5ee6de044749d6"
+
+# The planning tree whose scorer and approved numbers these fixtures use.
+BASE_COMMIT = "9c710edcea50d78e8e668e738223bc71c32a69f8"
+DESIGN_SHA256 = "597e39a84a142649f5355177a2c03f74ee7d0ae0c63d05e9e04515e23ff96f37"
 DESIGN_PATH = Path(__file__).with_name("water_transport_design.json")
 FIELD_NAMES = ("rho", "water_parent", "tag_origin_a", "tag_origin_b",
                "tag_overlay", "tag_tiny", "tag_zero")
@@ -173,14 +181,33 @@ def _initial_numeric(design, case, grid):
     return np.stack([fields[name] for name in FIELD_NAMES])
 
 
+def refinement_rungs(case):
+    """The (grid, dt) pairs of a case's refinement ladder, coarse to fine.
+
+    An advective case refines the grid and the time step together at one
+    fixed CFL number. Rung i pairs grids[i] with dt_seconds[i], and every
+    pair has the same product grid * dt. Two fixed reservoirs have no grid,
+    so the exchange case refines the time step alone.
+    """
+    if case["kind"] == "two_reservoir_exchange":
+        if case["ladder"] != "time_step_only":
+            raise ValueError("the exchange ladder must refine the time step alone")
+        return [(None, dt) for dt in case["dt_seconds"]]
+    if case["ladder"] != "fixed_cfl" or len(case["grids"]) != len(case["dt_seconds"]):
+        raise ValueError("an advective ladder must pair each grid with one time step")
+    if any(grid * dt != case["grid_times_dt_seconds"] for grid, dt in zip(case["grids"], case["dt_seconds"])):
+        raise ValueError("an advective ladder must keep the CFL number fixed")
+    return list(zip(case["grids"], case["dt_seconds"]))
+
+
 def numerical(design, case, grid=None, dt=None, newton=None):
     """Separately implemented conservative upwind or implicit exchange solve.
 
     Every requested step is executed. Exact endpoint divisibility and CFL
     are required. No temporal interpolation or analytic evolution is used.
     """
-    if dt not in case["dt_seconds"]:
-        raise ValueError("timestep is outside the frozen ladder")
+    if (grid, dt) not in refinement_rungs(case):
+        raise ValueError("grid and timestep are not a rung of the fixed-CFL ladder")
     exchange = case["kind"] == "two_reservoir_exchange"
     if (exchange and newton not in case["newton_iterations"]) or (not exchange and newton is not None):
         raise ValueError("invalid or inapplicable Newton rung")
@@ -195,6 +222,8 @@ def numerical(design, case, grid=None, dt=None, newton=None):
     net_inflow = np.zeros(len(FIELD_NAMES))
     mass_defects, boundary_amounts = [], []
     residual_by_iteration = np.zeros(newton + 1 if exchange else 0)
+    # Counted as they run, so a skipped step or solve shows in the diagnostics.
+    executed_steps, newton_solves = 0, 0
     if exchange:
         parents = current[1] * width
         flow = case["exchange_kg_m2_s"]
@@ -205,6 +234,8 @@ def numerical(design, case, grid=None, dt=None, newton=None):
         velocity = case["velocity_m_s"]
         if abs(velocity) * dt / np.min(width) > 1.0:
             raise ValueError("upwind reference violates its native-cell CFL")
+        # The ladder's CFL number on the nominal spacing L / grid. Equal on every rung.
+        nominal_cfl = abs(velocity) * dt * grid / case["length_m"]
         incoming_rho = np.array([case["density_mean"]])
         incoming_parent = case["water_specific"] * incoming_rho
         incoming = _with_overlays(incoming_rho, incoming_parent, incoming_parent, design["source_fractions"])
@@ -218,6 +249,7 @@ def numerical(design, case, grid=None, dt=None, newton=None):
             residual_by_iteration[0] = max(residual_by_iteration[0], float(np.max(np.abs(residual))))
             for iteration in range(newton):
                 correction = np.linalg.solve(jacobian, residual.T).T
+                newton_solves += 1
                 trial -= correction
                 residual = trial - old - dt * (trial @ generator.T)
                 residual_by_iteration[iteration + 1] = max(
@@ -233,6 +265,7 @@ def numerical(design, case, grid=None, dt=None, newton=None):
                 flux[:, -1] = flux[:, 0] if case["kind"] == "periodic_smooth" else velocity * boundary
             net_inflow += dt * (flux[:, 0] - flux[:, -1])
             current -= dt * (flux[:, 1:] - flux[:, :-1]) / width
+        executed_steps += 1
         time = step * dt
         if time in times[1:]:
             for i, name in enumerate(FIELD_NAMES):
@@ -242,8 +275,9 @@ def numerical(design, case, grid=None, dt=None, newton=None):
     return _state(times, faces, rows, {
         "method": "backward Euler with actual Newton iterations" if exchange else "first-order conservative upwind",
         "grid": grid, "dt_seconds": dt, "newton_iterations": newton,
-        "executed_steps": int(times[-1] / dt),
-        "executed_newton_solves": int(times[-1] / dt) * newton if exchange else 0,
+        "nominal_cfl": None if exchange else nominal_cfl,
+        "executed_steps": executed_steps,
+        "executed_newton_solves": newton_solves,
         "max_residual_by_iteration_kg_m2": residual_by_iteration.tolist(),
         "signed_boundary_inflow_kg_m2": boundary_amounts,
         "mass_defect_kg_m2": mass_defects,
@@ -251,13 +285,17 @@ def numerical(design, case, grid=None, dt=None, newton=None):
 
 
 def profile_error(candidate, reference, name, endpoint, kind):
-    """OD3 norms in the existing scorer's density/specific conventions."""
+    """OD3 norms in the existing scorer's density/specific conventions.
+
+    The limits come from the scorer's `origin_limits`, which refuses an
+    unknown tag kind or an endpoint without an approved tolerance.
+    """
     if not (np.array_equal(candidate.time, reference.time) and
             np.array_equal(candidate.faces, reference.faces)):
         raise ValueError("error requires the same physical times and native faces")
     hits = np.flatnonzero(reference.time == endpoint)
-    if len(hits) != 1 or endpoint not in (3600, 86400):
-        raise ValueError("error needs an exact approved endpoint")
+    require(len(hits) == 1, "error needs exactly one sample at the endpoint")
+    l1_limit, linf_limit = origin_limits(kind, float(endpoint))
     j = int(hits[0])
     rho_a, rho_b = candidate.values["rho"][j], reference.values["rho"][j]
     if np.any(rho_a <= 0) or np.any(rho_b <= 0):
@@ -268,18 +306,31 @@ def profile_error(candidate, reference, name, endpoint, kind):
     burden = float(np.sum(np.abs(b) * reference.weights))
     inventory = float(np.sum(b * reference.weights))
     parent = float(np.sum(reference.values["water_parent"][j] * reference.weights))
+    # A dry or zero-water reference has no parent scale. The scorer reads it
+    # as bad data, so this reference does too.
+    require(parent > 0, "nonpositive reference parent water")
     peak = float(np.max(np.abs(b / rho_b)))
     l1, linf = (absolute / burden if burden > 0 else None,
                 float(np.max(np.abs(specific_delta))) / peak if peak > 0 else None)
-    small = inventory / parent < 0.01
-    l1_limit = 0.02 if endpoint == 86400 else (0.01 if kind == "region" else 0.10)
-    linf_limit = 0.05 if endpoint == 86400 else 0.25
-    fractions = ({"absolute_L1": absolute / (2e-4 * parent)} if small else
+    small = inventory / parent < SMALL_SHARE
+    fractions = ({"absolute_L1": absolute / (SMALL * parent)} if small else
                  {"L1": l1 / l1_limit, "Linf": linf / linf_limit})
     return {"absolute_L1_kg_m2": absolute, "relative_L1": l1, "specific_Linf": linf,
             "reference_share": inventory / parent, "small_rule": small,
-            "fraction_of_tolerance": fractions, "meets": max(fractions.values()) <= 1.0,
-            "floor_eligible": max(fractions.values()) <= 0.25}
+            "fraction_of_tolerance": fractions, "meets": max(fractions.values()) <= 1.0}
+
+
+def floor_fraction(row, case):
+    """A row's floor as a fraction of its tolerance, for OD12's quarter rule.
+
+    A labelled front is judged in L1 only. The frozen design states no L∞
+    requirement for a front (`front_convergence`). A candidate's own profile
+    row keeps both OD3 norms.
+    """
+    fractions = row["fraction_of_tolerance"]
+    if case["kind"] == "labelled_inflow":
+        fractions = {norm: value for norm, value in fractions.items() if norm != "Linf"}
+    return max(fractions.values())
 
 
 def error_rows(candidate, reference, design):
