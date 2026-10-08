@@ -1,5 +1,21 @@
 # Status
 
+## Part 5 offline accounting layer (2026-10-07)
+
+The [Part 5 inventory/design](analysis/evidence/PART5.md) and existing
+[evidence workflow](analysis/evidence/README.md) now include a strict native
+weighted-application reader, cancellation-safe S/H/A and directed-leg
+reports, distinct trial/evaluation counters, and paired signed parent/tag
+precipitation integration. The 71 accounting tests and the evidence
+directory's 228 tests pass. These are offline results only.
+
+**Part 5 remains incomplete.** No verified producer exists, so no submission
+clears the production completeness gate. [PART5](analysis/evidence/PART5.md)
+lists the runtime evidence that is still missing. PR #146 merged on main at
+`12377fb88` on 2026-10-07. Its closing channel is not on this base yet.
+No runtime/default/checkpoint/dependency/CI/threshold or historical output
+changes are supplied.
+
 ## Part 4 offline evidence and scoring (2026-10-07)
 
 The common manifest extension, strict native readers and deterministic
