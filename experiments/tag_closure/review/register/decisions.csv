@@ -1,4 +1,10 @@
 date,decided_by,decision,doc,section,still_in_force,superseded_by
+2026-10-08,owner,"The production completeness gate binds to the producer: a roster pinned by the producer's own receipt, inactive channels verified by content, check logs parsed for named results. The registry refuses an entry without these.",DECISIONS.md,2026-10-08,yes,
+2026-10-08,owner,"Complete cancellation-safe accounting is a condition of a qualified energy claim too (WA-GATES a extends to energy).",DECISIONS.md,2026-10-08,yes,
+2026-10-08,owner,"WA-PRECIP in the scorer: declared paired precipitation evidence keeps the precipitation row reported only. No 0M precipitation claim is scored.",DECISIONS.md,2026-10-08,yes,
+2026-10-08,owner,"WA-SCOPE's cases: the GCM-driven column is the 24 h development case, RICO 1M 24 h is the held-out case, named before PX11.",DECISIONS.md,2026-10-08,yes,
+2026-10-08,owner,"The energy budget for criterion 1 of the long-run rule is OD3's 0.2% of Theta_x. The design note's 1e-4 proposal is not adopted.",DECISIONS.md,2026-10-08,yes,
+2026-10-08,owner,"The converter from model output to the scorer's bundle is built in the review session by an Opus agent, with a test on the archived W58 and E87 outputs.",DECISIONS.md,2026-10-08,yes,
 2026-10-07,owner,"Part 4 scorer: coverage of every active rule is reported for energy as for water and gates nothing until OD9.",DECISIONS.md,2026-10-07,yes,
 2026-10-07,owner,"Part 4 scorer: the second-12-hour closure rule passes a tie within rounding, G(24)-G(12) <= G(12)-G(0) + 1e-12 normalized. A reading of the rule, not a tolerance.",DECISIONS.md,2026-10-07,yes,
 2026-10-07,owner,"Part 4 scorer: failed or exported-only parity blocks the origin rows only. A missing or zero-length OD2 window is not applicable and blocks nothing.",DECISIONS.md,2026-10-07,yes,

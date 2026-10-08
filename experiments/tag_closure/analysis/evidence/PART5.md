@@ -111,7 +111,8 @@ corrections and compartment legs is a condition of a qualified claim
 (WA-GATES (a), in force since 2026-10-07). For energy, the G4 contract's
 intervention row leaves the full intervention claim not assessable while
 activity is missing. Whether completeness is also a condition of a qualified
-energy claim is waiting for the owner. Physical qualification, origin correctness and
+energy claim was decided on 2026-10-08: WA-GATES (a) extends to energy, so
+the condition holds for both families. Physical qualification, origin correctness and
 propagated error bounds remain separate. The required real producer,
 Float32/Float64 on/off parent bitwise parity, continuous/restarted all-channel
 accounting, device/distributed checks and cost must be run in the prepared
@@ -131,7 +132,7 @@ restart tests. This is source evidence, not a runtime test result.
 | Limiter/repair state maps           | The hook template distinguishes stage/pre-solve/post-init observations, post-Newton maps with `b_imp/gamma`, and final maps with unit weight. The last stage and final assembly can share a timestamp. | Instrument each writer before per-tag/part cancellation, carry the adapter's positional role and preserve N/R/S and grid/updraft/copy identities. Sampling cumulative attempted totals or whole-hook before/after net changes cannot recover opposite internal legs.                                         |
 | Paired applied precipitation        | Parent transfer-leg capture can read modeled flux legs during selected evaluations. Tag diagnostics expose current surface fluxes.                                                                     | Parent and every partition tag need the same actual accepted application, native surface, signed coefficient and units, separately for supported 0M and 1M rain/snow paths. Snapshot rates and the parent-only TRMM average do not supply this producer.                                                     |
 | Rejected trials and restart         | `commit_step!` runs after the accepted endpoint and clears step storage. Native tag checkpoints already carry retained/attempted history and latches.                                                  | The materialized adapter supplies no finalized trial/rejection IDs or rollback protocol. Add an explicit supported lifecycle for the actual solver, checkpoint every new numerator/count/latch and verify continuous versus restarted native history. Do not infer whole-run zeros from a restarted segment. |
-| Production completeness gate        | The gate compares the submitted roster with the roster in a submitted proof. It reads inactive-channel evidence by hash only and checks that each check log exists. The producer registry is empty.    | Waiting for the owner: before any producer is registered, the gate needs a roster pinned by the producer's own output, inactive channels verified by their content, and the check logs read.                                                                                                                 |
+| Production completeness gate        | The gate compares the submitted roster with the roster in a submitted proof. It reads inactive-channel evidence by hash only and checks that each check log exists. The producer registry is empty.    | Decided 2026-10-08: before any producer is registered, the gate binds to a roster pinned by the producer's own output, inactive channels verified by their content, and the check logs read. The registry refuses an entry without these. Implemented in the Part 4 converter PR.                            |
 
 The parent-budget configuration guard explicitly refuses every `AbstractEDMF`.
 Forcing its audit mode on for copies/TRMM would violate that declared scope.
