@@ -33,6 +33,22 @@ experiments/tag_closure/
   output/  plots/                        each run's small result files; the phase figures
 ```
 
+## Bounded offline water reference checks
+
+[Independent water known-answer fixtures](analysis/evidence/README.md#independent-water-known-answer-fixtures)
+run from the repository root with the existing Python verification
+environment. Their [frozen design](analysis/evidence/PART6.md) covers signed
+translation, nonuniform labelled inflow and conservative exchange. Each
+configuration saves every numerical/integration rung and independently
+measured floor in a fresh output directory. Exit 3 records an ineligible
+reference and leaves its candidate verdict not assessable.
+
+These manufactured development fixtures check equations and the evidence
+workflow. They are separate from a model submission: no Julia simulation,
+atmospheric producer, production reference, copies qualification, held-out
+result or full parent-state parity follows from them. Runtime setup and
+approved cluster submissions below still apply to actual simulations.
+
 ## Setup, once
 
 From the repository root:

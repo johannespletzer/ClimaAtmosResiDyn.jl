@@ -9,6 +9,9 @@ normalization and remaining dependency. See [PART4.md](PART4.md) for the
 reuse inventory, coverage and verification record.
 The optional weighted-application path and its production gaps are recorded
 in [PART5.md](PART5.md). Its offline implementation does not complete Part 5.
+The independent water references, the producer of their declared
+eligibility and their frozen development cases are documented in
+[PART6.md](PART6.md). They do not complete physical water qualification.
 
 The input is a separately identified extended manifest, not a second
 submission record format. Attach a predeclared extension to an archived
@@ -29,6 +32,72 @@ directory. Existing result paths are refused. Keep the original manifest,
 scorer hash, score and interpretation. A corrected score is a new reanalysis,
 not a simulation rerun. The legacy tools below retain their original CLIs
 and historical algorithms.
+
+## Independent water known-answer fixtures
+
+Run the two complete frozen configurations into separate new directories
+from the repository root:
+
+```sh
+python3 experiments/tag_closure/analysis/evidence/make_water_transport_fixture.py \
+  NEW/analytic --config experiments/tag_closure/configs/water_transport_known_answers.json
+python3 experiments/tag_closure/analysis/evidence/make_water_transport_fixture.py \
+  NEW/numerical --config experiments/tag_closure/configs/water_transport_numerical_fixture.json
+python3 -m unittest discover -s experiments/tag_closure/analysis/evidence \
+  -p 'test_water_transport_reference.py' -v
+```
+
+Both output roots must be absent. The exit codes follow the scorer's. Exit 0
+means every case's profile, prescribed exported-parent trajectory, partition
+closure and wrong-origin checks passed against an eligible reference. Exit 1
+records a failed fixture check. Exit 2 records missing, corrupt or
+inconsistent evidence. Exit 3 records an ineligible selected reference. Its
+candidate is not assessable, and no ranking or pass is inferred from it.
+Exit 4 means nothing was evaluated: the output exists, the command line is
+invalid or the driver raised an error. The analytic configuration has five
+cases with constructed eligibility and exits 0. The numerical configuration
+retains four ineligible upwind references and one eligible exchange
+reference, so its expected exit is 3.
+
+Each case directory contains the original `submission.json`, an existing-format
+`extension.json` and `manifest.json`, a separate `manifest_origin_swap.json`,
+the frozen design/resolved config and hashed evaluator sources, every native
+rung archive, and `known_answer_results.json`. `suite_results.json` records
+each case without hiding an ineligible result. All 21 numerical and 18
+quadrature rungs remain available. Raw per-tag 1 h/24 h L1, specific Linf,
+small/zero-tag absolute errors, parent/closure defects, conservation/boundary
+accounts and executed Newton diagnostics are reported beside OD12 eligibility.
+
+`water_transport_adapter.py` is the producing script of the declared
+eligibility file. It reconstructs every archived rung from independent
+equations, checks exact native faces/weights/time/dtype and
+source/config/model identity, requires explicit zero arrays for excluded
+processes, and measures every applicable floor in the same norm as OD3. It
+then writes the producer's name and sha256, one floor per OD12 source,
+`converged`, `mirrors_complete` and `jacobian_complete` into
+`water_reference_evidence.json`, each with its basis. The manifest's
+`reference.producer` names and hashes the same script. The scorer reads the
+declaration through its own eligibility reader, unchanged, and does not
+import the adapter. The driver reruns the adapter on the finished bundle,
+which refuses a declaration that differs from its recompute, and requires
+the scorer's reading to agree with it. Partition sums exclude source
+overlays. A numerical reference's same-parent status follows actual
+`rho`/`water_parent` bits, including fixed-parent inflow and exchange. Specific-profile agreement alone
+cannot hide a changed prescribed parent trajectory or a broken partition sum.
+The archived mutant must perform the registered origin swap while preserving
+the initial state, parent and source overlays. Other origin-failing changes
+do not verify that mutation.
+
+The full production scorer continues to emit its other missing-prerequisite
+rows. The driver does not manufacture those prerequisites. Its five labels
+include two partition origins and overlay/tiny/zero source diagnostics. It
+does not supply an eight-tag atmospheric reference or validate model parent
+physics. PX1/PX8/PX7/PX11/PX24/PX12, copies' native residual/repair/mirror/
+Jacobian/fallback and own-transport E gates, KI4-COPIES/UP1, accepted production
+capture, physical restart/parity/device/cost and OD14 held-out evidence remain
+required. The two-reservoir linear Newton test cannot establish the model's
+nonlinear solver floor. Part 5's verified runtime-producer registry is empty.
+No missing channel is inferred as zero outside these manufactured cases.
 
 ## Minimum evidence layout and extension
 

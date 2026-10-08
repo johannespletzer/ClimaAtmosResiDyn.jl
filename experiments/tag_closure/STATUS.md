@@ -1,5 +1,44 @@
 # Status
 
+## Part 6 independent water reference software (2026-10-08)
+
+The [frozen design and obligation inventory](analysis/evidence/PART6.md)
+now have runnable native cell-average known answers for signed periodic
+translation with advected nonuniform density, signed labelled inflow on
+nonuniform cells and conservative two-reservoir exchange. Independent
+quadrature and conservative upwind / implicit-Newton references report every
+registered rung. The adapter is the producer of a declared eligibility file,
+as the decision of 2026-10-07 allows. The manifest names and hashes it, and
+the reviewed scorer reads the declaration through its own reader, unchanged.
+Wrong-origin label swaps preserve total closure and fail the origin rows.
+Fixture PASS also requires candidate partition closure and the prescribed
+exported-parent trajectory. Same-parent status comes from the actual parent
+values. Mutant verification checks the registered swap and unchanged initial
+state, parent and source overlays.
+
+The analytic fixtures pass all five equation cases and label-swap checks.
+Their eligibility is constructed, not measured: the candidate equals the
+closed form, and the floor is a constructed roundoff bound, plus a measured
+quadrature floor in the smooth cases. The numerical fixture suite returns
+exit 3. All four upwind references exceed OD12's quarter rule. On the
+fixed-CFL ladder the smooth and positive-front floors fall at every doubling,
+and the negative front rises on its first doubling. The
+exchange reference is eligible on a measured floor. Every one of the 21
+numerical and 18 quadrature rungs is retained, including failures. The 38
+focused tests and the whole evidence directory pass.
+[Commands](analysis/evidence/README.md) reproduce the bounded work without
+launching a model run.
+
+**Part 6 physical qualification remains incomplete.** These five-label
+manufactured development cases establish implementation checks only. They
+supply no atmospheric PX1/PX8/PX7/PX11/PX24/PX12 execution, actual copies
+grid/updraft residual/repair/mirror/Jacobian/fallback evidence, KI4-COPIES/UP1
+verdict, eight-tag/full-window reference, OD14 held-out result or production
+origin qualification. Part 5's verified runtime-producer registry remains
+empty. No parent model, default, dependency, CI or approved tolerance changes
+are supplied. Residence-time and energy-reference work stay deferred. Five
+choices wait for the owner, listed in PART6's obligations table.
+
 ## Part 5 offline accounting layer (2026-10-07)
 
 The [Part 5 inventory/design](analysis/evidence/PART5.md) and existing

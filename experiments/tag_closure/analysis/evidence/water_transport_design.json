@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "identity": "part6-water-transport-known-answers-v1",
+  "design_sha256_pin": "DESIGN_SHA256 in water_transport_reference.py and design_sha256 in both fixture configs. Integrity only. The hash shows the file is unchanged, not when it was written.",
+  "development_only": true,
+  "qualification": "implementation equations only; no atmospheric or eight-tag qualification",
+  "equation": "d(rho*chi)/dt + div(rho*u*chi) = S_chi",
+  "representation": "native_density_cell_average",
+  "geometry_kind": "column",
+  "precision": "Float64",
+  "units": "kg m^-3",
+  "weight_units": "m",
+  "times_seconds": [0, 3600, 86400],
+  "tags": [
+    {"name": "origin_a", "kind": "region", "partition": true},
+    {"name": "origin_b", "kind": "region", "partition": true},
+    {"name": "overlay", "kind": "source", "partition": false},
+    {"name": "tiny", "kind": "source", "partition": false},
+    {"name": "zero", "kind": "source", "partition": false}
+  ],
+  "source_fractions": {"overlay": 0.2, "tiny": 0.00001, "zero": 0.0},
+  "independent_quadrature_orders": [8, 16, 32],
+  "profile_rules": {
+    "source": "G3_PLAN 6.1 / ROADMAP OD3; engineering tests only in this suite",
+    "first_hour_region_L1": 0.01,
+    "first_hour_source_L1": 0.1,
+    "first_hour_Linf": 0.25,
+    "day_L1": 0.02,
+    "day_Linf": 0.05,
+    "small_share_below": 0.01,
+    "small_absolute_parent_fraction": 0.0002,
+    "floor_max_fraction_of_tolerance": 0.25,
+    "roundoff_multiplier": 128,
+    "ladder_tie": 1e-12,
+    "unapproved_cutoffs": "pending; never inferred from this suite"
+  },
+  "cases": [
+    {"id": "smooth_positive", "kind": "periodic_smooth", "length_m": 1.0, "velocity_m_s": 0.00001, "density_mean": 1.0, "density_amplitude": 0.35, "water_specific": 0.01, "label_amplitude": 0.2, "ladder": "fixed_cfl", "grids": [16, 32, 64], "dt_seconds": [120, 60, 30], "grid_times_dt_seconds": 1920, "newton_iterations": null, "grid_power": 1.0},
+    {"id": "smooth_negative", "kind": "periodic_smooth", "length_m": 1.0, "velocity_m_s": -0.00001, "density_mean": 1.0, "density_amplitude": 0.35, "water_specific": 0.01, "label_amplitude": 0.2, "ladder": "fixed_cfl", "grids": [16, 32, 64], "dt_seconds": [120, 60, 30], "grid_times_dt_seconds": 1920, "newton_iterations": null, "grid_power": 1.0},
+    {"id": "boundary_positive", "kind": "labelled_inflow", "length_m": 1.0, "velocity_m_s": 0.00001, "density_mean": 1.0, "density_amplitude": 0.0, "water_specific": 0.01, "ladder": "fixed_cfl", "grids": [16, 32, 64], "dt_seconds": [120, 60, 30], "grid_times_dt_seconds": 1920, "newton_iterations": null, "grid_power": 1.15, "inflow_origin": "origin_a", "initial_origin": "origin_b", "front_convergence": "L1 only; no smooth-order or Linf convergence requirement"},
+    {"id": "boundary_negative", "kind": "labelled_inflow", "length_m": 1.0, "velocity_m_s": -0.00001, "density_mean": 1.0, "density_amplitude": 0.0, "water_specific": 0.01, "ladder": "fixed_cfl", "grids": [16, 32, 64], "dt_seconds": [120, 60, 30], "grid_times_dt_seconds": 1920, "newton_iterations": null, "grid_power": 1.15, "inflow_origin": "origin_a", "initial_origin": "origin_b", "front_convergence": "L1 only; no smooth-order or Linf convergence requirement"},
+    {"id": "conservative_exchange", "kind": "two_reservoir_exchange", "thickness_m": [1.5, 0.5], "density_kg_m3": [1.1, 0.8], "water_specific": 0.01, "initial_origin_a_fraction": [0.9, 0.1], "exchange_kg_m2_s": 0.0000001, "ladder": "time_step_only", "grids": null, "dt_seconds": [120, 60, 30], "newton_iterations": [1, 2, 4], "reference_solver": "backward Euler with actual Newton residual/Jacobian iterations; linear 2x2 system"}
+  ],
+  "mutation": {"kind": "swap_partition_origins_at_scored_times", "fields": ["origin_a", "origin_b"], "preserve": ["parent", "partition_sum", "source_overlays"], "required_outcome": "total closure passes; origin fails at an approved endpoint"},
+  "excluded_processes": ["sedimentation", "subsidence", "large_scale_forcing", "phase_transfer", "precipitation", "repair", "follower", "clamp", "fallback"],
+  "runtime_status": "No native atmospheric producer is supplied by this design. Actual PX channels require separate measured evidence."
+}
