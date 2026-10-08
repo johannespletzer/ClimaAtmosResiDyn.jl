@@ -111,10 +111,11 @@ end
 end
 
 @testset "Geometric SGS variance parameters" begin
-    # The defaults come from ClimaParams.
+    # The defaults come from ClimaParams. Since ClimaParams 1.3.0 the horizontal
+    # scale factor is 1, so the effective coefficient `c_g c_Δx²` is 1/12.
     for FT in (Float32, Float64)
         sq = CA.ClimaAtmosParameters(FT).sgs_quadrature_params
-        @test CAP.sgs_variance_horizontal_scale_factor(sq) == FT(3)
+        @test CAP.sgs_variance_horizontal_scale_factor(sq) == FT(1)
         @test CAP.sgs_variance_geometric_coeff(sq) == FT(1 // 12)
         @test CAP.sgs_variance_max_rel_std(sq) == FT(0.5)
         @test CAP.sgs_variance_geometric_Ri_factor(sq) == FT(1)
