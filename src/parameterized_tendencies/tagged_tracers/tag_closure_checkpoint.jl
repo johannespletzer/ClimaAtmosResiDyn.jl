@@ -1,5 +1,5 @@
 #####
-##### The closure checks' void flags through a restart
+##### The tag closure checks' void flags through a restart
 #####
 ##### Past `void_above`, a closure check marks this row and every later row of
 ##### its tables with `closure_void = 1`. Each family's flag lives in the cache,

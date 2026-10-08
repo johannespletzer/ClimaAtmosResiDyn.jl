@@ -1,9 +1,11 @@
 # Tagged Water API
 
-The docstrings of the water tags, split from [Tagged Water Tracers](tagged_water.md)
-so that each page stays within Documenter's page size limit. They are rendered
-here so that the `@ref` links in them resolve. Documenter resolves `@ref` only
-against docstrings that a `@docs` block splices into a page.
+This page holds the docstrings of the water tags. [Tagged Water
+Tracers](tagged_water.md) describes what the tags do and how to configure them.
+The docstrings have a page of their own for two reasons. Each page stays within
+Documenter's page size limit. And Documenter resolves `@ref` only against
+docstrings that a `@docs` block splices into a page, so the links in them need
+this page.
 
 ```@docs
 ClimaAtmos.WaterTaggingModel

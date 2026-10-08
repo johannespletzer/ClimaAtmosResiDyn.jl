@@ -22,9 +22,11 @@ parts moved as tracers (the default), and without tags. It checks:
  6. the split solver solves the parts apart, and the audit fills;
  7. the restart guard: a checkpoint with the parts restarts bit for bit with
     the key, and is refused without it;
- 8. under `tracer`, the partition stays bounded;
+ 8. under `tracer`, the partition stays bounded, with the audit switched off
+    (`water_tag_precipitation_audit: false`);
  9. the model's fields are those of the column without tags, bit for bit,
-    under both transports.
+    under both transports;
+ 10. the follow, with its closing step, and the rescale allocate nothing.
 
 A column has no horizontal operators. Item 10, the parts under the horizontal
 operators on a small sphere, is in `tagged_water_precipitation_sphere_integration.jl`,
@@ -36,6 +38,11 @@ import ClimaComms
 ClimaComms.@import_required_backends
 import ClimaAtmos as CA
 include("tagged_water_precipitation_common.jl")
+
+function second_call_allocations(f::F, args::Vararg{Any, N}) where {F, N}
+    f(args...)
+    return @allocated f(args...)
+end
 
 altitude_region(above) = Dict{String, Any}(
     "type" => "tanh_altitude",
@@ -365,15 +372,23 @@ end
         )
     end
 
-    # 8 and 9. The default transport, and the column without tags.
+    # 8 and 9. The default transport, and the column without tags. The audit
+    # is off here, so a run without its fields is covered too.
     tracer = run!(
         build(
-            merge(base_config(), tag_config("tracer")),
+            merge(
+                base_config(),
+                tag_config("tracer"),
+                Dict{String, Any}("water_tag_precipitation_audit" => false),
+            ),
             "water_tags_precipitation_tracer",
         ),
     )
     @testset "The parts under the default transport" begin
-        @test !CA.follows_water_increment(tracer.integrator.p.atmos.water_tagging_model)
+        tracer_model = tracer.integrator.p.atmos.water_tagging_model
+        @test !CA.follows_water_increment(tracer_model)
+        @test !CA.has_water_tag_precipitation_audit(tracer_model)
+        @test !any(CA.is_water_tag_audit_name, propertynames(tracer.integrator.u.c))
         # The same start as the column above, whose rain and snow scale
         # the residuals.
         result = closure(tracer.integrator.u, Y_start)
@@ -431,5 +446,23 @@ end
     @testset "The model's fields do not depend on the parts" begin
         test_parity(Y, plain.integrator.u)
         test_parity(tracer.integrator.u, plain.integrator.u)
+    end
+
+    # 10. Last, since both calls move the tags. The follow runs every time the
+    # state is constrained, and its closing step with it. Each step of the
+    # follow and of the rescale allocates a few small objects per call, not
+    # per cell: on `main` at d3c5e42f, 64 bytes for the follow and 192 for the
+    # rescale, on Julia 1.11. Raising `N` first runs each step twice, so the
+    # counts double, on Julia 1.10 and 1.11. The closing step adds none. A
+    # per-cell allocation
+    # would scale with the column's 30 levels and pass these bounds by far.
+    @testset "The follow and the rescale allocate no more per call" begin
+        ᶜρq_tot_before = copy(Y.c.ρq_tot)
+        follow = second_call_allocations(CA.follow_water_tag_precipitation!, Y, p)
+        rescale =
+            second_call_allocations(CA.rescale_water_tags!, Y, p, ᶜρq_tot_before)
+        @info "Allocations of the follow and the rescale" follow rescale
+        @test follow <= 128
+        @test rescale <= 384
     end
 end

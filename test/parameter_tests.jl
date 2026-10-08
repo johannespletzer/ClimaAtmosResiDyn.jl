@@ -13,6 +13,7 @@ import Thermodynamics as TD
         # Verify sub-components types
         @test params.thermodynamics_params isa CAP.TD.Parameters.ThermodynamicsParameters
         @test params.turbconv_params isa CAP.TurbulenceConvectionParameters
+        @test params.sgs_quadrature_params isa CAP.SGSQuadratureParameters
         @test params.microphysics_cloud_params isa NamedTuple
         @test params.microphysics_cloud_params.liquid isa CAP.CM.Parameters.CloudLiquid
 
@@ -110,21 +111,33 @@ end
 end
 
 @testset "Geometric SGS variance parameters" begin
-    # The horizontal scale factor is the switch for the resolved-gradient variance
-    # term; it must default to 0 so the historical closure is reproduced bitwise.
+    # The defaults come from ClimaParams. The compat bound admits 1.2 and 1.3,
+    # and the minimum-compat test jobs resolve 1.2. ClimaParams 1.3.0 changes
+    # the horizontal scale factor from 3 to 1, so the effective coefficient
+    # `c_g c_Δx²` drops from 9/12 to 1/12.
+    c_Δx_default = pkgversion(CP) >= v"1.3.0" ? 1 : 3
     for FT in (Float32, Float64)
-        tc = CA.ClimaAtmosParameters(FT).turbconv_params
-        @test CAP.sgs_variance_horizontal_scale_factor(tc) == FT(0)
-        @test CAP.sgs_variance_geometric_coeff(tc) == FT(1 // 12)
-        @test CAP.sgs_variance_max_rel_std(tc) == FT(0.5)
+        sq = CA.ClimaAtmosParameters(FT).sgs_quadrature_params
+        @test CAP.sgs_variance_horizontal_scale_factor(sq) == FT(c_Δx_default)
+        @test CAP.sgs_variance_geometric_coeff(sq) == FT(1 // 12)
+        @test CAP.sgs_variance_max_rel_std(sq) == FT(0.5)
+        @test CAP.sgs_variance_geometric_Ri_factor(sq) == FT(1)
+        @test CAP.sgs_liquid_uniform_fraction(sq) == FT(1)
+        @test CAP.sgs_ice_uniform_fraction(sq) == FT(1)
     end
-    # A run toml can enable the term.
+    # A run toml overrides the defaults.
     mktemp() do path, io
         write(
             io,
             """
   [sgs_variance_horizontal_scale_factor]
   value = 2.0
+  type = "float"
+  [sgs_variance_geometric_Ri_factor]
+  value = 0.0
+  type = "float"
+  [sgs_ice_uniform_fraction]
+  value = 0.5
   type = "float"
   """,
         )
@@ -133,8 +146,11 @@ end
             Dict("toml" => [path]),
             job_id = "parameter_test_sgs_variance_scale_factor",
         )
-        tc = CA.ClimaAtmosParameters(config).turbconv_params
-        @test CAP.sgs_variance_horizontal_scale_factor(tc) == 2.0
+        sq = CA.ClimaAtmosParameters(config).sgs_quadrature_params
+        @test CAP.sgs_variance_horizontal_scale_factor(sq) == 2.0
+        @test CAP.sgs_variance_geometric_Ri_factor(sq) == 0.0
+        @test CAP.sgs_ice_uniform_fraction(sq) == 0.5
+        @test CAP.sgs_liquid_uniform_fraction(sq) == 1.0
     end
 end
 

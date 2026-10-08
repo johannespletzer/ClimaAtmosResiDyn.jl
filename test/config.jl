@@ -14,6 +14,32 @@ import ClimaAtmos as CA
     end
 end
 
+@testset "Base-name uniqueness of configuration files" begin
+    configs = String[]
+    for (root, _, files) in walkdir(CA.config_path), f in files
+        endswith(f, ".yml") && push!(configs, joinpath(root, f))
+    end
+    stems = map(f -> first(splitext(basename(f))), configs)
+    # A shipped configuration whose base name appears once, so the assertions
+    # below rest on `is_unique_basename` and not on the contents of `config/`.
+    shipped = configs[findfirst(s -> count(==(s), stems) == 1, stems)]
+    shipped_id = first(splitext(basename(shipped)))
+    # A shipped file is unique with respect to itself.
+    @test CA.is_unique_basename(shipped)
+    @test CA.job_id_from_config_file(shipped) == shipped_id
+    mktempdir() do dir
+        # A file elsewhere that shares a shipped base name is not unique, and
+        # its job id is disambiguated by the full path.
+        clash = joinpath(dir, basename(shipped))
+        touch(clash)
+        @test !CA.is_unique_basename(clash)
+        @test CA.job_id_from_config_file(clash) != shipped_id
+        unique_file = joinpath(dir, "a_base_name_no_shipped_config_uses.yml")
+        touch(unique_file)
+        @test CA.is_unique_basename(unique_file)
+    end
+end
+
 file, io = mktemp()
 config_err = ErrorException("File $(CA.normrelpath(file)) is empty or missing.")
 @test_throws config_err CA.AtmosConfig(file)
@@ -32,11 +58,14 @@ config_err = ErrorException("File $(CA.normrelpath(file)) is empty or missing.")
     @test isempty(missing_value)
 end
 
-# Config files whose keys are already out of step with the schema. All three
-# come from upstream ClimaAtmos and predate this test; each sets keys the model
-# no longer reads, so those settings do nothing. Renaming them to whatever was
-# meant would change what the job runs, so they are recorded here rather than
-# quietly repaired. Do not add to this list -- fix the config instead.
+# Config files whose keys are already out of step with the schema. All four
+# come from upstream ClimaAtmos. Each sets keys the model no longer reads, so
+# those settings do nothing. Renaming them to whatever was meant would change
+# what the job runs, so they are recorded here rather than quietly repaired.
+# Upstream #4847 added the `_latent_` file as a copy of
+# `single_column_beres_nogw_test`, stale keys included. It is exempt like its
+# parent, so the fork's copy stays identical to upstream's. Do not add a config
+# of the fork's own to this list -- fix the config instead.
 #
 # The exemption is checked, not blanket. The testset below asserts that each
 # name here still names a config file and that the file still sets keys outside
@@ -45,6 +74,7 @@ end
 const KNOWN_STALE_CONFIGS = Set([
     "rcemipii_box_CRM_1M",          # moist, precip_model, surface_temperature
     "single_column_beres_nogw_test", # implicit_sgs_*
+    "single_column_beres_nogw_latent_test", # implicit_sgs_*
     "bm_default",                    # perf_summary
 ])
 

@@ -740,7 +740,7 @@ function default_diagnostics(
             ],
         )
     end
-    # The repair ledgers are running totals too, so they are sampled like the
+    # The fix ledgers are running totals too, so they are sampled like the
     # records. Without them a run with the repair on cannot say how much energy
     # the repair moved between the tags, or where. With the repair off they are
     # zero, so they are left out.
@@ -755,8 +755,7 @@ function default_diagnostics(
         )
     end
     # The water tags' microphysics audit is a running total too.
-    if !isnothing(water_tagging_model) &&
-       has_water_tag_precipitation(water_tagging_model)
+    if has_water_tag_precipitation_audit(water_tagging_model)
         for tag in water_tagging_model.tags
             name = tag_name(tag)
             append!(record_diagnostics, ["q_rtag_aud_$name", "q_stag_aud_$name"])

@@ -4,9 +4,9 @@
 ##### A record says what one process did, not where the energy or water present
 ##### came from. Each recorded process is one center field in `Y.c`, named
 ##### `prc_e_<process>` for energy and `prc_q_<process>` for water.
-##### The bracket around a process differences `Yₜ.c.ρe_tot` and `Yₜ.c.ρq_tot`,
-##### which gives a rate. A record adds that rate to its own tendency, and the
-##### timestepper integrates it. Records are prognostic but not transported, and
+##### An applied-update event around a process differences `Yₜ.c.ρe_tot` and
+##### `Yₜ.c.ρq_tot`, which gives the process's tendency. A record adds that
+##### tendency to its own, and the timestepper integrates it. Records are prognostic but not transported, and
 ##### they are carried through a restart. See `docs/src/process_record.md`.
 
 # ============================================================================
@@ -116,7 +116,7 @@ These are separate from the tags' own snapshot buffers on purpose. A record can
 be configured without any tags, and giving it its own buffers keeps the two
 features independent rather than making one depend on the other being enabled.
 
-The implicit path is bracketed too, so these can hold `ForwardDiff.Dual`
+The implicit path has the same events, so these can hold `ForwardDiff.Dual`
 numbers, which is why they live in `p.scratch`: it is dual-converted.
 """
 process_record_scratch(Y, atmos::AtmosModel) = (;
@@ -137,8 +137,8 @@ process_record_scratch(Y, atmos::AtmosModel) = (;
 """
     snapshot_process_record!(p, Yₜ, source::Symbol)
 
-Record the current `Yₜ.c.ρe_tot` and `Yₜ.c.ρq_tot` in `p.scratch`, opening a
-process-record bracket. A no-op for a process no record lists, and when neither
+Record the current `Yₜ.c.ρe_tot` and `Yₜ.c.ρq_tot` in `p.scratch`, opening an
+applied-update event for the process. A no-op for a process no record lists, and when neither
 record is configured.
 
 Paired with [`accumulate_process_record!`](@ref). On the explicit path it is
@@ -170,10 +170,10 @@ end
 """
     accumulate_process_record!(Yₜ, p, source::Symbol)
 
-Close a bracket opened by [`snapshot_process_record!`](@ref): add the increment
-the bracketed process applied to `ρe_tot` and `ρq_tot` to that process's record.
+Close the applied-update event opened by [`snapshot_process_record!`](@ref).
+Add the process's tendency of `ρe_tot` and `ρq_tot` to that process's record.
 
-The increment is signed. A process that cools drives its energy record negative,
+The tendency is signed. A process that cools drives its energy record negative,
 which is the point of the diagnostic.
 
 A no-op for a process no record lists, and when neither record is configured.
@@ -207,12 +207,12 @@ function _accumulate_water_record!(Yₜ, p, source, model::ProcessRecordModel)
     return nothing
 end
 
-# Whether any process in this record matches `source`. Cheap, and it keeps a
-# bracket for an unrecorded process from copying a whole field into scratch.
+# Whether any process in this record matches `source`. Cheap, and it keeps an
+# event for an unrecorded process from copying a whole field into scratch.
 _records_process(model::ProcessRecordModel, source::Symbol) =
     any(p -> process_name(p) === source, model.processes)
 
-# `ᶜΔ` is a difference of two tendencies, so it is a rate. Adding it to the
+# `ᶜΔ` is a difference of two tendencies, so it is the process's tendency. Adding it to the
 # record's own tendency hands the integration to the timestepper, which weights
 # every stage correctly. Accumulating it into a plain field instead would sum
 # rates and give a total proportional to the number of tendency evaluations.

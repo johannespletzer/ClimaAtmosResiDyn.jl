@@ -1,41 +1,16 @@
 #####
 ##### Energy source tags
 #####
-##### Each tag adds one grid-scale prognostic field `Y.c.ρe_src_<name>` holding
-##### part of the total moist energy `ρe_tot`. The `energy_source_tags` config
-##### key switches them on. Types live in `types.jl` and config parsing in
-##### `config/tracer_config.jl`. The physics is written up in
-##### `docs/src/energy_source_tags.md`.
-#####
-##### This is the energy counterpart of the water tags in `tagged_water.jl`, and
-##### it is a different quantity from `ρe_tag_*` in `tagged_tracers.jl`. A source
-##### tag holds energy that is present now, traced back to where it came from,
-##### which holds only where the partitioned total is positive and the tag is
-##### non-negative. That total is `ρe_tot`, or `ρe_tot + c·ρ` under an offset.
-##### An `ρe_tag_*` tag configured with `source` is a signed process tag: it
-##### holds the signed increment one process applied. That is not the same as
-##### the process-change record, which is the separate `prc_*` family in
-##### `process_record.jl`. Both are useful; they answer different questions.
-#####
-##### This file carries the state, the masks, the transport hook-up and the
-##### attribution rule. Production is shared out by region mask and loss is
-##### taken from each tag in proportion to what it already holds, which is what
-##### makes a tag an amount of energy present rather than a running total. A
-##### partition of region tags closes under pure dynamics, and the rule is
-##### built to keep that true once sources and sinks are attributed.
-#####
-##### `energy_source_tag_offset` gives the tags a total the model never uses,
-##### `ρe_tot + c·ρ`, which can be positive where `ρe_tot` is not. Every place
-##### below that reads the parent goes through `energy_source_parent` or one of
-##### its field forms, so without an offset the arithmetic is exactly as before.
-#####
-##### Tag names are ρ-weighted, so `gs_tracer_names(Y)` picks them up and the
-##### usual tracer machinery supplies advection, hyperdiffusion, sponges,
-##### vertical eddy diffusion and the implicit-Jacobian blocks. Leave transport
-##### to that machinery. Attributing it here would count it twice.
-#####
-##### Masks are static in space. Evaluate them once when building the cache,
-##### outside any per-timestep broadcast.
+##### Transported fields `Y.c.ρe_src_<name>` that split the total `ρe_tot + c·ρ`
+##### by where the energy present now came from. `energy_source_tags` switches
+##### them on, and `c` is `energy_source_tag_offset`. Production goes by region
+##### mask. Loss comes out of every tag in proportion to what it holds, which
+##### makes a tag an amount of energy and not a running total. This is not the
+##### signed `ρe_tag_*` family (`tagged_tracers.jl`) or the `prc_*` process
+##### records (`process_record.jl`). Tag names are ρ-weighted, so the tracer
+##### machinery transports them. Masks are static and built once with the cache.
+##### Types are in `types.jl` and config parsing in `config/tracer_config.jl`.
+##### Reference: `docs/src/energy_source_tags.md`.
 
 # ============================================================================
 # Names and state
@@ -121,8 +96,8 @@ other grid-scale variables. Returns `(;)` when energy source tagging is disabled
 
 `ρe_parent` is the total the tags partition, from `energy_source_parent`:
 `ρe_tot`, or `ρe_tot + c·ρ` with an offset. Initial values come from
-`tag_initial_value`, so a pure region tag starts as its masked share of that
-total and a tag carrying a source starts at zero.
+`tag_initial_value`, so a region tag starts as its masked share of that total and
+a source tag starts at zero.
 """
 energy_source_tagging_variables(ρe_parent, local_geometry, ::Nothing) = (;)
 energy_source_tagging_variables(
@@ -140,27 +115,27 @@ _energy_source_variables(ρe_parent, coord, tags::Tuple) = merge(
 """
     energy_source_parent(ρe_tot, ρ, model)
 
-The total the energy source tags partition at one point: `ρe_tot` itself, or
-`ρe_tot + c·ρ` when `model` carries an offset `c` in J/kg.
+Return the total the energy source tags partition at one point.
 
-The model never uses this total. Only the tags see it, so an offset changes what
-they split and leaves the simulated atmosphere exactly as it was. That is the
-reason for it. `ρe_tot` has no physical zero, and under the default energy
-reference it is negative over much of a typical domain, where the donor share
-`ρe_src_k / ρe_tot` is undefined. A large enough `c` makes the total positive
-everywhere without moving the thermodynamic reference, which would reach the
-model's own numerics. See `docs/src/energy_source_tags.md`.
+That is `ρe_tot` itself, or `ρe_tot + c·ρ` when `model` carries an offset `c` in
+J/kg. Only the tags see this total. The model never uses it, so an offset
+changes what the tags split and leaves the simulated atmosphere as it is.
+
+`ρe_tot` has no physical zero. Under the default energy reference it is
+negative over much of a typical domain, where the share `ρe_src_k / ρe_tot` is
+undefined. A large enough `c` makes the total positive everywhere without moving
+the thermodynamic reference, which would reach the model's own numerics. See
+`docs/src/energy_source_tags.md`.
 
 `c·ρ` is energy carried by mass, so a process that changes `ρ` changes the total
-by `c` times that change. The attribution bracket counts it for the processes it
-covers, which are the labels in `KNOWN_TAG_SOURCES`. A process that writes
-`Yₜ.c.ρ` under any other label, or under none, moves the offset total without
-reaching a tag, and that difference lands in `e_src_res`. Vertical diffusion,
-the viscous sponge, the LES SGS closures and hyperdiffusion are all in that
-group, so the residual carries a `c`-proportional term wherever they are active
-that it did not carry without an offset. A constant per unit mass does pass
-unchanged through transport that is consistent with the mass flux, and through
-limiters built on differences.
+by `c` times that change. The attribution counts it for the processes it covers,
+which are the labels in `KNOWN_TAG_SOURCES`. A process that writes `Yₜ.c.ρ`
+under any other label, or under none, moves the offset total without reaching a
+tag. That difference lands in `e_src_res`. Vertical diffusion, the viscous
+sponge, the LES SGS closures and hyperdiffusion are in that group, so the
+residual carries a term proportional to `c` wherever they are active. A constant
+per unit mass passes unchanged through transport that is consistent with the
+mass flux, and through limiters built on differences.
 """
 @inline energy_source_parent(ρe_tot, ρ, ::Nothing) = ρe_tot
 @inline energy_source_parent(ρe_tot, ρ, model::EnergySourceTaggingModel) =
@@ -182,9 +157,9 @@ energy_source_tag_state_names(model::EnergySourceTaggingModel) =
 """
     energy_source_region_tag_state_names(model::EnergySourceTaggingModel)
 
-`Tuple` of the state-field `Symbol`s of the pure region tags: those with a
-region and no sources. These are the tags whose sum is expected to track
-`ρe_tot`, so they are what the closure residual is summed over.
+`Tuple` of the state-field `Symbol`s of the region tags, those with a region and
+no sources. Their sum is expected to track the total they partition, so the
+closure residual is summed over them.
 """
 energy_source_region_tag_state_names(model::EnergySourceTaggingModel) = Tuple(
     Symbol(:ρe_src_, tag_name(tag)) for
@@ -207,9 +182,9 @@ is_energy_source_tag_name(name::MatrixFields.FieldName) =
 `Tuple` of `@name`s (relative to `Y.c`) of the energy source tags, when some
 species sediments, and `()` otherwise. They fall with their shares of each
 species' energy flux (`sediment_energy_source_tags!`), so with the split solver
-their Jacobian rows carry cross blocks to each sedimenting mass (G4.16). Used
-by both the block allocation and the update, as `sedimenting_water_tag_names`
-is for the water tags.
+their Jacobian rows carry cross blocks to each sedimenting mass. The block
+allocation and the update both use it, as they use `sedimenting_water_tag_names`
+for the water tags.
 """
 sedimenting_energy_source_tag_names(Y) =
     isempty(sedimenting_mass_names(Y)) ? () :
@@ -222,8 +197,8 @@ const ENERGY_SOURCE_LEDGER_NAMES = (:e_src_inc_left, :e_src_inc_moved)
     energy_source_increment_ledger_variables(ρe_parent, model)
 
 The increment ledger of [`correct_energy_source_increment!`](@ref), for a single
-grid point, as zeros of the type of `ρe_parent`. Only under
-`energy_source_tag_transport: enthalpy_increment`, and `(;)` otherwise:
+grid point, as zeros of the type of `ρe_parent`. It exists only under
+`energy_source_tag_transport: enthalpy_increment`, and is `(;)` otherwise:
 
   - `e_src_inc_left`: the energy the correction has left out of the tags, in
     J/m³, since the start of the run. In each column it sums to the part of the
@@ -237,10 +212,10 @@ grid point, as zeros of the type of `ρe_parent`. Only under
     their lag behind the parent's other implicit terms.
 
 Both are prognostic, so the stepper weights each stage's entry as it weights
-the tags. They record what the correction intends. A face whose donor cell has
-no share of the partition moves no tag, so there a cell's actual change
-differs, and the difference lands in `e_src_res` but in neither field. The
-column totals are right.
+the tags. They record what the correction intends. A face whose upwind cell has
+no share of the region tags moves no tag. There a cell's actual change differs,
+and the difference lands in `e_src_res` but in neither field. The column totals
+are right.
 
 Like the process records, their names carry no `ρ` prefix. So `gs_tracer_names`
 and `is_tracer_var` skip them, and no transport or limiter reaches them. They
@@ -290,16 +265,16 @@ when they are disabled. Contains:
   - `ᶜenergy_source_fix`: one center `Field` per tag, accumulating the energy
     that `repair_energy_source_tags!` has moved into or out of it. It is
     reported as `e_src_fix_<name>`. It lives in the cache, and a checkpoint
-    carries it, as it carries the water tags' repair ledger (WP6, step 3).
+    carries it, as it carries the water tags' fix ledger.
   - `ᶜenergy_source_pos` and `ᶜenergy_source_neg`: the positive and negative
     parts of the partition's sum, which the repair fills itself.
   - `ᶠenergy_source_interior`: one on every face but the bottom one, where it
-    is zero. `sediment_energy_source_tags!` uses it to keep the lowest cell as
-    the donor at the surface, where there is no cell below.
-  - `energy_source_partition_deviation`: how far the masks of the pure region
-    tags are from summing to 1, a number
-    ([`energy_source_partition_deviation`](@ref)). The throughput and the
-    flush are read only where it is within
+    is zero. `sediment_energy_source_tags!` uses it to keep the lowest cell's
+    shares at the surface, where there is no cell below.
+  - `energy_source_partition_deviation`: how far the masks of the region tags
+    are from summing to 1, a number
+    ([`energy_source_partition_deviation`](@ref)). The source throughput and
+    the flush are read only where it is within
     [`energy_source_partition_tolerance`](@ref).
   - Under `energy_source_tag_transport: enthalpy_increment` only, the fields of
     `snapshot_energy_source_increment!` and `correct_energy_source_increment!`:
@@ -328,10 +303,10 @@ function _energy_source_tagging_cache(Y, model::EnergySourceTaggingModel)
     )
     _check_parent_positivity(Y, model)
     _check_sedimentation_offset(Y, model)
-    # The repair ledger exists whether or not the repair is on, so that
+    # The fix ledger exists whether or not the repair is on, so that
     # `e_src_fix_<name>` reads zero rather than failing when it is off.
     ᶜenergy_source_fix = _energy_source_fix_fields(Y.c.ρ, model.tags)
-    # Its gross twin and count, in Float64 (`tag_throughput.jl`).
+    # Its gross and count, beside the ledger, in Float64 (`tag_throughput.jl`).
     ᶜenergy_source_fix_gross = tag_throughput_fields(Y.c.ρ, model.tags)
     ᶜenergy_source_fix_count = tag_throughput_fields(Y.c.ρ, model.tags)
     ᶜenergy_source_pos = zero.(Y.c.ρ)
@@ -356,22 +331,21 @@ end
 """
     energy_source_partition_tolerance(FT)
 
-How far the masks of the pure region tags may sum from 1 for them to count as
-a verified partition: 100 rounding units of `FT`, 2.2e-14 in Float64 and
-1.2e-5 in Float32. It is the level above which `enthalpy_increment` refuses
-the masks, as the water tags' follower does
-(`water_increment_partition_tolerance`). A region and its complement sum to 1
-within a few rounding units.
+How far the masks of the region tags may sum from 1 for them to count as a
+verified partition: 100 rounding units of `FT`, 2.2e-14 in Float64 and 1.2e-5 in
+Float32. It is the level above which `enthalpy_increment` refuses the masks, as
+the water tags' increment transport does (`water_increment_partition_tolerance`).
+A region and its complement sum to 1 within a few rounding units.
 """
 energy_source_partition_tolerance(::Type{FT}) where {FT} = 100 * eps(FT)
 
 """
     energy_source_partition_deviation(ᶜmasks, names, ᶜρ)
 
-How far the pure region tags are from a partition of unity: the largest
+How far the region tags are from a partition of unity: the largest
 `|Σᵢ Mᵢ - 1|` over the domain, reduced across processes, for the masks in
-`ᶜmasks` of the tags `names`. It is `1` without a pure region tag, where the sum
-is zero. `ᶜρ` gives the float type and the processes. The cache keeps it; see
+`ᶜmasks` of the tags `names`. It is `1` without a region tag, where the sum is
+zero. `ᶜρ` gives the float type and the processes. The cache keeps it. See
 [`energy_source_partition_verified`](@ref).
 """
 function energy_source_partition_deviation(ᶜmasks, names, ᶜρ)
@@ -388,9 +362,9 @@ end
     energy_source_partition_verified(deviation)
     energy_source_partition_verified(tagging)
 
-Whether the masks of the pure region tags are a verified partition: they sum
-to 1 everywhere within [`energy_source_partition_tolerance`](@ref). Only then
-does the throughput count each unit of source energy once
+Whether the masks of the region tags are a verified partition: they sum to 1
+everywhere within [`energy_source_partition_tolerance`](@ref). Only then does
+the source throughput count each unit of source energy once
 ([`energy_source_throughput`](@ref)), and only then is `e_src_led_src_res` the
 loss rule's flush of the residual. A strict subset counts too little, and an
 overlap too much. The second form reads the deviation the cache keeps.
@@ -400,9 +374,8 @@ energy_source_partition_verified(deviation::Real) =
 energy_source_partition_verified(tagging) =
     energy_source_partition_verified(tagging.energy_source_partition_deviation)
 
-# With updraft copies, a work field for the copies' mirrors
-# (`energy_source_copy_mirrors.jl`): the partition's copies' sum, and each
-# tag's share in the surface relaxation.
+# With updraft copies, a work field for the copies' updates
+# (`energy_source_copy_mirrors.jl`): the sum of the region tags' copies.
 _energy_source_copy_cache(Y, model) =
     has_energy_source_updraft_copies(model) ?
     (; ᶜenergy_source_copy_sum = zero.(Y.c.ρ)) : (;)
@@ -423,9 +396,9 @@ function _check_increment_partition(ᶜmasks, names, model)
         maximum(abs.(mask_sum .- 1)),
         getproperty(ᶜmasks, first(names)),
     )
-    # 100 rounding units, as the water tags' follower allows
-    # (`water_increment_partition_tolerance`): a region and its complement sum
-    # to 1 within a few; a gap the size of the closure tolerance does not pass.
+    # 100 rounding units, as the water tags' increment transport allows
+    # (`water_increment_partition_tolerance`). A region and its complement sum
+    # to 1 within a few. A gap the size of the closure tolerance does not pass.
     deviation > energy_source_partition_tolerance(eltype(mask_sum)) && error(
         "`energy_source_tag_transport: enthalpy_increment` needs region tags \
         that partition the domain, and the masks of these sum to 1 only to \
@@ -441,7 +414,7 @@ end
 """
     check_energy_source_exchange_partition(cache, atmos)
 
-Refuse the exchange of provenance at the sub-grid mass flux without region tags
+Refuse the exchange of composition at the sub-grid mass flux without region tags
 that partition the domain. The exchange (`sgs_exchange_of_energy_source_tags!`)
 runs under `PrognosticEDMFX` with the SGS mass flux on and without updraft
 copies. A tag's share there is its value over the sum of the region tags without
@@ -471,7 +444,7 @@ function _check_exchange_partition(
              or `inside: false`, or set `energy_source_tag_updraft_copy: true`, \
              whose copies need no partition."
     isempty(names) && error(
-        "The energy source tags exchange provenance at the updraft's mass \
+        "The energy source tags exchange composition at the updraft's mass \
         flux under `turbconv: prognostic_edmfx`, and a tag's share there is \
         its value over the sum of the region tags without sources. These \
         tags have none, so the exchange would do nothing. $advice",
@@ -482,7 +455,7 @@ function _check_exchange_partition(
     )
     deviation = maximum(abs.(mask_sum .- 1))
     deviation > 0.01 && error(
-        "The energy source tags exchange provenance at the updraft's mass \
+        "The energy source tags exchange composition at the updraft's mass \
         flux under `turbconv: prognostic_edmfx`, and a tag's share there is \
         its value over the sum of the region tags without sources. Their \
         masks sum to 1 only to within $deviation. Where they leave a gap, \
@@ -519,7 +492,7 @@ _energy_source_fix_fields(ᶜρ, tags::Tuple) = merge(
     energy_source_scratch(Y, model, atmos)
 
 Scratch fields of the energy source tags, merged into `p.scratch`: the
-bracket's snapshot of `Yₜ.c.ρe_tot`, the partition-share denominator that
+snapshot of `Yₜ.c.ρe_tot` before each attributed process, the share denominator that
 sedimentation divides by, the two face fluxes of `E` that the tags share under
 `PrognosticEDMFX`, and with an offset also a snapshot of `Yₜ.c.ρ` and a field
 the closure check fills with the offset total. Where the exchange at the mass
@@ -567,8 +540,8 @@ function _energy_source_exchange_scratch(
         ᶜe_src_energy_ratio = similar(Y.c.ρ),
     )
 end
-# The cell-center scratch alone: the bracket's snapshots, the share
-# denominator and the offset total. It needs no face space.
+# The cell-center scratch alone: the snapshots, the share denominator and the
+# offset total. It needs no face space.
 energy_source_cell_scratch(ᶜρ, ::Nothing) =
     (; ᶜe_src_snapshot = similar(ᶜρ), ᶜe_src_share_norm = similar(ᶜρ))
 energy_source_cell_scratch(ᶜρ, offset) = (;
@@ -603,31 +576,30 @@ The energy source family's own columns of the audit table, beside those
 [`tag_audit`](@ref) writes for every family:
 
   - `source_negative`, `source_negative_relative`: the integral of the negative
-    parts of the tags that carry a source, in J, and over `scale`. The closure
-    residual does not see those tags at all, so this is where a source tag going
-    negative shows;
-  - `source_minimum`: the smallest value of any tag that carries a source, per
-    unit mass, in J/kg, over the whole domain, or `NaN` when there is none;
+    parts of the source tags, in J, and over `scale`. The closure residual does
+    not see those tags, so this is where a source tag going negative shows;
+  - `source_minimum`: the smallest value of any source tag, per unit mass, in
+    J/kg, over the whole domain, or `NaN` when there is none;
   - `repair_moved`, `repair_moved_relative`: the integral over all tags of the
     absolute value of what the repair has moved since the start of the run,
     in J, and over `scale`. Gross over the cells, net over time.
   - `repair_gross`, `repair_gross_relative`, `repair_events`: the same from the
-    ledger's gross twin, gross over time too, and the number of cell-events
-    (`tag_throughput.jl`). Zero with the repair off. At
-    `update_constrain_state_every: stage` or `dss` the repair ledger also counts
-    the in-step repairs the stepper discards; see `repair_energy_source_tags!`.
+    gross beside the ledger, which sums absolute values over time too, and the
+    number of cell-events (`tag_throughput.jl`). Zero with the repair off. At
+    `update_constrain_state_every: stage` or `dss` the fix ledger also counts
+    the in-step repairs the stepper discards. See `repair_energy_source_tags!`.
   - under `energy_source_tag_transport: enthalpy_increment` only, the integrals
     of the increment ledger since the start of the run, in J:
     `increment_left`, what it left out of the tags, which is signed and lands
     in the closure residual; `increment_left_net_abs`, the sum over the cells of
     the absolute value of each cell's ledger; and `increment_moved_net_abs`, the
     same for what it moved between levels. Both are net over time in each cell,
-    as the water tags' are: not a throughput. Each also over `scale`. See
-    [`energy_source_increment_ledger_variables`](@ref).
+    as the water tags' are, so neither is a source throughput. Each is also given
+    over `scale`. See [`energy_source_increment_ledger_variables`](@ref).
   - per state ledger, what the accepted steps retained, what its writers
     attempted, and the events, and for each tag's own ledgers the ratios to
     the tag's energy, to its absolute burden and to
-    `energy_source_ledger_parent_scale` (`tag_ledger_audit`, WP6 step 3).
+    `energy_source_ledger_parent_scale` (`tag_ledger_audit`).
 
 Every reduction is collective, so every process must call it.
 """
@@ -680,12 +652,12 @@ function energy_source_audit(Y, p, model::EnergySourceTaggingModel, scale)
         repair_gross_relative = per_scale(repair_gross),
         repair_events = tag_event_total(p.tagging.ᶜenergy_source_fix_count),
         _energy_source_ledger_audit(Y, ᶜtmp, model, per_scale)...,
-        # OD4's scale, where each tag keeps its source ledger, and whether the
-        # partition makes it exact.
+        # The source throughput, where each tag keeps its source ledger, and
+        # whether the region tags make it exact.
         _energy_source_throughput_column(throughput, p.tagging)...,
         # Per state ledger, retained, attempted and events, and each tag's own
         # ledgers against its energy, its burden and the parent scale, where
-        # kept (WP6, step 3).
+        # kept.
         tag_ledger_audit(
             Y,
             p,
@@ -698,9 +670,9 @@ function energy_source_audit(Y, p, model::EnergySourceTaggingModel, scale)
 end
 
 # The columns `source_partition_valid` and `source_throughput`: whether the
-# pure region tags' masks are a verified partition, 1 or 0, and OD4's scale,
-# cumulative since the start of the run (`energy_source_throughput`). The sum
-# counts each source increment once only on a verified partition, so the
+# region tags' masks are a verified partition, 1 or 0, and the source
+# throughput, cumulative since the start of the run (`energy_source_throughput`).
+# The sum counts each source increment once only on a verified partition, so the
 # throughput is `NaN` elsewhere. No columns without the throughput.
 _energy_source_throughput_column(::Nothing, tagging) = (;)
 function _energy_source_throughput_column(throughput, tagging)
@@ -715,22 +687,20 @@ end
     energy_source_ledger_parent_scale(Y, throughput)
 
 The energy source tags' parent scale for their own ledgers' ratios and
-small-tag bound: OD4's gross source throughput, `throughput`, from
-`energy_source_throughput`. The tags keep it whenever they keep ledgers
-per tag, so it is there wherever the ratios are. Where the pure region tags'
-masks are not a verified partition, it is still what the partition's tags took
-from the sources, and serves as a scale. It is then not the whole throughput,
-and the audit writes `source_throughput` as `NaN`.
+small-tag bound: the source throughput, `throughput`, from
+`energy_source_throughput`. The tags keep it whenever they keep ledgers per tag,
+so it is there wherever the ratios are. Where the region tags' masks are not a
+verified partition, it is still what the region tags took from the sources, and
+it serves as a scale. It is then not the whole source throughput, and the audit
+writes `source_throughput` as `NaN`.
 
-Where `throughput` is `nothing`, the interim the owner set before it existed:
-the process records' amounts, `Σₚ ∫|prc_e_p|` over the recorded processes, or
-`NaN` without energy process records. The interim is an estimate, not a bound.
-Each record is net over time in each cell, and the throughput nets the
-processes against each other within a step, so either can be the larger. On
-the tag-closure experiments' D4 column the exact throughput was 6% below it
-(their E84). The scale is not `∫(ρe_tot + c·ρ)`: that depends on the offset
-`c`, and it is so large that the small-tag bound would pass over most source
-tags. Collective, as `sum` is.
+Where `throughput` is `nothing`, the scale is the process records' amounts,
+`Σₚ ∫|prc_e_p|` over the recorded processes, or `NaN` without energy process
+records. That is an estimate, not a bound. Each record is net over time in each
+cell, and the source throughput nets the processes against each other within a
+step, so either can be the larger. The scale is not `∫(ρe_tot + c·ρ)`. That
+depends on the offset `c`, and it is so large that the small-tag bound would
+pass over most source tags. Collective, as `sum` is.
 """
 energy_source_ledger_parent_scale(Y, throughput) = Float64(throughput)
 function energy_source_ledger_parent_scale(Y, ::Nothing)
@@ -758,11 +728,10 @@ function _energy_source_ledger_columns(Y, ᶜtmp, per_scale)
     )
 end
 
-# The donor share `φ_k = ρe_src_k / ρe_tot` needs a positive parent to mean
-# anything. Moist total energy has no physical zero, so a shifted thermodynamic
-# or gravitational reference can put part of the domain at or below it, and
-# there the shares are undefined and `energy_source_fraction` returns zero
-# instead.
+# The share `φ_k = ρe_src_k / ρe_tot` needs a positive parent to mean anything.
+# Moist total energy has no physical zero, so a shifted thermodynamic or
+# gravitational reference can put part of the domain at or below it. There the
+# shares are undefined and `energy_source_fraction` returns zero instead.
 #
 # This runs unconditionally at initialization, because nothing else will say so.
 # The closure check reports `nonpositive_fraction` every time it fires, but it
@@ -796,7 +765,7 @@ function _check_parent_positivity(Y, model)
     @warn(
         "$parent is non-positive over $(fraction * 100)% of the domain " *
         "volume at initialization. The energy source tags divide by it to get " *
-        "each tag's donor share, so the shares are undefined there and " *
+        "each tag's share, so the shares are undefined there and " *
         "`energy_source_fraction` returns zero rather than a meaningful " *
         "number. Moist total energy has no physical zero, so this usually " *
         "means the chosen thermodynamic or gravitational reference puts part " *
@@ -816,21 +785,21 @@ end
 """
     energy_source_fraction(ρe_src, ρe_tot)
 
-The donor share `φ = ρe_src / ρe_tot` of a tag in the local moist energy,
-clamped to `[0, 1]` and defined to be zero where `ρe_tot` is not positive.
+The share `φ = ρe_src / ρe_tot` of a tag in the local moist energy, clamped to
+`[0, 1]` and zero where `ρe_tot` is not positive. The attribution hands losses
+to the tags in proportion to it.
 
 This is the energy counterpart of `water_tag_fraction`, and the two share the
 same weakness for different reasons. Total water has a physical zero, so a cell
-with `ρq_tot ≤ 0` is a numerical artifact, though not a rare one: nothing in the
-model enforces the bound and a sphere run routinely has it over part of its
-volume. Moist total energy has no physical zero at all, because it depends on
-the chosen thermodynamic and gravitational reference, and a shift of that
-reference can put a whole region below zero at once. The
-fallback below keeps the arithmetic finite in either case, but it does not make
-the answer meaningful. A configuration whose `ρe_tot` goes non-positive anywhere
-is one whose source shares cannot be interpreted there, and the run reports that
-through `e_src_res` and through the `nonpositive_fraction` column of its closure
-table rather than silently.
+with `ρq_tot ≤ 0` is a numerical artifact, though not a rare one. The model does
+not enforce the bound by default, and a sphere run routinely has it over part of
+its volume. Moist total energy has no physical zero at all, because it depends
+on the chosen thermodynamic and gravitational reference. A shift of that
+reference can put a whole region below zero at once. The fallback keeps the
+arithmetic finite in either case, but it does not make the answer meaningful.
+Where `ρe_tot` is not positive, the source shares cannot be interpreted. The run
+reports that through `e_src_res` and through the `nonpositive_fraction` column
+of its closure table.
 
 With `energy_source_tag_offset` the second argument is the offset total
 `ρe_tot + c·ρ` rather than `ρe_tot`; see `energy_source_parent`.
@@ -842,8 +811,8 @@ With `energy_source_tag_offset` the second argument is the offset total
 """
     snapshot_energy_source_tags!(p, Yₜ)
 
-Record the current `Yₜ.c.ρe_tot` in `p.scratch`, opening an attribution bracket
-for the energy source tags, and with an offset `Yₜ.c.ρ` as well. A no-op when
+Record the current `Yₜ.c.ρe_tot` in `p.scratch`, and with an offset `Yₜ.c.ρ` as
+well. This opens an applied-update event for the energy source tags. A no-op when
 they are disabled.
 
 Paired with [`attribute_energy_source_tags!`](@ref). This uses its own buffers
@@ -870,37 +839,37 @@ end
 """
     attribute_energy_source_tags!(Yₜ, Y, p, source::Symbol)
 
-Close a bracket opened by [`snapshot_energy_source_tags!`](@ref): compute the
-increment `Δ = Yₜ.c.ρe_tot - snapshot` produced by the bracketed process
-(labeled `source`) and add `M_k·Δ⁺ - φ_k·Δ⁻` to each tag's tendency, where `M_k`
-is the tag's mask and `φ_k` its donor share of the local moist energy.
+Close the applied-update event opened by [`snapshot_energy_source_tags!`](@ref).
+Compute the process's tendency `Δ = Yₜ.c.ρe_tot - snapshot` for the process
+labeled `source`, and add `M_k·Δ⁺ - φ_k·Δ⁻` to each tag's tendency. `M_k` is the
+tag's mask and `φ_k` its share of the local moist energy.
 
-With an offset `c` the increment is that of the offset total instead,
+With an offset `c` the tendency is that of the offset total instead,
 `Δ + c·(Yₜ.c.ρ - ρ snapshot)`, and `φ_k` is the share of `ρe_tot + c·ρ`. A
 process that moves mass then moves the offset energy that mass carries, so the
-region tags still account for the whole increment.
+region tags still account for the whole tendency.
 
-Production reaches a tag only when it lists `source`; pure region tags list none
-and so receive every process. Loss reaches **every** tag, whatever it lists,
-because energy leaves in proportion to what is actually present. That asymmetry
-is what makes a tag an amount rather than a running total. It is the same rule
-the water tags use, and the opposite of the `ρe_tag_*` family, which applies the
-whole signed increment by mask.
+Production reaches a tag only when it lists `source`. Region tags list none, so
+they receive every process. Loss reaches **every** tag, whatever it lists,
+because energy leaves in proportion to what is present. That asymmetry makes a
+tag an amount and not a running total. The water tags use the same rule. The
+`ρe_tag_*` family does the opposite and applies the whole signed tendency by
+mask.
 
-This step does not keep a tag non-negative. What it produces is a tendency: the
-loss term sets the *rate* a tag is depleted at, in proportion to what it holds,
-but the timestepper integrates that over a finite step and the amount removed is
+This step does not keep a tag non-negative. It produces a tendency. The loss
+term sets the *rate* at which a tag is depleted, in proportion to what it holds.
+The timestepper integrates that over a finite step, and the amount removed is
 roughly `dt * φ_k * Δ⁻`. Nothing here bounds that by the holding. Where the
 total is not positive the share is undefined and
-[`energy_source_fraction`](@ref) returns zero, so no loss is attributed there at
-all. The tags are also exempt from both tracer limiters and ride the unlimited
-explicit transport path. What puts a negative tag back, where the total is
-positive, is `repair_energy_source_tags!`, after each state update, unless
+[`energy_source_fraction`](@ref) returns zero, so no loss is attributed there.
+The tags are also exempt from both tracer limiters and ride the unlimited
+explicit transport path. `repair_energy_source_tags!` puts a negative tag back
+after each state update where the total is positive, unless
 `energy_source_tag_repair` is off. See the contract on
 [`EnergySourceTag`](@ref).
 
-`Y` is needed in addition to `Yₜ` because the donor share is a property of the
-current state. A no-op when energy source tagging is disabled.
+`Y` is needed in addition to `Yₜ` because the share is a property of the current
+state. A no-op when energy source tagging is disabled.
 """
 attribute_energy_source_tags!(Yₜ, Y, p, source::Symbol) =
     _attribute_energy_source_tags!(
@@ -923,7 +892,8 @@ function _attribute_energy_source_tags!(
     ᶜparent = _energy_source_parent_field(Y, model.offset)
     ledger_view = energy_source_src_ledger_view(Yₜ, model)
     # Each tag's change also goes into its source ledger, where the tags keep
-    # ledgers per tag: OD4's throughput (`energy_source_throughput`).
+    # ledgers per tag. These give the source throughput
+    # (`energy_source_throughput`).
     _accumulate_energy_source_tags!(
         Yₜ.c,
         Y.c,
@@ -934,9 +904,9 @@ function _attribute_energy_source_tags!(
         ᶜparent,
         ledger_view,
     )
-    # And what the partition's tags did not take goes into the residual's
-    # source ledger (G4.4). With masks that sum to one it is the loss rule's
-    # flush of `e_src_res`.
+    # And what the region tags did not take goes into the residual's source
+    # ledger. With masks that sum to one it is the loss rule's flush of
+    # `e_src_res`.
     accumulate_energy_source_residual_source!(
         ledger_view,
         Y.c,
@@ -952,22 +922,22 @@ end
     accumulate_energy_source_residual_source!(ledger_view, ᶜY, ᶜmasks, ᶜΔ,
                                               tags, ᶜparent)
 
-Add to `e_src_led_src_res`, the residual's own source ledger, what one source
-bracket did to the residual `R = E - Σ partition tags`: the bracket's increment
-`ᶜΔ` of `E` less the change each partition tag took,
+Add to `e_src_led_src_res`, the residual's own source ledger, what one attributed
+process did to the residual `R = E - Σ region tags`: the process's tendency `ᶜΔ`
+of `E` less the change each region tag took,
 
     Δ - Σ_partition (Mᵢ Δ⁺ - φᵢ Δ⁻) = (1 - Σ Mᵢ) Δ⁺ - (1 - Σ φᵢ) Δ⁻.
 
-In general this is the net residual source attribution: what the sources put
-into the residual or took out of it. Where the masks are a verified partition
+In general this is what the sources put into the residual or took out of it.
+Where the masks are a verified partition
 ([`energy_source_partition_verified`](@ref)), they sum to one, and it is
 `-(R/E) Δ⁻`, the loss rule's flush of the residual. Elsewhere it also holds
-`(1 - Σ Mᵢ) Δ⁺`, the part of each gain that a gap leaves out of the partition,
-or that an overlap takes twice. It is then not the flush. The audit reads its
-per-step gross as the gross flush only on a verified partition
+`(1 - Σ Mᵢ) Δ⁺`, the part of each gain that a gap leaves out of the region
+tags, or that an overlap takes twice. It is then not the flush. The audit reads
+its per-step gross as the gross flush only on a verified partition
 (`energy_source_residual_report`).
 
-The partition's changes are computed again here, from the same expression the
+The region tags' changes are computed again here, from the same expression the
 tags' own broadcast uses, rather than read from the tags' tendencies. So the
 tags' tendencies are computed exactly as without the ledger. A no-op for
 `nothing`, where the tags keep no ledger per tag.
@@ -997,8 +967,8 @@ end
 _subtract_partition_changes!(ᶜL, ᶜY, ᶜmasks, ᶜΔ, ::Tuple{}, ᶜparent) = nothing
 function _subtract_partition_changes!(ᶜL, ᶜY, ᶜmasks, ᶜΔ, tags::Tuple, ᶜparent)
     tag = first(tags)
-    # A partition tag receives every source: its mask's share of a gain, and
-    # its donor share of a loss (`_accumulate_energy_source_tag!`).
+    # A region tag receives every source: its mask's share of a gain, and its
+    # share of a loss (`_accumulate_energy_source_tag!`).
     if _is_energy_partition_tag(tag)
         ᶜρe_src = tag_field(ᶜY, tag)
         ᶜmask = tag_field(ᶜmasks, tag)
@@ -1016,10 +986,10 @@ function _subtract_partition_changes!(ᶜL, ᶜY, ᶜmasks, ᶜΔ, tags::Tuple, 
     )
 end
 
-# The bracketed process's increment to the total the tags partition. With an
+# The attributed process's tendency of the total the tags partition. With an
 # offset `c`, a process that changes the mass changes the total by `c` times
 # that change. The two differences are taken separately, so the large
-# tendencies accumulated before the bracket cancel within each field rather than
+# tendencies accumulated before the process cancel within each field rather than
 # across them.
 function _energy_source_increment(Yₜ, scratch, ::Nothing)
     ᶜsnapshot = scratch.ᶜe_src_snapshot
@@ -1031,8 +1001,6 @@ function _energy_source_increment(Yₜ, scratch, offset)
     return @. lazy((Yₜ.c.ρe_tot - ᶜsnapshot) + offset * (Yₜ.c.ρ - ᶜρ_snapshot))
 end
 
-# The total the donor share divides by, as a field: `Y.c.ρe_tot` itself without
-# an offset, so that path is unchanged, and a lazy sum with one.
 # The energy source tags partition `ρe_tot + c·ρ`, so they are rebuilt from
 # that total, and their updraft copies from the tags themselves. See
 # `rebuild_tags_from_state!`.
@@ -1061,6 +1029,8 @@ function _rebuild_updraft_copies!(ᶜsgsʲ, ᶜY, tags::Tuple)
     return _rebuild_updraft_copies!(ᶜsgsʲ, ᶜY, Base.tail(tags))
 end
 
+# The total the share divides by, as a field: `Y.c.ρe_tot` itself without an
+# offset, and a lazy sum with one.
 _energy_source_parent_field(Y, ::Nothing) = Y.c.ρe_tot
 _energy_source_parent_field(Y, offset) = @. lazy(Y.c.ρe_tot + offset * Y.c.ρ)
 
@@ -1069,7 +1039,7 @@ _energy_source_parent_field(Y, offset) = @. lazy(Y.c.ρe_tot + offset * Y.c.ρ)
 # update in one broadcast, and a `-` directly before a modifier letter such as
 # `ᶜ` parses as the suffixed operator `-ᶜ`, which Julia leaves undefined.
 #
-# `ᶜparent` is the total the donor share divides by. Called without it, it is
+# `ᶜparent` is the total the share divides by. Called without it, it is
 # `ᶜY.ρe_tot`, which is what a model without an offset uses.
 _accumulate_energy_source_tags!(ᶜYₜ, ᶜY, ᶜmasks, ᶜΔ, source, tags::Tuple) =
     _accumulate_energy_source_tags!(
@@ -1165,8 +1135,8 @@ function _accumulate_energy_source_tag!(
     return nothing
 end
 
-# Tag with a region: production is masked. Loss stays donor-proportional, so
-# energy leaves from wherever the tag is holding it.
+# Tag with a region: production is masked. Loss stays in proportion to what the
+# tag holds, so energy leaves from wherever the tag holds it.
 function _accumulate_energy_source_tag!(
     ᶜYₜ,
     ᶜY,
@@ -1199,8 +1169,8 @@ end
 # Repair
 # ============================================================================
 
-# A pure region tag has a region and no sources. Those tags partition the total,
-# and the repair keeps their sum. Both properties are type parameters, so this
+# A region tag has a region and no sources. Those tags partition the total, and
+# the repair keeps their sum. Both properties are type parameters, so this
 # resolves at compile time, as `_is_partition_tag` does for the water tags.
 _is_energy_partition_tag(
     ::EnergySourceTag{name, R, Tuple{}},
@@ -1210,8 +1180,8 @@ _is_energy_partition_tag(::EnergySourceTag) = false
 """
     energy_source_partition_repair(ρe_src, pos, neg, parent)
 
-The value `repair_energy_source_tags!` gives a partition tag. `pos` and `neg` are
-the positive and negative parts of the partition's sum in the same cell, and
+The value `repair_energy_source_tags!` gives a region tag. `pos` and `neg` are
+the positive and negative parts of the region tags' sum in the same cell, and
 `parent` is the total the tags partition there.
 
 Where `parent` is positive, a negative tag is set to zero and the positive tags
@@ -1221,11 +1191,10 @@ exactly and every tag ends non-negative. Where the negatives outweigh the
 positives, no non-negative partition has that sum, so every tag is zeroed, as
 the water repair does.
 
-Where `parent` is not positive the tag is left as it is. The donor share is
-undefined there, and a region tag carries the parent's sign by design, so a
-negative value is not an error to repair. Under the default energy reference
-that is much of the troposphere. With a large enough `energy_source_tag_offset`
-it is nowhere.
+Where `parent` is not positive the tag is left as it is. The share is undefined
+there, and a region tag carries the parent's sign by design, so a negative value
+is not an error to repair. Under the default energy reference that is much of
+the troposphere. With a large enough `energy_source_tag_offset` it is nowhere.
 """
 @inline energy_source_partition_repair(ρe_src, pos, neg, parent) =
     parent > zero(parent) ?
@@ -1234,14 +1203,13 @@ it is nowhere.
 """
     energy_source_overlay_repair(ρe_src, parent)
 
-The value `repair_energy_source_tags!` gives a tag that carries a source. Such a
-tag is not a member of the partition. It marks the part of the total that came
-in through its processes. Where `parent` is positive a negative value is set to
-zero; elsewhere the tag is left alone, for the reason
-`energy_source_partition_repair` gives.
+The value `repair_energy_source_tags!` gives a source tag. Such a tag is not a
+member of the partition. It marks the part of the total that came in through its
+processes. Where `parent` is positive a negative value is set to zero. Elsewhere
+the tag is left alone, for the reason `energy_source_partition_repair` gives.
 
 There is no sum to keep, so the energy the clip adds comes from nowhere within
-the tags. The repair ledger records it.
+the tags. The fix ledger records it.
 """
 @inline energy_source_overlay_repair(ρe_src, parent) =
     parent > zero(parent) ? max(ρe_src, zero(ρe_src)) : ρe_src
@@ -1251,15 +1219,15 @@ the tags. The repair ledger records it.
 
 Keep the energy source tags non-negative where their total is positive.
 
-The tags go negative for the reasons given in `docs/src/energy_source_tags.md`:
-the finite step of the donor loss, and unlimited explicit transport with no
-limiter. A negative tag voids its reading as an amount of energy from
-somewhere. Through the clamp in `energy_source_fraction` it also distorts what
-the other tags lose. This puts the tags back in range after each state update:
+The tags go negative for the reasons given in `docs/src/energy_source_tags.md`.
+The loss is proportional to what a tag holds, but the step is finite. And the
+transport is explicit and unlimited. A negative tag voids its reading as an
+amount of energy from somewhere. Through the clamp in `energy_source_fraction`
+it also distorts what the other tags lose. This puts the tags back in range
+after each state update:
 
-  - the partition tags keep their sum, through `energy_source_partition_repair`;
-  - a tag that carries a source is clipped at zero, through
-    `energy_source_overlay_repair`.
+  - the region tags keep their sum, through `energy_source_partition_repair`;
+  - a source tag is clipped at zero, through `energy_source_overlay_repair`.
 
 Both act only where the total the tags partition is positive, which is
 everywhere with a large enough `energy_source_tag_offset`.
@@ -1271,13 +1239,13 @@ repair does.
 
 Every change is added to `p.tagging.ᶜenergy_source_fix` and reported as
 `e_src_fix_<name>`, so what the repair did stays distinguishable from what the
-rule and the transport did. For the partition tags these changes sum to zero in
-each cell, except where the negatives outweighed the positives and every tag was
-zeroed. The repair ledger equals what the repair changed in the accepted state
-only at the default `update_constrain_state_every: step`. At `stage` or `dss`
-the repair also runs inside the step, where the stepper rescales or discards
-what it changes, as it does for the water tags' `q_tag_fix`. The tags end each
-step repaired either way.
+rule and the transport did. For the region tags these changes sum to zero in each
+cell, except where the negatives outweighed the positives and every tag was
+zeroed. The fix ledger equals what the repair changed in the accepted state only
+at the default `update_constrain_state_every: step`. At `stage` or `dss` the
+repair also runs inside the step, where the stepper rescales or discards what it
+changes, as it does for the water tags' `q_tag_fix`. The tags end each step
+repaired either way.
 
 On by default. `energy_source_tag_repair: false` switches it off, and leaves the
 tags exactly as the rule and their transport make them, negative values
@@ -1301,7 +1269,7 @@ function _repair_energy_source_tags!(Y, p, model::EnergySourceTaggingModel)
         model.tags,
     )
     # What this call adds to the ledgers per mechanism goes to their
-    # `attempted`, whether or not the stepper keeps it (WP6, step 3).
+    # `attempted`, whether or not the stepper keeps it.
     mechanisms = Val((:e_src_led_repair, :e_src_led_repairnet))
     before_tag_ledgers!(p, Y, mechanisms)
     _apply_energy_source_repair!(
@@ -1318,8 +1286,8 @@ function _repair_energy_source_tags!(Y, p, model::EnergySourceTaggingModel)
         model.tags,
     )
     # Where the parent is positive and every tag is zeroed, the repair adds
-    # `max(-(pos + neg), 0)` to the partition's sum. That part is not moved
-    # between tags, so it goes to its own ledger (WP6, the code review's S1).
+    # `max(-(pos + neg), 0)` to the region tags' sum. That part is not moved
+    # between tags, so it goes to its own ledger.
     @. Y.c.e_src_led_repair -= ifelse(
         ᶜparent > 0,
         max(-(ᶜenergy_source_pos + ᶜenergy_source_neg), 0) / 2,
@@ -1334,8 +1302,8 @@ function _repair_energy_source_tags!(Y, p, model::EnergySourceTaggingModel)
     return nothing
 end
 
-# The partition's sum split into its positive and negative parts, over the pure
-# region tags only. The tags that carry a source are outside the partition.
+# The region tags' sum split into its positive and negative parts. The source
+# tags are outside the partition.
 _accumulate_energy_source_partition!(ᶜpos, ᶜneg, ᶜY, ::Tuple{}) = nothing
 function _accumulate_energy_source_partition!(ᶜpos, ᶜneg, ᶜY, tags::Tuple)
     tag = first(tags)
@@ -1354,8 +1322,7 @@ end
 
 # `ᶜpos` and `ᶜneg` come from the state before the repair and are only read
 # here, so each tag can be rewritten in place and a later tag's factor still
-# holds. The repair ledger is written first, so it records the correction
-# itself.
+# holds. The fix ledger is written first, so it records the correction itself.
 _apply_energy_source_repair!(ᶜY, ledger, ᶜpos, ᶜneg, ᶜparent, ::Tuple{}) =
     nothing
 function _apply_energy_source_repair!(
@@ -1369,11 +1336,11 @@ function _apply_energy_source_repair!(
     tag = first(tags)
     ᶜρe_src = tag_field(ᶜY, tag)
     (ᶜtag_fix, ᶜgross, ᶜcount) = tag_ledger_fields(ledger, tag)
-    # The gross twin and the count take the same change as the ledger, the
-    # count against the total the tags partition.
+    # The gross and the count take the same change as the ledger, the count
+    # against the total the tags partition.
     if _is_energy_partition_tag(tag)
-        # The partition's changes are transfers, so the state ledger takes
-        # half of their size, the energy moved (WP6).
+        # The region tags' changes are transfers, so the state ledger takes
+        # half of their size, the energy moved.
         @. ᶜY.e_src_led_repair +=
             abs(
                 energy_source_partition_repair(ᶜρe_src, ᶜpos, ᶜneg, ᶜparent) -
@@ -1388,7 +1355,7 @@ function _apply_energy_source_repair!(
             ᶜρe_src,
             ᶜparent,
         )
-        # The tag's own ledger, where kept, takes the same change (step 3).
+        # The tag's own ledger, where kept, takes the same change.
         add_to_tag_ledger!(
             ledger.state,
             tag,
@@ -1441,11 +1408,11 @@ const ᶠbottom_bias_zero =
     energy_source_source_sediment_share(ρe_src, parent)
 
 The fraction of the energy that sedimentation carries out of a cell which a tag
-gives up. A partition tag's clamped share of the total is divided by `norm`,
-the sum of those shares over the partition. So the shares add up to one wherever
-there is tagged energy, and the partition's fluxes add up to the parent's
-exactly. A tag that carries a source keeps its own clamped share, as the water
-tags' source tags do.
+gives up. A region tag's clamped share of the total is divided by `norm`, the
+sum of those shares over the region tags. So the shares add up to one wherever
+there is tagged energy, and the region tags' fluxes add up to the parent's
+exactly. A source tag keeps its own clamped share, as the water tags' source
+tags do.
 """
 @inline energy_source_sediment_share(ρe_src, parent, norm) =
     norm > zero(norm) ? energy_source_fraction(ρe_src, parent) / norm :
@@ -1456,7 +1423,7 @@ tags' source tags do.
 """
     energy_source_share_norm!(p, Y)
 
-Fill `p.scratch.ᶜe_src_share_norm` with the sum of the partition tags' clamped
+Fill `p.scratch.ᶜe_src_share_norm` with the sum of the region tags' clamped
 shares of the total they partition, the denominator that
 `energy_source_sediment_share` divides by. It is a property of the current
 state, so each caller recomputes it: `vertical_advection_of_water_tendency!`
@@ -1515,9 +1482,9 @@ flux is shared out by the shares of the cell that loses the energy:
     as ice can, the energy flux points up while the water falls. Then the cell
     below loses the energy, and the face takes its shares;
   - at the bottom face there is no cell below, so the lowest cell's shares are
-    kept, and energy that enters there brings no new provenance.
+    kept. Energy that enters there brings no new origin.
 
-The partition's shares add up to one, so its fluxes add up to the parent's at
+The region tags' shares add up to one, so their fluxes add up to the parent's at
 every face, and sedimentation adds nothing to `e_src_res`. A no-op when energy
 source tagging is disabled, and under 0-moment microphysics, where nothing
 sediments.
@@ -1525,14 +1492,12 @@ sediments.
 The tags have no diagonal Jacobian block for this. A tag's own Courant number
 is the species' times the species' share of the total, which is small, so the
 step is not stiff for the tags. The parent's energy flux enters the Newton
-solve through the condensate's own blocks. With the split solver, each tag's
-row carries the matching cross block to each falling mass, its share of the
-parent's (`update_energy_source_sedimentation_jacobian!`, G4.16). So one Newton
-iteration moves the tags with the updated species, as it moves `ρe_tot`.
-Without the split the tags lag it within a step, and the gap lands in
-`e_src_res`. With the microphysics stepped explicitly that lag was 2.1e-4 of
-the partitioned energy in an hour on a DYCOMS RF02 EDMF column (FINDINGS E80 on
-the record branch).
+solve through the condensate's own blocks. With the split solver, each tag's row
+carries the matching cross block to each falling mass, its share of the parent's
+(`update_energy_source_sedimentation_jacobian!`). So one Newton iteration moves
+the tags with the updated species, as it moves `ρe_tot`. Without the split
+solver the tags lag it within a step, and the gap lands in `e_src_res`. That lag
+matters most with the microphysics stepped explicitly.
 """
 sediment_energy_source_tags!(Yₜ, Y, p, ᶜq, ᶜw, ᶜenergy_flux, ᶠρ) =
     _sediment_energy_source_tags!(
@@ -1786,7 +1751,7 @@ _energy_source_share_field(ᶜρe_src, ᶜparent, ᶜnorm, tag) =
     (@. lazy(energy_source_source_sediment_share(ᶜρe_src, ᶜparent)))
 
 # ============================================================================
-# Enthalpy-form transport, an audit
+# Enthalpy-form transport, a comparison mode
 # ============================================================================
 
 """
@@ -1849,8 +1814,8 @@ unchanged, so the parent's flux of `E = ρe_tot + c·ρ` through a face is `ρ u
 times the face value of `h_tot + c`. Each tag takes that flux times its share in
 the cell upwind of the face. The shares add up to one, so the partition's fluxes
 add up to the parent's at every face. The upwind shares are first order, so a
-region's edge smears more than under van Leer. For an audit that is acceptable,
-because what it checks is closure.
+region's edge smears more than under van Leer. For a comparison mode that is
+acceptable, because what it checks is closure.
 
 The tags move explicitly, with the fluxes of the solved stage state. The parent
 moves `ρe_tot` vertically in the implicit step. With one Newton iteration
@@ -1955,8 +1920,10 @@ by their shares of the parent's own sub-grid mass flux of `E = ρe_tot + c·ρ`.
 
 The tags have no copy in the updrafts, so the SGS tracer loop of
 `edmfx_sgs_mass_flux_tendency!` never reaches them. For each subdomain `k`, the
-parent moves `ρe_tot` with the difference-form flux `ρᵏ aᵏ (u³ᵏ - u³)(χᵏ - h_tot)`, where `χᵏ` is the subdomain's moist static energy plus its kinetic
-energy, and, when the air is moist, `ρ` with the same flux of `q_totᵏ - q_tot`.
+parent moves `ρe_tot` with the difference-form flux
+`ρᵏ aᵏ (u³ᵏ - u³)(χᵏ - h_tot)`, where `χᵏ` is the subdomain's moist static energy
+plus its kinetic energy. When the air is moist, it moves `ρ` with the same flux
+of `q_totᵏ - q_tot`.
 The flux of `E` is the first plus `c` times the second. It is rebuilt here face
 by face, each part with the parent's own reconstruction, and summed over the
 subdomains. The two parts are reconstructed apart, because the van Leer option
@@ -1976,9 +1943,9 @@ because there is no tracer form of this flux for a field without an updraft
 copy.
 
 A tag's composition in an updraft is taken as that of the cell it leaves. So
-the flux moves the energy convection carries, but it does not mix provenance
-the way it mixes the air. `sgs_exchange_of_energy_source_tags!` adds that
-mixing, as an exchange that sums to zero over the tags.
+the flux moves the energy convection carries, but it does not mix the tags'
+composition the way it mixes the air. `sgs_exchange_of_energy_source_tags!` adds
+that mixing, as an exchange that sums to zero over the region tags.
 
 Under `energy_source_tag_updraft_copy: true` neither runs. The tags then have
 copies in the updraft, and the model's SGS tracer flux moves them, as it moves
@@ -2099,60 +2066,52 @@ end
 """
     sgs_exchange_of_energy_source_tags!(Yₜ, Y, p, turbconv_model, model)
 
-Exchange provenance between the energy source tags at the sub-grid mass flux,
-as an updraft copy of the tags would, without one. Each tag `i` takes
+Exchange composition between the energy source tags at the sub-grid mass flux.
+Each tag `i` takes, at each face,
 
     Xᵢ = Σₖ ρᵏ aᵏ (u³ᵏ - u³) (φᵏᵢ - φ̄ᵢ) Aᵏ
 
-at each face, over the updraft and the environment `k`. `φᵏᵢ` is the tag's share
-of the energy in subdomain `k`, `φ̄ᵢ` its share in the grid mean, and
-`Aᵏ = e_totᵏ + c` the subdomain's energy per unit mass. A share is the tag's
-specific value over the sum of the partition's, the region tags without
-sources, in each subdomain. So a source tag's share is its fraction of the
-partition's energy there. Where a subdomain's sum or the grid mean's is not
-positive, the tags exchange nothing. Each term is
-reconstructed as the parent reconstructs its own SGS flux. `X` is the part of
-the flux an updraft copy would add to the donor-share flux of
-`sgs_mass_flux_of_energy_source_tags!`: air of one composition rises and air of
-another sinks, each with its whole energy.
+over the updraft and the environment `k`. `φᵏᵢ` is the tag's share of the energy
+in subdomain `k`, `φ̄ᵢ` its share in the grid mean, and `Aᵏ = e_totᵏ + c` the
+subdomain's energy per unit mass. A share is the tag's specific value over the
+region tags' sum in that subdomain. Where a subdomain's sum or the grid mean's is
+not positive, the tags exchange nothing.
+
+`X` is what an updraft copy of the tags would add to the flux of
+`sgs_mass_flux_of_energy_source_tags!`. Air of one composition rises and air of
+another sinks, each with its whole energy. Each term is reconstructed as the
+parent reconstructs its own SGS flux. The van Leer reconstruction is not linear,
+so under it `X` uses first-order upwinding, which keeps the sum over the region
+tags at zero.
+
+The updraft's shares come from a steady entraining plume. It is marched up each
+column with the model's entrainment rate `ε + ε_turb` and the updraft's velocity
+`wʲ` at the face below each cell. In the specific tag values `εʲ`, which mix by
+mass,
+
+    εʲ(k) = (εʲ(k - 1) + a ε̄(k)) / (1 + a),    a = (ε + ε_turb) Δz / wʲ · ρ / ρa⁰.
+
+This is the steady updraft equation `wʲ ∂εʲ/∂z = (ε + ε_turb)(ε⁰ - εʲ)`, taken
+implicitly in `z`. The plume starts in the lowest cell with the updraft's
+surface energy (`energy_source_plume!`) and starts anew from the grid mean's
+composition wherever the updraft is absent or does not rise. It is exact when
+the updraft adjusts faster than the shares change. Negative tags count as zero
+in every share.
 
 No subdomain may carry more of a tag's energy than the cell holds,
 `ρaʲ φʲᵢ Aʲ ≤ ρ φ̄ᵢ Ā`, and no share may go negative. The plume is blended toward
 the grid mean by the largest factor that keeps a tag inside the smaller of those
-two bounds. The partition's tags share one factor, so their shares keep summing
-to one and their `Xᵢ` add up to zero at every face, and closure is untouched
-under every transport. Each source tag has its own factor, since its exchange
-stands alone, so a tag the cell holds little of cannot slow the partition's
-mixing. The environment's shares follow from the updraft's, reversed and scaled
-by the energy each subdomain carries, and are non-negative by construction.
-Where the subdomains' energies do not add up to the cell's, the share-weighted
-inventory is off by that mismatch. The zero sum also
-needs region tags that partition the domain, which
-`check_energy_source_exchange_partition` enforces. A
-source tag's exchange stands alone, as its other fluxes do. The van
-Leer reconstruction is not linear, so under it `X` is reconstructed first-order
-upwind, which keeps that sum zero.
+bounds. The region tags share one factor, so their shares keep summing to one
+and their `Xᵢ` add up to zero at every face. Closure is untouched under every
+transport. Each source tag has its own factor. A tag the cell holds little of
+therefore cannot slow the region tags' mixing. The environment's shares follow
+from the updraft's, reversed and scaled by the energy each subdomain carries.
 
-The updraft's shares come from a steady entraining plume, marched up each column
-with the model's own entrainment rate `ε + ε_turb` and the updraft's velocity
-`wʲ` at the face below each cell, as the model advects an updraft tracer. In the specific tag values `εʲ`, which
-mix by mass,
-
-    εʲ(k) = (εʲ(k - 1) + a ε̄(k)) / (1 + a),    a = (ε + ε_turb) Δz / wʲ · ρ / ρa⁰,
-
-which is the steady updraft equation `wʲ ∂εʲ/∂z = (ε + ε_turb)(ε⁰ - εʲ)`, taken
-implicitly in `z`, with the environment `ε⁰` from the grid mean and the updraft.
-The plume starts in the lowest cell with the updraft's surface energy
-(`energy_source_plume!`), and anew from the grid mean's composition
-wherever the updraft is absent or does not rise. It assumes one
-updraft, since the environment is the grid mean less that updraft. It is exact when
-the updraft adjusts faster than the shares change. The environment's shares
-follow from the grid mean and the updraft. Negative tags count as zero in every
-share.
-
-It runs in the implicit tendency, after the donor-share flux, and has no
-Jacobian block, as the model's SGS flux of a passive tracer has none. It needs
-one updraft, which `check_energy_source_tagging_supported` enforces.
+It needs region tags that partition the domain, which
+`check_energy_source_exchange_partition` enforces, and one updraft, which
+`check_energy_source_tagging_supported` enforces. It runs in the implicit
+tendency, after the flux of `sgs_mass_flux_of_energy_source_tags!`, and has no
+Jacobian block, as the model's SGS flux of a passive tracer has none.
 """
 function sgs_exchange_of_energy_source_tags!(Yₜ, Y, p, turbconv_model, model)
     (; edmfx_sgsflux_upwinding) = p.atmos.numerics
@@ -2243,9 +2202,9 @@ Write the exchange's plume into `ᶜεʲ`: the updraft's specific tag values fro
 the steady entraining plume of [`sgs_exchange_of_energy_source_tags!`](@ref).
 `ᶜε̄` gets the grid mean's specific tag values, negative ones as zero, which
 the plume mixes in. In the lowest cell it starts with the updraft's surface
-energy, as the copies' mirror M1 gives it (`energy_plume_surface_fraction!`,
-`start_plume_at_surface!`). `ᶜε_start` and `ᶜf` are scratch, the exchange's
-by default.
+energy, as the copies' update from the surface enthalpy flux gives it
+(`energy_plume_surface_fraction!`, `start_plume_at_surface!`). `ᶜε_start` and
+`ᶜf` are scratch, the exchange's by default.
 """
 function energy_source_plume!(
     ᶜεʲ,
@@ -2283,8 +2242,7 @@ function energy_source_plume!(
     ᶜwʲ = @. lazy(ᶜbottom_bias(get_physical_w(ᶠu³ʲs.:(1), ᶠlg)))
     set_nonnegative_specific!(ᶜε̄, Y.c, model.tags)
     # Where the plume starts: the grid mean's values, and in the lowest cell
-    # the surface flux's energy besides (W21's rule, which the owner extended
-    # to these tags on 2026-09-29).
+    # the surface flux's energy besides, as for the water tags.
     energy_plume_surface_fraction!(ᶜf, Y, p, _mass_energy(model.offset))
     start_plume_at_surface!(
         ᶜε_start,
@@ -2326,8 +2284,8 @@ and `f = 0` where the denominator is zero. The three supplies are in the tags'
 units, energy per unit mass plus the offset `c`, per second:
 
   - the relaxation toward the buoyant surface value at the rate
-    `r = mass_flux_source / max(ρaʲ, ρʲ a_min)`. The copies' targets under M2
-    sum to `Ā + X`, with `Ā = ρe_tot / ρ + c` and `X = mse_b - mse̅`;
+    `r = mass_flux_source / max(ρaʲ, ρʲ a_min)`. The copies' targets in that
+    relaxation sum to `Ā + X`, with `Ā = ρe_tot / ρ + c` and `X = mse_b - mse̅`;
   - entrainment at the plume's own rate `e`, of the environment's
     `A⁰ = (E - ρaʲ Aʲ) / ρa⁰`, with `E = ρe_tot + c ρ` and
     `Aʲ = mseʲ + Kʲ - p / ρʲ + c`, regularized as the model's environment
@@ -2335,8 +2293,8 @@ units, energy per unit mass plus the offset `c`, per second:
   - the surface enthalpy flux, `Δ⁺ = max(Δʲ, 0)`, with `Δʲ` the increment
     `surface_flux_tendency!` gives `mseʲ`. A specific increment carries no `c`.
 
-So `f` depends on the offset. A cooling flux leaves by share in M1, so it
-gives `f = 0`, and so does `disable_surface_flux_tendency`.
+So `f` depends on the offset. A cooling flux leaves each copy by its share, so
+it gives `f = 0`, and so does `disable_surface_flux_tendency`.
 
 Each factor is clipped at zero, so a supply counts only where both its
 factors are positive, and `0 ≤ f ≤ 1`. Here the clip can act.
@@ -2361,7 +2319,7 @@ function energy_plume_surface_fraction!(ᶜf, Y, p, c)
     (; sfc_mass_flux_sourceʲs, sfc_mse_buoyantʲs) = p.precomputed
     a_min = FT(CAP.min_area(CAP.turbconv_params(p.params)))
     # The surface flux's increment of `mseʲ`, from the flux and the operator
-    # the model and M1 use. It is zero above the lowest cell.
+    # the model and the copies use. It is zero above the lowest cell.
     btt = boundary_tendency_scalar(
         ᶜh_tot,
         p.precomputed.sfc_conditions.ρ_flux_h_tot,
@@ -2430,10 +2388,11 @@ end
 Write where a plume starts into `ᶜε_start`: the grid mean's specific tag values
 `ᶜε̄` in every cell but the lowest. There each tag takes
 `(1 - f) ε̄ᵢ + f gᵢ Σ_P ε̄`, with `f` the surface flux's part of the cell's
-supplies and `Σ_P ε̄` the partition's sum. `gᵢ` is the surface-flux mirror's
-weight: `gain_weight(ᶜmasks, tag)` where the tag receives `surface_flux`, and
-zero where it does not. So the shares there are `(1 - f) φ̄ᵢ + f gᵢ` where the
-partition's masks sum to one. Shared by the water and the energy source tags.
+supplies and `Σ_P ε̄` the region tags' sum. `gᵢ` is the weight of the copies'
+update from the surface flux: `gain_weight(ᶜmasks, tag)` where the tag receives
+`surface_flux`, and zero where it does not. So the shares there are
+`(1 - f) φ̄ᵢ + f gᵢ` where the region tags' masks sum to one. Shared by the water
+and the energy source tags.
 """
 function start_plume_at_surface!(
     ᶜε_start,
@@ -2562,8 +2521,7 @@ Write every tag's specific value in `ᶜY`, negative ones as zero, into the tupl
 field `ᶜε̄` (`_nonnegative_specific`). Up to 31 tags this is one broadcast over
 `ρ` and the tag fields. From 32 tags on that broadcast would take more than 32
 arguments, which Julia does not specialize: with 32 tags it allocated at every
-level (FINDINGS W34 on the record branch). So there each tag's component is
-written by its own broadcast. The number of tags is a constant of the type, so
+level. So there each tag's component is written by its own broadcast. The number of tags is a constant of the type, so
 the choice costs nothing at run time.
 """
 function set_nonnegative_specific!(ᶜε̄, ᶜY, tags)
@@ -2754,8 +2712,8 @@ end
 Whether the energy source tags of `model` take the parent's own increment in
 each implicit stage (`energy_source_tag_transport: enthalpy_increment`). A tag
 that follows an implicit term by its tendency lags the parent's Newton solve,
-and for a stiff term the gap grows step by step (FINDINGS E59). The parent's
-increment has no such gap, whatever the solver does. The answer is a property
+and for a stiff term the gap grows step by step. The parent's increment has no
+such gap, whatever the solver does. The answer is a property
 of the model's type, so it folds away at compile time.
 """
 follows_implicit_increment(::Nothing) = false
@@ -2792,7 +2750,7 @@ function _energy_source_face_area_ratio(Yf)
     return @. ΔA_bot * ᶠΔz / ᶠJ
 end
 
-# The sum of the partition tags of `ᶜY`, plus `dtγ` times that of `ᶜdY`.
+# The sum of the region tags of `ᶜY`, plus `dtγ` times that of `ᶜdY`.
 function _energy_source_partition_sum!(ᶜsum, ᶜY, ᶜdY, dtγ, tags)
     ᶜsum .= zero(eltype(ᶜsum))
     return _add_energy_source_partition!(ᶜsum, ᶜY, ᶜdY, dtγ, tags)
@@ -2848,21 +2806,23 @@ end
 """
     correct_energy_source_increment!(dY, U, p)
 
-After the Newton solve of an implicit stage, make the partition tags take the
+After the Newton solve of an implicit stage, make the region tags take the
 parent's increment of `E`. `U` is the solved stage value, and `dY` already holds
 the parent's own post-solve correction, which the stepper adds as `dtγ·dY`.
 
 In each cell, the mismatch `m` is the parent's increment of `E` since the
-snapshot less the partition's. The part of `m` that changes a column's total
-cannot be moved within the column; it is left out of the tags, spread over the
+snapshot less the region tags'. The part of `m` that changes a column's total
+cannot move within the column. It is left out of the tags, spread over the
 column in proportion to `|m|`, and stays in `e_src_res`. Its column total is
-exact, but `|m|` is dominated by the parent's vertical transport, so its
-profile does not show where it arose. The rest integrates up the column to a face flux
-that is zero at both boundaries, whose divergence is that rest. Each tag takes
-the flux times its share in the cell the flux leaves, as with the sub-grid mass
-flux, and the flux is added to `dY` divided by `dtγ`. The partition's shares add
-up to one, so the partition then follows the parent's increment, up to the part
-left in place. A tag that carries a source takes its own share of the flux.
+exact, but `|m|` is dominated by the parent's vertical transport, so its profile
+does not show where it arose.
+
+The rest integrates up the column to a face flux that is zero at both
+boundaries, and its divergence is that rest. Each tag takes the flux times its
+share in the cell the flux leaves, as with the sub-grid mass flux. The flux is
+added to `dY` divided by `dtγ`. The region tags' shares add up to one, so they
+then follow the parent's increment, up to the part left in place. A source tag
+takes its own share of the flux.
 
 The part left in place and the part moved are added to the increment ledger,
 `e_src_inc_left` and `e_src_inc_moved` (see
@@ -2927,7 +2887,7 @@ function correct_energy_source_increment!(dY, U, p)
         model.tags,
     )
     # Each tag's own ledger, where kept, takes the same flux, so it holds what
-    # the correction moved into or out of that tag (WP6, step 3). Its absolute
+    # the correction moved into or out of that tag. Its absolute
     # value per stage goes to `attempted`.
     ledger_view = energy_source_inc_ledger_view(dY, model)
     isnothing(ledger_view) || _sgs_energy_source_tag_fluxes!(
@@ -2950,7 +2910,7 @@ function correct_energy_source_increment!(dY, U, p)
     @. dY.c.e_src_inc_left += ᶜe_src_abs_mismatch / dtγ
     @. dY.c.e_src_inc_moved += (ᶜm - ᶜe_src_abs_mismatch) / dtγ
     # What this stage left out and moved, in absolute value, whether or not
-    # the step keeps it (WP6, step 3).
+    # the step keeps it.
     add_attempted!(p, Val(:e_src_inc_left), ᶜe_src_abs_mismatch)
     add_attempted!(p, Val(:e_src_inc_moved), @. lazy(ᶜm - ᶜe_src_abs_mismatch))
     return nothing

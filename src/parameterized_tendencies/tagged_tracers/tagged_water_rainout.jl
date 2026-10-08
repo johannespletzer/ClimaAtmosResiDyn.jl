@@ -1,23 +1,23 @@
 #####
-##### The 0M rain-out split by EDMF subdomain (WP4a)
+##### The 0M rain-out split by EDMF subdomain
 #####
 ##### Under 0M the only sink of total water is the rain-out, which prognostic
 ##### EDMF computes per subdomain: `Δʲ = ρaʲ dq_tot_dtʲ` in the updraft and
 ##### `Δ⁰ = ρa⁰ dq_tot_dt⁰` in the environment (`microphysics/tendency.jl`). The
-##### `:microphysics` bracket sees only their sum. Here each subdomain's part
-##### goes to the tags by that subdomain's composition, `Σₖ Δᵏ φᵏᵢ`, for both
-##### signs, instead of by the grid mean's. In the default mode that
-##### composition is reconstructed from the exchange's plume. Where an area is
-##### negative its rain-out is a gain, so the split is a signed attribution. The design, its review and the
-##### reasons for each guard are in design/ZERO_M_SPLIT.md on the record branch.
+##### `:microphysics` applied-update event sees only their sum. Here each
+##### subdomain's part goes to the tags by that subdomain's composition,
+##### `Σₖ Δᵏ φᵏᵢ`, for both signs, instead of by the grid mean's. In the default
+##### mode that composition is reconstructed from the exchange's plume. Where an
+##### area is negative its rain-out is a gain, so the split is a signed
+##### attribution.
 
 """
     splits_rainout(p, source)
 
-Whether the bracket's increment for `source` is split by subdomain: the
-`:microphysics` label under 0M microphysics and prognostic EDMF, in copies mode
-or in the default mode with the SGS mass flux on. Elsewhere, and in the default
-mode without the SGS mass flux, the grid mean's share applies as before.
+Whether the applied-update event's tendency for `source` is split by subdomain:
+the `:microphysics` label under 0M microphysics and prognostic EDMF, in copies
+mode or in the default mode with the SGS mass flux on. Elsewhere, and in the
+default mode without the SGS mass flux, the grid mean's share applies.
 """
 splits_rainout(p, source) =
     source === :microphysics &&
@@ -53,8 +53,8 @@ type, so that the partition's flags and the index are constants of the kernel.
 It is the tag's partition-normalized share in the grid mean plus the
 subdomain's difference from `ShareDifferences`, times `S`, the partition's sum
 of clamped grid shares, so that a drifted partition keeps losing in proportion
-to what it holds, as before. A partition tag's lies in [0, S] up to rounding,
-and can exceed 1 where the partition has drifted. A source tag's is clamped to
+to what it holds. A region tag's lies in [0, S] up to rounding, and can exceed 1
+where the partition has drifted. A source tag's is clamped to
 [0, 1], since its environment difference is not bounded by the exchange. Its
 share is relative to the partition's total, `S·min(ε̄ᵢ/total, 1)` without an
 exchange. Where the partition holds nothing, or a value is not finite, it is
@@ -81,26 +81,26 @@ end
 
 Add to `ᶜdest.ρq_tag_<name>`, for every water tag, or for the tag `target`
 alone, its part of the 0M rain-out split by subdomain: `Δʲ φʲᵢ + Δ⁰ φ⁰ᵢ`.
-`ᶜdest` is `Yₜ.c` in the bracket, or one scratch field for `pr_tag`. Call only
-where [`splits_rainout`](@ref) holds. `rule` is the bracket's gain rule, by
-default the one the run's microphysics path takes.
+`ᶜdest` is `Yₜ.c` in the applied-update event, or one scratch field for
+`pr_tag`. Call only where [`splits_rainout`](@ref) holds. `rule` is the event's
+gain rule, by default the one the run's microphysics path takes.
 
   - **Default mode.** The model holds no subdomain composition, so the
     shares are reconstructed from the exchange's plume and bound, into the
     exchange's scratch (`SplitShare`), which the exchange later overwrites.
-    So the plume is computed twice per implicit evaluation (4.5% of
-    `implicit_tendency!`). Where the exchange does not run, the shares are
-    the partition-normalized grid shares times `S`. `S` is zero where the
-    grid parent is not positive: no partition tag takes a part there.
+    So the plume is computed twice per implicit evaluation. Where the exchange
+    does not run, the shares are the partition-normalized grid shares times `S`.
+    `S` is zero where the grid parent is not positive, so no region tag takes
+    a part there.
   - **Copies.** The updraft's share is the copy's clamped share of `q_totʲ`,
     the one the copies' own rain-out takes (`_copies_rain_out!`). Under
     `TargetGain` a tag's gain from it is withheld where the grid parent is
     below zero. The environment's share is the model's regularized
     environment value of the copy over `q_tot⁰`, renormalized over the
-    partition and times `S`; a source tag takes its own clamped share. Where
+    partition and times `S`. A source tag takes its own clamped share. Where
     the environment's partition holds nothing, the grid mean's share.
 
-The partition's increment sums to `S·(Δʲ + Δ⁰)` in the default mode, and in
+The partition's change sums to `S·(Δʲ + Δ⁰)` in the default mode, and in
 copies mode to `Δʲ·Σᵢ φʲᵢ + S·Δ⁰` less a withheld gain, the same where the
 copies' partition holds the updraft's water.
 """
@@ -240,7 +240,7 @@ function _add_split_rainout_copies!(
     return nothing
 end
 _add_split_rainout_copies_each!(ᶜdest, Y, p, ᶜsgsʲ, args, ::Tuple{}) = nothing
-# The updraft's part of every tag takes the bracket's gain rule
+# The updraft's part of every tag takes the applied-update event's gain rule
 # (`water_tag_split_change`): under `TargetGain` its gain is withheld where the
 # grid parent is below zero, for a source tag too. The copies' own rain-out
 # (`water_tag_copies_microphysics_tendency!`) is not changed: each copy loses
@@ -281,7 +281,7 @@ end
     add_rainout_increments!(ᶜdest, Y, p, model, target = nothing)
 
 Add to `ᶜdest.ρq_tag_<name>` each tag's part of the 0M rain-out, or the tag
-`target`'s alone, by the rule the `:microphysics` bracket applies: split by
+`target`'s alone, by the rule the `:microphysics` applied-update event applies: split by
 subdomain where [`splits_rainout`](@ref) holds, and otherwise the grid rule on
 the cached sink `ᶜρ_dq_tot_dt`, production by mask and loss by share. Reads
 only the state and the cache, so the diagnostics can call it at output time.
@@ -297,8 +297,8 @@ add_rainout_increments!(ᶜdest, Y, p, model, target = nothing) =
         :microphysics,
         _selected_tags(model.tags, target),
         Y.c.ρq_tot,
-        # The partition tags' gain, as the bracket gives it on the path the
-        # run steps the microphysics on.
+        # The region tags' gain, as the applied-update event gives it on the
+        # path the run steps the microphysics on.
         microphysics_gain_rule(p.atmos),
     )
 
@@ -306,7 +306,7 @@ add_rainout_increments!(ᶜdest, Y, p, model, target = nothing) =
     update_water_tag_rainouts!(Y, p, t)
 
 Compute every tag's part of the 0M rain-out at the state `Y`, by the rule the
-`:microphysics` bracket applies ([`add_rainout_increments!`](@ref)), into
+`:microphysics` applied-update event applies ([`add_rainout_increments!`](@ref)), into
 `p.scratch.ᶜtagging_q_rainouts`, one field per tag. Also compute the part no
 region tag takes, `ᶜρ_dq_tot_dt` less the partition's parts, into
 `p.scratch.ᶜtagging_q_rainout_res`. Mark both as computed at `t`.
@@ -353,12 +353,12 @@ end
 The column integral of `tag`'s part of the 0M rain-out into `out`, a level
 field, as `pr` integrates `ᶜρ_dq_tot_dt` (`set_precipitation_surface_fluxes!`):
 upward-positive, so negative, and split into rain and snow by the grid mean's
-temperature for `phase` `Val(:rain)` and `Val(:snow)`; `Val(:all)` is both.
+temperature for `phase` `Val(:rain)` and `Val(:snow)`. `Val(:all)` is both.
 
 It reads the batch of [`update_water_tag_rainouts!`](@ref) for the time `t`,
 and computes the batch first if it holds another time. It reads the state at
 output time, so it is the rate at the step's end, not the one applied during
-it. Both signs are attributed, as the bracket attributes them (see
+it. Both signs are attributed, as the applied-update event attributes them (see
 [`add_split_rainout!`](@ref)). Over a closed partition the tags' sum is `pr`
 less [`water_tag_precipitation_residual!`](@ref).
 """
@@ -386,7 +386,8 @@ batch of [`update_water_tag_rainouts!`](@ref) for the time `t`. Under the split
 it is `∫ (Δʲ (1 - Sʲ) + Δ⁰ (1 - S))`, with `S` the grid partition's sum of
 shares and `Sʲ` the updraft's (`S` in the default mode). On the grid rule it is
 `∫ ρ_dq_tot_dt (1 - S)` for a loss. A gain, to rounding, stays here only where
-the bracket withholds it from the partition (`ρq_tot < 0`), on either path.
+the applied-update event withholds it from the partition (`ρq_tot < 0`), on
+either path.
 """
 function water_tag_precipitation_residual!(out, Y, p, t)
     _current_water_tag_rainouts!(Y, p, t)

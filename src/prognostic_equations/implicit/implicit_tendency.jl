@@ -40,25 +40,24 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
 
     if p.atmos.microphysics_tendency_timestepping == Implicit()
         # `implicit_microphysics` defaults to true, so with 0-moment microphysics
-        # this is where the total-water sink lives. Bracketing it for the water
-        # tags is not optional: without it their dominant loss term would be
-        # missing under the default configuration. Bracketing is safe here for
-        # the same reason it is for sedimentation below — `implicit_tendency!`
-        # zeroes `Yₜ` on every evaluation, so each Newton iterate recomputes the
-        # attribution from scratch rather than accumulating it.
+        # this is where the total-water sink lives. The water tags must see it:
+        # without it their dominant loss term would be missing under the
+        # default configuration. This is safe for the same reason as for
+        # sedimentation below. `implicit_tendency!` zeroes `Yₜ` on every
+        # evaluation, so each Newton iterate recomputes the attribution from
+        # scratch rather than accumulating it.
         #
-        # The energy source tags and the process records are bracketed here
-        # too. Under 0-moment microphysics this is where rain leaves the
-        # column with its energy, and without a bracket that loss reaches
-        # neither of them. The source tags read the donor share from `Y`, the
-        # Newton iterate, as the water tags do.
+        # The energy source tags and the process records see it too. Under
+        # 0-moment microphysics this is where rain leaves the column with its
+        # energy, and without it that loss reaches neither of them. The source
+        # tags read the share from `Y`, the Newton iterate, as the water tags do.
         #
-        # The `ρe_tag_*` family is not. Its `microphysics` label has always
-        # fired on the explicit path only (see `docs/src/tagged_water.md` and
-        # `KNOWN_TAG_SOURCES`); extending it here would silently change
-        # existing tagged-energy results, so that gap is left as it is.
+        # The `ρe_tag_*` family does not see it. Its `microphysics` label fires
+        # on the explicit path only (see `docs/src/tagged_water.md` and
+        # `KNOWN_TAG_SOURCES`). Extending it here would change the energy tags'
+        # results.
         #
-        # The parent budget takes the whole increment, through its own
+        # The parent budget takes the whole tendency, through its own
         # half of the applied-update event, and only while it is metering the
         # audit evaluation at the Newton-solved stage. It reads `Yₜ` and writes
         # nothing, so the Newton iterations see no difference.
@@ -95,7 +94,7 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
         close_parent_budget_event!(p.parent_budget, Yₜ, Y, p, :microphysics)
         # The tags take the target's gain here too: none where the parent is
         # below zero at this Newton iterate. The withheld gain goes to the
-        # ledger `q_tag_exp_negative`. Under 0M this increment is a sink,
+        # ledger `q_tag_exp_negative`. Under 0M this tendency is a sink,
         # except where a subdomain's area is negative. The diagnostics'
         # rain-out reads `microphysics_gain_rule` too, so the two agree.
         attribute_tagged_ρq_tot!(
@@ -139,6 +138,15 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
             p.atmos.vertical_diffusion,
         )
         close_parent_budget_event!(p.parent_budget, Yₜ, Y, p, :vertical_diffusion)
+        open_parent_budget_event!(p.parent_budget, Yₜ, :smagorinsky_lilly)
+        vertical_smagorinsky_lilly_tendency!(
+            Yₜ,
+            Y,
+            p,
+            t,
+            p.atmos.smagorinsky_lilly,
+        )
+        close_parent_budget_event!(p.parent_budget, Yₜ, Y, p, :smagorinsky_lilly)
         edmfx_sgs_diffusive_flux_tendency!(Yₜ, Y, p, t, p.atmos.turbconv_model)
     end
 
@@ -147,7 +155,7 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
     edmfx_sgs_mass_flux_tendency!(Yₜ, Y, p, t, p.atmos.turbconv_model)
     # By default the energy source tags have no updraft copy, so the SGS tracer
     # loop above skips them. They take their shares of the parent's flux of `E`
-    # here, and exchange provenance at the mass flux. With updraft copies the
+    # here, and exchange composition at the mass flux. With updraft copies the
     # loop above moves them, and this call does nothing.
     sgs_mass_flux_of_energy_source_tags!(Yₜ, Y, p, p.atmos.turbconv_model)
     # The water tags likewise, unless they have updraft copies.
@@ -177,8 +185,9 @@ NVTX.@annotate function implicit_tendency!(Yₜ, Y, p, t)
     # DO NOT add additional velocity tendencies after this function
     zero_velocity_tendency!(Yₜ, Y, p, t)
 
-    # The water tags' follower reads the gain withheld in the solve from the
-    # ledger's tendency at the solve's last evaluation. It writes only scratch.
+    # The correction after each solve of increment transport reads the gain
+    # withheld in the solve from the ledger's tendency at the solve's last
+    # evaluation. It writes only scratch.
     keep_water_tag_exp_rate!(p, Yₜ)
 
     return nothing
@@ -268,9 +277,8 @@ Vertical advection of passive tracers by the mean flow is treated explicitly.
 Returns `nothing`.
 """
 function implicit_vertical_advection_tendency!(Yₜ, Y, p, t)
-    (; microphysics_model, turbconv_model, rayleigh_sponge) = p.atmos
+    (; microphysics_model, rayleigh_sponge) = p.atmos
     (; params, dt) = p
-    n = n_mass_flux_subdomains(turbconv_model)
     ᶜJ = Fields.local_geometry_field(axes(Y.c)).J
     ᶠJ = Fields.local_geometry_field(axes(Y.f)).J
     (; ᶠgradᵥ_ᶜΦ) = p.core
@@ -367,20 +375,20 @@ function implicit_vertical_advection_tendency!(Yₜ, Y, p, t)
     end
 
     # Precipitation sedimentation carries energy out of each level, and the
-    # `ρe_tag_*` family attributes it here. Bracketing is safe because
+    # `ρe_tag_*` family attributes it here. This is safe because
     # `implicit_tendency!` zeroes `Yₜ` on every evaluation, so each Newton
     # iterate recomputes the attribution from scratch rather than accumulating
-    # it. The attributed increment does not depend on the tags themselves, so
+    # it. The attributed tendency does not depend on the tags themselves, so
     # the `-I` diagonal Jacobian block that tags fall back to is exactly right
     # for this term.
     #
-    # The process records are bracketed here too, for the same reason: a record
-    # says what sedimentation did to each cell, which needs no share. The
-    # energy source tags are not bracketed. Sedimentation moves energy from
-    # level to level with the falling water, and a bracket would count what
-    # arrives in a cell as new energy. So `vertical_advection_of_water_tendency!`
-    # moves the tags with the water instead, each by its share of what the
-    # losing cell holds (`sediment_energy_source_tags!`).
+    # The process records see it too, for the same reason. A record says what
+    # sedimentation did to each cell, which needs no share. The energy source
+    # tags do not see it. Sedimentation moves energy from level to level with
+    # the falling water, and an applied-update event would count what arrives in
+    # a cell as new energy. So `vertical_advection_of_water_tendency!` moves the
+    # tags with the water instead, each by its share of what the losing cell
+    # holds (`sediment_energy_source_tags!`).
     open_parent_budget_event!(p.parent_budget, Yₜ, :precipitation)
     snapshot_tagged_ρe_tot!(p, Yₜ)
     snapshot_process_record!(p, Yₜ, :precipitation)

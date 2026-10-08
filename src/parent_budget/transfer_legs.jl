@@ -6,13 +6,13 @@
 ##### it. The atmosphere's leg comes from the flux the tendency applied at the
 ##### boundary. The slab's leg comes from the flux the slab tendency applied.
 #####
-##### Where a bracket isolates one leg, that leg is the bracket's own total,
-##### which is what the reservoir's fields integrated. This holds for the
+##### Where an applied-update event isolates one leg, that leg is the event's own
+##### total, which is what the reservoir's fields integrated. This holds for the
 ##### atmosphere's side of the surface flux and of precipitation, and for the
 ##### slab's side of precipitation.
 #####
-##### Where a bracket lumps several legs, the legs are read from the flux
-##### fields those tendencies read, and the bracket's total is kept beside
+##### Where an event lumps several legs, the legs are read from the flux
+##### fields those tendencies read, and the event's total is kept beside
 ##### their sum as a check. This holds for radiation at the top and at the
 ##### surface of the atmosphere, and for the slab's turbulent, radiative and
 ##### prescribed fluxes in one slab tendency.
@@ -24,8 +24,8 @@
 
 Which applied-update event measures each modeled leg of each transfer event,
 keyed by the event id and the reservoir. The atmosphere's legs fire in the
-bracket around the tendency that writes the atmosphere, the slab's in the
-bracket around the slab tendency that receives them.
+applied-update event around the tendency that writes the atmosphere, the slab's
+in the event around the slab tendency that receives them.
 """
 const TRANSFER_LEG_EVENTS = Dict(
     (Symbol("xfer.surface_turbulent_flux"), ATMOSPHERE_ENDPOINT_GROUP) => :surface_flux,
@@ -54,7 +54,8 @@ function transfer_leg_event(event::Symbol, reservoir::Symbol)
     return TRANSFER_LEG_EVENTS[(event, reservoir)]
 end
 
-# The legs a bracket isolates, so that the leg is the bracket's own total.
+# `BRACKET_TOTAL_LEGS` lists the legs an applied-update event isolates, so that
+# the leg is the event's own total. `is_bracket_total` tests membership.
 const BRACKET_TOTAL_LEGS = (
     (Symbol("xfer.surface_turbulent_flux"), ATMOSPHERE_ENDPOINT_GROUP),
     (Symbol("xfer.precipitation_0m"), ATMOSPHERE_ENDPOINT_GROUP),
@@ -138,7 +139,7 @@ signed(pair, factor) = (factor * pair[1], abs(factor) * pair[2])
 # The radiative flux field a flux-form mode built, on faces, positive upward.
 # RRTMGP and DYCOMS keep it in the radiation cache. ISDAC builds it in scratch
 # and applies its divergence at once, so it is readable only inside the
-# radiation bracket; the bracket check is what guards that reading.
+# radiation event. `inside_radiation` says whether the caller is inside it.
 radiation_flux_field(p, ::RRTMGPI.AbstractRRTMGPMode, _) = p.radiation.ᶠradiation_flux
 radiation_flux_field(p, ::RadiationDYCOMS, _) = p.radiation.ᶠradiation_flux
 radiation_flux_field(p, ::RadiationISDAC, inside_radiation::Bool) =
@@ -163,8 +164,8 @@ top_level(Y) = Spaces.nlevels(axes(Y.c)) + half
                               moist, bracket) -> Vector{LegMeasurement}
 
 Read every declared leg of every transfer event that the applied-update
-`event` measures, from the bracket's own total or from the flux fields inside
-it. `bracket` is the bracket's own total in the leg's reservoir,
+`event` measures, from the event's own total or from the flux fields inside
+it. `bracket` holds the event's own total in the leg's reservoir,
 `(amounts, magnitudes)` for the atmosphere and for the slab, which is the leg
 for a volume sink. Legs the configuration does not declare are not measured,
 and a declared leg that cannot be read here is returned unknown with its

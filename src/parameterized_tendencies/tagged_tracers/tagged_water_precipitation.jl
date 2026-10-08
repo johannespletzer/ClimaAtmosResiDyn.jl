@@ -224,11 +224,12 @@ water_tag_precip_part_state_names(model::WaterTaggingModel) =
     water_tag_audit_state_names(model)
 
 `Tuple` of the state-field `Symbol`s of the microphysics audit, the rain
-fields and then the snow fields, and `()` without the key.
+fields and then the snow fields, and `()` without the key or with
+`water_tag_precipitation_audit: false`.
 """
 water_tag_audit_state_names(::Nothing) = ()
 water_tag_audit_state_names(model::WaterTaggingModel) =
-    has_water_tag_precipitation(model) ?
+    has_water_tag_precipitation_audit(model) ?
     (
         Tuple(Symbol(:q_rtag_aud_, tag_name(tag)) for tag in model.tags)...,
         Tuple(Symbol(:q_stag_aud_, tag_name(tag)) for tag in model.tags)...,
@@ -314,12 +315,12 @@ _part_variables(entry, ρq, coord, tags::Tuple) = merge(
 
 The microphysics audit's state fields for a single grid point, as zeros of the
 type of `value`: `q_rtag_aud_<name>` and `q_stag_aud_<name>` for each tag,
-under `water_tag_precipitation: true` only. See
-[`water_tag_microphysics_audit`](@ref).
+under `water_tag_precipitation: true` with `water_tag_precipitation_audit`
+on only. See [`water_tag_microphysics_audit`](@ref).
 """
 water_tag_precipitation_audit_variables(value, ::Nothing) = (;)
 water_tag_precipitation_audit_variables(value, model::WaterTaggingModel) =
-    has_water_tag_precipitation(model) ?
+    has_water_tag_precipitation_audit(model) ?
     _mechanism_zeros(value, _audit_names(model.tags)) : (;)
 # The names come from the tags' type parameters, so the state's type can be
 # inferred where it is built point by point.
@@ -399,7 +400,8 @@ function _water_tag_precipitation_cache(Y, model)
 end
 
 # The scratch under the key: the rain and snow parts' share denominators, and
-# the snapshots of the bracket around the vapour nonnegativity tendency. They
+# the snapshots of the applied-update event around the vapour nonnegativity
+# tendency. They
 # live in `p.scratch` because the microphysics may be evaluated with dual
 # numbers, as the tags' own share denominator does.
 _water_tag_precipitation_scratch(Y, ::Nothing) = (;)
@@ -420,7 +422,7 @@ _water_tag_precipitation_scratch(Y, model) =
     water_tag_part_share(ᶜY, scratch, tag, part)
 
 Lazy field of `tag`'s share of the compartment `part` is a share of: for a
-partition tag, its clamped share renormalized over the partition
+region tag, its clamped share renormalized over the region tags
 ([`water_tag_sediment_share`](@ref)), and for a source tag its own clamped share
 ([`water_tag_source_sediment_share`](@ref)). The partition's shares of a
 compartment then sum to one wherever the partition holds some of it. Needs
@@ -590,6 +592,7 @@ function BMT.bulk_microphysics_tendencies(
     tps,
     ρ,
     T,
+    w,
     q_tot,
     q_lcl,
     q_icl,
@@ -603,6 +606,7 @@ function BMT.bulk_microphysics_tendencies(
         tps,
         ρ,
         T,
+        w,
         q_tot,
         q_lcl,
         q_icl,
@@ -617,36 +621,36 @@ function BMT.bulk_microphysics_tendencies(
 end
 
 """
-    water_tag_1m_flows(mp, tps, ρ, T, q_tot, q_lcl, q_icl, q_rai, q_sno, Δt, nsub)
+    water_tag_1m_flows(mp, tps, ρ, T, w, q_tot, q_lcl, q_icl, q_rai, q_sno, Δt, nsub)
 
 The 1-moment microphysics over `Δt`, decomposed into the flows of water between
 the non-precipitating water `N` (vapour, cloud liquid, cloud ice), rain `R` and
 snow `S`. Returns the six flows of [`WATER_TAG_FLOW_NAMES`](@ref), each averaged
 over `Δt`, and the net tendencies of rain and snow, `dq_rai_dt` and
-`dq_sno_dt`.
+`dq_sno_dt`. `w` is the air's vertical velocity, which the rain
+autoconversion may depend on.
 
 It repeats `BMT.bulk_microphysics_tendencies(BMT.LinearizedAverage(), ...)` of
-CloudMicrophysics 0.39 and 0.40, substep for substep, with the same arithmetic.
-The two versions differ only in `_linearize`, and the flows call the one the
-model's version has (`_water_tag_linearize`). Each substep solves the
-linearized system `(q* - q)/Δt = M q* + e`. A sink is linear in its donor,
-`D q_donor*`, so each process's transfer over the substep is its
-coefficient times the solved donor. The transfers that cross between
-compartments are summed into the six flows. Transfers inside `N`, such as
-condensation or ice melt, do not move a tag's water between its parts, so they
-are left out. The net tendencies it returns are the model's, and the flows'
-net is the tendency's net, both to the rounding of the step's water over the
-step: the compiler may fuse a `muladd` in one and not in the other. A test
-holds them to that.
+CloudMicrophysics 0.43, substep for substep, with the same arithmetic. Each
+substep solves the linearized system `(q* - q)/Δt = M q* + e`. A sink is linear
+in the content of the species it takes from, `D q_from*`, so each process's
+transfer over the substep is its coefficient times the solved content of that
+species. The transfers that cross between compartments are summed into the six
+flows. Transfers inside `N`, such as condensation or ice melt, do not move a
+tag's water between its parts, so they are left out. The net tendencies it returns
+are the model's, and the flows' net is the tendency's net, both to the rounding
+of the step's water over the step: the compiler may fuse a `muladd` in one and
+not in the other. A test holds them to that.
 
-These are the gross flows. Each flow is later attributed with its donor's
-composition ([`water_tag_microphysics_change`](@ref)).
+These are the gross flows. Each flow is later attributed with the composition of
+the compartment it leaves ([`water_tag_microphysics_change`](@ref)).
 """
 @inline function water_tag_1m_flows(
     mp,
     tps,
     ρ,
     T,
+    w,
     q_tot,
     q_lcl,
     q_icl,
@@ -670,6 +674,7 @@ composition ([`water_tag_microphysics_change`](@ref)).
             tps,
             ρ,
             T,
+            w,
             q_tot,
             q_lcl,
             q_icl,
@@ -706,20 +711,8 @@ composition ([`water_tag_microphysics_change`](@ref)).
     )
 end
 
-# CloudMicrophysics 0.40 passes the substep to `_linearize`, to integrate the
-# vapour relaxation over it. CloudMicrophysics 0.39 does not. The model's step
-# calls the method its version has, so the flows call the same one. The choice
-# is made once, when the package is compiled.
-@static if hasmethod(BMT._linearize, NTuple{7, Any})
-    @inline _water_tag_linearize(src, q_lcl, q_icl, q_rai, q_sno, q_min, Δt) =
-        BMT._linearize(src, q_lcl, q_icl, q_rai, q_sno, q_min, Δt)
-else
-    @inline _water_tag_linearize(src, q_lcl, q_icl, q_rai, q_sno, q_min, Δt) =
-        BMT._linearize(src, q_lcl, q_icl, q_rai, q_sno, q_min)
-end
-
-# One substep of `BMT._linearized_implicit_step`, CloudMicrophysics 0.39 and
-# 0.40, line for line, and the flows it implies. The rain row of the solved
+# One substep of `BMT._linearized_implicit_step`, CloudMicrophysics 0.43, line
+# for line, and the flows it implies. The rain row of the solved
 # system is `(q_rai* - q_rai)/Δt = M31 q_lcl* + M33 q_rai* + M34 q_sno*`, and
 # the snow row `M41 q_lcl* + M42 q_icl* + M43 q_rai* + M44 q_sno* + α e4`.
 # `M31` holds the transfers from cloud liquid into rain, `M41` and `M42` those
@@ -732,6 +725,7 @@ end
     tps,
     ρ,
     T,
+    w,
     q_tot,
     q_lcl,
     q_icl,
@@ -746,6 +740,7 @@ end
         tps,
         ρ,
         T,
+        w,
         q_tot,
         q_lcl,
         q_icl,
@@ -753,7 +748,7 @@ end
         q_sno,
     )
     q_min = BMT.TDI.TD.Parameters.q_min(tps)
-    lin = _water_tag_linearize(src, q_lcl, q_icl, q_rai, q_sno, q_min, Δt)
+    lin = BMT._linearize(src, q_lcl, q_icl, q_rai, q_sno, q_min, Δt)
 
     invΔt = one(FT) / Δt
 
@@ -814,7 +809,7 @@ end
 end
 
 """
-    water_tag_1m_flows_grid_mean(ρ, q_tot_nonneg, q_lcl, q_icl, q_rai, q_sno, T, cmp, thp, dt, nsubs)
+    water_tag_1m_flows_grid_mean(ρ, q_tot_nonneg, q_lcl, q_icl, q_rai, q_sno, T, w, cmp, thp, dt, nsubs)
 
 The flows of [`water_tag_1m_flows`](@ref) at the grid mean, with the arguments
 of `microphysics_tendencies_1m`'s grid-mean form, which the model calls without
@@ -828,6 +823,7 @@ SGS quadrature.
     q_rai,
     q_sno,
     T,
+    w,
     cmp,
     thp,
     dt,
@@ -839,6 +835,7 @@ SGS quadrature.
     thp,
     ρ,
     T,
+    w,
     q_tot_nonneg,
     q_lcl,
     q_icl,
@@ -879,7 +876,7 @@ function _set_water_tag_microphysics_flows!(
     has_water_tag_precipitation(model) || return nothing
     hasproperty(p, :tagging) || return nothing
     (; dt) = p
-    (; ᶜT, ᶜq_tot_nonneg) = p.precomputed
+    (; ᶜT, ᶜu, ᶜq_tot_nonneg) = p.precomputed
     ᶜflows = p.tagging.ᶜwater_mp_flows
     thp = CAP.thermodynamics_params(p.params)
     cmp = CAP.microphysics_1m_params(p.params)
@@ -889,19 +886,22 @@ function _set_water_tag_microphysics_flows!(
     ᶜq_rai = @. lazy(specific(Y.c.ρq_rai, Y.c.ρ))
     ᶜq_sno = @. lazy(specific(Y.c.ρq_sno, Y.c.ρ))
     sgs_quad = p.atmos.sgs_quadrature
+    ᶜw_air = @. lazy(w_component(WVec(ᶜu)))
     if not_quadrature(sgs_quad)
         @. ᶜflows = water_tag_1m_flows_grid_mean(
             Y.c.ρ, ᶜq_tot_nonneg, ᶜq_lcl, ᶜq_icl, ᶜq_rai, ᶜq_sno,
-            ᶜT, cmp, thp, dt, mp1m.n_substeps,
+            ᶜT, ᶜw_air, cmp, thp, dt, mp1m.n_substeps,
         )
     else
         (; ᶜT′T′, ᶜq′q′, ᶜsgs_moments) = p.precomputed
         corr_Tq = correlation_Tq(p.params)
         α = sgs_variance_fidelity(CAP.cloud_fraction_steepness_scale(p.params))
+        ξ_liq = CAP.sgs_liquid_uniform_fraction(p.params)
+        ξ_ice = CAP.sgs_ice_uniform_fraction(p.params)
         @. ᶜflows = microphysics_tendencies_1m(
-            WaterTagFlows1M(), sgs_quad, cmp, thp, Y.c.ρ, ᶜT,
+            WaterTagFlows1M(), sgs_quad, cmp, thp, Y.c.ρ, ᶜT, ᶜw_air,
             ᶜq_tot_nonneg, ᶜq_lcl, ᶜq_icl, ᶜq_rai, ᶜq_sno,
-            ᶜT′T′, ᶜq′q′, corr_Tq, ᶜsgs_moments.λ_lagrange, α,
+            ᶜT′T′, ᶜq′q′, corr_Tq, ᶜsgs_moments.λ_lagrange, α, ξ_liq, ξ_ice,
             dt, mp1m.n_substeps_quad,
         )
     end
@@ -912,8 +912,8 @@ end
     water_tag_gross_flow_change(F, ψN, ψR, ψS)
 
 The change of one tag's three parts, per unit mass and time, when each of the
-six flows `F` ([`WATER_TAG_FLOW_NAMES`](@ref)) carries its donor compartment's
-composition: `ψN`, `ψR` and `ψS` are the tag's shares of the water that leaves
+six flows `F` ([`WATER_TAG_FLOW_NAMES`](@ref)) carries the composition of the
+compartment it leaves: `ψN`, `ψR` and `ψS` are the tag's shares of the water that leaves
 the non-precipitating water, rain and snow ([`water_tag_pool_shares`](@ref)).
 Returns `(ΔN, ΔR, ΔS)`, which sum to zero.
 """
@@ -929,7 +929,8 @@ Returns `(ΔN, ΔR, ΔS)`, which sum to zero.
 A tag's shares of the water that leaves each compartment over the step `Δt`:
 the compartment's water at the start, `qN`, `qR` or `qS` (per unit mass, with
 the tag's shares `φN`, `φR`, `φS`), mixed with what the flows `F` bring into it
-during the step, each with its own donor's share. So each share solves
+during the step, each with the share of the compartment it leaves. So each share
+solves
 
     ψR (qR + Δt (F.NR + F.SR)) = qR φR + Δt (F.NR ψN + F.SR ψS),
 
@@ -1034,8 +1035,8 @@ end
     water_tag_microphysics_change(F, dq_rai_dt, dq_sno_dt, qN, qR, qS, Δt, φN, φR, φS, negN = false, negR = false, negS = false)
 
 The change of one tag's parts by the microphysics, per unit mass and time: the
-gross flows `F` over the step `Δt`, each with its donor's composition over the
-step ([`water_tag_pool_shares`](@ref), [`water_tag_gross_flow_change`](@ref)),
+gross flows `F` over the step `Δt`, each with the composition of the compartment
+it leaves over the step ([`water_tag_pool_shares`](@ref), [`water_tag_gross_flow_change`](@ref)),
 plus the net-flow rule ([`water_tag_net_flow_change`](@ref)) on what the
 flows' net misses of the model's own tendencies, `dq_rai_dt` and `dq_sno_dt`.
 That remainder is rounding where the flows are available, so the gross flows
@@ -1110,8 +1111,9 @@ end
 
 The six flows `F` ([`WATER_TAG_FLOW_NAMES`](@ref)), read in their actual
 direction where they touch a negative compartment: a negative flow moves water
-from its nominal receiver to its nominal donor. The 1-moment flows are linear
-in their solved donors, so a negative content reverses its outflows. A pair of
+from its nominal receiving compartment to its nominal leaving compartment. The
+1-moment flows are linear in the solved content of the compartment they leave,
+so a negative content reverses its outflows. A pair of
 compartments neither of which is negative keeps its two flows as they are.
 Each pair's net flow is unchanged.
 """
@@ -1135,7 +1137,8 @@ end
 # The gross flows' change of one tag's parts where a compartment is negative
 # (`water_tag_microphysics_change`). The pools are those of
 # `water_tag_pool_shares`, over the flows in their actual direction, and a
-# donor's composition enters a receiver's pool times what the donor passes on.
+# leaving compartment's composition enters the receiving compartment's pool
+# times what the leaving compartment passes on.
 @inline function _water_tag_negative_gross_change(
     F,
     qN,
@@ -1311,18 +1314,19 @@ end
     water_tag_precipitation_microphysics_tendency!(Yₜ, Y, p)
 
 Move each tag's water between its three parts as the 1-moment microphysics
-moves the parent's between its compartments: by the gross flows, each with its
-donor's composition over the step ([`water_tag_microphysics_change`](@ref)). The flows are
-frozen in `p.tagging.ᶜwater_mp_flows` with the model's own tendencies, and the
-shares are taken from `Y`. It also adds the audit's difference to the audit
-fields `q_rtag_aud_<name>` and `q_stag_aud_<name>`
+moves the parent's between its compartments: by the gross flows, each with the
+composition of the compartment it leaves over the step
+([`water_tag_microphysics_change`](@ref)). The flows are frozen in `p.tagging.ᶜwater_mp_flows` with the model's own tendencies, and the
+shares are taken from `Y`. Under `water_tag_precipitation_audit`, on by
+default, it also adds the audit's difference to the audit fields
+`q_rtag_aud_<name>` and `q_stag_aud_<name>`
 ([`water_tag_microphysics_audit`](@ref)). Where a compartment of `Y` is
 negative, the transfers into it take the target's treatment, and the ledgers
 `q_tag_exp_negative` and `q_tag_exp_negative_precip` take what it keeps.
 
 Called beside `microphysics_tendency!`, on the implicit path or the explicit
 one, whichever the model uses. The microphysics keeps `ρq_tot`, so the
-bracket around it moves nothing. A no-op without the key.
+applied-update event around it moves nothing. A no-op without the key.
 """
 water_tag_precipitation_microphysics_tendency!(Yₜ, Y, p) =
     _water_tag_precipitation_microphysics_tendency!(
@@ -1373,6 +1377,7 @@ function _water_tag_precipitation_microphysics_tendency!(
         ᶜpools,
         ᶜnegative,
         eltype(Y.c.ρ)(float(p.dt)),
+        Val(has_water_tag_precipitation_audit(model)),
         model.tags,
     )
     return nothing
@@ -1399,6 +1404,7 @@ _microphysics_of_water_tag_parts!(
     ᶜpools,
     ᶜnegative,
     Δt,
+    audit::Val,
     ::Tuple{},
 ) = nothing
 function _microphysics_of_water_tag_parts!(
@@ -1410,8 +1416,9 @@ function _microphysics_of_water_tag_parts!(
     ᶜpools,
     ᶜnegative,
     Δt,
+    audit::Val{with_audit},
     tags::Tuple,
-)
+) where {with_audit}
     tag = first(tags)
     (ᶜnegN, ᶜnegR, ᶜnegS) = ᶜnegative
     ᶜφN = water_tag_part_share(ᶜY, scratch, tag, NonPrecipitatingPart())
@@ -1438,18 +1445,22 @@ function _microphysics_of_water_tag_parts!(
             ᶜF, ᶜdq_rai_dt, ᶜdq_sno_dt, ᶜqN, ᶜqR, ᶜqS, Δt, ᶜφN, ᶜφR, ᶜφS,
             ᶜnegN, ᶜnegR, ᶜnegS,
         )
-    ᶜrain_auditₜ = rain_audit_field(ᶜYₜ, tag)
-    ᶜsnow_auditₜ = snow_audit_field(ᶜYₜ, tag)
-    @. ᶜrain_auditₜ +=
-        ᶜY.ρ * _mp_audit_r(
-            ᶜF, ᶜdq_rai_dt, ᶜdq_sno_dt, ᶜqN, ᶜqR, ᶜqS, Δt, ᶜφN, ᶜφR, ᶜφS,
-            ᶜnegN, ᶜnegR, ᶜnegS,
-        )
-    @. ᶜsnow_auditₜ +=
-        ᶜY.ρ * _mp_audit_s(
-            ᶜF, ᶜdq_rai_dt, ᶜdq_sno_dt, ᶜqN, ᶜqR, ᶜqS, Δt, ᶜφN, ᶜφR, ᶜφS,
-            ᶜnegN, ᶜnegR, ᶜnegS,
-        )
+    # The audit recomputes the change twice per tag, so its own key can
+    # leave it out. Nothing else reads it.
+    if with_audit
+        ᶜrain_auditₜ = rain_audit_field(ᶜYₜ, tag)
+        ᶜsnow_auditₜ = snow_audit_field(ᶜYₜ, tag)
+        @. ᶜrain_auditₜ +=
+            ᶜY.ρ * _mp_audit_r(
+                ᶜF, ᶜdq_rai_dt, ᶜdq_sno_dt, ᶜqN, ᶜqR, ᶜqS, Δt, ᶜφN, ᶜφR, ᶜφS,
+                ᶜnegN, ᶜnegR, ᶜnegS,
+            )
+        @. ᶜsnow_auditₜ +=
+            ᶜY.ρ * _mp_audit_s(
+                ᶜF, ᶜdq_rai_dt, ᶜdq_sno_dt, ᶜqN, ᶜqR, ᶜqS, Δt, ᶜφN, ᶜφR, ᶜφS,
+                ᶜnegN, ᶜnegR, ᶜnegS,
+            )
+    end
     return _microphysics_of_water_tag_parts!(
         ᶜYₜ,
         ᶜY,
@@ -1459,6 +1470,7 @@ function _microphysics_of_water_tag_parts!(
         ᶜpools,
         ᶜnegative,
         Δt,
+        audit,
         Base.tail(tags),
     )
 end
@@ -1471,7 +1483,7 @@ end
     snapshot_water_tag_precipitation_tendency!(p, Yₜ)
     attribute_water_tag_precipitation_tendency!(Yₜ, Y, p)
 
-A bracket around `tracer_nonnegativity_vapor_tendency!`, which lifts negative
+An applied-update event around `tracer_nonnegativity_vapor_tendency!`, which lifts negative
 condensate at the expense of vapour and keeps `ρq_tot`. The rain and snow it
 adds or removes move between each tag's rain or snow part and its
 non-precipitating part by the net-flow rule
@@ -1589,8 +1601,18 @@ tag's rain or snow part and its non-precipitating part, at fixed `ρq_tot`, as
 without a change of `ρq_tot`, and so without a call of `rescale_water_tags!`:
 the clip and rescale of the condensates in
 `enforce_grid_mean_microphysics_constraints!`, the vapour constraint, and a
-limiter that leaves `ρq_tot` out. Called last in `limiters_func!`, and in
-`constrain_state!` before the partition repair. A no-op without the key.
+limiter that leaves `ρq_tot` out.
+
+Then the closing step brings the partition's rain parts to the non-negative
+part of `ρq_rai`, and its snow parts to that of `ρq_sno`
+([`water_tag_part_closing_shift`](@ref)). Other paths can leave them apart:
+the microphysics and the sedimentation where a compartment is negative, and
+the advection, which can take a compartment below zero. Nothing else would
+bring them back. The closing step books what it adds or removes in a ledger
+of its own, `q_tag_led_close`, and in each tag's `q_tag_fix_<name>`.
+
+Called last in `limiters_func!`, and in `constrain_state!` before the partition
+repair. A no-op without the key.
 """
 follow_water_tag_precipitation!(Y, p) = _follow_water_tag_precipitation!(
     Y,
@@ -1602,12 +1624,115 @@ function _follow_water_tag_precipitation!(Y, p, model::WaterTaggingModel)
     has_water_tag_precipitation(model) || return nothing
     # Where rain or snow crosses zero, the non-precipitating parts take the
     # rest of their compartment's change by the rescale's rule, into its
-    # ledgers per mechanism. So the call is bracketed as the rescale is.
-    mechanisms = Val((:q_tag_led_rescale, :q_tag_led_empty))
+    # ledgers per mechanism. The closing step writes its own. So the call
+    # opens and closes all three.
+    mechanisms = Val((:q_tag_led_rescale, :q_tag_led_empty, :q_tag_led_close))
     before_tag_ledgers!(p, Y, mechanisms)
     _rescale_water_tag_parts!(Y, p, Y.c.ρq_tot, model, Val(false))
+    _close_water_tag_precip_parts!(Y, p, model)
     after_tag_ledgers!(p, Y, mechanisms)
     return nothing
+end
+
+"""
+    water_tag_part_closing_shift(ρq_part, ρq_nonprecip, target, pos, neg, pos_nonprecip)
+
+The water that the closing step of [`follow_water_tag_precipitation!`](@ref)
+adds to the rain or snow part `ρq_part` of a *partition* tag. `target` is the
+compartment's non-negative part, [`water_tag_partition_target`](@ref). `pos`
+and `neg` are the sums of the partition's non-negative and negative parts of
+that compartment in the cell, and `pos_nonprecip` the sum of its non-negative
+non-precipitating parts. The rest to close is `target - (pos + neg)`. The rules
+are:
+
+  - the parts take the rest by their own composition. Each part becomes
+    `(ρq_part⁺ / pos) · (target - neg)`, and the shift is that less
+    `ρq_part⁺`. That is `rest · ρq_part⁺ / pos`. The rest is never below
+    `-pos`, so no part goes below zero. Written so, a part whose compartment
+    is zero ends at zero exactly, not at a rounding unit off it, and the share
+    is taken before the product, which keeps a Float32 product of two small
+    numbers from underflowing;
+  - where the parts hold nothing and the rest is positive, they take it by
+    the non-precipitating composition, `rest · ρq_nonprecip⁺ / pos_nonprecip`,
+    as a compartment that grows does in the follow;
+  - elsewhere nothing moves, and the rest stays in the compartment's residual.
+
+The water is added to the tag, not moved from its other parts. Their own
+compartments are not changed. Where the rest is zero the shift is `-0`, which
+leaves the part as it was, bit for bit.
+"""
+@inline function water_tag_part_closing_shift(
+    ρq_part,
+    ρq_nonprecip,
+    target,
+    pos,
+    neg,
+    pos_nonprecip,
+)
+    rest = target - (pos + neg)
+    iszero(rest) && return -zero(ρq_part)
+    if pos > zero(pos)
+        held = max(ρq_part, zero(ρq_part))
+        return held / pos * (target - neg) - held
+    end
+    (rest > zero(rest) && pos_nonprecip > zero(pos_nonprecip)) ||
+        return -zero(ρq_part)
+    return rest * (max(ρq_nonprecip, zero(ρq_nonprecip)) / pos_nonprecip)
+end
+
+# The closing step: each compartment of rain and snow on its own. The sums are
+# taken first and only read, so each tag's shift sees the parts before the step.
+function _close_water_tag_precip_parts!(Y, p, model)
+    ledger = _water_tag_fix_ledger(Y, p, model)
+    (; ᶜwater_pos, ᶜwater_neg, ᶜwater_pos_2, ᶜwater_shift) = p.tagging
+    for part in (RainPart(), SnowPart())
+        ᶜwater_pos .= zero(eltype(ᶜwater_pos))
+        ᶜwater_neg .= zero(eltype(ᶜwater_neg))
+        ᶜwater_pos_2 .= zero(eltype(ᶜwater_pos_2))
+        _accumulate_part_pos!(ᶜwater_pos, Y.c, model.tags, part)
+        _accumulate_part_neg!(ᶜwater_neg, Y.c, model.tags, part)
+        _accumulate_partition_pos!(ᶜwater_pos_2, Y.c, model.tags)
+        _apply_part_closing!(
+            Y.c,
+            ledger,
+            (ᶜwater_pos, ᶜwater_neg, ᶜwater_pos_2),
+            ᶜwater_shift,
+            water_tag_part_target(Y.c, part),
+            model.tags,
+            part,
+        )
+    end
+    return nothing
+end
+
+_apply_part_closing!(ᶜY, ledger, sums, ᶜshift, ᶜtarget, ::Tuple{}, part) =
+    nothing
+function _apply_part_closing!(ᶜY, ledger, sums, ᶜshift, ᶜtarget, tags::Tuple, part)
+    tag = first(tags)
+    if _is_partition_tag(tag)
+        (ᶜpos, ᶜneg, ᶜpos_nonprecip) = sums
+        ᶜρq_part = water_tag_part_field(ᶜY, tag, part)
+        ᶜρq_nonprecip = tag_field(ᶜY, tag)
+        (ᶜfix, ᶜgross, ᶜcount) = tag_ledger_fields(ledger, tag)
+        @. ᶜshift = water_tag_part_closing_shift(
+            ᶜρq_part,
+            ᶜρq_nonprecip,
+            ᶜtarget,
+            ᶜpos,
+            ᶜneg,
+            ᶜpos_nonprecip,
+        )
+        # The water enters or leaves the tag, as in the rescale, so its
+        # signed ledger takes it. The closing step has a ledger per mechanism
+        # of its own, so its work stays apart from the rescale's.
+        @. ᶜY.q_tag_led_close += ᶜshift
+        @. ᶜgross += abs(ᶜshift)
+        @. ᶜcount += tag_event(ᶜshift, ᶜY.ρq_tot)
+        add_to_tag_ledger!(ledger.state, tag, ᶜshift)
+        @. ᶜfix += ᶜshift
+        @. ᶜρq_part += ᶜshift
+    end
+    return _apply_part_closing!(ᶜY, ledger, sums, ᶜshift, ᶜtarget, Base.tail(tags), part)
 end
 
 """
@@ -1679,77 +1804,94 @@ is again the change of the compartment's non-negative part.
            water_tag_fraction(ρq_nonprecip, nonprecip_before)
 end
 
-# The corrections under the key. Rain, then snow: each compartment's change
-# since the snapshot moves between the part and the non-precipitating part.
-# Then, when the caller passes a change of `ρq_tot`, the non-precipitating
-# parts take it by the rule the tags follow without the key, on their own
-# compartment. Last, the snapshots move on, so a later call moves only what
-# changed since.
+# The corrections under the key. Each compartment's change since the snapshot
+# moves between the part and the non-precipitating part. When the caller passes
+# a change of `ρq_tot`, the non-precipitating parts also take it, by the rule
+# the tags follow without the key, on their own compartment. Last, the
+# snapshots move on, so a later call moves only what changed since.
+#
+# The changes that raise the non-precipitating water `N = ρq_tot - ρq_rai -
+# ρq_sno` go first, and those that lower it last. Each change is split at its
+# middle value, `max` of before and after for `ρq_tot` and `min` for rain and
+# snow, so the order holds in every cell. The order is: rain falls, snow falls,
+# `ρq_tot` rises, rain rises, snow rises, `ρq_tot` falls. So `N` rises and then
+# falls, and every value it takes in between lies above the smaller of its
+# values before and after. A cell whose `N` is positive before and after never
+# passes through zero on the way. A fixed order could take `N` below zero in
+# between. The non-precipitating parts would then empty, and the water would
+# end in no tag. The falls of rain and snow come before the rise of `ρq_tot`.
+# Where `N` starts at or below zero, they can lift it above zero first, so the
+# parts are not empty when the rise of `ρq_tot` reaches them. The other way
+# round, the rescale would find no parts to give the rise to.
 function _rescale_water_tag_parts!(Y, p, ᶜρq_tot_before, model, ::Val{total}) where {total}
-    (; ᶜwater_fix, ᶜwater_fix_gross, ᶜwater_fix_count) = p.tagging
+    ledger = _water_tag_fix_ledger(Y, p, model)
     (; ᶜwater_pos, ᶜwater_pos_2, ᶜwater_shift, ᶜwater_shift_sum) = p.tagging
     (; ᶜwater_rai_before, ᶜwater_sno_before) = p.tagging
-    # Each tag's own ledger, where kept, takes the rescale of its
-    # non-precipitating part, as `q_tag_fix_<name>` does. The moves between a
-    # tag's parts leave it alone. Only the rescale adds to the ledgers per
-    # mechanism, and `_rescale_water_tags!` brackets it, so there is no bracket
-    # here.
-    ledger = tag_ledger(
-        ᶜwater_fix,
-        ᶜwater_fix_gross,
-        ᶜwater_fix_count,
-        water_tag_fix_ledger_view(Y, model),
-    )
     ᶜY = Y.c
     scratch = (ᶜwater_pos, ᶜwater_pos_2, ᶜwater_shift, ᶜwater_shift_sum)
-    # The non-precipitating compartment before and after each step, at the
-    # `ρq_tot` before the correction. The rain step's after is the snow step's
-    # before, and the snow step's after is what the rescale below starts from.
-    ᶜnonprecip_before_rain =
-        @. lazy(ᶜρq_tot_before - ᶜwater_rai_before - ᶜwater_sno_before)
-    ᶜnonprecip_before_snow =
-        @. lazy(ᶜρq_tot_before - ᶜY.ρq_rai - ᶜwater_sno_before)
-    ᶜnonprecip_after_snow = @. lazy(ᶜρq_tot_before - ᶜY.ρq_rai - ᶜY.ρq_sno)
+    # Before, middle and after of each change. Without a change of `ρq_tot`
+    # the caller passes `ρq_tot` itself, so its middle is that too.
+    (ᶜT₀, ᶜT₂) = (ᶜρq_tot_before, ᶜY.ρq_tot)
+    ᶜT₁ = total ? (@. lazy(max(ᶜT₀, ᶜT₂))) : ᶜT₀
+    (ᶜR₀, ᶜR₂) = (ᶜwater_rai_before, ᶜY.ρq_rai)
+    ᶜR₁ = @. lazy(min(ᶜR₀, ᶜR₂))
+    (ᶜS₀, ᶜS₂) = (ᶜwater_sno_before, ᶜY.ρq_sno)
+    ᶜS₁ = @. lazy(min(ᶜS₀, ᶜS₂))
+    # `N` at each point of the sequence. The index of each name gives the
+    # values of `ρq_tot`, rain and snow there.
+    ᶜN₀₀₀ = @. lazy(ᶜT₀ - ᶜR₀ - ᶜS₀)
+    ᶜN₀₁₀ = @. lazy(ᶜT₀ - ᶜR₁ - ᶜS₀)
+    ᶜN₀₁₁ = @. lazy(ᶜT₀ - ᶜR₁ - ᶜS₁)
+    ᶜN₁₁₁ = @. lazy(ᶜT₁ - ᶜR₁ - ᶜS₁)
+    ᶜN₁₂₁ = @. lazy(ᶜT₁ - ᶜR₂ - ᶜS₁)
+    ᶜN₁₂₂ = @. lazy(ᶜT₁ - ᶜR₂ - ᶜS₂)
+    ᶜN₂₂₂ = @. lazy(ᶜT₂ - ᶜR₂ - ᶜS₂)
+    # The changes that raise `N`.
     _follow_water_tag_part!(
-        ᶜY,
-        ledger,
-        scratch,
-        ᶜwater_rai_before,
-        ᶜnonprecip_before_rain,
-        ᶜnonprecip_before_snow,
-        model.tags,
-        RainPart(),
+        ᶜY, ledger, scratch, ᶜR₀, ᶜR₁, ᶜN₀₀₀, ᶜN₀₁₀, model.tags, RainPart(),
     )
     _follow_water_tag_part!(
-        ᶜY,
-        ledger,
-        scratch,
-        ᶜwater_sno_before,
-        ᶜnonprecip_before_snow,
-        ᶜnonprecip_after_snow,
-        model.tags,
-        SnowPart(),
+        ᶜY, ledger, scratch, ᶜS₀, ᶜS₁, ᶜN₀₁₀, ᶜN₀₁₁, model.tags, SnowPart(),
     )
-    if total
-        ᶜwater_pos .= zero(eltype(ᶜwater_pos))
-        _accumulate_partition_pos!(ᶜwater_pos, ᶜY, model.tags)
-        _apply_water_tag_rescale!(
-            ᶜY,
-            ledger,
-            ᶜwater_pos,
-            ᶜnonprecip_after_snow,
-            model.tags,
-            water_tag_part_parent(ᶜY, NonPrecipitatingPart()),
-        )
-    end
+    total && _rescale_nonprecip_parts!(ᶜY, ledger, ᶜwater_pos, ᶜN₀₁₁, ᶜN₁₁₁, model)
+    # The changes that lower it.
+    _follow_water_tag_part!(
+        ᶜY, ledger, scratch, ᶜR₁, ᶜR₂, ᶜN₁₁₁, ᶜN₁₂₁, model.tags, RainPart(),
+    )
+    _follow_water_tag_part!(
+        ᶜY, ledger, scratch, ᶜS₁, ᶜS₂, ᶜN₁₂₁, ᶜN₁₂₂, model.tags, SnowPart(),
+    )
+    total && _rescale_nonprecip_parts!(ᶜY, ledger, ᶜwater_pos, ᶜN₁₂₂, ᶜN₂₂₂, model)
     ᶜwater_rai_before .= ᶜY.ρq_rai
     ᶜwater_sno_before .= ᶜY.ρq_sno
     return nothing
 end
 
-# One compartment's follow, then the rest of the non-precipitating parts' change.
+# The ledgers that the rescale and the closing step write. Each tag's own
+# ledger, where kept, takes the rescale of its non-precipitating part, as
+# `q_tag_fix_<name>` does. The moves between a tag's parts leave it alone.
+# Only the rescale and the closing step add to the ledgers per mechanism. Their
+# callers open and close those ledgers around them.
+_water_tag_fix_ledger(Y, p, model) = tag_ledger(
+    p.tagging.ᶜwater_fix,
+    p.tagging.ᶜwater_fix_gross,
+    p.tagging.ᶜwater_fix_count,
+    water_tag_fix_ledger_view(Y, model),
+)
+
+# The non-precipitating parts take the change of `N` from `ᶜN_before` to
+# `ᶜN_after`, by the rescale's rule, everywhere.
+function _rescale_nonprecip_parts!(ᶜY, ledger, ᶜpos, ᶜN_before, ᶜN_after, model)
+    ᶜpos .= zero(eltype(ᶜpos))
+    _accumulate_partition_pos!(ᶜpos, ᶜY, model.tags)
+    _apply_water_tag_rescale!(ᶜY, ledger, ᶜpos, ᶜN_before, model.tags, ᶜN_after)
+    return nothing
+end
+
+# One compartment's follow from `ᶜbefore` to `ᶜafter`, then the rest of the
+# non-precipitating parts' change.
 #
-# The follow moves each partition tag's `shift` into its `part` and out of its
+# The follow moves each region tag's `shift` into its `part` and out of its
 # non-precipitating part, so the partition's non-precipitating sum changes by
 # `-S`, `S` the sum of the shifts. Its target changes by
 # `T(N_after) - T(N_before)`, with `T` the non-negative part. The two agree
@@ -1769,12 +1911,12 @@ function _follow_water_tag_part!(
     ledger,
     (ᶜpos_part, ᶜpos_nonprecip, ᶜshift, ᶜshift_sum),
     ᶜbefore,
+    ᶜafter,
     ᶜnonprecip_before,
     ᶜnonprecip_after,
     tags,
     part,
 )
-    ᶜafter = water_tag_part_parent(ᶜY, part)
     ᶜpos_part .= zero(eltype(ᶜpos_part))
     _accumulate_part_pos!(ᶜpos_part, ᶜY, tags, part)
     ᶜpos_nonprecip .= zero(eltype(ᶜpos_nonprecip))
@@ -1882,8 +2024,8 @@ function _apply_part_follow!(
         )
     end
     # The shift moves water within the tag, so the tag's signed ledger does
-    # not change. The gross twin counts it out of one part and into the
-    # other, as a transfer between tags counts.
+    # not change. The gross counts it out of one part and into the other, as a
+    # transfer between tags counts.
     @. ᶜgross += 2 * abs(ᶜshift)
     @. ᶜcount += tag_event(ᶜshift, ᶜY.ρq_tot)
     @. ᶜρq_part += ᶜshift
@@ -1927,7 +2069,7 @@ function _repair_water_tag_precip_parts!(Y, p, ledger, model)
 end
 
 # ============================================================================
-# Advection under the increment follower
+# Advection under increment transport
 # ============================================================================
 
 """
@@ -1973,46 +2115,80 @@ end
 # Hyperdiffusion
 # ============================================================================
 
-# The Laplacian's field of a tag's non-precipitating part, keyed by its
-# specific name, as `allocate_ᶜspecific_gs_tracers` keys them.
-@generated _laplacian_tag_field(obj, ::WaterTag{name}) where {name} =
-    :(obj.$(Symbol(:q_tag_, name)))
+"""
+    water_tag_hyperdiffusion_quantities(Y, model)
+
+The hyperdiffusion's field for the water tags under `water_tag_precipitation: true`: `ᶜ∇²q_tot_r`, the horizontal Laplacian of the reference profile, which is
+DSSed with the others. An empty `NamedTuple` without the key, so the cache is
+then as without tags.
+"""
+water_tag_hyperdiffusion_quantities(Y, model) =
+    has_water_tag_precipitation(model) ? (; ᶜ∇²q_tot_r = similar(Y.c, eltype(Y))) :
+    (;)
 
 """
-    prep_water_tag_hyperdiffusion!(ᶜ∇²specific_tracers, Y, p)
+    prep_water_tag_hyperdiffusion!(Y, p)
 
-Under `water_tag_precipitation: true`, set the Laplacian that each tag's
-non-precipitating part is hyperdiffused on to `∇²(N/ρ - φ q_tot_r)`, with `φ`
-the tag's share of its compartment ([`water_tag_part_share`](@ref)) and
-`q_tot_r` the reference profile the parent's water is hyperdiffused against.
-The parent hyperdiffuses `q_tot_eff - q_tot_r`, and the partition's shares sum
-to one, so the partition's non-precipitating parts then move as the parent's
-diffusing water. Called after the tracer
-Laplacians are computed, before their DSS. A no-op without the key.
+Under `water_tag_precipitation: true`, set `p.hyperdiff.ᶜ∇²q_tot_r` to the
+horizontal Laplacian of `q_tot_r`, the reference profile the parent's water is
+hyperdiffused against. Each tag's non-precipitating part keeps the Laplacian of
+its own `N/ρ`, as a passive tracer does. Called after the tracer Laplacians are
+computed, before their DSS. A no-op without the key. See
+[`apply_water_tag_hyperdiffusion!`](@ref).
 """
-function prep_water_tag_hyperdiffusion!(ᶜ∇²specific_tracers, Y, p)
+function prep_water_tag_hyperdiffusion!(Y, p)
+    has_water_tag_precipitation(p.atmos.water_tagging_model) || return nothing
+    thermo_params = CAP.thermodynamics_params(p.params)
+    (; ᶜp) = p.precomputed
+    (; ᶜ∇²q_tot_r) = p.hyperdiff
+    @. ᶜ∇²q_tot_r = wdivₕ(gradₕ(q_tot_r(thermo_params, ᶜp)))
+    return nothing
+end
+
+"""
+    apply_water_tag_hyperdiffusion!(Yₜ, Y, p, ν₄_scalar)
+
+Under `water_tag_precipitation: true`, give each tag's non-precipitating part
+its share `φ` of the reference profile's hyperdiffusion,
+`φ ν₄ ∇⋅(ρ ∇∇²q_tot_r)`. The part has already taken its own hyperdiffusion as a
+passive tracer, `-ν₄ ∇⋅(ρ ∇∇²(N_tag/ρ))`. The parent hyperdiffuses
+`q_tot_eff - q_tot_r`. Where the partition holds water its shares sum to one,
+so there the partition's non-precipitating parts sum to the parent's tendency
+of its diffusing water. Where the partition is empty the shares are zero, and
+no tag takes the reference term there (W61's addendum: about 3.8e10 kg over 3
+days on its sphere).
+
+The share is taken outside the operator. Inside it, as
+`∇²(N_tag/ρ - φ q_tot_r)`, a tag's composition would mix against its gradient
+where `q_tot_eff` is below `q_tot_r`. With `q` uniform on a level and the
+reference flat there, that form is `(1 - q_tot_r/q)` times the passive one,
+which is negative below `q_tot_r`. Called after the tracers' hyperdiffusion. A
+no-op without the key.
+"""
+function apply_water_tag_hyperdiffusion!(Yₜ, Y, p, ν₄_scalar)
     model = p.atmos.water_tagging_model
     has_water_tag_precipitation(model) || return nothing
     water_tag_share_norm!(p, Y)
-    thermo_params = CAP.thermodynamics_params(p.params)
-    (; ᶜp) = p.precomputed
+    (; ᶜ∇²q_tot_r) = p.hyperdiff
+    ᶜreference = p.scratch.ᶜtemp_scalar
+    @. ᶜreference = ν₄_scalar * wdivₕ(Y.c.ρ * gradₕ(ᶜ∇²q_tot_r))
     MatrixFields.unrolled_foreach(model.tags) do tag
-        ᶜ∇²χ = _laplacian_tag_field(ᶜ∇²specific_tracers, tag)
-        ᶜρq_tag = tag_field(Y.c, tag)
+        ᶜρq_tagₜ = tag_field(Yₜ.c, tag)
         ᶜshare = water_tag_part_share(
             Y.c,
             p.scratch,
             tag,
             NonPrecipitatingPart(),
         )
-        @. ᶜ∇²χ = wdivₕ(
-            gradₕ(
-                specific(ᶜρq_tag, Y.c.ρ) - ᶜshare * q_tot_r(thermo_params, ᶜp),
-            ),
-        )
+        @. ᶜρq_tagₜ += ᶜshare * ᶜreference
     end
     return nothing
 end
+
+# The DSS pair of the reference profile's Laplacian, under the key only.
+water_tag_hyperdiffusion_dss_pairs(hyperdiff_cache, buffer, model) =
+    has_water_tag_precipitation(model) ?
+    (hyperdiff_cache.ᶜ∇²q_tot_r => buffer.ᶜ∇²q_tot_r,) : ()
 
 # ============================================================================
 # Surface precipitation of each tag
@@ -2073,6 +2249,22 @@ function water_tag_precipitation_from_config(value)
     isnothing(value) && return false
     value isa Bool || error(
         "`water_tag_precipitation` must be `true` or `false`, got \
+        $(repr(value)).",
+    )
+    return value
+end
+
+"""
+    water_tag_precipitation_audit_from_config(value)
+
+Parse `water_tag_precipitation_audit`. `true`, the default, and `~` keep the
+microphysics audit of the rain and snow parts as state fields. `false` leaves
+them out. Anything else is an error.
+"""
+function water_tag_precipitation_audit_from_config(value)
+    isnothing(value) && return true
+    value isa Bool || error(
+        "`water_tag_precipitation_audit` must be `true` or `false`, got \
         $(repr(value)).",
     )
     return value

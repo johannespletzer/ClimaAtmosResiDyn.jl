@@ -1,26 +1,17 @@
 #####
-##### Parent budget: the transactional event journal
+##### Parent budget: the event journal
 #####
-##### One journal holds the signed legs of every event in one accepted timestep.
-##### A leg says what one event did to one reservoir, and it is recorded once.
-##### Control-volume totals are projections of those legs, not separate entries,
-##### so an internal transfer cancels because its two legs cancel and not because
-##### anything was synthesized to make it.
-#####
-##### This file records what happened. `schema.jl` declares what should have, and
-##### the two are compared at commit. Nothing here decides what was expected.
-#####
-##### Three rules from `docs/src/parent_budget/contract.md` are enforced by
-##### construction rather than documented and hoped for. Only a measured
-##### component may carry a nonzero amount, and a measured one must name how it
-##### was obtained. A component that was not established is unknown and blocks
-##### the claim it belongs to, so nothing turns silence into zero. And an event
-##### is recorded at one collection level, so an envelope and its own
-##### decomposition can be compared but can never land in the same sum.
-#####
-##### Legs are host-side scalar entries built after the step's one collective, so
-##### these types are written for clarity rather than for a kernel. Nothing here
-##### is evaluated on the device.
+##### One journal holds the signed legs of every event in one accepted step. A
+##### leg says what one event did to one reservoir, and it is recorded once.
+##### Control-volume totals are projections of the legs, so an internal transfer
+##### cancels because its two legs cancel. This file stores what happened.
+##### `schema.jl` declares what should have happened, and the two are compared at
+##### commit. The types enforce three rules of `contract.md` by construction.
+##### Only a measured component may carry a nonzero amount, and it must name its
+##### method. An unestablished component is unknown and blocks its claim. An
+##### event has one collection level, so an envelope and its own decomposition
+##### never land in the same sum. Legs are host-side scalars built after the
+##### step's one collective, so nothing here runs on the device.
 
 # ============================================================================
 # Component status and evidence
@@ -91,18 +82,17 @@ status_name(::UnknownComponent) = :unknown
 Return whether a component with this `status` is what the schema's `expected`
 disposition asked for. See `EXPECTED_DISPOSITIONS`.
 
-  - `:open` permits any status. The registry has not established
-    what the path does, so nothing is demanded of a leg, and the claim the
-    declaration feeds is blocked by the schema at reconciliation instead; see
-    `open_dispositions`.
+  - `:open` permits any status. The registry has not established what the path
+    does, so nothing is demanded of a leg. The schema blocks the claim the
+    declaration feeds at reconciliation instead. See `open_dispositions`.
   - `:measured` permits a `Measured` component, and an `UnknownComponent`,
     which is the honest status for a measurement that was expected and not
     taken. It blocks, which is the point.
   - `:invariant_zero` permits an `InvariantZero`, and an `UnknownComponent`
-    for a proof not yet established. A `Measured` component is **not**
-    permitted: the registry says this path is provably zero, so a measurement
-    here means the proof does not hold, which is a disagreement
-    between the registry and the code rather than a residual.
+    for a proof that is not established. A `Measured` component is **not**
+    permitted. The registry says this path is provably zero, so a measurement
+    here means the proof does not hold. That is a disagreement between the
+    registry and the code, not a residual.
   - `:not_applicable` permits only a `NotApplicable` component. There is
     nothing here to be unknown about.
 """
@@ -284,7 +274,7 @@ component_route(c::BudgetComponent) = c.evidence.route
 """
     component_magnitude(component) -> FT
 
-Return the arithmetic magnitude of the sum the amount came from; see
+Return the arithmetic magnitude of the sum the amount came from. See
 `BudgetComponent`.
 """
 component_magnitude(c::BudgetComponent) = c.magnitude
@@ -294,9 +284,9 @@ component_magnitude(c::BudgetComponent) = c.magnitude
              magnitude = abs(amount))
 
 Build a `BudgetComponent` holding a measured signed amount. `method` is
-required: an amount with no account of where it came from cannot be audited.
-`magnitude` is the arithmetic magnitude of the sum behind the amount, see
-`BudgetComponent`; the default is right for a single measurement.
+required, because an amount with no account of where it came from cannot be
+audited. `magnitude` is the arithmetic magnitude of the sum behind the amount,
+see `BudgetComponent`. The default is right for a single measurement.
 """
 measured(
     amount::FT;
@@ -361,7 +351,7 @@ unknown_component(
 Return whether the component may be added into a total.
 
 True for `Measured` and `InvariantZero`. False for `NotApplicable` and
-`UnknownComponent`, whose amounts are zero anyway; the distinction matters
+`UnknownComponent`, whose amounts are zero anyway. The distinction matters
 because only `UnknownComponent` also blocks.
 """
 is_contributing(c::BudgetComponent) =

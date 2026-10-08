@@ -1,12 +1,12 @@
 #####
-##### Parent budget: the report and the claim certificate
+##### Parent budget: the report
 #####
-##### The report states what a run established. It is written once at the end
-##### of the run. It says which claim levels held for which quantities in which
+##### `parent_budget_report.yaml` states what a run established. It is written
+##### once at the end of the run, as versioned YAML beside the run's other
+##### output. It says which claim levels held for which quantities in which
 ##### control volumes, under which configuration, and what blocked the rest.
-##### It is versioned YAML beside the run's other output, with a concise human
-##### summary. Nothing here is new accounting. The report reads the last
-##### commit and the journal's cumulative totals and adds nothing to them.
+##### The report reads the last commit and the journal's cumulative totals.
+##### It adds no accounting.
 
 """
     REPORT_VERSION

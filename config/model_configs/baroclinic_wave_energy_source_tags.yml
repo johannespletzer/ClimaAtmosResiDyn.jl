@@ -15,14 +15,14 @@ t_end: "1days"
 #     follows it.
 #   - The records say what each of those processes did at each point.
 #
-# The closure check is on by default with these tags. It runs daily, from a
-# spin-up reference 1 hour in. It warns above 1.0, the default tolerance for
+# The closure check is on by default with these tags. It runs daily and also
+# reports the residual since spin-up, 1 hour in. It warns above 1.0, the default tolerance for
 # `tracer` transport, which this config uses. By default it never stops the
 # run and never marks rows void. The repair is on by default too, and the
-# repair ledgers are in the default output.
+# fix ledgers are in the default output.
 
 # Required with the tags. The tags partition `ρe_tot + c·ρ`, which this offset
-# makes positive everywhere, so the donor share is defined everywhere. The model
+# makes positive everywhere, so each tag's share is defined everywhere. The model
 # never sees it.
 energy_source_tag_offset: 110495.0
 energy_source_tags:
