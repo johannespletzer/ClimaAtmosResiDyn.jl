@@ -54,6 +54,39 @@ class EquationTests(unittest.TestCase):
         np.testing.assert_allclose(answer.labels.sum(axis=2), np.broadcast_to(x.sum(axis=1), (4, 6)), atol=1e-15)
         self.assertTrue(closure(answer, self.design)["complete_label_conservation"])
 
+    def test_tolerances_are_the_scorers_approved_numbers(self):
+        # The reference repeats OD3's numbers as literals. Pin them to the scorer.
+        rules = self.design["profile_rules"]
+        self.assertEqual((rules["hour_region_L1"], rules["hour_source_L1"]),
+                         (score_acceptance.ORIGIN_L1_FIRST_HOUR["region"], score_acceptance.ORIGIN_L1_FIRST_HOUR["source"]))
+        self.assertEqual((rules["day_L1"], rules["day_Linf"], rules["hour_Linf"]),
+                         (score_acceptance.ORIGIN_L1_DAY, score_acceptance.ORIGIN_LINF_DAY,
+                          score_acceptance.ORIGIN_LINF_FIRST_HOUR))
+        self.assertEqual((rules["small_absolute_parent_fraction"], rules["small_inventory_fraction"],
+                          rules["floor_fraction"], rules["process_weighted"]),
+                         (score_acceptance.SMALL, score_acceptance.SMALL_SHARE, score_acceptance.FLOOR_FRACTION_MAX,
+                          score_acceptance.PROCESS_WEIGHTED_MAX))
+        case, truth = self.state("single_transfer")
+        rows = {(r["tag"], r["compartment"], r["endpoint_seconds"]): r for r in error_rows(truth, truth, self.design)}
+        self.assertEqual(rows[("origin_a", "total", 3600.)]["tolerances"], {"L1": .01, "Linf": .25})
+        self.assertEqual(rows[("source_overlap", "total", 3600.)]["tolerances"], {"L1": .10, "Linf": .25})
+        self.assertEqual(rows[("origin_a", "total", 86400.)]["tolerances"], {"L1": .02, "Linf": .05})
+        parent = float(truth.parent[-1].sum())
+        self.assertAlmostEqual(rows[("tiny_source", "total", 86400.)]["tolerances"]["absolute"], 2e-4 * parent, places=15)
+        rain_case, rain = self.state("rain_snow_sedimentation")
+        kinds = {tag["name"]: tag["kind"] for tag in self.design["tags"]}
+        exports = boundary_error_rows(rain, rain, self.design, rain_case)
+        # Every export-origin row is small against the internal column parent (2026-10-08 review).
+        self.assertTrue(all(r["small"] for r in exports))
+        for r in exports:
+            hour = r["endpoint_seconds"] == 3600
+            relative = (.01 if kinds[r["tag"]] == "region" else .10) if hour else .02
+            expected = 2e-4 * r["parent_scale"] if r["small"] else relative * r["reference_absolute_inventory"]
+            self.assertAlmostEqual(r["native_tolerance"], expected, places=15)
+        wrong = mutation(self.design, case, truth)
+        process = application_error(wrong, case)
+        self.assertEqual(process["meets"], bool(np.all(np.asarray(process["weighted_share_error"]) <= .05)))
+
     def test_wrong_donor_closes_compartments_and_each_global_label_but_fails_origins(self):
         case, truth = self.state("single_transfer")
         wrong = mutation(self.design, case, truth)
