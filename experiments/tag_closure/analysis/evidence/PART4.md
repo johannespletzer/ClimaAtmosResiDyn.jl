@@ -44,7 +44,7 @@ implementation. It supplies no new atmospheric evidence or qualification.
 | Over-blocking                                                                                                                                                                                               | Failed or exported-only parity blocks the origin rows only. Closure and intervention are scored with `parent_parity` recorded. A missing or zero-length window's rows are not applicable                                                                        | Decided 2026-10-07: parity blocks origins only, and a missing or zero-length OD2 window blocks nothing, so the pilot scores its first-hour row.                                                                                                                                                                                                                                                                                                                |
 | Reference eligibility evidence                                                                                                                                                                              | A declared evidence file with one floor per OD12 source and its producer, recorded as "eligibility as declared by <producer> <hash>"                                                                                                                            | Decided 2026-10-07: a file with one scalar floor or without a producer fails the eligibility row as a data failure.                                                                                                                                                                                                                                                                                                                                            |
 | Specification pins                                                                                                                                                                                          | `approved_numbers_sha256` over the scorer's named constants, plus the scorer files. `planning_commit` is recorded                                                                                                                                               | Decided 2026-10-07: a changed constant invalidates a manifest, a changed DECISIONS.md does not.                                                                                                                                                                                                                                                                                                                                                                |
-| Real model output                                                                                                                                                                                           | Fixture NPZ only. NetCDF needs `geometry_key`/`weights_key` variables the model does not write. Model names (`hus`, `rhoa`, `q_tag_<n>`, `pr_tag_<n>`, `q_tag_led_fix_<n>`) need a mapping                                                                      | Decided 2026-10-07: a follow-up Part 4 PR builds the converter and its name table, tested on one archived real output, before any scoring claim.                                                                                                                                                                                                                                                                                                               |
+| Real model output                                                                                                                                                                                           | `convert_output.py` maps NetCDF fields and closure/audit columns through an explicit name table, with Δz from faces rebuilt from the `z` centres. Missing variables are named, never zero-filled                                                                | Producer gaps under the open items. LED_FIX/LED_INC read accepted-step ledger samples, and the model writes the ledgers at the output cadence                                                                                                                                                                                                                                                                                                                  |
 
 ## Verification and review
 
@@ -80,9 +80,36 @@ changes.
   - G4_TODO's other known script defects stay open: `tag_correctness.py`
     weights by `np.gradient(z)` and floors denominators at `1e-300`, and
     `g411_eligibility.py`'s docstring still calls the interim a lower bound.
-  - The converter from model output to the scorer's bundle, with a name table
-    and one test on an archived real output (decided 2026-10-07). A follow-up
-    Part 4 PR builds it before any scoring claim. PR #150 merges without it.
+  - The converter (decided 2026-10-07) is `convert_output.py`, with its name
+    table and the archived-output tests in `test_convert_output.py`. Its
+    command, table and refusals are in [README.md](README.md). Converting the
+    archived runs found the producer gaps below. Each is a named data failure
+    in the scorer, never a zero.
+  - Every run: no model variable holds `named_remainder`, `newton_error`,
+    `process_amount`, `process_share`, `energy_parent` (a specific total
+    energy field) or `parent_N`. The water `copy_residual` has none with the
+    scorer's convention: `q_tag_copy_res` is per unit mass of updraft air.
+  - Every archived submission record has a null hash for
+    `LocalPreferences.toml`, which `manifest.py` writes for an absent file.
+    The validator requires every environment file, so `COMMON.EVIDENCE` fails
+    on it.
+  - W58 (TRMM 0M, three tags, 6 h): its runs are on scratch only. The
+    archive's last full sync, on 2026-10-01, came before them. The per-tag
+    ledgers are written each 30 min, and LED_FIX/LED_INC read samples at the
+    accepted step (150 s). The model's accepted-step activity is the audit's
+    `led_fix_<tag>_retained` and `q_tag_led_fixgross_<tag>`. A scorer path
+    that reads them is for the owner to decide. The first-hour origin rows
+    measure within the first-hour limits (`evap` L1 7.4%, under the small-tag
+    absolute rule) and stay not assessable: the parity is exported only, and
+    no reference eligibility evidence exists.
+  - E87 (D4, the G4.6 process budget): the closure table at `0164c2fd` has
+    no `source_partition_valid` column, so `ENERGY.CLOSURE_GROWTH` is a data
+    failure. Θx itself resolves, 2.09e7 J m⁻² over the day. Six of the eight
+    configured tags (`rad`, `sfc`, `sub`, `mp`, `new_strat`, `new_tropo`) are
+    not in its diagnostics list. It wrote no `e_src_led_fix_<tag>`,
+    `e_src_led_inc_<tag>` or `_applicable` columns, and, without water tags,
+    no `negative_water_void`. Its config and environment files are read from
+    git (`--git-repo`), since its worktree is gone.
 
 Commands and the minimal schema/example are in [README.md](README.md).
 No model, diagnostic state, configuration default, threshold, dependency or

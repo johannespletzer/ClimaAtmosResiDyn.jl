@@ -276,6 +276,101 @@ claim, so its scientific blockers select exit 3. The exit codes:
 Required failures are never averaged across tags/windows. Proposed
 thresholds and reported-only quantities never become scientific passes.
 
+## Converting model output: convert_output.py
+
+`convert_output.py` builds the bundle that the scorer reads from a run's
+output directories. Each directory is one `output_XXXX`: the NetCDF files the
+model wrote, the merged config `*.yml`, `provenance.txt`, the closure and
+audit tables, and the `manifest.json` from `manifest.py`.
+
+```sh
+python3 experiments/tag_closure/analysis/evidence/convert_output.py --family water \
+  --candidate RUNS/default/output_0000 --reference RUNS/copies/output_0000 \
+  --untagged RUNS/untagged/output_0000 --period 30m --pilot-first-hour --same-parent \
+  --planning-commit SHA --scorer-commit SHA [--git-repo CLONE] --out NEW_BUNDLE
+python3 experiments/tag_closure/analysis/evidence/score_acceptance.py \
+  score NEW_BUNDLE/manifest.json --json NEW_BUNDLE/score.json
+```
+
+The candidate's submission manifest becomes the bundle's record, with the
+`acceptance` extension added. The fields go into `<role>.npz` bit for bit,
+time first. `conversion.json` (also `acceptance.conversion`) lists each
+logical name with its model variable and whether it resolved, and pins the
+converter's and the name table's hashes. The tags come from the candidate's
+config. The reference must list the same tags. `--git-repo` reads a
+submission file from git at the submission commit when its worktree is gone.
+It is kept only if its hash matches the record.
+
+**Weights.** A column's weight is the cell thickness Δz in m. The faces are
+rebuilt from the `z` centres, `z_f[0] = 0` and `z_f[k+1] = 2 z_c[k] - z_f[k]`,
+as `compare_runs.py` does. The top face must match the config's `z_max` to
+1e-9. The density enters through `rho`, which the scorer multiplies in, so
+the integrand weight is ρ Δz (ρ_ref Δz at a profile row, G3_PLAN 6.1.1).
+A table column is already a domain integral and has one unit weight. A
+sphere needs a native cell-area variable in the output (`cell_area` in m^2).
+Its weight is then area × Δz in m^3.
+
+**The name table.** `<tag>` is each configured tag, `<process>` each entry of
+`energy_process_record`. Native fields are on the model's levels with Δz
+weights. Table columns and surface fields are column scalars with a unit
+weight. Amounts are kg m^-2 or J m^-2 on a column, and kg or J on a sphere.
+
+| Logical name | Model variable | Units | Native geometry | Weight source |
+|:--|:--|:--|:--|:--|
+| `rho` | `rhoa` | kg m^-3 | levels | Δz |
+| `water_parent` | `hus` | kg kg^-1 | levels | ρ Δz |
+| `temperature` | `ta` | K | levels | Δz |
+| `tag_<tag>` (water) | `q_tag_<tag>` | kg kg^-1 | levels | ρ Δz |
+| `parent_R`, `parent_S` (rain and snow key) | `husra`, `hussn` | kg kg^-1 | levels | ρ Δz |
+| `tag_N_<tag>`, `tag_R_<tag>`, `tag_S_<tag>` | `q_ntag_<tag>`, `q_rtag_<tag>`, `q_stag_<tag>` | kg kg^-1 | levels | ρ Δz |
+| `led_fix_<tag>`, `led_inc_<tag>` (water) | `q_tag_led_fix_<tag>`, `q_tag_led_inc_<tag>` | kg kg^-1, cumulative | levels | ρ Δz |
+| `led_fix_<tag>_applicable`, `led_inc_<tag>_applicable` | same columns of the audit table | 1 | column scalar | one |
+| `negative_water_void` | `negative_water_void`, water closure table | 1 | column scalar | one |
+| `repair_retained`, `repair_attempted` (water candidate) | `led_repair_retained`, `led_repair_attempted`, water audit | amount, cumulative | column scalar | one |
+| `repair_retained`, `repair_attempted` (copies reference) | `led_uprepair_retained`, `led_uprepair_attempted`, water audit | amount, cumulative | column scalar | one |
+| `precip_parent`, `precip_<tag>` (partition) | `pr`, `pr_tag_<tag>` | kg m^-2 s^-1 | surface | one |
+| `tag_<tag>` (energy) | `e_src_<tag>` | J kg^-1 | levels | ρ Δz |
+| `residual` | `e_src_res` | J kg^-1 | levels | ρ Δz |
+| `led_src_<tag>`, `led_fix_<tag>`, `led_inc_<tag>` (energy) | `e_src_led_src_<tag>`, `e_src_led_fix_<tag>`, `e_src_led_inc_<tag>` | J kg^-1, cumulative | levels | ρ Δz |
+| `source_partition_valid` | `source_partition_valid`, energy closure table | 1 | column scalar | one |
+| `throughput` (Θx) | `source_throughput`, energy closure table | amount, cumulative | column scalar | one |
+| `repair_retained`, `repair_attempted` (energy) | `led_repair_retained`, `led_repair_attempted`, energy audit | amount, cumulative | column scalar | one |
+| `record_<process>` | `e_prc_<process>` | J kg^-1, cumulative | levels | ρ Δz |
+| `export_<name>` | every other instantaneous field that is not a tag's | as written | as written | Δz or one |
+
+The audit's `*_retained` and `*_attempted` amounts are taken only where its
+`ledger_cadence_step` is 1 at every row, so they are exact per accepted step.
+The `export_<name>` fields, with `rho`, `water_parent` and `temperature`, are
+the exported parent fields compared bit for bit with the untagged twin
+(`parent_capture_scope: exported`).
+
+No model variable holds these, so they are always recorded as missing:
+`parent_N`, the water `copy_residual` (`q_tag_copy_res` is per unit mass of
+updraft air), `named_remainder`, `energy_parent`, `newton_error`,
+`process_amount` and `process_share`.
+
+**What it refuses**, writing nothing: a config other than `column` or
+`sphere`, topography other than `NoWarp`, a non-positive rebuilt thickness, a
+top face that differs from `z_max`, native fields with different `z`, a
+sphere without a native cell-area variable, a deep-atmosphere sphere, several
+output periods without `--period`, a run without `manifest.json` or with
+other than one `*.yml`, a candidate without tags, and a reference with
+different tags. An existing `--out` exits 4.
+
+**What it does not do.** A missing file, column or variable, wrong units or
+fill values are recorded as missing with the reason. The field is left out of
+the bundle, never zero-filled, so the scorer names it as a data failure. The
+converter does not interpolate, sum cells, derive differences, or stitch
+restart segments. It exits 2 when anything is missing and 0 otherwise.
+
+`test_convert_output.py` checks the table row by row, the bit copies, the
+weights on a stretched column and a sphere, each refusal and the named
+failures on synthetic runs. It also converts archived real output, W58's
+TRMM 0M pilot and E87's D4 process budget, when present
+(`TAG_CLOSURE_OUTPUT_ROOTS` overrides where it looks), and skips with the
+reason otherwise. On both, the rebuilt Δz reproduce the model's own column
+integrals to 1e-15.
+
 ## Legacy G3 phase 1 evidence pipeline
 
 Four standalone tools (`compare_runs.py`, `test_compare_runs.py`,
