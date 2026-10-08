@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "design_sha256": "c1af334b03727c3017810c46d2f826eff51dbdccccac55bb3c5ee6de044749d6",
+  "scope": "preregistered water known-answer development fixture",
+  "case_ids": ["smooth_positive", "smooth_negative", "boundary_positive", "boundary_negative", "conservative_exchange"],
+  "comparison_grid": 64,
+  "reference_mode": "analytic",
+  "retain_all_rungs": true,
+  "mutant": "swap_partition_origins_at_scored_times"
+}

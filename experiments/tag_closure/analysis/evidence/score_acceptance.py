@@ -29,7 +29,8 @@ DAY = 86400.0
 SMALL = 2e-4
 SPEC_ROOT = Path(__file__).resolve().parent.parent.parent
 SPEC_PATHS = ("G3_PLAN.md", "design/G4_CLAIM_CONTRACTS.md", "ROADMAP.md", "DECISIONS.md")
-SCORER_PATHS = ("score_acceptance.py", "acceptance_data.py", "correction_accounting.py", "manifest.py", "closure_verdict.py")
+SCORER_PATHS = ("score_acceptance.py", "acceptance_data.py", "correction_accounting.py", "manifest.py", "closure_verdict.py",
+                "water_transport_reference.py", "water_transport_adapter.py")
 
 
 def local_identities():
@@ -388,6 +389,9 @@ class Scorer:
 
     def reference_eligibility(self, start, end):
         ref = self.s.get("reference", {})
+        if self.family == "water" and ref.get("kind") == "water_transport":
+            from water_transport_adapter import evaluate_water_transport
+            return evaluate_water_transport(self.b, start, end)
         if not ref.get("identity") or not ref.get("evidence"):
             raise NotAssessable("no independent reference has been supplied for this scope")
         detail = json.loads(self.b.artifact(ref["evidence"]).read_text())
@@ -442,6 +446,13 @@ class Scorer:
 
     def active_rule_coverage(self):
         ref = self.s.get("reference", {})
+        if self.family == "water" and ref.get("kind") == "water_transport":
+            from water_transport_adapter import evaluate_water_transport
+            result = evaluate_water_transport(self.b)
+            return {"metrics": {"tested_active_rules": result["metrics"]["independent_rules"],
+                                "untested_or_shared_rules": []}, "meets": result["meets"],
+                    "verdict": "PASS" if result["meets"] else "NOT ASSESSABLE",
+                    "limitation": result["limitation"]}
         if not ref.get("evidence"):
             raise NotAssessable("independent active-rule coverage evidence unavailable")
         detail = json.loads(self.b.artifact(ref["evidence"]).read_text())

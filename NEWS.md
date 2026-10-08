@@ -3,6 +3,14 @@ ClimaAtmos.jl Release Notes
 
 main
 ----
+- The offline tag-closure tools include independent native water translation,
+  labelled-inflow and conservative-exchange known answers, with every frozen
+  numerical/integration rung and measured OD12 floor retained. The existing
+  Bundle/scorer verifies their narrow development scope and source identities;
+  fixture verdicts require origins, closure and the prescribed exported parent,
+  while mutation checks require the registered swap and its preservation rules.
+  These cases supply no atmospheric, copies or production
+  qualification and change no model behavior or approved tolerance.
 - The offline tag-closure evidence tools can read finalized weighted
   application receipts, report signed, retained and cancellation-safe
   correction activity with directed-leg and counter conventions, and

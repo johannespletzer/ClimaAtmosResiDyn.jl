@@ -2279,3 +2279,33 @@ The existing manifest/evaluator carries this optional extension. Its full-scope
 completeness row requires actual runtime validation evidence; synthetic arrays
 exercise arithmetic and cannot close the production claim. Independent review
 and final finding closure are recorded separately from unrun runtime gates.
+
+## Part 6 independent water-reference dispositions (2026-10-08)
+
+The [frozen inventory/equations](analysis/evidence/PART6.md) and
+[runnable evidence workflow](analysis/evidence/README.md#independent-water-known-answer-fixtures)
+add a bounded implementation record without removing or completing any
+prior physical obligation. The exact source remains Part 5 commit
+`1b04926582941740f2599a92c57acb3ad0abb1c6`. Source inspection recorded PR146
+merged on main; its divergent runtime code remains absent from this base.
+Dated prior PR states above are preserved as historical evidence.
+
+| Source obligation | Implemented local evidence | Remaining destination/gate |
+|:--|:--|:--|
+| Part 6 Tasks 1–3; G3 criteria 1/12; independent equations/design | Exact dependency and reused/new/triggered/blocked inventory; preregistered native rho/chi conventions, IC/BC/labels, exact times and every rung | No design/result-driven cutoff or held-out relabelling; owner scientific choices remain pending |
+| Part 6 Tasks 4/8; OD3 origins and discrimination | Signed smooth translation with advected density, nonuniform signed labelled inflow, conservative exchange, native masses/fluxes, tiny/zero/overlay tests, closure-preserving wrong-origin mutants | Only named prescribed equations; no atmospheric, surface/microphysical or eight-tag origin claim |
+| Part 6 Task 6; OD12 floor/eligibility | All 45 numerical/18 integration rungs and every per-tag/norm/time floor retained; four selected upwind references ineligible, exchange eligible | Actual count/window/runtime reference floors, copies own-transport E <= 1e-3 per rung, repair/residual/init/mirror/Jacobian coverage |
+| Part 6 Task 7; Part 4 manifest/scorer | Existing Bundle optional reference adapter, exact native geometry/time/dtype/config/model/evaluator identities, excluded-process arrays and independent active-rule checks | Metadata or shared agreement cannot populate Part 5's empty verified runtime-producer registry or pass production completeness |
+| PX1 then PX8; PX16/PP-SUB; OD13 | Minimum sequence and exact accepted-state/native exposure requirement preserved regardless of hourly screen | Actual D4-W/site23 accepted-step states/operator capture; PP-SUB only under the original materiality/diagnostic/parity gate |
+| PX7 lag/structure | Fixed-parent versus full-trajectory and original ratio branches inventoried separately | Actual matched-time solver/probe evidence; neither shared convergence nor small residual validates origins |
+| PX11/PX24 clean Soares | Source-free assumptions, sedimentation/subsidence/forcing/surface/init/linearity floors and no moist-precipitation scope inventoried | Native accepted applications and all named active-rule accounting; proposed OD10 rounding attribution is not an approved cutoff |
+| PX12; KI4-COPIES/UP1; option D | Existing TRMM0M solver/grid/count/probe obligations and UP1's own share-budget decision preserved | Actual native grid/updraft pre-repair residual/repair, mirrors/Jacobian, fallback and E per rung; no D4-W reference reopening |
+| Part 6 Tasks 9/10; software review/handoff | Local exact-diff review, regression fixes, immutable outputs/logs, patch/hashes/draft PR text and checkpoint record | No remote branch, commit, PR, merge or scientific completion supplied; full prepared Julia/netCDF4 runtime validation remains open |
+| OD14; G3 criterion 8; Parts 8/10/12 | Development-only scope stays explicit; historical Soares/TRMM/site23/26 meanings retained | Separate owner-frozen held-out case/window/metric and valid intended-count references before tuning/qualification |
+
+Candidate fixture PASS requires both OD3 profiles and native partition closure,
+plus the prescribed exported-parent trajectory within the frozen arithmetic
+allowance. Actual exported parent bits determine same-parent classification.
+Those software gates are not physical model parity or an attribution error
+bound. Part 7 transfer/precipitation references, energy references,
+residence-time work and Part 9 production closure tuning are not supplied.

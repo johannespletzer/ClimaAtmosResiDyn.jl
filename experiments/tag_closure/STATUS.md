@@ -1,5 +1,49 @@
 # Status
 
+## Part 6 independent water reference software (2026-10-08)
+
+The [frozen design and obligation inventory](analysis/evidence/PART6.md)
+now have runnable native cell-average known answers for signed periodic
+translation with advected nonuniform density, signed labelled inflow on
+nonuniform cells and conservative two-reservoir exchange. Independent
+quadrature and conservative upwind / implicit-Newton references report every
+registered rung. The existing Bundle/scorer checks native geometry, exact
+times, source/config/model hashes, active rules and actual per-norm floors.
+Wrong-origin label swaps preserve total closure and fail the origin rows.
+Fixture PASS also requires candidate partition closure and the prescribed
+exported-parent trajectory; same-parent status comes from the actual parent
+values. Mutant verification checks the registered swap and unchanged initial
+state, parent and source overlays.
+
+Fresh analytic fixtures pass all five equation cases and label-swap checks.
+The numerical fixture suite correctly returns exit 3: all four upwind
+references exceed OD12's quarter-tolerance floor and cannot judge candidates;
+the exchange reference is eligible. Every one of the 45 numerical and 18
+quadrature rungs is retained, including failures. Twenty-two focused equation/
+fault tests and the selected 127-test acceptance/accounting/reference suite
+pass. Independent actual-diff review is complete and its findings are
+resolved in the local handoff. [Commands](analysis/evidence/README.md)
+reproduce the bounded work without launching a model run.
+
+**Part 6 physical qualification remains incomplete.** These five-label
+manufactured development cases establish implementation checks only. They
+supply no atmospheric PX1/PX8/PX7/PX11/PX24/PX12 execution, actual copies
+grid/updraft residual/repair/mirror/Jacobian/fallback evidence, KI4-COPIES/UP1
+verdict, eight-tag/full-window reference, OD14 held-out result or production
+origin qualification. Part 5's verified runtime-producer registry remains
+empty. Julia/prepared runtime is unavailable; netCDF4-dependent comparison,
+energy-throughput fallback and increment tests remain execution blockers.
+No parent model, default, dependency, CI or approved tolerance changes are
+supplied; residence-time and energy-reference work stay deferred.
+
+Source inspection for this increment recorded PR146 merged on main at
+`12377fb885149d5180031c0e6a41d8dc8041e4ef`. The exact dependency remains
+Part 5 commit `1b04926582941740f2599a92c57acb3ad0abb1c6`; it does not include
+those divergent runtime changes. Older dated PR states below are history.
+The local work is a source materialization, with no branch, commit, push or
+published pull request supplied by this increment.
+
+
 ## Part 5 offline accounting layer (2026-10-07)
 
 The [Part 5 inventory/design](analysis/evidence/PART5.md) and existing
