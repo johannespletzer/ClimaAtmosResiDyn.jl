@@ -18,11 +18,11 @@ import numpy as np
 
 from acceptance_data import aligned, density, require, same_bits, window
 from manifest import sha256_file
-from score_acceptance import FLOOR_FRACTION_MAX, local_identities
+from score_acceptance import FLOOR_FRACTION_MAX, SECOND_HALF_TIE, local_identities
 from water_transport_reference import (
     BASE_COMMIT, DESIGN_SHA256, FIELD_NAMES, NativeState, analytic, case_by_id,
     closure, error_rows, floor_fraction, load_design, numerical,
-    prescribed_parent_trajectory, quadrature, rule_for,
+    prescribed_parent_trajectory, quadrature, refinement_rungs, rule_for,
 )
 
 
@@ -52,16 +52,20 @@ def evaluator_identities():
     return {name: sha256_file(Path(__file__).with_name(name)) for name in SOURCE_FILES}
 
 
+# A floor that rises by at most this much along a refinement ladder is a tie,
+# not a rise. Floors are fractions of a tolerance, so this is the scorer's own
+# tie on a normalized quantity (SECOND_HALF_TIE, decision of 2026-10-07).
+LADDER_TIE = SECOND_HALF_TIE
+
+
 def rungs(design, case):
-    grids = case["grids"] if case["grids"] is not None else [None]
     newtons = case["newton_iterations"] if case["newton_iterations"] is not None else [None]
     result = []
-    for grid in grids:
-        for dt in case["dt_seconds"]:
-            for count in newtons:
-                result.append({"kind": "numerical", "grid": grid, "dt_seconds": dt,
-                               "newton_iterations": count,
-                               "role": f"floor_g{grid}_dt{dt}_n{count}"})
+    for grid, dt in refinement_rungs(case):
+        for count in newtons:
+            result.append({"kind": "numerical", "grid": grid, "dt_seconds": dt,
+                           "newton_iterations": count,
+                           "role": f"floor_g{grid}_dt{dt}_n{count}"})
         if case["kind"] == "periodic_smooth":
             for order in design["independent_quadrature_orders"]:
                 result.append({"kind": "quadrature", "grid": grid, "order": order,
@@ -126,37 +130,52 @@ def rung_floor(rows, case, start, end):
 def ladder_axes(case, selected, expected_rungs):
     """Each refinement axis through the selected rung, ordered coarse to fine.
 
+    An advective case has one axis, the fixed-CFL ladder, on which the grid
+    and the time step refine together. The exchange case has a time-step axis
+    and a Newton axis.
+
     Only the rungs up to the selected one count, since a reference is judged
     at the rung it uses.
     """
     numerical_rungs = [rung for rung in expected_rungs if rung["kind"] == "numerical"]
+    pairs = refinement_rungs(case)
+    position = (selected["grid"], selected["dt_seconds"])
+    require(position in pairs, "refinement axis is outside the frozen ladder")
+    # The grid and the time step refine together. The Newton count is its own axis.
+    steps = [{"grid": grid, "dt_seconds": dt, "newton_iterations": selected["newton_iterations"]}
+             for grid, dt in pairs[:pairs.index(position) + 1]]
+    axes = {"fixed_cfl" if case["ladder"] == "fixed_cfl" else "dt_seconds": steps}
+    if case["newton_iterations"] is not None:
+        counts = case["newton_iterations"]
+        axes["newton_iterations"] = [{**selected, "newton_iterations": count}
+                                     for count in counts[:counts.index(selected["newton_iterations"]) + 1]]
     keys = ("grid", "dt_seconds", "newton_iterations")
-    axes = {}
-    for key, ladder_key in zip(keys, ("grids", "dt_seconds", "newton_iterations")):
-        ladder = case[ladder_key]
-        if ladder is None:
-            continue
+    chains = {}
+    for axis, wanted in axes.items():
         chain = []
-        for value in ladder[:ladder.index(selected[key]) + 1]:
-            matches = [rung for rung in numerical_rungs if rung[key] == value and
-                       all(rung[k] == selected[k] for k in keys if k != key)]
+        for target in wanted:
+            matches = [rung for rung in numerical_rungs if all(rung[k] == target[k] for k in keys)]
             require(len(matches) == 1, "refinement axis is outside the frozen ladder")
             chain.append(matches[0])
-        axes[key] = chain
-    return axes
+        chains[axis] = chain
+    return chains
 
 
-def converges(axes, floor_by_role, tie):
+def rung_label(rung):
+    return f"g{rung['grid']} dt{rung['dt_seconds']} n{rung['newton_iterations']}"
+
+
+def converges(axes, floor_by_role, tie=LADDER_TIE):
     """True when no refinement step toward the selected rung raises the floor.
 
-    A rise within the frozen roundoff allowance is a tie, not a rise.
+    A rise of at most `tie` in the floor fraction is a tie, not a rise.
     """
     reasons = []
     for axis, chain in axes.items():
         values = [floor_by_role[rung["role"]] for rung in chain]
-        if any(later > earlier * (1.0 + tie) for earlier, later in zip(values, values[1:])):
+        if any(later > earlier + tie for earlier, later in zip(values, values[1:])):
             reasons.append(f"The floor rises along {axis} " +
-                           " -> ".join(f"{rung[axis]}: {value:.6g}" for rung, value in zip(chain, values)))
+                           " -> ".join(f"{rung_label(rung)}: {value:.6g}" for rung, value in zip(chain, values)))
     return not reasons, reasons
 
 
@@ -240,7 +259,6 @@ def evaluate_water_transport(bundle, declared=True):
     declared_rungs = detail.get("rungs")
     expected_rungs = rungs(design, case)
     require(declared_rungs == expected_rungs, "incomplete or changed full grid/time/Newton/integration ladder")
-    tie = design["profile_rules"]["roundoff_multiplier"] * np.finfo(np.float64).eps
     floors, measured, floor_by_role = [], {}, {}
     for rung in expected_rungs:
         expected = regenerate(design, case, rung)
@@ -285,7 +303,7 @@ def evaluate_water_transport(bundle, declared=True):
         discretization = max([constructed, floor_by_role[selected["role"]]] + quadrature_floors)
         discretization_basis = ("Measured. The selected rung against the closed form on its own grid, "
                                 "with the initial-state quadrature and the constructed roundoff bound.")
-        converged, reasons = converges(ladder_axes(case, selected, expected_rungs), floor_by_role, tie)
+        converged, reasons = converges(ladder_axes(case, selected, expected_rungs), floor_by_role)
         converged_basis = ("Measured. No refinement step toward the selected rung raises its floor."
                            if converged else "Measured. " + ". ".join(reasons) + ".")
         if case["kind"] == "two_reservoir_exchange":
@@ -329,8 +347,9 @@ def evaluate_water_transport(bundle, declared=True):
     cross_check = {}
     for floor in floors:
         if floor["kind"] == "numerical":
-            cross_check.setdefault(f"dt{floor['dt_seconds']}_n{floor['newton_iterations']}", []).append(
-                {"grid": floor["grid"], "floor_fraction": floor["floor_fraction"]})
+            cross_check.setdefault(f"n{floor['newton_iterations']}", []).append(
+                {"grid": floor["grid"], "dt_seconds": floor["dt_seconds"],
+                 "floor_fraction": floor["floor_fraction"]})
     if eligible and mode == "analytic":
         verdict = ("constructed eligibility, fixture equations only: a closed-form answer with a constructed "
                    "roundoff floor" + (" and a measured quadrature floor" if quadrature_floors else ""))

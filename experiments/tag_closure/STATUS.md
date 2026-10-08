@@ -20,10 +20,11 @@ The analytic fixtures pass all five equation cases and label-swap checks.
 Their eligibility is constructed, not measured: the candidate equals the
 closed form, and the floor is a constructed roundoff bound, plus a measured
 quadrature floor in the smooth cases. The numerical fixture suite returns
-exit 3. All four upwind references exceed OD12's quarter rule, and none
-converges along the frozen dt ladder, which raises the upwind floor. The
-exchange reference is eligible on a measured floor. Every one of the 45
-numerical and 18 quadrature rungs is retained, including failures. The 36
+exit 3. All four upwind references exceed OD12's quarter rule. On the
+fixed-CFL ladder the smooth and positive-front floors fall at every doubling,
+and the negative front rises on its first doubling. The
+exchange reference is eligible on a measured floor. Every one of the 21
+numerical and 18 quadrature rungs is retained, including failures. The 38
 focused tests and the whole evidence directory pass.
 [Commands](analysis/evidence/README.md) reproduce the bounded work without
 launching a model run.

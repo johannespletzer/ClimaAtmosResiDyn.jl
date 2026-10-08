@@ -1,6 +1,6 @@
 """Bounded independent water references on native unit-area cells.
 
-The continuum equations and all refinement rungs are frozen in the sibling
+The continuum equations and all refinement rungs are fixed in the sibling
 design file. This offline module calls no model transport, copies or tag
 kernel. Its known answers do not qualify an atmospheric origin claim.
 
@@ -23,7 +23,7 @@ from score_acceptance import SMALL, SMALL_SHARE, origin_limits
 
 # The planning tree whose scorer and approved numbers these fixtures use.
 BASE_COMMIT = "9c710edcea50d78e8e668e738223bc71c32a69f8"
-DESIGN_SHA256 = "c1af334b03727c3017810c46d2f826eff51dbdccccac55bb3c5ee6de044749d6"
+DESIGN_SHA256 = "597e39a84a142649f5355177a2c03f74ee7d0ae0c63d05e9e04515e23ff96f37"
 DESIGN_PATH = Path(__file__).with_name("water_transport_design.json")
 FIELD_NAMES = ("rho", "water_parent", "tag_origin_a", "tag_origin_b",
                "tag_overlay", "tag_tiny", "tag_zero")
@@ -181,14 +181,33 @@ def _initial_numeric(design, case, grid):
     return np.stack([fields[name] for name in FIELD_NAMES])
 
 
+def refinement_rungs(case):
+    """The (grid, dt) pairs of a case's refinement ladder, coarse to fine.
+
+    An advective case refines the grid and the time step together at one
+    fixed CFL number. Rung i pairs grids[i] with dt_seconds[i], and every
+    pair has the same product grid * dt. Two fixed reservoirs have no grid,
+    so the exchange case refines the time step alone.
+    """
+    if case["kind"] == "two_reservoir_exchange":
+        if case["ladder"] != "time_step_only":
+            raise ValueError("the exchange ladder must refine the time step alone")
+        return [(None, dt) for dt in case["dt_seconds"]]
+    if case["ladder"] != "fixed_cfl" or len(case["grids"]) != len(case["dt_seconds"]):
+        raise ValueError("an advective ladder must pair each grid with one time step")
+    if any(grid * dt != case["grid_times_dt_seconds"] for grid, dt in zip(case["grids"], case["dt_seconds"])):
+        raise ValueError("an advective ladder must keep the CFL number fixed")
+    return list(zip(case["grids"], case["dt_seconds"]))
+
+
 def numerical(design, case, grid=None, dt=None, newton=None):
     """Separately implemented conservative upwind or implicit exchange solve.
 
     Every requested step is executed. Exact endpoint divisibility and CFL
     are required. No temporal interpolation or analytic evolution is used.
     """
-    if dt not in case["dt_seconds"]:
-        raise ValueError("timestep is outside the frozen ladder")
+    if (grid, dt) not in refinement_rungs(case):
+        raise ValueError("grid and timestep are not a rung of the fixed-CFL ladder")
     exchange = case["kind"] == "two_reservoir_exchange"
     if (exchange and newton not in case["newton_iterations"]) or (not exchange and newton is not None):
         raise ValueError("invalid or inapplicable Newton rung")
@@ -215,6 +234,8 @@ def numerical(design, case, grid=None, dt=None, newton=None):
         velocity = case["velocity_m_s"]
         if abs(velocity) * dt / np.min(width) > 1.0:
             raise ValueError("upwind reference violates its native-cell CFL")
+        # The ladder's CFL number on the nominal spacing L / grid. Equal on every rung.
+        nominal_cfl = abs(velocity) * dt * grid / case["length_m"]
         incoming_rho = np.array([case["density_mean"]])
         incoming_parent = case["water_specific"] * incoming_rho
         incoming = _with_overlays(incoming_rho, incoming_parent, incoming_parent, design["source_fractions"])
@@ -254,6 +275,7 @@ def numerical(design, case, grid=None, dt=None, newton=None):
     return _state(times, faces, rows, {
         "method": "backward Euler with actual Newton iterations" if exchange else "first-order conservative upwind",
         "grid": grid, "dt_seconds": dt, "newton_iterations": newton,
+        "nominal_cfl": None if exchange else nominal_cfl,
         "executed_steps": executed_steps,
         "executed_newton_solves": newton_solves,
         "max_residual_by_iteration_kg_m2": residual_by_iteration.tolist(),

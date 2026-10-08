@@ -19,16 +19,17 @@ from make_water_transport_fixture import evaluate_fixture, suite_exit_code, writ
 from manifest import sha256_file
 from score_acceptance import (
     DAY, FIRST_HOUR, FLOOR_FRACTION_MAX, ORIGIN_L1_DAY, ORIGIN_L1_FIRST_HOUR, ORIGIN_LINF_DAY,
-    ORIGIN_LINF_FIRST_HOUR, SCORER_PATHS, SMALL, SMALL_SHARE, Scorer, approved_numbers_sha256,
+    ORIGIN_LINF_FIRST_HOUR, SCORER_PATHS, SECOND_HALF_TIE, SMALL, SMALL_SHARE, Scorer,
+    approved_numbers_sha256,
 )
 from water_transport_adapter import (
-    converges, evaluate_water_transport, first_iteration_at_roundoff, ladder_axes, producer_identity,
-    read_native, rung_floor, rungs,
+    LADDER_TIE, converges, evaluate_water_transport, first_iteration_at_roundoff, ladder_axes,
+    producer_identity, read_native, rung_floor, rungs,
 )
 from water_transport_reference import (
     BASE_COMMIT, DESIGN_SHA256, FIELD_NAMES, NativeState, analytic, case_by_id, closure,
     error_rows, floor_fraction, load_design, native_faces, numerical, profile_error, quadrature,
-    swapped_origins,
+    refinement_rungs, swapped_origins,
 )
 
 CASE_IDS = ("smooth_positive", "smooth_negative", "boundary_positive", "boundary_negative",
@@ -40,7 +41,17 @@ class EquationTests(unittest.TestCase):
     def setUpClass(cls):
         cls.design = load_design()
 
-    def test_frozen_design_and_native_integrals(self):
+    def test_design_sha256_is_an_integrity_pin_only(self):
+        # The hash shows the file is unchanged. It makes no claim about timing.
+        self.assertNotIn("frozen_before_results", self.design)
+        self.assertIn("Integrity only.", self.design["design_sha256_pin"])
+        self.assertNotIn("frozen", json.dumps(self.design["design_sha256_pin"]))
+        self.assertEqual(sha256_file(Path(__file__).with_name("water_transport_design.json")), DESIGN_SHA256)
+        configs = Path(__file__).resolve().parents[2] / "configs"
+        for name in ("water_transport_known_answers.json", "water_transport_numerical_fixture.json"):
+            self.assertEqual(json.loads((configs / name).read_text())["design_sha256"], DESIGN_SHA256)
+
+    def test_design_and_native_integrals(self):
         self.assertEqual(sha256_file(Path(__file__).with_name("water_transport_design.json")), DESIGN_SHA256)
         case = case_by_id(self.design, "smooth_positive")
         state = analytic(self.design, case, 16)
@@ -70,6 +81,8 @@ class EquationTests(unittest.TestCase):
         self.assertEqual(rules["small_share_below"], SMALL_SHARE)
         self.assertEqual(rules["small_absolute_parent_fraction"], SMALL)
         self.assertEqual(rules["floor_max_fraction_of_tolerance"], FLOOR_FRACTION_MAX)
+        self.assertEqual(rules["ladder_tie"], SECOND_HALF_TIE)
+        self.assertIs(LADDER_TIE, SECOND_HALF_TIE)
         self.assertEqual(self.design["times_seconds"][1:], [FIRST_HOUR, DAY])
 
     def test_periodic_mass_density_direction_and_quadrature(self):
@@ -144,11 +157,11 @@ class EquationTests(unittest.TestCase):
         for name in ("smooth_positive", "smooth_negative", "boundary_positive", "boundary_negative"):
             case = case_by_id(self.design, name)
             errors = []
-            for grid in (16, 32, 64):
-                reference = numerical(self.design, case, grid, 30)
+            for grid, dt in ((16, 120), (32, 60), (64, 30)):
+                reference = numerical(self.design, case, grid, dt)
                 truth = analytic(self.design, case, grid)
                 errors.append(profile_error(reference, truth, "tag_origin_a", 86400, "region")["absolute_L1_kg_m2"])
-                self.assertEqual(reference.diagnostics["executed_steps"], 2880)
+                self.assertEqual(reference.diagnostics["executed_steps"], 86400 // dt)
                 self.assertEqual(reference.diagnostics["executed_newton_solves"], 0)
                 self.assertEqual(reference.diagnostics["max_residual_by_iteration_kg_m2"], [])
                 # The solver starts from the initial cell integrals, not a later sample.
@@ -208,15 +221,66 @@ class EquationTests(unittest.TestCase):
         self.assertEqual([r["newton_iterations"] for r in axes["newton_iterations"]], [1, 2])
         self.assertNotIn("grid", axes)
         chain = {"dt_seconds": [{"role": name, "dt_seconds": dt} for name, dt in (("a", 120), ("b", 60), ("c", 30))]}
+        chain = {axis: [{**rung, "grid": None, "newton_iterations": None} for rung in values]
+                 for axis, values in chain.items()}
         tie = 1e-12
         self.assertEqual(converges(chain, {"a": 1.0, "b": 1.0 + tie / 2, "c": 1.0}, tie)[0], True)
         self.assertEqual(converges(chain, {"a": 1.0, "b": 1.0 + 3 * tie, "c": 1.0}, tie)[0], False)
+        # The default tie is the scorer's, added to the floor fraction, not scaled by it.
+        self.assertEqual(converges(chain, {"a": 1.0, "b": 1.0 + SECOND_HALF_TIE / 2, "c": 1.0})[0], True)
+        self.assertEqual(converges(chain, {"a": 1.0, "b": 1.0 + 3 * SECOND_HALF_TIE, "c": 1.0})[0], False)
+        self.assertEqual(converges(chain, {"a": 1e6, "b": 1e6 * (1 + 1e-15), "c": 1.0})[0], False)
+        self.assertEqual(converges(chain, {"a": 0.0, "b": SECOND_HALF_TIE / 2, "c": 0.0})[0], True)
+        # A rise of exactly the tie is still a tie.
+        exact = {"a": 1.0, "b": 1.0 + SECOND_HALF_TIE, "c": 1.0 + SECOND_HALF_TIE}
+        self.assertEqual(converges(chain, exact), (True, []))
         # A rise in the middle is caught even when the last rung is lower again.
         self.assertEqual(converges(chain, {"a": 2.0, "b": 3.0, "c": 1.0}, tie)[0], False)
         self.assertEqual(converges(chain, {"a": 3.0, "b": 2.0, "c": 1.0}, tie), (True, []))
         self.assertTrue(first_iteration_at_roundoff([1e-6, 1e-16], 1e-16))
         self.assertFalse(first_iteration_at_roundoff([1e-6, 2e-16], 1e-16))
         self.assertFalse(first_iteration_at_roundoff([1e-6], 1e-16))
+
+    def test_fixed_cfl_rung_construction(self):
+        # Every advective rung refines the grid and the time step together.
+        for name in ("smooth_positive", "smooth_negative", "boundary_positive", "boundary_negative"):
+            case = case_by_id(self.design, name)
+            pairs = refinement_rungs(case)
+            self.assertEqual(pairs, [(16, 120), (32, 60), (64, 30)])
+            for (coarse, coarse_dt), (fine, fine_dt) in zip(pairs, pairs[1:]):
+                self.assertEqual((fine, fine_dt), (2 * coarse, coarse_dt // 2))
+            numerical_rungs = [r for r in rungs(self.design, case) if r["kind"] == "numerical"]
+            self.assertEqual([(r["grid"], r["dt_seconds"]) for r in numerical_rungs], pairs)
+            cfl = {abs(case["velocity_m_s"]) * dt * grid / case["length_m"] for grid, dt in pairs}
+            self.assertEqual(len(cfl), 1)
+            self.assertAlmostEqual(cfl.pop(), 0.0192, places=15)
+            reference = numerical(self.design, case, 32, 60)
+            self.assertAlmostEqual(reference.diagnostics["nominal_cfl"], 0.0192, places=15)
+            axes = ladder_axes(case, numerical_rungs[-1], rungs(self.design, case))
+            self.assertEqual(list(axes), ["fixed_cfl"])
+            self.assertEqual([(r["grid"], r["dt_seconds"]) for r in axes["fixed_cfl"]], pairs)
+            axes = ladder_axes(case, numerical_rungs[1], rungs(self.design, case))
+            self.assertEqual([(r["grid"], r["dt_seconds"]) for r in axes["fixed_cfl"]], pairs[:2])
+            # A grid with a time step from another rung is off the ladder.
+            for grid, dt in ((64, 120), (16, 30), (32, 30)):
+                with self.assertRaisesRegex(ValueError, "fixed-CFL"):
+                    numerical(self.design, case, grid, dt)
+            bad = rungs(self.design, case)[0]
+            with self.assertRaises(DataError):
+                ladder_axes(case, {**bad, "dt_seconds": 30}, rungs(self.design, case))
+        smooth = case_by_id(self.design, "smooth_positive")
+        for change in ({"grid_times_dt_seconds": 3840}, {"dt_seconds": [120, 60, 15]},
+                       {"dt_seconds": [120, 60]}, {"grids": [16, 32]}, {"ladder": "time_step_only"}):
+            with self.assertRaises(ValueError):
+                refinement_rungs({**smooth, **change})
+        # The CFL number is taken on the nominal spacing L / grid.
+        longer = numerical(self.design, {**smooth, "length_m": 2.0}, 32, 60)
+        self.assertAlmostEqual(longer.diagnostics["nominal_cfl"], 0.0096, places=15)
+        exchange = case_by_id(self.design, "conservative_exchange")
+        self.assertEqual(refinement_rungs(exchange), [(None, 120), (None, 60), (None, 30)])
+        self.assertIsNone(numerical(self.design, exchange, dt=60, newton=1).diagnostics["nominal_cfl"])
+        with self.assertRaises(ValueError):
+            refinement_rungs({**exchange, "ladder": "fixed_cfl"})
 
     def test_zero_or_dry_parent_is_a_data_failure(self):
         # G3_PLAN 6.1.3's dry and zero-state limit. The frozen design has no
@@ -298,7 +362,8 @@ class AdapterTests(unittest.TestCase):
         cls.root = Path(cls.scratch.name)
         cls.analytic = {case_id: write_fixture(cls.root / ("analytic_" + case_id), case_id) for case_id in CASE_IDS}
         cls.numerical = {case_id: write_fixture(cls.root / ("numerical_" + case_id), case_id, reference_mode="numerical")
-                         for case_id in ("smooth_positive", "boundary_negative", "conservative_exchange")}
+                         for case_id in ("smooth_positive", "boundary_positive", "boundary_negative",
+                                         "conservative_exchange")}
         cls.analytic_manifest = cls.analytic["smooth_positive"]
         cls.numerical_manifest = cls.numerical["smooth_positive"]
 
@@ -338,7 +403,7 @@ class AdapterTests(unittest.TestCase):
         self.assertEqual(producer_identity()["script"], "water_transport_adapter.py")
 
     def test_every_analytic_case_through_the_producer_and_the_scorer(self):
-        expected_rungs = {"periodic_smooth": 18, "labelled_inflow": 9, "two_reservoir_exchange": 9}
+        expected_rungs = {"periodic_smooth": 12, "labelled_inflow": 3, "two_reservoir_exchange": 9}
         for case_id, manifest in self.analytic.items():
             with self.subTest(case_id):
                 bundle = Bundle(manifest)
@@ -374,18 +439,32 @@ class AdapterTests(unittest.TestCase):
         self.assertFalse(smooth["meets"])
         self.assertEqual(smooth["reference_eligibility"], "ineligible")
         self.assertAlmostEqual(smooth["declaration"]["floors"]["reference_discretization"], 2.9993801653943, places=9)
-        self.assertFalse(smooth["declaration"]["converged"])
-        self.assertIn("rises along dt_seconds", smooth["declaration"]["eligibility_basis"]["converged"])
-        self.assertNotIn("rises along grid", smooth["declaration"]["eligibility_basis"]["converged"])
+        # On the fixed-CFL ladder the smooth floor falls at every doubling. It
+        # converges, and its floor is still far above the quarter rule.
+        self.assertTrue(smooth["declaration"]["converged"])
+        self.assertTrue(smooth["declaration"]["eligibility_basis"]["converged"].startswith("Measured. No refinement"))
+        self.assertEqual([(r["grid"], r["dt_seconds"]) for r in smooth["metrics"]["rungs"] if r["kind"] == "numerical"],
+                         [(16, 120), (32, 60), (64, 30)])
         self.assertFalse(Scorer(Bundle(self.numerical["smooth_positive"])).reference_eligibility(0, DAY)["meets"])
+        positive = evaluate_water_transport(Bundle(self.numerical["boundary_positive"]))
+        self.assertTrue(positive["declaration"]["converged"])
+        self.assertFalse(positive["meets"])
+        # The negative front rises on the first doubling. In the first hour the
+        # front travels 0.036 m, about one top cell at grid 32.
         front = evaluate_water_transport(Bundle(self.numerical["boundary_negative"]))
-        self.assertIn("rises along grid", front["declaration"]["eligibility_basis"]["converged"])
+        self.assertFalse(front["declaration"]["converged"])
+        self.assertIn("rises along fixed_cfl g16 dt120 nNone", front["declaration"]["eligibility_basis"]["converged"])
         exchange = evaluate_water_transport(Bundle(self.numerical["conservative_exchange"]))
         self.assertTrue(exchange["meets"])
         self.assertTrue(exchange["reference_eligibility"].startswith("measured eligibility"))
         self.assertTrue(exchange["declaration"]["converged"])
         self.assertTrue(exchange["declaration"]["jacobian_complete"])
         self.assertTrue(exchange["declaration"]["eligibility_basis"]["jacobian_complete"].startswith("Measured"))
+        cross_check = exchange["metrics"]["closed_form_cross_check"]
+        self.assertEqual(sorted(cross_check), ["n1", "n2", "n4"])
+        self.assertEqual([row["dt_seconds"] for row in cross_check["n4"]], [120, 60, 30])
+        self.assertEqual([(row["grid"], row["dt_seconds"]) for row in smooth["metrics"]["closed_form_cross_check"]["nNone"]],
+                         [(16, 120), (32, 60), (64, 30)])
         selected = exchange["metrics"]["rungs"][-1]
         self.assertEqual((selected["dt_seconds"], selected["newton_iterations"]), (30, 4))
         allowance = 128 * np.finfo(np.float64).eps * 0.01 * 1.1 * 1.5

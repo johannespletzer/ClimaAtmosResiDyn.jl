@@ -63,7 +63,7 @@ Each case directory contains the original `submission.json`, an existing-format
 `extension.json` and `manifest.json`, a separate `manifest_origin_swap.json`,
 the frozen design/resolved config and hashed evaluator sources, every native
 rung archive, and `known_answer_results.json`. `suite_results.json` records
-each case without hiding an ineligible result. All 45 numerical and 18
+each case without hiding an ineligible result. All 21 numerical and 18
 quadrature rungs remain available. Raw per-tag 1 h/24 h L1, specific Linf,
 small/zero-tag absolute errors, parent/closure defects, conservation/boundary
 accounts and executed Newton diagnostics are reported beside OD12 eligibility.

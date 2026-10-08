@@ -6,13 +6,21 @@ This is bounded offline implementation work. It runs no model. No physical
 atmosphere, held-out or eight-tag claim is qualified by a small known-answer
 case.
 
-## Inventory and frozen design
+Scope (decision of 2026-10-08). Part 6 gives known-answer references for
+label arithmetic only. The reference integrates the continuum equation with
+first-order upwind of rho chi. The model uses van Leer on specific chi in the
+vertical, a spectral horizontal operator and the water increment follower. So
+this suite does not test operator fidelity. That belongs to the PX runs of
+Part 7.
 
-[water_transport_design.json](water_transport_design.json) freezes equations,
+## Inventory and design
+
+[water_transport_design.json](water_transport_design.json) fixes equations,
 IC/BC, densities, velocities, label definitions, exact physical times,
-every refinement rung, scoring and mutation rules. The file records
-`frozen_before_results: true`. That is the author's statement. Its hash shows
-that the file has not changed since, not when it was written. These are
+every refinement rung, scoring and mutation rules. Its sha256 is pinned in
+`water_transport_reference.py` and in both fixture configs. The hash shows
+integrity only. It shows that the file has not changed since it was pinned,
+not when it was written (decision of 2026-10-08). These are
 development cases. Soares, TRMM and sites 23/26 remain development cases
 under OD14. No previous case is relabelled held-out. WA-SCOPE's two cases are
 named (decision of 2026-10-08). The 24 h development case is the GCM-driven
@@ -36,7 +44,7 @@ The useful minimum is two smooth periodic directions, two labelled boundary
 directions and one conservative exchange. It tests nonuniform density,
 nonuniform native cell geometry, overlapping/very small/zero source tracers,
 and a total-preserving origin swap. It is not a general transport framework.
-G3_PLAN 6.1.3 also asks for dry and zero-state limits. The frozen design has
+G3_PLAN 6.1.3 also asks for dry and zero-state limits. The design has
 no such case, and adding one would change its hash. A unit test checks
 instead that a dry or zero-water parent is a data failure, as in the scorer.
 The independent numerical reference is tested on known answers before it can
@@ -89,10 +97,12 @@ Jacobian at every requested Newton count. This small linear Newton test is
 not evidence about ClimaAtmos's nonlinear Newton floor.
 
 An independent quadrature of the smooth profile checks analytic integration
-at orders 8/16/32. Translation reports every grid (16/32/64) and timestep
-(120/60/30 s). Newton is explicitly inapplicable. Mixing reports every dt and
+at orders 8/16/32. Translation refines the grid and the timestep together at
+one fixed CFL number. Grid 16/32/64 pairs with dt 120/60/30 s, so grid times
+dt is 1920 s and C = |u| dt grid / L = 0.0192 on every rung. Newton is
+explicitly inapplicable. Mixing reports every dt and
 actual Newton count (1/2/4). Grid refinement is inapplicable to two fixed
-reservoirs. No best pair is selected. Raw per-tag errors, native mass defects,
+reservoirs, so the exchange ladder refines the time step alone. No best pair is selected. Raw per-tag errors, native mass defects,
 and every known-answer numerical floor are retained at 1 h and 24 h.
 
 ## Acceptance and attribution scope
@@ -136,11 +146,19 @@ beside the design hash.
 | Declared value                                                          | What it rests on                                                                                                                                                                                                      |
 |:----------------------------------------------------------------------- |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Reference-discretization floor                                          | Measured from the rungs in numerical mode. In analytic mode it is a constructed roundoff bound, plus the measured quadrature floor for the smooth cases (next section).                                               |
-| Source-injection, initialization, parent-solve and contamination floors | Stated as zero, each with its reason. They are statements about the frozen equations, not measurements. A nonzero initial-state error or an active excluded process refuses the evidence instead of entering a floor. |
-| `converged`, numerical mode                                             | Measured. No refinement step toward the selected rung raises its floor, with a rise within the frozen roundoff allowance read as a tie.                                                                               |
+| Source-injection, initialization, parent-solve and contamination floors | Stated as zero, each with its reason. They are statements about the design equations, not measurements. A nonzero initial-state error or an active excluded process refuses the evidence instead of entering a floor. |
+| `converged`, numerical mode                                             | Measured. No refinement step toward the selected rung raises its floor. A rise of at most the scorer's `SECOND_HALF_TIE` (1e-12 of the tolerance) is a tie.                                                           |
 | `converged`, analytic mode                                              | Declared true as inapplicable. A closed form has no ladder. The independent numerical route is reported in `closed_form_cross_check` and gates nothing.                                                               |
 | `mirrors_complete`                                                      | Declared true as inapplicable. Source mirrors and the Jacobian are copies conditions (G3_PLAN 6.1.2). These equations have no source, and every excluded process reads zero.                                          |
 | `jacobian_complete`                                                     | Measured for the exchange solve: the residual after the first Newton iteration is at roundoff. Declared true as inapplicable for the closed form and the explicit upwind.                                             |
+
+A flag that a reference does not have is declared true with the basis
+"inapplicable". This is a clarification of the 2026-10-07 format, decided on
+2026-10-08.
+
+The ladder tie is the scorer's `SECOND_HALF_TIE`, imported, not a new
+constant. Floors are fractions of a tolerance, so the tie is added to the
+floor, as the scorer adds it to its normalized second-half increment.
 
 Active-rule coverage stays reported, with the OD9 limitation, and is never a
 gate (WA-GATES (b)). The TRMM pilot's first-hour row is untouched by this
@@ -153,28 +171,29 @@ new state field or runtime hook is introduced here.
 
 ## Every Part6 obligation and its next dependency
 
-| Obligation                                                        | Reused / new / triggered / blocked                      | Concrete completion or remaining gate                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-|:----------------------------------------------------------------- |:------------------------------------------------------- |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Task1 exact dependency/current refs/source/guides                 | Reused and inspected                                    | The base is plan-rev2 at `9c710edc`, with the reviewed scorer.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| Task2 minimum inventory/design/freeze                             | New                                                     | This inventory and the frozen JSON. That it was frozen before results is the author's statement (owner line below).                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| Task3 independent equations/scope/conventions                     | New                                                     | Analytic, independent numerical, same-parent, copies and closure distinguished above. No shared tag rule validates itself.                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| Task4 translation/mixing/density/direction/boundaries/mutant      | New                                                     | Runnable independent cases and adapter/tests. Source overlays/small/zero included. Exact closure with wrong origins required.                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| PX1 then PX8 regardless low hourly screen                         | Reused. Actual execution blocked                        | Hourly screen cannot establish immateriality. Accepted-step exact subsidence exposure requires actual states and operator capture. Preserve two D4-W cases and site23 windows.                                                                                                                                                                                                                                                                                                                                                                            |
-| PX16/PP-SUB                                                       | Triggered only                                          | Material PX8 plus OD13 and diagnostic-only approved job. No new runtime state/activation here.                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| PX7 lag versus structure                                          | Reused. Blocked execution                               | Existing solver sets/probe. Freeze matched physical times, fixed-parent trial and full-parent trajectory separately. Existing monotone ratios <=.25/<=.75 for lag, >.9 structural. Neither validates origins.                                                                                                                                                                                                                                                                                                                                             |
-| PX11 clean Soares / PX24 accounting                               | Reused. Blocked production channels                     | Measure sedimentation (<1e-4 parent), zero subsidence/forcing, surface/init/parent/linearity floors before scoring. No named active-rule claim without complete per-tag accounting. OD10 rounding attribution rule stays proposed.                                                                                                                                                                                                                                                                                                                        |
-| PX12 TRMM0M / KI4-COPIES / UP1                                    | Reused. Blocked actual evidence                         | dt150/75, Newton2/10 and actual grid/count ladders. Grid/updraft pre-repair residuals/repair, mirrors/Jacobian, initialization/fallback, E per rung <=1e-3. Fixed-parent copies probe uses UP1's own 1-to-10 share-budget rule. Merely running a probe does not resolve it.                                                                                                                                                                                                                                                                               |
-| Task6 floors/eligibility/count                                    | New known-answer floor reports. Production blocked      | Every numerical/integration rung retained. Each applicable OD12 floor quarter-tolerance. Full copies evidence still required at actual tag count. Eight-tag target unchanged.                                                                                                                                                                                                                                                                                                                                                                             |
-| Task7 manifest/scorer identity/native evidence                    | Reused plus the producer of a declared eligibility file | No parallel manifest, time interpolation, unknown zero, metadata production pass or automatic Part5 completion. The scorer is unchanged.                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| Task8 equation/fault/refinement/mutation tests                    | New plus existing regression suites                     | Exact answers, conservation, zero/small/overlay, dry parent, stale hashes, units/times/geometry/scope/count, shared/ineligible refs, active exclusions, the scorer's reading of the declaration and the driver's exit codes.                                                                                                                                                                                                                                                                                                                              |
-| Task9 docs                                                        | New                                                     | G3_TODO, STATUS, the crosswalk and the two READMEs state the partial scope. NEWS has no entry, since experiment tools are not listed there.                                                                                                                                                                                                                                                                                                                                                                                                               |
-| Task10 record                                                     | New                                                     | This PR carries the code, the design, the configs and this record. Fixture outputs are regenerated by the commands in the README.                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| Option D / Part7 / residence-time / energy / Part9 closure tuning | Excluded or separately routed                           | No D4-W origin/convergence reopening, precipitation work on the giving pool, residence-time/energy reference work or production closure tuning.                                                                                                                                                                                                                                                                                                                                                                                                           |
-| Waiting for the owner: what the reference models                  | Owner                                                   | The reference solves the continuum equation with first-order upwind of rho chi. The model moves tracers differently. Its vertical default is `vanleer_limiter` on specific chi (`implicit_tendency.jl`). Its horizontal transport is the spectral-element `split_divₕ` (`advection.jl`). Water tags that follow the parent's implicit increment take their vertical advection from that shared increment. The model's column has no labelled inflow boundary. So these cases check label arithmetic and the evidence workflow, not the model's operators. |
-| Waiting for the owner: the ladder and the roundoff multiplier     | Owner                                                   | The grids 16/32/64, grid power 1.15, steps 120/60/30 s, Newton counts 1/2/4, quadrature orders 8/16/32 and the 128 eps multiplier are in no contract. PX12's rungs are dt 150/75 s and Newton 2/10, and OD10's proposed rounding row is 1e-10 relative. The dt ladder raises the upwind floor (next section), so it cannot show convergence. No test checks 128 eps from above and below.                                                                                                                                                                 |
-| Waiting for the owner: Part 6's deliverable against ROADMAP's row | Owner                                                   | ROADMAP's Part 6 row asks to reuse PX1/PX8, PX7, PX11/PX24 and existing mixing tests, and to run PX12. This PR runs none of them and reuses no existing mixing test in code. It adds the analytic references that the row allows "after design".                                                                                                                                                                                                                                                                                                          |
-| Waiting for the owner: frozen before results                      | Owner                                                   | `frozen_before_results` is self-asserted. The suite's own test tolerances, for example the 0.55 exchange ratio, are not in the design file.                                                                                                                                                                                                                                                                                                                                                                                                               |
-| Waiting for the owner: inapplicable conditions declared true      | Owner                                                   | `mirrors_complete`, analytic-mode `converged` and `jacobian_complete` for references without an implicit solve are declared true as inapplicable, each with its basis. The scorer requires all three for every reference. If the owner reads them as false, every fixture except the numerical exchange becomes ineligible.                                                                                                                                                                                                                               |
+| Obligation                                                        | Reused / new / triggered / blocked                      | Concrete completion or remaining gate                                                                                                                                                                                                                                       |
+|:----------------------------------------------------------------- |:------------------------------------------------------- |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Task1 exact dependency/current refs/source/guides                 | Reused and inspected                                    | The base is plan-rev2 at `9c710edc`, with the reviewed scorer.                                                                                                                                                                                                              |
+| Task2 minimum inventory/design/freeze                             | New                                                     | This inventory and the design JSON. Its pinned hash shows integrity only (decided 2026-10-08).                                                                                                                                                                              |
+| Task3 independent equations/scope/conventions                     | New                                                     | Analytic, independent numerical, same-parent, copies and closure distinguished above. No shared tag rule validates itself.                                                                                                                                                  |
+| Task4 translation/mixing/density/direction/boundaries/mutant      | New                                                     | Runnable independent cases and adapter/tests. Source overlays/small/zero included. Exact closure with wrong origins required.                                                                                                                                               |
+| PX1 then PX8 regardless low hourly screen                         | Reused. Actual execution blocked                        | Hourly screen cannot establish immateriality. Accepted-step exact subsidence exposure requires actual states and operator capture. Preserve two D4-W cases and site23 windows.                                                                                              |
+| PX16/PP-SUB                                                       | Triggered only                                          | Material PX8 plus OD13 and diagnostic-only approved job. No new runtime state/activation here.                                                                                                                                                                              |
+| PX7 lag versus structure                                          | Reused. Blocked execution                               | Existing solver sets/probe. Freeze matched physical times, fixed-parent trial and full-parent trajectory separately. Existing monotone ratios <=.25/<=.75 for lag, >.9 structural. Neither validates origins.                                                               |
+| PX11 clean Soares / PX24 accounting                               | Reused. Blocked production channels                     | Measure sedimentation (<1e-4 parent), zero subsidence/forcing, surface/init/parent/linearity floors before scoring. No named active-rule claim without complete per-tag accounting. OD10 rounding attribution rule stays proposed.                                          |
+| PX12 TRMM0M / KI4-COPIES / UP1                                    | Reused. Blocked actual evidence                         | dt150/75, Newton2/10 and actual grid/count ladders. Grid/updraft pre-repair residuals/repair, mirrors/Jacobian, initialization/fallback, E per rung <=1e-3. Fixed-parent copies probe uses UP1's own 1-to-10 share-budget rule. Merely running a probe does not resolve it. |
+| Task6 floors/eligibility/count                                    | New known-answer floor reports. Production blocked      | Every numerical/integration rung retained. Each applicable OD12 floor quarter-tolerance. Full copies evidence still required at actual tag count. Eight-tag target unchanged.                                                                                               |
+| Task7 manifest/scorer identity/native evidence                    | Reused plus the producer of a declared eligibility file | No parallel manifest, time interpolation, unknown zero, metadata production pass or automatic Part5 completion. The scorer is unchanged.                                                                                                                                    |
+| Task8 equation/fault/refinement/mutation tests                    | New plus existing regression suites                     | Exact answers, conservation, zero/small/overlay, dry parent, stale hashes, units/times/geometry/scope/count, shared/ineligible refs, active exclusions, the scorer's reading of the declaration and the driver's exit codes.                                                |
+| Task9 docs                                                        | New                                                     | G3_TODO, STATUS, the crosswalk and the two READMEs state the partial scope. NEWS has no entry, since experiment tools are not listed there.                                                                                                                                 |
+| Task10 record                                                     | New                                                     | This PR carries the code, the design, the configs and this record. Fixture outputs are regenerated by the commands in the README.                                                                                                                                           |
+| Option D / Part7 / residence-time / energy / Part9 closure tuning | Excluded or separately routed                           | No D4-W origin/convergence reopening, precipitation work on the giving pool, residence-time/energy reference work or production closure tuning.                                                                                                                             |
+| Decided 2026-10-08: what the reference models                     | Owner                                                   | Known answers for label arithmetic only. Operator fidelity belongs to the PX runs of Part 7 (scope paragraph at the top).                                                                                                                                                   |
+| Decided 2026-10-08: the ladder and its tie                        | Owner                                                   | Fixed CFL with the scorer's tie. Grid and step refine together at C = 0.0192. A rise of at most `SECOND_HALF_TIE` is a tie. The 128 eps multiplier stays only in arithmetic allowances.                                                                                     |
+| Decided 2026-10-08: Part 6's deliverable against ROADMAP's row    | Owner                                                   | The row is amended. The PX runs move to Part 7.                                                                                                                                                                                                                             |
+| Decided 2026-10-08: the design hash                               | Owner                                                   | The hash shows integrity only. The timing field is removed. The suite's own test tolerances, for example the 0.55 exchange ratio, are still not in the design file.                                                                                                         |
+| Decided 2026-10-08: inapplicable conditions declared true         | Owner                                                   | True with a stated basis. This clarifies the 2026-10-07 format.                                                                                                                                                                                                             |
+| Decided 2026-10-08: eligibility rows under exported-only parity   | Owner                                                   | A scorer follow-up. This PR reports the rows and is not blocked by them.                                                                                                                                                                                                    |
 
 ## Execution limits
 
@@ -192,8 +211,8 @@ code runs off the model hot path and claims none of those gates.
 
 ## Saved implementation and measured execution
 
-The frozen design SHA256 remains
-`c1af334b03727c3017810c46d2f826eff51dbdccccac55bb3c5ee6de044749d6`.
+The design SHA256 is
+`597e39a84a142649f5355177a2c03f74ee7d0ae0c63d05e9e04515e23ff96f37`.
 [water_transport_reference.py](water_transport_reference.py) implements the
 native analytic antiderivatives, front intersections and exchange solution,
 and separate quadrature, upwind and implicit-Newton solvers. It counts the
@@ -208,9 +227,10 @@ faults, the scorer's reading of each case and the driver's exit codes.
 [Runnable commands](README.md#independent-water-known-answer-fixtures) use
 both complete JSON configurations and preserve failed references.
 
-Every case retains nine numerical rungs, and each smooth case also retains
-nine quadrature rungs. A full suite records 45 numerical and 18 integration
-rungs. All 18 quadrature rungs and all nine exchange rungs meet the quarter
+Each advective case retains three fixed-CFL rungs, and each smooth case also
+retains nine quadrature rungs. The exchange case retains nine rungs, three
+time steps by three Newton counts. A full suite records 21 numerical and 18
+integration rungs. All 18 quadrature rungs and all nine exchange rungs meet the quarter
 rule. No upwind rung does.
 
 ### What analytic-mode eligibility rests on
@@ -232,54 +252,63 @@ nothing about a model's transport.
 ### What the numerical ladder shows
 
 Largest floor fraction of each rung over all tags and both endpoints. The
-front's floor is its L1 fraction. The first-hour L1 rows dominate every case.
+front's floor is its L1 fraction. Each step halves dx and dt together.
 
-| Case               | grid 16, dt 30 | grid 32, dt 30 | grid 64, dt 120 | grid 64, dt 60 | grid 64, dt 30 |
-|:------------------ | --------------:| --------------:| ---------------:| --------------:| --------------:|
-| Smooth, both signs | 8.369          | 5.294          | 2.847           | 2.949          | 2.999          |
-| Front, positive    | 66.30          | 45.50          | 27.87           | 28.72          | 29.36          |
-| Front, negative    | 50.26          | 72.67          | 51.73           | 52.67          | 53.13          |
+| Case                        | grid 16, dt 120 | grid 32, dt 60 | grid 64, dt 30 | Fraction per doubling | Converged |
+|:--------------------------- | ---------------:| --------------:| --------------:|:--------------------- |:--------- |
+| Smooth, both signs          | 8.303           | 5.256          | 2.999          | 0.63, 0.57            | Yes       |
+| Front, positive             | 65.37           | 45.05          | 29.36          | 0.69, 0.65            | Yes       |
+| Front, negative             | 50.01           | 72.36          | 53.13          | 1.45, 0.73            | No        |
+| Exchange, Newton 1, 2 and 4 | 0.01824         | 0.00913        | 0.00457        | 0.50, 0.50            | Yes       |
 
-The smooth upwind floor falls by 0.63 and then 0.57 per grid doubling. At the
-measured 0.57, reaching the quarter would take about 1,300 cells. At first
-order's asymptotic one half it would take about 800. Both are extrapolations,
-not runs. Along the dt ladder the floor rises as the step shrinks. First-order
-upwind's numerical diffusion is u dx (1 - C)/2 with Courant number C. In the
-smooth cases C is 0.005 to 0.08, so a smaller step adds diffusion. The dt ladder cannot
-show convergence for this scheme, and the producer declares every upwind
-reference not converged for that reason. The negative front does not fall
-with the grid either. At one hour it sits in the coarse cells at the inflow
-end (grid power 1.15). The exchange floor is 0.0182, 0.0091 and 0.0046 at dt
-120, 60 and 30 s, first order in dt. It is the same at Newton 1, 2 and 4,
-because the system is linear and λ dt is at most 3.7e-3. Its Newton axis
-measures nothing. The choice of ladder is the owner's (obligations table).
+The exchange has no grid. Its columns are dt 120, 60 and 30 s alone.
 
-| Selected numerical reference (grid 64, dt 30, exchange Newton 4) | Reference-discretization floor | Converged            | Eligible      | Candidate disposition              |
-|:---------------------------------------------------------------- | ------------------------------:|:-------------------- |:------------- |:---------------------------------- |
-| Smooth positive                                                  | 2.99938                        | No, dt axis          | No            | Not assessable                     |
-| Smooth negative                                                  | 2.99938                        | No, dt axis          | No            | Not assessable                     |
-| Inflow positive                                                  | 29.3649                        | No, dt axis          | No            | Not assessable                     |
-| Inflow negative                                                  | 53.1270                        | No, grid and dt axes | No            | Not assessable                     |
-| Conservative exchange                                            | 0.00456819                     | Yes                  | Yes, measured | Manufactured equation check passes |
+First-order upwind at a fixed CFL number converges at order one, so a
+smooth floor should fall toward one half per doubling. The smooth floor
+falls by 0.63 and then 0.57. At 0.57 it would reach the quarter at about
+1,400 cells, and at one half at about 800. Both are extrapolations, not runs.
+A front converges at about order one half in L1, or 0.71 per doubling. The
+positive front falls by 0.69 and then 0.65. The negative front is not
+monotone. Its floor is the first-hour L1 row, and that row rises from 41.8
+to 72.4 and then falls to 53.1. In the first hour the front travels 0.036 m
+from the inflow end at x = 1. The grid power 1.15 makes the cells coarsest
+there: 0.072 m at grid 16, 0.036 m at grid 32 and 0.018 m at grid 64. On the
+two coarse rungs the front has not left its first cell or two, so the ladder
+is not yet asymptotic there. Its day row falls at every doubling (50.0, 38.0
+and 30.4). The exchange floor halves with dt, first order. It is the same at
+Newton 1, 2 and 4, because the system is linear and λ dt is at most 3.7e-3.
+Its Newton axis measures nothing.
+
+Three of the four upwind references now converge: both smooth cases and the
+positive front. None becomes eligible. Their floors are 3.0, 3.0 and 29.4
+times the tolerance, far above the quarter.
+
+| Selected numerical reference (grid 64, dt 30, exchange Newton 4) | Reference-discretization floor | Converged          | Eligible      | Candidate disposition              |
+|:---------------------------------------------------------------- | ------------------------------:|:------------------ |:------------- |:---------------------------------- |
+| Smooth positive                                                  | 2.99938                        | Yes                | No            | Not assessable                     |
+| Smooth negative                                                  | 2.99938                        | Yes                | No            | Not assessable                     |
+| Inflow positive                                                  | 29.3649                        | Yes                | No            | Not assessable                     |
+| Inflow negative                                                  | 53.1270                        | No, first doubling | No            | Not assessable                     |
+| Conservative exchange                                            | 0.00456819                     | Yes                | Yes, measured | Manufactured equation check passes |
 
 The analytic suite reports constructed eligibility for all five cases and
 verifies all five closure-preserving wrong-origin mutants. Its exit is 0. The
 numerical suite exits 3: its four upwind references are ineligible. These
-values do not imply that refining beyond the frozen ladder would pass or
+values do not imply that refining beyond the design's ladder would pass or
 that any atmospheric reference is eligible. Every rung's raw rows are kept
 in the result bundles, and no best pair is selected.
 
 Fixture PASS requires the candidate's OD3 profiles, its partition closure
 and its prescribed native exported-parent trajectory against the analytic
-equation, within the frozen arithmetic allowance. Specific profiles and
+equation, within the design arithmetic allowance. Specific profiles and
 closure alone would miss a proportional scaling of density, parent and all
 tags. This is an implementation check and does not certify physical
 all-state parent parity. Mutant verification checks the actual saved swap
-and every frozen initial-state, parent and overlay invariant. Changing the
+and every registered initial-state, parent and overlay invariant. Changing the
 parent, an overlay or the kind of wrong-origin assignment fails it even when
 total closure and origin discrimination hold.
 
-On this tree the 36 focused tests pass, and so does the whole evidence
+On this tree the 38 focused tests pass, and so does the whole evidence
 directory. The existing Bundle CLI validates an analytic fixture with exit 0.
 The full acceptance scorer on the same fixture exits 2 and stays
 `NOT QUALIFIED`. Native temperature, negative water, Newton, ledgers and the
