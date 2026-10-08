@@ -345,6 +345,9 @@ class Bundle:
             for name in run.get("fields", {}):
                 check(lambda role=role, name=name: self.field(role, name))
         check(lambda: require("candidate" in self.spec.get("runs", {}), "missing candidate run"))
+        if "correction_accounting" in self.spec or "precipitation_applications" in self.spec:
+            from correction_accounting import validate_extensions
+            check(lambda: validate_extensions(self))
         return sorted(set(errors))
 
     def field(self, role, name):

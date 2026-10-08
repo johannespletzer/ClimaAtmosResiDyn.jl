@@ -7,6 +7,8 @@ Each row separates applicability, data completeness, scientific verdict,
 approved/proposed/reported status, reference eligibility, units, window,
 normalization and remaining dependency. See [PART4.md](PART4.md) for the
 reuse inventory, coverage and verification record.
+The optional weighted-application path and its production gaps are recorded
+in [PART5.md](PART5.md). Its offline implementation does not complete Part 5.
 
 The input is a separately identified extended manifest, not a second
 submission record format. Attach a predeclared extension to an archived
@@ -60,6 +62,8 @@ The extension records these fields:
 | `accepted_step_seconds`, `throughput_accumulation` | Step cadence for deriving cell-step ledger variation. Exact stored Θx identifies `accepted_step` accumulation independently of output cadence. |
 | `reference`, `active_rules` | Named, scope-specific eligibility artifact and its `producer` (`script` and `sha256`). The file names the same producer and declares tested independent rules, convergence, `floors` with one entry per OD12 source (`source_injection`, `initialization`, `parent_solve`, `contamination`, `reference_discretization`), active mirrors/Jacobian and copies refinement. A single scalar floor or a missing producer fails the eligibility row as a data failure. The row records "eligibility as declared by <producer> <hash>". Active-rule coverage is reported and gates nothing until OD9. |
 | `record_processes`, `expected_record_processes` | Complete predeclared process roster. A missing active record cannot be silently skipped. Duplicate process names are rejected. |
+| `correction_accounting` | Versioned required-channel/coverage table, finalized trial receipt, native application arrays and optional directed leg pairs. Missing/unsupported channels remain explicit. |
+| `precipitation_applications` | Paired parent and every partition tag at identical accepted applications/weights/bounds/native surface. Signed fluxes are integrated before cancellations. |
 
 A field descriptor names `path`, `key`, `units`, `representation`, `sampling`,
 `dimensions` (native dimensions excluding time), and `weight_units`.
@@ -97,6 +101,140 @@ ledgers must be reconstructed to density before stitching. Attempted and
 retained fields remain distinct. A reader test does not prove model restart
 equivalence.
 
+## Weighted applications and cancellation
+
+For one fixed mechanism/tag/compartment and native volume, signed window S is
+the integral of the endpoint ledger difference. Retained H sums the absolute
+native-cell ledger changes at every accepted step. Accepted A sums absolute
+weighted native-cell contributions at every accepted application. Absolute
+value precedes cells, applications and compartments for A. A complete additive
+decomposition satisfies abs(S) <= H <= A up to a reported rounding allowance.
+The reader also matches every native-cell accepted-step sum to the real ledger,
+reconstructing density times specific output at each endpoint. That consistency
+allowance is not a scientific activity tolerance.
+It uses per-step/native-cell quantities with the same density units and the
+least precise native dtype, including the sum of absolute weighted
+contributions before cancellation. This covers native addition roundoff
+between opposing stages. An unrelated dense cell or atmospheric density
+cannot enlarge another cell's correction allowance.
+Below the native normal range, the allowance also includes the local loss
+when a weighted contribution rounds to its native dtype. Specific-ledger
+export has a separate half-subnormal quantum at each endpoint, converted to
+density units with that endpoint's density. Density ledgers receive no export
+floor. Exact all-zero input still has zero allowance, and an omitted
+representable subnormal update into a zero density ledger is rejected.
+
+An application is a final additive contribution with its integration weight.
+The receipt pins `unconstrained_imex_ark`, `ClimaTimeSteppers` version,
+`b_exp`, `b_imp` and `implicit_diagonal`. Explicit/implicit tendency weights
+are dt times the corresponding accepted b coefficient. Post-Newton map
+increments use b_imp/gamma. Final accepted maps have weight 1. Nonadditive
+pre-solve stage observations are refused. A distinct final evaluation ID must
+replace repeated Newton evaluations. Rejected/superseded evaluations cannot
+enter A. `attempted_coefficient` is optional: supply it only for an actual trial
+update. An unweighted tendency evaluation has no physical attempted amount.
+
+The extension uses this shape inside the existing `acceptance` object:
+
+```json
+{
+  "correction_accounting": {
+    "schema_version": 1,
+    "required_channels": ["fix.pbl.total", "negative.pbl.total"],
+    "receipt": "application_receipt.json",
+    "coverage": [
+      {"id": "fix.pbl.total", "mechanism": "fix", "tag": "pbl",
+       "compartment": "total", "status": "observed",
+       "ledger": "application_ledger_fix_pbl_total",
+       "applications": {"path": "applications.npz", "prefix": "fix_pbl_total",
+                        "quantity": "water_increment", "units": "kg m^-3"}},
+      {"id": "negative.pbl.total", "mechanism": "negative", "tag": "pbl",
+       "compartment": "total", "status": "missing", "reason": "no accepted producer"}
+    ]
+  }
+}
+```
+
+The required roster is the declared accounting scope. It must cover every
+active mechanism/tag/compartment needed for the claim, not a convenient subset.
+It is checked against the runtime validation's active-roster evidence before a
+production completeness pass. `inactive` requires a reason and pinned evidence.
+`unsupported`/`missing` block completeness and never receive a zero. Every
+observed channel must have an applied record at every accepted step, including
+an explicit measured zero. Empty rosters cannot pass.
+
+The receipt has `schema_version: 1`, `semantics:
+"weighted_final_additive_updates"`, `kind: "runtime_capture"` or `"synthetic"`,
+the model commit and dirty-diff SHA256, the integrator pin, and a `steps` list.
+Each step names its unique ID, start/end seconds, exactly one `accepted_trial`,
+all finalized `trials` (`accepted`/`rejected`), and its `applications`.
+Each application names `channel`, unique `record_id`, `trial`,
+`application_id`, `evaluation_id`, `disposition`
+(`applied`/`rejected`/`superseded`), `role`, final `coefficient`,
+`coefficient_units` (`1`/`s`), and stage where needed. Bounds must be contiguous
+and exactly match the complete accepted-step ledger, never hourly interpolation.
+
+An NPZ application artifact contains `weights`, `geometry`, `weight_units`
+and, for each prefix, `PREFIX__values` (native Float32/Float64 record x cell),
+`__record_ids`, embedded `__quantity`/`__units`, native `__event_scale` and
+integer arrays `__fallback`, `__bound`, `__clamp`, `__zero_normalization`.
+Missing counters are data failures. Values are density increments or density
+tendencies as explicitly named. Final coefficients are applied before absolute
+value. The event convention is a stored native node per element per weighted
+application above max(1e-12,16 eps(native dtype)) times the absolute value of
+`__event_scale`, the writer's own scale. That scale differs by writer, as
+[PART5.md](PART5.md) lists.
+Existing retained cell-step and attempted cache-count conventions stay separate.
+
+Optional `directed_transfers` pairs name an `id`, a `donor` channel (the giving
+leg) and a `receiver` channel.
+The reader requires identical applications/native cells and equal opposite
+legs. It reports transfer Q once and summed leg activity 2Q. Aggregate signed
+closure is never used as a substitute for either amount or an origin bound.
+Fine energy sources remain separate from OD4's accepted-step partition source
+variation. No retained tolerance is transplanted onto A.
+
+For `precipitation_applications`, use `schema_version: 1`, a receipt,
+`channels` keyed by `parent` and every partition tag, and
+`sign_convention: "upward_positive"`. Each channel descriptor names a native
+`precipitation_flux` in kg m^-2 s^-1. Identical parent/tag application/evaluation/
+trial/coefficient identities are required. Column amounts use one unit-weighted
+surface. Native sphere amounts use m^2 area weights. Signed downward, positive
+downward and negative downward amounts are reported separately. Instantaneous
+precipitation diagnostics remain available. No reference for the giving pool
+or precipitation accuracy tolerance is supplied by this arithmetic. The row
+stays reported accounting. An unverified producer is a stated limitation and
+never turns the row into a not-assessable one.
+
+Production completeness additionally needs a pinned `lifecycle_evidence`
+artifact of kind `runtime_validation`, exact model/diff identity, producer
+source and scope roster, and PASS checks with commands/environment/hashed logs
+for accepted weights, rollback, Newton replacement, complete active roster,
+parent bitwise parity and all-channel checkpoint/restart. The proof's roster
+must equal the roster the reader evaluated. The producer ID, source hash and
+timestepper version must also match the implementation's verified-producer
+registry, which is empty, so no submission clears the gate today
+([PART5.md](PART5.md)).
+
+The scorer scores completeness in `COMMON.ACCEPTED_APPLICATION_ACTIVITY` and
+reports each window's activity in `COMMON.APPLICATION_ACTIVITY.<window>`, a
+reported row that never passes.
+
+The cancellation example is reproducible and separate from all historical runs:
+
+```sh
+python3 experiments/tag_closure/analysis/evidence/make_correction_fixture.py /tmp/correction-example
+python3 experiments/tag_closure/analysis/evidence/score_acceptance.py \
+  validate /tmp/correction-example/manifest.json --json /tmp/correction-example/validation.json
+python3 experiments/tag_closure/analysis/evidence/score_acceptance.py \
+  score /tmp/correction-example/manifest.json --json /tmp/correction-example/score.json
+python3 -m unittest discover -s experiments/tag_closure/analysis/evidence -p test_correction_accounting.py -v
+```
+
+Every hour applies +1 and -1 in each of two unit-thickness cells. Over 24 h
+S=0, H=0 and A=96 kg m^-2. Production completeness stays NOT ASSESSABLE.
+Scoring exits 3 for the remaining scientific gates. No simulation is run.
+
 ## Reproducible analytic example and tests
 
 These commands create a **synthetic fixture**, with separate candidate,
@@ -118,7 +256,7 @@ norms, comparator checks, parent parity and ledger ratios. It also reports:
 COMMON.SCOPE_APPROVAL: NOT ASSESSABLE / COMPLETE
   qualification stays at eight tags on the approved rows (WA-SCOPE)
 COMMON.ACCEPTED_APPLICATION_ACTIVITY: NOT ASSESSABLE / COMPLETE
-  cell-step variation can hide cancelling applications/legs
+  missing accepted application/leg accounting
 WATER.PRECIP_INTEGRATED.established: NOT ASSESSABLE / DATA FAILURE
   snapshots are insufficient for paired integrated precipitation
 qualification: NOT QUALIFIED, exit 3

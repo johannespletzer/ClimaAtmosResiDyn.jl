@@ -108,6 +108,11 @@ Concrete remaining work, retaining all G4.n/PX obligations below:
     Preserve count conventions, cancellation visibility and checkpoints. Use
     OD13's probe gates rather than unsolicited state fields. No propagated
     attribution-error bound from these activity totals alone.
+      + Offline reader and tests implemented. They read accepted weighted
+        source, repair and follower applications separately from OD4, with
+        native signed, retained, activity and counter reports. The exact
+        accepted-step source denominator stays unchanged. The production
+        obligation stays open, as [PART5](analysis/evidence/PART5.md) states.
   - [ ] **Part 11a, independent energy references:** design the
     [discriminating cases](design/G4_CLAIM_CONTRACTS.md#6-discriminating-reference-work-for-later-parts),
     including stage-weighted radiative flux/divergence versus the signed record,

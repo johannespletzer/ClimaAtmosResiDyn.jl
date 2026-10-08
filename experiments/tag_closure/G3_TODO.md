@@ -76,6 +76,11 @@ is promoted by preparing this documentation.
     or applied accumulations. Check signed rates and every checkpointed
     numerator/latch/count. Do not reinterpret approved retained thresholds as a
     different observable without an owner decision.
+      + Offline reader and tests implemented. Native weighted receipts expose
+        opposing applications, cells and parts, counts, trials and directed
+        transfers. Paired signed precipitation uses identical updates. The
+        production obligation stays open, as [PART5](analysis/evidence/PART5.md)
+        states.
   - [ ] **Part 6 / PX11-PX24 / PX12:** establish floors and eligibility at the
     actual tag count/window, including copies grid/updraft residuals, repair,
     mirrors/Jacobian, KI4-COPIES/UP1 and E/refinement per rung. Known-answer
