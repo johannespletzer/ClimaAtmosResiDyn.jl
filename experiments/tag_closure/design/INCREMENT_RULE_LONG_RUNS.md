@@ -75,8 +75,9 @@ families call it. Neither branch is for merge.
 Keep **same sign** if both hold:
 
  1. its gross closure residual at day 90 is within the family's budget:
-    water 0.2% of `∫ρq_tot` (G3_PLAN 6.1); energy 1e-4 of `∫(ρe_tot + cρ)`,
-    **a proposal**, since no energy budget of this form is set;
+    water 0.2% of `∫ρq_tot` (G3_PLAN 6.1), energy 0.2% of Θx (OD3's closure
+    row, decided 2026-10-08 in place of the proposed 1e-4 of
+    `∫(ρe_tot + cρ)`).
  2. it grows no faster than under `|m|`: its slope over days 30 to 90 is at
     most `|m|`'s plus 0.25.
 

@@ -310,6 +310,64 @@ The list as it stood before this classification, kept as written:
 >     and the copies under first-order upwinding (W25). **Waiting.**
 >     [FINDINGS W25](FINDINGS.md)
 
+## 2026-10-08
+
+The owner decided these on 2026-10-08, after PRs #150 and #151 merged into
+plan-rev2.
+
+  - **The production completeness gate binds to the producer.** **In
+    force.** Before any producer is registered: the producer writes the
+    roster it instrumented into its receipt and the gate reads it there,
+    inactive channels are verified by reading their content, and the check
+    logs are parsed for named results. The registry refuses an entry
+    without these three. Implemented in the Part 4 converter PR.
+  - **Complete cancellation-safe accounting is a condition of a qualified
+    energy claim too.** **In force.** WA-GATES (a) extends to energy. The
+    scorer's final accounting row stays required for both families.
+  - **WA-PRECIP in the scorer.** **In force.** Declared paired
+    precipitation evidence keeps the precipitation row reported only, with
+    the closed gate as a limitation. No 0M precipitation claim is scored.
+  - **WA-SCOPE's cases.** **In force.** The 24 h development case is the
+    GCM-driven column (OD2's established window to one day, not held out
+    for site-23 rules). The held-out case is RICO 1M, 24 h (OD2's WP4b
+    held-out row, in V-W6's list). Named before PX11 runs, as OD14 asks.
+  - **The energy budget for criterion 1 of the long-run rule is OD3's
+    0.2% of Θx.** **In force.** The design note's proposal, 1e-4 of
+    `∫(ρe_tot + cρ)`, is not adopted. OD7 stays deferred until the site-23
+    long runs are scored.
+  - **The converter from model output to the scorer's bundle is built in
+    the review session.** **In force.** An Opus agent writes it against the
+    reviewed scorer, with a test on the archived W58 and E87 outputs, as a
+    PR for the owner's review.
+  - **Part 6 delivers known-answer references for label arithmetic.** **In
+    force.** The reference integrates the continuum equation with
+    first-order upwind of `ρχ`. The code's transport operators (van Leer on
+    specific `χ`, the spectral horizontal operator, the water increment
+    follower) are not tested by it. Operator fidelity belongs to the PX
+    runs of Part 7. Decided after the review of PR #154.
+  - **The Part 6 ladder refines at fixed CFL, with the scorer's tie.** **In
+    force.** `Δx` and `Δt` refine together, so upwind converges at first
+    order. The `Δt`-only ladder and the 128 eps tie multiplier are dropped.
+    Recorded as a Part 6 convention, since no contract named a ladder.
+  - **Part 6's register row is amended.** **In force.** Part 6 is the
+    known-answer references of PR #154. The PX runs (PX1/PX8, PX7,
+    PX11/PX24, PX12) and the reuse of the existing mixing tests move to
+    Part 7, where the model runs.
+  - **The design hash shows integrity only.** **In force.** A fixture's
+    design hash proves the design file is unchanged, not that it was fixed
+    before the results. No "frozen before results" claim is made.
+  - **Inapplicable completeness flags are true with a stated basis.** **In
+    force.** A clarification of the declared eligibility format of
+    2026-10-07: a condition a reference does not have (source mirrors, the
+    Jacobian, convergence of an analytic case) is declared complete with
+    the basis "inapplicable". Read as false, every analytic fixture would
+    be ineligible.
+  - **Parity blocks the origin rows only. The eligibility rows are
+    reported.** **In force.** The reviewed scorer also blocked the
+    `REFERENCE.ELIGIBILITY` rows under exported-only parity. Eligibility is
+    a producer property, so the scorer is fixed in a follow-up on plan-rev2
+    to read those rows from the declared file whatever the parity state.
+
 ## 2026-10-07
 
 The owner decided these on 2026-10-07, after the review of PRs #147 to #149
@@ -363,7 +421,8 @@ and an adversarial check of the review's recommendations
     claim comes first, with `pbl` and `free` entry labels and `evap` as an
     overlay. The precipitation claim waits for OD15. The 24 h development
     case and the held-out case are named before PX11 runs (OD14).
-    *Waiting:* the owner names those two cases.
+    *Named 2026-10-08:* the GCM-driven column develops, RICO 1M 24 h is held
+    out (section 2026-10-08).
   - **WA-PRECIP: criterion 7 stays reported accounting.** **In force.**
     Precipitation origin is scored only under 1M, at PX25 under OD15, where
     independent donor references exist. One precipitation pathway.
@@ -426,7 +485,8 @@ and an adversarial check of the review's recommendations
     movement for energy, and the fourfold gross residual is energy without
     origin. Before the post-#139 site-23 long runs are scored, the owner
     fixes the energy budget for criterion 1 of the registered rule, either
-    OD3's 0.2% of Θx or the design note's proposal. *Waiting:* that budget.
+    OD3's 0.2% of Θx or the design note's proposal. *Decided 2026-10-08:*
+    OD3's 0.2% of Θx (section 2026-10-08).
   - **OD9 to OD11 stay proposed. Each pre-registration states its c.** **In
     force.** The convention is not fixed ahead of the gated evidence. Every
     G1 and G2 run used 110,495 J/kg, and Part 3 requires every test to state
