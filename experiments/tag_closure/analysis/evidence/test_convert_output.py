@@ -650,7 +650,7 @@ class ArchivedOutputTests(unittest.TestCase):
         self.assertEqual(rows["WATER.CLOSURE"]["verdict"], "REPORTED ONLY")
         # The first-hour rows: measured, within the first-hour limits, and blocked by named prerequisites.
         blocked = ("failed/unavailable prerequisite: COMMON.PARENT_PARITY, REFERENCE.ELIGIBILITY.startup, "
-                   "REFERENCE.ELIGIBILITY.sensitivity_1h")
+                   "REFERENCE.ELIGIBILITY.sensitivity_1h, REFERENCE.PARENT_PARITY")
         for tag in ("pbl", "free", "evap"):
             row = rows[f"WATER.ORIGINS.{tag}.3600"]
             self.assertEqual((row["verdict"], row["data_status"]), ("NOT ASSESSABLE", "COMPLETE"))
