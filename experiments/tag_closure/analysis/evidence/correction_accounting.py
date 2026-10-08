@@ -7,6 +7,7 @@ acceptance, and export native arrays before any signed aggregation.
 """
 
 import json
+import re
 from dataclasses import dataclass
 from zipfile import BadZipFile
 
@@ -29,7 +30,46 @@ QUANTITIES = {
 # No verified runtime producer is supplied by this offline implementation.
 # Registration is an implementation change after actual source/lifecycle,
 # parent-parity and all-channel restart validation, never a manifest setting.
+# Use register_producer. Besides its timestepper version and source hash, an
+# entry declares how the gate reads the producer's own output (the owner's
+# decision of 2026-10-08):
+#   roster_key: the receipt key under which the producer writes the roster of
+#     channels it instrumented. The gate reads the roster there, not from the
+#     submitted manifest or proof.
+#   inactive_arrays: {"values": suffix, "mark": suffix}, the arrays of an
+#     inactive channel's evidence file, `<channel>__<suffix>` with the channel
+#     ID's dots as underscores. Values must all be an explicit zero and marks
+#     all 1. A file hash alone does not show a channel inactive.
+#   check_log_pattern: a regular expression with the groups `check` and
+#     `result`. Each check's log must record that check by name as PASS.
 VERIFIED_PRODUCERS = {}
+PRODUCER_DECLARATIONS = ("cts_version", "source_sha256", "roster_key", "inactive_arrays", "check_log_pattern")
+
+
+def producer_entry(producer_id, entry):
+    """A registry entry with its declarations checked. An entry without them is refused."""
+    require(isinstance(entry, dict), f"verified producer {producer_id}: the entry must be an object")
+    absent = [k for k in PRODUCER_DECLARATIONS if k not in entry]
+    require(not absent, f"verified producer {producer_id} lacks declarations: {', '.join(absent)}")
+    require(text(entry["cts_version"]) and text(entry["source_sha256"]) and text(entry["roster_key"]),
+            f"verified producer {producer_id}: version, source hash and roster key must be names")
+    arrays = entry["inactive_arrays"]
+    require(isinstance(arrays, dict) and set(arrays) == {"values", "mark"} and all(text(v) for v in arrays.values()),
+            f"verified producer {producer_id}: inactive_arrays must name a values and a mark suffix")
+    try:
+        pattern = re.compile(entry["check_log_pattern"], re.MULTILINE)
+    except (re.error, TypeError) as exc:
+        raise DataError(f"verified producer {producer_id}: invalid check_log_pattern: {exc}") from exc
+    require({"check", "result"} <= set(pattern.groupindex),
+            f"verified producer {producer_id}: check_log_pattern needs the groups check and result")
+    return {**entry, "check_log_pattern": pattern}
+
+
+def register_producer(producer_id, entry):
+    """Add a verified producer after its runtime validation. Refuses an incomplete entry."""
+    require(text(producer_id), "a verified producer needs an ID")
+    producer_entry(producer_id, entry)
+    VERIFIED_PRODUCERS[producer_id] = dict(entry)
 
 # Numerical consistency constants. No contract sets them. Each is a reading of
 # native rounding, not a scientific tolerance, and a test pins each one.
@@ -410,9 +450,10 @@ def channel_metrics(bundle, channel, receipt, start, end):
 def production_gate(bundle, receipt, section, roster):
     """Require runtime validation evidence. Synthetic arithmetic cannot qualify it.
 
-    The roster is the one the reader actually evaluated. Today the gate checks a
-    submitted roster against submitted proof and reads inactive evidence by hash
-    only. PART5.md lists what a registered producer needs beyond that.
+    `roster` is the one the reader evaluated. The gate compares it with the
+    roster the producer wrote into its own receipt, reads every inactive
+    channel's arrays, and parses each check's log for the check's named
+    result, as the producer's registry entry declares.
     """
     if (receipt.metadata.get("kind") == "synthetic" or
             bundle.spec.get("resolved_settings", {}).get("fixture") is True or
@@ -431,6 +472,7 @@ def production_gate(bundle, receipt, section, roster):
     supported = VERIFIED_PRODUCERS.get(proof.get("producer_id"))
     if supported is None:
         return "no verified runtime application producer is registered. Metadata/log declarations cannot establish acceptance semantics"
+    supported = producer_entry(proof["producer_id"], supported)
     require(proof.get("integrator_pin") == receipt.metadata.get("integrator_pin") and
             receipt.metadata["integrator_pin"]["version"] == supported["cts_version"],
             "runtime producer timestepper pin differs from verified implementation")
@@ -448,10 +490,40 @@ def production_gate(bundle, receipt, section, roster):
             return "unverified production lifecycle check: " + key
         require(check.get("command") and check.get("environment") and check.get("log"),
                 "runtime lifecycle result lacks command/environment/log: " + key)
-        bundle.artifact(check["log"])
-    require(proof.get("scope_roster") == list(roster),
-            "runtime validation does not cover declared accounting scope")
+        try:
+            log = bundle.artifact(check["log"]).read_text()
+        except (UnicodeDecodeError, OSError) as exc:
+            raise DataError(f"unreadable runtime lifecycle log {check['log']}: {exc}") from exc
+        results = [m["result"] for m in supported["check_log_pattern"].finditer(log) if m["check"] == key]
+        require(results, f"runtime lifecycle log {check['log']} records no named result for {key}")
+        require(all(r == "PASS" for r in results),
+                f"runtime lifecycle log {check['log']} records {key} as {', '.join(sorted(set(results)))}, not PASS")
+    pinned = receipt.metadata.get(supported["roster_key"])
+    require(isinstance(pinned, list) and pinned and all(text(c) for c in pinned) and len(set(pinned)) == len(pinned),
+            f"the producer's receipt pins no instrumented roster under {supported['roster_key']}")
+    require(set(pinned) == set(roster),
+            "the declared accounting scope differs from the roster the producer instrumented")
+    for channel in section.get("coverage", []):
+        if channel.get("status") == "inactive":
+            inactive_content(bundle, channel, supported["inactive_arrays"])
     return ""
+
+
+def inactive_content(bundle, channel, arrays):
+    """An inactive channel's evidence must show it inactive in its arrays, not by its hash."""
+    prefix = channel["id"].replace(".", "_")
+    keys = {kind: prefix + "__" + suffix for kind, suffix in arrays.items()}
+    try:
+        with bundle.artifact(channel["evidence"]).open("rb") as stream, np.load(stream, allow_pickle=False) as archive:
+            found = {kind: archive[key].copy() for kind, key in keys.items() if key in archive.files}
+    except (BadZipFile, EOFError, ValueError, OSError) as exc:
+        raise DataError(f"inactive channel {channel['id']}: unreadable evidence: {exc}") from exc
+    require(found, f"inactive channel {channel['id']}: its evidence holds neither {keys['values']} nor {keys['mark']}")
+    for kind, value in found.items():
+        expected = 0 if kind == "values" else 1
+        require(value.size > 0 and value.dtype.kind in "biuf" and np.all(value == expected),
+                f"inactive channel {channel['id']}: {keys[kind]} is not {'an explicit zero' if expected == 0 else 'an inactive mark'} "
+                "everywhere")
 
 
 def transfer_metrics(bundle, pair, channels, receipt, start, end):

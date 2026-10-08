@@ -80,7 +80,7 @@ step/window coverage, complete counters and checkpoint history, actual
 production lifecycle evidence and consistent native arrays. The verified
 producer registry is empty, so synthetic inputs and declared metadata cannot
 pass the production completeness gate today. The last row of the table below
-says what the gate checks and what it still lacks.
+says what the gate checks.
 Absent/inactive/unsupported/conditionally applicable channels remain explicit.
 
 The scorer scores completeness in `COMMON.ACCEPTED_APPLICATION_ACTIVITY` and
@@ -131,7 +131,7 @@ restart tests. This is source evidence, not a runtime test result.
 | Limiter/repair state maps           | The hook template distinguishes stage/pre-solve/post-init observations, post-Newton maps with `b_imp/gamma`, and final maps with unit weight. The last stage and final assembly can share a timestamp. | Instrument each writer before per-tag/part cancellation, carry the adapter's positional role and preserve N/R/S and grid/updraft/copy identities. Sampling cumulative attempted totals or whole-hook before/after net changes cannot recover opposite internal legs.                                         |
 | Paired applied precipitation        | Parent transfer-leg capture can read modeled flux legs during selected evaluations. Tag diagnostics expose current surface fluxes.                                                                     | Parent and every partition tag need the same actual accepted application, native surface, signed coefficient and units, separately for supported 0M and 1M rain/snow paths. Snapshot rates and the parent-only TRMM average do not supply this producer.                                                     |
 | Rejected trials and restart         | `commit_step!` runs after the accepted endpoint and clears step storage. Native tag checkpoints already carry retained/attempted history and latches.                                                  | The materialized adapter supplies no finalized trial/rejection IDs or rollback protocol. Add an explicit supported lifecycle for the actual solver, checkpoint every new numerator/count/latch and verify continuous versus restarted native history. Do not infer whole-run zeros from a restarted segment. |
-| Production completeness gate        | The gate compares the submitted roster with the roster in a submitted proof. It reads inactive-channel evidence by hash only and checks that each check log exists. The producer registry is empty.    | Waiting for the owner: before any producer is registered, the gate needs a roster pinned by the producer's own output, inactive channels verified by their content, and the check logs read.                                                                                                                 |
+| Production completeness gate        | Implemented, as the owner decided on 2026-10-08. The gate reads the producer's roster from its receipt, each inactive channel's arrays for zeros or marks, and each check log's named result.          | Each registry entry declares its roster key, inactive arrays and log pattern, or `register_producer` refuses it. The registry is empty, so no submission clears the gate until a producer passes its runtime validation.                                                                                     |
 
 The parent-budget configuration guard explicitly refuses every `AbstractEDMF`.
 Forcing its audit mode on for copies/TRMM would violate that declared scope.

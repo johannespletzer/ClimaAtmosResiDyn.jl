@@ -208,13 +208,28 @@ never turns the row into a not-assessable one.
 
 Production completeness additionally needs a pinned `lifecycle_evidence`
 artifact of kind `runtime_validation`, exact model/diff identity, producer
-source and scope roster, and PASS checks with commands/environment/hashed logs
-for accepted weights, rollback, Newton replacement, complete active roster,
-parent bitwise parity and all-channel checkpoint/restart. The proof's roster
-must equal the roster the reader evaluated. The producer ID, source hash and
-timestepper version must also match the implementation's verified-producer
-registry, which is empty, so no submission clears the gate today
-([PART5.md](PART5.md)).
+source, and PASS checks with commands/environment/hashed logs for accepted
+weights, rollback, Newton replacement, complete active roster, parent bitwise
+parity and all-channel checkpoint/restart. The producer ID, source hash and
+timestepper version must match the implementation's verified-producer
+registry. The gate then reads the producer's own output, as its registry
+entry declares:
+
+  - the roster: the producer writes the channels it instrumented into its
+    receipt under the entry's `roster_key`. That roster must equal the one the
+    reader evaluated. A roster in the submitted manifest or proof is not read.
+  - inactive channels: each one's evidence file must hold
+    `<channel>__<values>` with every entry an explicit zero, or
+    `<channel>__<mark>` with every entry 1, or both. Its hash alone is not
+    enough. The channel ID's dots become underscores.
+  - check logs: each check's log must record the check by name as PASS,
+    read with the entry's `check_log_pattern` (groups `check` and `result`).
+    A log that is merely present, or that names the check otherwise, is
+    refused.
+
+`register_producer` refuses an entry without these three declarations, and
+the gate refuses such an entry too. The registry is empty, so no submission
+clears the gate today ([PART5.md](PART5.md)).
 
 The scorer scores completeness in `COMMON.ACCEPTED_APPLICATION_ACTIVITY` and
 reports each window's activity in `COMMON.APPLICATION_ACTIVITY.<window>`, a
