@@ -1,6 +1,7 @@
 {
   "base_commit": "9344147c69f4c58eb1197adf84f3b7b98df65440",
   "base_tree": "dd499d34df3e121165e6280ba68d9eed191976c8",
+  "design_sha256_pin": "DESIGN_SHA256 in water_transfer_reference.py and design_sha256 in both fixture configs. Integrity only. The hash shows the file is unchanged, not when it was written.",
   "cases": [
     {
       "cells": [

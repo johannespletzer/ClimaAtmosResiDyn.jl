@@ -1,22 +1,27 @@
 """Independent equations, closed wrong donors, native faults and decision gates."""
 
+import contextlib
 import copy
+import io
 import json
 import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import numpy as np
 
 from acceptance_data import Bundle, DataError, Field, same_bits, stitch
 from correction_accounting import VERIFIED_PRODUCERS, paired_precipitation
-from make_water_transfer_fixture import evaluate_fixture, write_fixture, write_json
+import make_water_transfer_fixture as driver
+import score_acceptance
+from make_water_transfer_fixture import evaluate_fixture, suite_exit_code, write_fixture, write_json
 from manifest import sha256_file
-from score_acceptance import Scorer
-from water_transfer_adapter import evaluate_water_transfer
+from score_acceptance import DAY, SCORER_PATHS, Scorer
+from water_transfer_adapter import evaluate_water_transfer, producer_identity
 from water_transfer_preregistration import (effective_substep_key, proposed_audit_trend,
-    px25_matrix, short_case_rows, void_substep_perturbation)
+    px25_matrix, save_px25_draft, short_case_rows, void_substep_perturbation)
 from water_transfer_reference import (DESIGN_SHA256, _exact_at, _exp_action, _rhs,
     application_error, audit_report, boundary_error_rows, case_by_id, closure,
     declared_negative_map, error_rows, exact, floor_result, initial, load_design,
@@ -35,6 +40,12 @@ class EquationTests(unittest.TestCase):
 
     def test_frozen_design_and_single_transfer_known_answer(self):
         self.assertEqual(sha256_file(Path(__file__).with_name("water_transfer_design.json")), DESIGN_SHA256)
+        # The hash shows the file is unchanged. It makes no claim about timing.
+        self.assertIn("Integrity only.", self.design["design_sha256_pin"])
+        self.assertNotIn("frozen", json.dumps(self.design["design_sha256_pin"]))
+        configs = Path(__file__).resolve().parents[2] / "configs"
+        for name in ("water_transfer_exact.json", "water_transfer_rk4.json"):
+            self.assertEqual(json.loads((configs / name).read_text())["design_sha256"], DESIGN_SHA256)
         case, answer = self.state("single_transfer")
         m, x = initial(case)
         np.testing.assert_allclose(answer.parent[-1], [3.7, 2.3, 1], atol=1e-15)
@@ -244,12 +255,33 @@ class PlanningTests(unittest.TestCase):
         self.assertEqual(trend["proposed_reading"],"converging")
         self.assertEqual(trend["verdict"],"NOT ASSESSABLE")
         self.assertIn("zero denominator",proposed_audit_trend([0.,0.,0.])["proposed_reading"])
+        # The proposed trend reading's bounds (PART7, OD15 table). Each branch and edge.
+        for values,reading in (([1.,.75,.5625],"converging"),([1.,.76,.5],"unresolved"),
+                               ([1.,1.11,1.],"growing"),([1.,1.1,1.1],"systematic"),
+                               ([1.,.9,.81],"systematic"),([1.,.89,.8],"unresolved"),([1.,.5,.5],"unresolved"),([1.,.5,.6],"growing")):
+            with self.subTest(values=values):
+                self.assertEqual(proposed_audit_trend(values)["proposed_reading"],reading)
+                self.assertEqual(proposed_audit_trend(values)["verdict"],"NOT ASSESSABLE")
+
+    def test_committed_px25_draft_is_the_generators_output_and_stays_a_draft(self):
+        committed=Path(__file__).resolve().parents[2]/"configs"/"part7_px25_draft"
+        with tempfile.TemporaryDirectory() as scratch:
+            matrix=save_px25_draft(Path(scratch)/"draft")
+            generated=sorted(p.name for p in (Path(scratch)/"draft").iterdir())
+            self.assertEqual(generated,sorted(p.name for p in committed.iterdir()))
+            for name in generated:
+                self.assertEqual((Path(scratch)/"draft"/name).read_text(),(committed/name).read_text(),name)
+        self.assertTrue(matrix["kind"].startswith("DRAFT"))
+        self.assertEqual(matrix["OD15_status"],"PROPOSED/PENDING")
+        self.assertIn("RICO 1M 24 h is the held-out case",matrix["held_out_overlap"])
+        self.assertIn("draft pending the owner",(committed/"README.md").read_text())
+        self.assertEqual(len([p for p in committed.iterdir() if p.suffix==".yml"]),24)
 
 
 class BundleTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.scratch=tempfile.TemporaryDirectory(dir=Path(__file__).parent)
+        cls.scratch=tempfile.TemporaryDirectory()
         cls.root=Path(cls.scratch.name)
         cls.base=write_fixture(cls.root/"single","single_transfer")
 
@@ -281,8 +313,18 @@ class BundleTests(unittest.TestCase):
         bundle=Bundle(self.base)
         self.assertEqual(bundle.validate(),[])
         scorer=Scorer(bundle)
-        self.assertTrue(scorer.reference_eligibility(0,86400)["meets"])
-        self.assertEqual(scorer.active_rule_coverage()["verdict"],"PASS")
+        # The scorer reads the producer's declaration. It has no transfer hook.
+        eligibility=scorer.reference_eligibility(0,86400)
+        self.assertTrue(eligibility["meets"])
+        self.assertIn(producer_identity()["sha256"],eligibility["reference_eligibility"])
+        measured=evaluate_water_transfer(bundle)
+        self.assertEqual(eligibility["metrics"]["floors"],measured["declaration"]["floors"])
+        self.assertTrue(measured["declaration"]["converged"])
+        self.assertTrue(measured["declaration"]["eligibility_basis"]["converged"].startswith("Measured. No refinement"))
+        coverage=scorer.active_rule_coverage()
+        self.assertNotIn("verdict",coverage)
+        self.assertTrue(coverage["limitation"].startswith("reported, not a gate until OD9"))
+        self.assertEqual(coverage["metrics"]["tested_active_rules"],["independent directed compartment donor attribution"])
         report=evaluate_fixture(self.base)
         self.assertEqual(report["candidate_verdict"],"PASS")
         self.assertTrue(report["origin_mutant"]["mutation_verified"])
@@ -294,44 +336,46 @@ class BundleTests(unittest.TestCase):
                 lambda s:s["runs"]["candidate"]["fields"]["rho"].update(expected_times=[0,3600,86400]),
                 lambda s:s["runs"]["candidate"]["fields"]["water_R"].update(weight_units="1"),
                 lambda s:s["runs"]["candidate"]["fields"].pop("excluded_activity_edmf")]
-        for k,edit in enumerate(checks):
+        reasons=("embedded units","expected samples","weight units","excluded_activity_edmf")
+        for edit,reason in zip(checks,reasons):
             path=self.changed(manifest=edit)
-            with self.assertRaises(DataError):evaluate_water_transfer(Bundle(path))
+            with self.assertRaisesRegex(DataError,reason):evaluate_water_transfer(Bundle(path))
             shutil.rmtree(path.parent)
         path=self.changed(archive=("candidate.npz",lambda d:d["geometry"].__setitem__((0,1),3.)))
-        with self.assertRaises(DataError):evaluate_water_transfer(Bundle(path))
+        with self.assertRaisesRegex(DataError,"time/geometry/native weight"):evaluate_water_transfer(Bundle(path))
 
     def test_full_ladder_shared_scope_evaluator_and_reference_selection_fail(self):
-        edits=[lambda d:d["rungs"].pop(),lambda d:d.update(shared_rules=["donor"]),
-               lambda d:d.update(evaluator_files={}),lambda d:d.update(reference_substeps=16),
-               lambda d:d.update(development_only=False)]
-        for edit in edits:
+        edits=[(lambda d:d["rungs"].pop(),"transfer ladder"),(lambda d:d.update(shared_rules=["donor"]),"shared"),
+               (lambda d:d.update(evaluator_files={}),"stale transfer evaluator"),
+               (lambda d:d.update(reference_substeps=16),"pinned configuration"),
+               (lambda d:d.update(development_only=False),"reference identity differs")]
+        for edit,reason in edits:
             path=self.changed(evidence=edit)
-            with self.assertRaises(DataError):evaluate_water_transfer(Bundle(path))
+            with self.assertRaisesRegex(DataError,reason):evaluate_water_transfer(Bundle(path))
             shutil.rmtree(path.parent)
 
     def test_changed_rate_pinned_config_and_model_fail(self):
         path=self.changed(archive=("resolved_config.json",lambda d:d["rates"][0].update(value=1.)))
-        with self.assertRaises(DataError):evaluate_water_transfer(Bundle(path))
+        with self.assertRaisesRegex(DataError,"pinned configuration/rates"):evaluate_water_transfer(Bundle(path))
         shutil.rmtree(path.parent)
         path=self.changed(evidence=lambda d:d.update(model_commit="0"*40))
-        with self.assertRaises(DataError):evaluate_water_transfer(Bundle(path))
+        with self.assertRaisesRegex(DataError,"model/design/reference identity"):evaluate_water_transfer(Bundle(path))
 
     def test_claimed_good_floor_cannot_override_actual_finest_array(self):
         path=self.changed(evidence=lambda d:d.update(converged=True,floor_fraction_of_tolerance=0.,eligible=True),
                           archive=("rk4_s64_native.npz",lambda d:d["labels"].__setitem__((-1,0,0),d["labels"][-1,0,0]+.1)))
-        with self.assertRaises(DataError):evaluate_water_transfer(Bundle(path))
+        with self.assertRaisesRegex(DataError,"rk4_s64 native labels"):evaluate_water_transfer(Bundle(path))
 
     def test_missing_real_application_roster_fails_even_with_new_hash(self):
         path=self.changed(archive=("rk4_s64_applications.json",lambda d:d.pop()))
         with self.assertRaisesRegex(DataError,"roster"):evaluate_water_transfer(Bundle(path))
 
     def test_candidate_directed_water_amounts_cannot_disagree_with_pinned_rates(self):
-        for edit in (lambda d:d["activity"].__imul__(2),
-                     lambda d:d["activity"].__isub__(1)):
+        for edit,reason in ((lambda d:d["activity"].__imul__(2),"directed water amounts at pinned rates"),
+                            (lambda d:d["activity"].__isub__(1),"negative/reset")):
             path=self.changed(archive=("candidate_native.npz",edit))
             self.assertEqual(Bundle(path).validate(),[])
-            with self.assertRaises(DataError):evaluate_water_transfer(Bundle(path))
+            with self.assertRaisesRegex(DataError,reason):evaluate_water_transfer(Bundle(path))
             shutil.rmtree(path.parent)
 
     def test_zero_weight_pseudo_roster_cannot_erase_real_candidate_activity(self):
@@ -383,16 +427,29 @@ class BundleTests(unittest.TestCase):
                     elif key.startswith(("water_","tag_")) and "__" not in key:data[key][1:]*=1.01
             np.savez(p,**data);value["acceptance"]["artifacts"][name]=sha256_file(p)
         write_json(path,value)
-        with self.assertRaises(DataError):evaluate_water_transfer(Bundle(path))
+        with self.assertRaisesRegex(DataError,"native coordinates/density"):evaluate_water_transfer(Bundle(path))
 
     def test_paired_applied_precipitation_same_owner_and_empty_registry(self):
         base=write_fixture(self.root/"sedimentation","rain_snow_sedimentation")
         bundle=Bundle(base);paired=paired_precipitation(bundle,0,86400)
         self.assertEqual(VERIFIED_PRODUCERS,{})
-        self.assertEqual(paired["verdict"],"NOT ASSESSABLE")
+        # WA-PRECIP: the paired row is reported accounting, never a verdict.
+        self.assertNotIn("verdict",paired)
+        self.assertFalse(paired["metrics"]["production_complete"])
+        self.assertIn("does not validate precipitation origins",paired["limitation"])
+        # The full scorer never scores precipitation provenance as PASS.
+        rows=Scorer(bundle).run()["rows"]
+        precipitation=[row for row in rows if "PRECIP" in row["id"]]
+        self.assertTrue(precipitation)
+        self.assertFalse([row for row in precipitation if row["verdict"]=="PASS"])
         parent=bundle.field("candidate","precipitation_accumulated").values[-1,0]
         self.assertAlmostEqual(paired["metrics"]["signed_downward_amount"],parent,places=14)
         self.assertEqual(bundle.field("candidate","precipitation").sampling,"instantaneous")
+        report=evaluate_fixture(base)
+        self.assertEqual(report["candidate_verdict"],"PASS")
+        # The owner-reset control keeps the parent and every total and fails an origin row.
+        self.assertTrue(report["origin_mutant"]["mutation_verified"])
+        self.assertIn("reported accounting",report["measured_reference"]["metrics"]["paired_precipitation_status"])
         path=self.changed(base=base,archive=("candidate_precip_receipt.json",lambda d:d["steps"][0]["applications"][1].update(application_id="wrong")))
         with self.assertRaisesRegex(DataError,"update/surface"):paired_precipitation(Bundle(path),0,86400)
 
@@ -400,8 +457,102 @@ class BundleTests(unittest.TestCase):
         path=write_fixture(self.root/"zero","zero_activity")
         report=evaluate_water_transfer(Bundle(path))
         self.assertEqual(report["metrics"]["independent_rules"],[])
+        self.assertEqual(report["declaration"]["independent_rules"],[])
         self.assertIn("not applicable",report["metrics"]["donor_rule_applicability"])
-        self.assertEqual(Scorer(Bundle(path)).active_rule_coverage()["verdict"],"NOT APPLICABLE")
+        # The floor is measured, but a reference that exercises no donor rule
+        # covers none. The scorer reads it as ineligible and the rule as untested.
+        self.assertLess(report["declaration"]["floors"]["reference_discretization"],1e-10)
+        self.assertFalse(report["meets"])
+        scorer=Scorer(Bundle(path))
+        self.assertFalse(scorer.reference_eligibility(0,DAY)["meets"])
+        coverage=scorer.active_rule_coverage()
+        self.assertNotIn("verdict",coverage)
+        self.assertFalse(coverage["meets"])
+        self.assertEqual(coverage["metrics"]["untested_or_shared_rules"],["independent directed compartment donor attribution"])
+        self.assertEqual(evaluate_fixture(path)["candidate_verdict"],"NOT ASSESSABLE")
+
+    def test_erased_exchange_control_and_non_partitioning_applied_labels(self):
+        base=write_fixture(self.root/"opposing","opposing_net_zero")
+        report=evaluate_fixture(base)
+        self.assertEqual(report["candidate_verdict"],"PASS")
+        self.assertTrue(report["origin_mutant"]["mutation_verified"])
+        # Both opposing edges carry 4% extra origin_a. Labels, closure, directed
+        # balance and the 5% applied-share row all stay within their limits.
+        def extra(data):
+            data["label_activity"][:,0,0]+=.04*data["activity"][:,0]
+            data["label_activity"][:,0,1]+=.04*data["activity"][:,1]
+        path=self.changed(base=base,archive=("candidate_native.npz",extra))
+        twin=path.with_name("manifest_origin_mutant.json")
+        spec=json.loads(twin.read_text())
+        spec["acceptance"]["artifacts"]["candidate_native.npz"]=sha256_file(path.parent/"candidate_native.npz")
+        write_json(twin,spec)
+        metrics=evaluate_fixture(path)["measured_reference"]["metrics"]
+        self.assertTrue(all(row["meets"] is not False for row in metrics["candidate_errors"]))
+        self.assertTrue(metrics["candidate_closure"]["meets"])
+        self.assertTrue(metrics["candidate_directed_balance"]["meets"])
+        self.assertTrue(metrics["candidate_application_error"]["meets"])
+        self.assertFalse(metrics["candidate_applied_partition"]["meets"])
+        self.assertEqual(evaluate_fixture(path)["candidate_verdict"],"FAIL")
+
+    def test_scorer_reads_the_declared_file_and_the_producer_refuses_a_changed_one(self):
+        def raise_floor(detail):
+            detail["floors"]["reference_discretization"]=0.5
+        path=self.changed(evidence=raise_floor)
+        # The scorer reads the declaration as the decision of 2026-10-07 allows.
+        self.assertFalse(Scorer(Bundle(path)).reference_eligibility(0,DAY)["meets"])
+        with self.assertRaisesRegex(DataError,"declared eligibility differs"):
+            evaluate_water_transfer(Bundle(path))
+        shutil.rmtree(path.parent)
+        path=self.changed(evidence=lambda d:d.update(independent_rules=[]))
+        with self.assertRaisesRegex(DataError,"declared eligibility differs.*independent_rules"):
+            evaluate_water_transfer(Bundle(path))
+
+    def test_scorer_refuses_a_declaration_without_its_producer(self):
+        path=self.changed(manifest=lambda s:s["reference"].pop("producer"))
+        with self.assertRaisesRegex(DataError,"producing script"):
+            Scorer(Bundle(path)).reference_eligibility(0,DAY)
+        with self.assertRaisesRegex(DataError,"producer"):
+            evaluate_water_transfer(Bundle(path))
+
+    def test_fixture_modules_are_not_scorer_files(self):
+        self.assertFalse([path for path in SCORER_PATHS if path.startswith("water_transfer")])
+        self.assertNotIn("water_transfer", Path(score_acceptance.__file__).read_text())
+
+
+class DriverExitTests(unittest.TestCase):
+    """The driver's exit codes follow the scorer's convention."""
+
+    def setUp(self):
+        self.scratch=tempfile.TemporaryDirectory()
+        self.root=Path(self.scratch.name)
+        self.config=json.loads((Path(__file__).parents[2]/"configs"/"water_transfer_exact.json").read_text())
+
+    def tearDown(self):
+        self.scratch.cleanup()
+
+    def main(self,*args):
+        with contextlib.redirect_stdout(io.StringIO()),contextlib.redirect_stderr(io.StringIO()):
+            return driver.main([str(arg) for arg in args])
+
+    def test_exit_code_of_suite_rows(self):
+        passing={"candidate_verdict":"PASS","mutation_verified":True,"reference_eligible":True}
+        self.assertEqual(suite_exit_code([passing]),0)
+        self.assertEqual(suite_exit_code([passing,{**passing,"candidate_verdict":"NOT ASSESSABLE",
+                                                   "mutation_verified":None,"reference_eligible":False}]),3)
+        self.assertEqual(suite_exit_code([passing,{**passing,"candidate_verdict":"FAIL"}]),1)
+        self.assertEqual(suite_exit_code([{**passing,"mutation_verified":False}]),1)
+
+    def test_main_maps_failures_to_the_scorer_codes(self):
+        config=self.root/"config.json"
+        write_json(config,{**self.config,"design_sha256":"0"*64})
+        self.assertEqual(self.main(self.root/"bad_config","--config",config),2)
+        self.assertEqual(self.main(self.root/"missing_config","--config",self.root/"absent.json"),2)
+        self.assertEqual(self.main(self.root,"--config",config),4)
+        self.assertEqual(self.main(self.root/"no_option"),4)
+        with mock.patch.object(driver,"run_suite",side_effect=RuntimeError("driver bug")):
+            self.assertEqual(self.main(self.root/"driver_error","--config",config),4)
+        with mock.patch.object(driver,"run_suite",return_value={"exit_code":3}):
+            self.assertEqual(self.main(self.root/"ineligible","--config",config),3)
 
     def test_restart_reader_deduplicates_exact_boundary_and_requires_reset(self):
         def field(times,values):

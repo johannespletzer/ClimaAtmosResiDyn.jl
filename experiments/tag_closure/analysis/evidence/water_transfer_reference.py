@@ -15,9 +15,11 @@ import numpy as np
 from acceptance_data import require, same_bits
 from manifest import sha256_file
 
-BASE_COMMIT = "9344147c69f4c58eb1197adf84f3b7b98df65440"
+# The plan-rev2 commit this reference is reconciled with. The design file's
+# base_commit records the commit it was written against.
+BASE_COMMIT = "7c96c2046f440990b070ed65e38c08f2afeb8d92"
 DESIGN_PATH = Path(__file__).with_name("water_transfer_design.json")
-DESIGN_SHA256 = "2f57920536d142dca834ed67df9ed0f6e09305ec11833b484f8b200849238a42"
+DESIGN_SHA256 = "a2ddfccc6ca5e781633458fd2d6a7230f5121776ea1f17593a8bc0e272146b71"
 PARTS = ("N", "R", "S")
 
 
