@@ -83,7 +83,7 @@ class Field:
         require(np.all(np.diff(self.time) > 0),
                 f"{name}: duplicate or unordered time coordinate")
         if cadence is not None:
-            require(cadence > 0 and np.all(np.diff(self.time) == cadence),
+            require(isinstance(cadence, (int, float)) and cadence > 0 and np.all(np.diff(self.time) == cadence),
                     f"{name}: missing sample or wrong cadence")
         require(self.values.ndim == 2 and len(self.values) == len(self.time),
                 f"{name}: expected time × native-cell array")
@@ -248,7 +248,10 @@ class Bundle:
             isinstance(r, dict) and isinstance(r.get("fields", {}), dict)
             for r in self.spec.get("runs", {}).values()), "invalid run/field inventory")
         require(isinstance(self.spec.get("tags", []), list) and all(
-            isinstance(t, dict) for t in self.spec.get("tags", [])), "invalid tag inventory")
+            isinstance(t, dict) and isinstance(t.get("name"), str) and t.get("kind") in ("region", "source")
+            for t in self.spec.get("tags", [])), "invalid tag inventory: each tag needs a name and a region/source kind")
+        for key in ("claim", "reference"):
+            require(isinstance(self.spec.get(key, {}), dict), f"acceptance {key} must be a JSON object")
         self.used = {self.path.name: sha256_file(self.path)}
         self.cache = {}
         self.verified = {}
@@ -291,7 +294,7 @@ class Bundle:
                               "missing/unsupported acceptance extension; legacy evidence is incomplete"))
         for key in ("head_sha", "status_lines", "diff", "diff_sha256", "untracked", "config", "buildkite_files",
                     "julia_version", "hostname", "env_vars", "julia_binary", "julia_channel", "loaded_modules"):
-            check(lambda key=key: require(key in self.manifest, f"missing submission provenance: {key}"))
+            check(lambda key=key: require(key in self.manifest, f"missing submission record: {key}"))
         check(lambda: require(re.fullmatch(r"[0-9a-f]{40}", self.manifest.get("head_sha", "")),
                               "missing model commit"))
         check(lambda: require(hashlib.sha256(self.manifest.get("diff", "").encode()).hexdigest() ==
@@ -302,7 +305,7 @@ class Bundle:
         check(lambda: require(self.spec.get("experiment_commit") and
                               self.spec.get("resolved_settings") and self.spec.get("precision") in
                               ("Float32", "Float64") and self.spec.get("process_count", 0) > 0,
-                              "missing experiment/config/precision/process provenance"))
+                              "missing experiment/config/precision/process records"))
         check(lambda: require(all(k in self.spec.get("resolved_settings", {}) for k in
                               ("solver", "seed", "physics", "diagnostics", "tag_definitions")),
                               "incomplete resolved solver/seed/physics/tag/diagnostic settings"))
@@ -321,8 +324,8 @@ class Bundle:
         check(submission_identity)
         check(lambda: require(self.spec.get("scorer_commit") and self.spec.get("scorer_files"),
                               "missing scorer identity"))
-        check(lambda: require(self.spec.get("acceptance_commit") and self.spec.get("acceptance_files"),
-                              "missing acceptance specification identity"))
+        check(lambda: require(self.spec.get("planning_commit") and self.spec.get("approved_numbers_sha256"),
+                              "missing planning commit or approved-numbers hash"))
         check(lambda: require(self.spec.get("claim", {}).get("family") in
                               ("water", "energy_source", "radiation_record"), "unknown claim family"))
         check(lambda: require(self.spec.get("geometry_kind") in ("column", "sphere"), "unknown native geometry"))
@@ -354,7 +357,10 @@ class Bundle:
         run = self.spec.get("runs", {}).get(role, {})
         require(name in run.get("fields", {}), f"missing {role} variable: {name}")
         descriptor = run["fields"][name]
+        require(isinstance(descriptor, dict), f"{role}:{name}: field descriptor must be a JSON object")
         segments = run.get("segments")
+        require(segments is None or (isinstance(segments, list) and all(isinstance(s, dict) for s in segments)),
+                f"{role}: segments must be a list of objects")
         if segments:
             for seg in segments:
                 for label in ("input_checkpoint", "output_checkpoint"):

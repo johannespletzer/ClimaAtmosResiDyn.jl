@@ -14,7 +14,7 @@ cases are documented in [PART6.md](PART6.md); they do not complete physical
 water qualification.
 
 The input is a separately identified extended manifest, not a second
-submission-provenance format. Attach a predeclared extension to an archived
+submission record format. Attach a predeclared extension to an archived
 manifest without changing the original:
 
 ```sh
@@ -29,7 +29,7 @@ python3 experiments/tag_closure/analysis/evidence/score_acceptance.py \
 
 All evidence paths in the extension are relative to the new manifest's
 directory. Existing result paths are refused. Keep the original manifest,
-scorer hash, score and interpretation; a corrected score is a new reanalysis,
+scorer hash, score and interpretation. A corrected score is a new reanalysis,
 not a simulation rerun. The legacy tools below retain their original CLIs
 and historical algorithms.
 
@@ -108,17 +108,19 @@ The extension records these fields:
 | Field | Meaning |
 |:--|:--|
 | `artifacts` | Map of every named bundle-relative artifact to its SHA256. Hashes prove identity, not physical sufficiency. |
-| `experiment_commit`, `scorer_commit`, `acceptance_commit` | Keep experiment/config, analysis implementation and specification identities distinct from original `head_sha`. An unpublished scorer uses `local-uncommitted` plus exact file hashes. |
-| `scorer_files`, `acceptance_files` | Exact current evaluator and contract file hashes, as returned by `local_identities()`. The evaluator rejects a different pinned implementation/specification. |
+| `experiment_commit`, `scorer_commit`, `planning_commit` | Keep experiment/config, analysis implementation and planning-tree identities distinct from original `head_sha`. An unpublished scorer uses `local-uncommitted` plus exact file hashes. `planning_commit` is recorded information. The scorer does not verify it. |
+| `scorer_files`, `approved_numbers_sha256` | Exact scorer file hashes and the sha256 of the scorer's named approved numbers as a stable table, as returned by `local_identities()`. A changed approved number invalidates the manifest. An edit to the planning files, DECISIONS.md included, does not. |
 | `submission_files` | Original config and recorded environment/untracked names mapped to archived artifacts. Hashes must match submission identities. |
 | `resolved_settings`, `precision`, `process_count` | Declared solver, seed, physics, diagnostics, tag definitions and environment scope. Do not fill unavailable legacy facts with guesses. |
 | `claim`, `case`, `geometry_kind`, `end_seconds` | Family (`water`, `energy_source`, `radiation_record`), declared use, native column/sphere geometry and physical duration. No count/time/device scope promotion. |
+| `pilot_first_hour` | `true` declares the TRMM 0M 6 h pilot (2026-10-07): a water run that ends after 1 h and before 24 h. Only the first-hour origin rows are scored, labelled low power. The 24 h origin rows are not applicable, and closure and the named remainder are reported at the run's end. |
+| `excluded_criteria` | Criteria the owner excluded for this `case`, such as `[5, 6]` on D4-W under option D. The scorer accepts only approved exclusions and makes every row of those criteria not applicable. Any other declaration fails the evidence row. |
 | `runs` | Candidate/reference/untagged field inventories. Reference/untagged runs name separately hashed submission manifests and matching model/config identities. |
 | `tags`, `compartments` | Named kind (`region`/`source`) and partition membership. Source overlays never enter pure-region closure. Compartments are `total` or complete `N,R,S`. |
 | `required_parent_fields`, `parent_capture_scope` | Frozen required-state inventory. `exported` parity is reported but cannot pass full parent parity. `all-state` requires the actual complete capture inventory from the relevant model setup. |
-| `accepted_step_seconds`, `throughput_accumulation` | Step cadence for deriving cell-step ledger variation; exact stored Θx identifies `accepted_step` accumulation independently of output cadence. |
-| `reference`, `active_rules` | Named, scope-specific eligibility artifact: tested independent rules, shared/untested rules, convergence/floors, active mirrors/Jacobian and copies repair/refinement. |
-| `record_processes`, `expected_record_processes` | Complete predeclared process roster. A missing active record cannot be silently skipped; duplicate process names are rejected. |
+| `accepted_step_seconds`, `throughput_accumulation` | Step cadence for deriving cell-step ledger variation. Exact stored Θx identifies `accepted_step` accumulation independently of output cadence. |
+| `reference`, `active_rules` | Named, scope-specific eligibility artifact and its `producer` (`script` and `sha256`). The file names the same producer and declares tested independent rules, convergence, `floors` with one entry per OD12 source (`source_injection`, `initialization`, `parent_solve`, `contamination`, `reference_discretization`), active mirrors/Jacobian and copies refinement. A single scalar floor or a missing producer fails the eligibility row as a data failure. The row records "eligibility as declared by <producer> <hash>". Active-rule coverage is reported and gates nothing until OD9. |
+| `record_processes`, `expected_record_processes` | Complete predeclared process roster. A missing active record cannot be silently skipped. Duplicate process names are rejected. |
 | `correction_accounting` | Versioned required-channel/coverage table, finalized trial receipt, native application arrays and optional directed leg pairs. Missing/unsupported channels remain explicit. |
 | `precipitation_applications` | Paired parent and every partition tag at identical accepted applications/weights/bounds/native surface. Signed fluxes are integrated before cancellations. |
 
@@ -130,22 +132,22 @@ be hidden by taking a common prefix.
 Native NPZ exports include `time`, `time_units="s"`, `geometry`, `weights`,
 `weight_units`, and each field's embedded `KEY__units`, `KEY__representation`,
 `KEY__sampling`, `KEY__dimensions`. Arrays have time first, then native cells.
-Scalar integrated amounts use one weight of 1 and `weight_units="1"`; extra
+Scalar integrated amounts use one weight of 1 and `weight_units="1"`. Extra
 geometric weighting is rejected. The required 1 h and 24 h origin rows remain
 present even when an optional `profile_times` list is empty.
 Alternative time/geometry/weight keys may be explicitly named.
 
 Existing NetCDF reading uses named dimensions, finite unmasked values, exact
 physical-second time units, native coordinates and a named native weights
-variable. It requires the verifier environment's existing `netCDF4`; no
+variable. It requires the verifier environment's existing `netCDF4`. No
 dependency is added here. A remapped sphere grid cannot replace native
 volume integrals. There is no implicit centre/face reconstruction, remapping,
 interpolation, extrapolation or common-prefix truncation.
 
 CSV scalar columns name a pinned `metadata_source` for their units and
-sampling convention; do not relabel a rate as an amount. Interval averages
+sampling convention. Do not relabel a rate as an amount. Interval averages
 also name exact contiguous bounds. Cumulative scalar gross fields name
-their `accumulator_kind`; ratios are not cumulative amounts. Paired
+their `accumulator_kind`. Ratios are not cumulative amounts. Paired
 precipitation is integrated only from applied-flux interval averages or
 accepted applied accumulators. Hourly snapshots remain instantaneous reports.
 
@@ -161,8 +163,8 @@ equivalence.
 ## Weighted applications and cancellation
 
 For one fixed mechanism/tag/compartment and native volume, signed window S is
-the integral of the endpoint ledger difference; retained H sums the absolute
-native-cell ledger changes at every accepted step; accepted A sums absolute
+the integral of the endpoint ledger difference. Retained H sums the absolute
+native-cell ledger changes at every accepted step. Accepted A sums absolute
 weighted native-cell contributions at every accepted application. Absolute
 value precedes cells, applications and compartments for A. A complete additive
 decomposition satisfies abs(S) <= H <= A up to a reported rounding allowance.
@@ -172,7 +174,7 @@ allowance is not a scientific activity tolerance.
 It uses per-step/native-cell quantities with the same density units and the
 least precise native dtype, including the sum of absolute weighted
 contributions before cancellation. This covers native addition roundoff
-between opposing stages; an unrelated dense cell or atmospheric density
+between opposing stages. An unrelated dense cell or atmospheric density
 cannot enlarge another cell's correction allowance.
 Below the native normal range, the allowance also includes the local loss
 when a weighted contribution rounds to its native dtype. Specific-ledger
@@ -184,8 +186,8 @@ representable subnormal update into a zero density ledger is rejected.
 An application is a final additive contribution with its integration weight.
 The receipt pins `unconstrained_imex_ark`, `ClimaTimeSteppers` version,
 `b_exp`, `b_imp` and `implicit_diagonal`. Explicit/implicit tendency weights
-are dt times the corresponding accepted b coefficient; post-Newton map
-increments use b_imp/gamma; final accepted maps have weight 1. Nonadditive
+are dt times the corresponding accepted b coefficient. Post-Newton map
+increments use b_imp/gamma. Final accepted maps have weight 1. Nonadditive
 pre-solve stage observations are refused. A distinct final evaluation ID must
 replace repeated Newton evaluations. Rejected/superseded evaluations cannot
 enter A. `attempted_coefficient` is optional: supply it only for an actual trial
@@ -212,10 +214,10 @@ The extension uses this shape inside the existing `acceptance` object:
 }
 ```
 
-The required roster is the declared accounting scope; it must cover every
+The required roster is the declared accounting scope. It must cover every
 active mechanism/tag/compartment needed for the claim, not a convenient subset.
 It is checked against the runtime validation's active-roster evidence before a
-production completeness pass. `inactive` requires a reason and pinned evidence;
+production completeness pass. `inactive` requires a reason and pinned evidence.
 `unsupported`/`missing` block completeness and never receive a zero. Every
 observed channel must have an applied record at every accepted step, including
 an explicit measured zero. Empty rosters cannot pass.
@@ -236,41 +238,46 @@ and, for each prefix, `PREFIX__values` (native Float32/Float64 record x cell),
 `__record_ids`, embedded `__quantity`/`__units`, native `__event_scale` and
 integer arrays `__fallback`, `__bound`, `__clamp`, `__zero_normalization`.
 Missing counters are data failures. Values are density increments or density
-tendencies as explicitly named; final coefficients are applied before absolute
+tendencies as explicitly named. Final coefficients are applied before absolute
 value. The event convention is a stored native node per element per weighted
-application above max(1e-12,16 eps(native dtype))*abs(parent total).
+application above max(1e-12,16 eps(native dtype)) times the absolute value of
+`__event_scale`, the writer's own scale. That scale differs by writer, as
+[PART5.md](PART5.md) lists.
 Existing retained cell-step and attempted cache-count conventions stay separate.
 
-Optional `directed_transfers` pairs name an `id`, donor and receiver channel.
+Optional `directed_transfers` pairs name an `id`, a `donor` channel (the giving
+leg) and a `receiver` channel.
 The reader requires identical applications/native cells and equal opposite
 legs. It reports transfer Q once and summed leg activity 2Q. Aggregate signed
-closure is never used as a substitute for either amount or a provenance bound.
+closure is never used as a substitute for either amount or an origin bound.
 Fine energy sources remain separate from OD4's accepted-step partition source
 variation. No retained tolerance is transplanted onto A.
 
 For `precipitation_applications`, use `schema_version: 1`, a receipt,
-`channels` keyed by `parent` and every partition tag, `required_channels`, and
+`channels` keyed by `parent` and every partition tag, and
 `sign_convention: "upward_positive"`. Each channel descriptor names a native
 `precipitation_flux` in kg m^-2 s^-1. Identical parent/tag application/evaluation/
 trial/coefficient identities are required. Column amounts use one unit-weighted
-surface; native sphere amounts use m^2 area weights. Signed downward, positive
+surface. Native sphere amounts use m^2 area weights. Signed downward, positive
 downward and negative downward amounts are reported separately. Instantaneous
-precipitation diagnostics remain available. No donor reference or precipitation
-accuracy tolerance is supplied by this arithmetic.
+precipitation diagnostics remain available. No reference for the giving pool
+or precipitation accuracy tolerance is supplied by this arithmetic. The row
+stays reported accounting. An unverified producer is a stated limitation and
+never turns the row into a not-assessable one.
 
 Production completeness additionally needs a pinned `lifecycle_evidence`
 artifact of kind `runtime_validation`, exact model/diff identity, producer
 source and scope roster, and PASS checks with commands/environment/hashed logs
 for accepted weights, rollback, Newton replacement, complete active roster,
-parent bitwise parity and all-channel checkpoint/restart. The producer ID,
-source hash and timestepper version must also match the implementation's
-verified-producer registry. **That registry is empty in this handoff:** no
-runtime producer has been implemented or verified. Users cannot register one
-through manifest metadata, and arbitrary hashed files or declared PASS logs
-cannot clear the gate. A future registry entry is a code change after actual
-source/lifecycle/parity/restart review and validation. Synthetic submission/
-receipt identities cannot clear the gate. All current production scopes remain
-NOT ASSESSABLE while their measured arithmetic is reported.
+parent bitwise parity and all-channel checkpoint/restart. The proof's roster
+must equal the roster the reader evaluated. The producer ID, source hash and
+timestepper version must also match the implementation's verified-producer
+registry, which is empty, so no submission clears the gate today
+([PART5.md](PART5.md)).
+
+The scorer scores completeness in `COMMON.ACCEPTED_APPLICATION_ACTIVITY` and
+reports each window's activity in `COMMON.APPLICATION_ACTIVITY.<window>`, a
+reported row that never passes.
 
 The cancellation example is reproducible and separate from all historical runs:
 
@@ -284,8 +291,8 @@ python3 -m unittest discover -s experiments/tag_closure/analysis/evidence -p tes
 ```
 
 Every hour applies +1 and -1 in each of two unit-thickness cells. Over 24 h
-S=0, H=0 and A=96 kg m^-2. Production completeness stays NOT ASSESSABLE;
-scoring exits 3 for the remaining scientific gates. No simulation is run.
+S=0, H=0 and A=96 kg m^-2. Production completeness stays NOT ASSESSABLE.
+Scoring exits 3 for the remaining scientific gates. No simulation is run.
 
 ## Reproducible analytic example and tests
 
@@ -306,19 +313,26 @@ norms, comparator checks, parent parity and ledger ratios. It also reports:
 
 ```text
 COMMON.SCOPE_APPROVAL: NOT ASSESSABLE / COMPLETE
-  pilot scope/accuracy owner choices remain proposals
+  qualification stays at eight tags on the approved rows (WA-SCOPE)
 COMMON.ACCEPTED_APPLICATION_ACTIVITY: NOT ASSESSABLE / COMPLETE
-  cell-step variation can hide cancelling applications/legs
+  missing accepted application/leg accounting
 WATER.PRECIP_INTEGRATED.established: NOT ASSESSABLE / DATA FAILURE
   snapshots are insufficient for paired integrated precipitation
-qualification: NOT QUALIFIED
+qualification: NOT QUALIFIED, exit 3
 ```
 
 The precipitation data gap is outside this inventory-only fixture's required
-claim, so its scientific blockers select exit 3. Exit 2 means missing/corrupt
-required evidence; exit 1 a measured required approved failure; exit 0 an
-unblocked completed evaluation. Validation exit 0 means bundle integrity
-only. Required failures are never averaged across tags/windows. Proposed
+claim, so its scientific blockers select exit 3. The exit codes:
+
+| Exit | Meaning |
+|:--|:--|
+| 0 | No required row failed or is blocked. A score cannot reach it today: the convergence, refinement, accepted-application, restart, held-out and scope rows stay blocked until their parts deliver. Validation exit 0 means bundle integrity only. |
+| 1 | A measured required approved row failed. |
+| 2 | Required evidence is missing, corrupt or inconsistent. A water row with a data failure fails, labelled DATA FAILURE, and so does the evidence row. An energy row with absent data is not assessable (G4 section 5). |
+| 3 | A required scientific approval, reference or prerequisite is unavailable. Failed or exported-only parity blocks the origin rows only. Closure and intervention rows are scored with `parent_parity` recorded. A missing or zero-length OD2 window is not applicable and blocks nothing. |
+| 4 | Nothing was evaluated: the result path exists, the command line is invalid, or the scorer raised an error. A scorer error is not a data failure. |
+
+Required failures are never averaged across tags/windows. Proposed
 thresholds and reported-only quantities never become scientific passes.
 
 ## Legacy G3 phase 1 evidence pipeline

@@ -2,7 +2,7 @@
 
 ## Delivery routing (2026-10-05)
 
-UP1's fixed-parent KI4-COPIES probe stays in PX12 (part 6); use its own
+UP1's fixed-parent KI4-COPIES probe stays in PX12 (part 6). Use its own
 decision criterion before proposing an upstream change. UP2 stays deferred
 until upstream support changes. Neither becomes permission to change parent
 physics in the fork. Parts 9/11c may implement tag-only follow-ups only after
@@ -87,4 +87,3 @@ remain.
 
 *Sources: the owner's review of #101 (P1), 2026-09-23; the discussion that
 followed; `docs/known_issues.md`, issues 3 and 4.*
-
