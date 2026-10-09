@@ -19,7 +19,7 @@ from manifest import sha256_file
 # base_commit records the commit it was written against.
 BASE_COMMIT = "7c96c2046f440990b070ed65e38c08f2afeb8d92"
 DESIGN_PATH = Path(__file__).with_name("water_transfer_design.json")
-DESIGN_SHA256 = "99d06a4075ede14b914febf1758ef98191bb7d9f84c9c198b21728e360ca36f3"
+DESIGN_SHA256 = "f2f881dfd789031efb08a37bd7ccc03aec27f278b802b70647acdd75c0ccea81"
 PARTS = ("N", "R", "S")
 
 
@@ -80,7 +80,7 @@ class TransferState:
 
 
 def _generator(case):
-    """Reference assembly; the RK4 derivative separately traverses each edge."""
+    """Reference assembly, the RK4 derivative separately traverses each edge."""
     parent, _ = initial(case)
     n, ecount = len(parent), len(case["edges"])
     generator, flux = np.zeros((n, n)), np.zeros((ecount, n))
@@ -102,7 +102,7 @@ def _exp_action(matrix, time, values):
     """96-term scaled Taylor exponential accumulated in longdouble.
 
     This is an independent small solver. Its measured RK4/known-answer floor
-    decides eligibility; the fixed series count is not a truth declaration.
+    decides eligibility. The fixed series count is not a truth declaration.
     """
     work = np.asarray(matrix, dtype=np.longdouble) * np.longdouble(time)
     norm = float(np.max(np.sum(np.abs(work), axis=0))) if len(work) else 0.
@@ -207,7 +207,7 @@ def _rhs(case, time, mass, labels):
 
 
 def _prescribed_parent(case, time):
-    """Fixed rates prescribe the parent; avoid accumulated endpoint drift.
+    """Fixed rates prescribe the parent, avoid accumulated endpoint drift.
 
     This independently assembles the affine water balance. Labels still use
     the RK4 derivative and retain their measured arithmetic residuals.
@@ -405,11 +405,11 @@ def error_rows(candidate, reference, design):
                              "parent_scale":parent_scale,"compartment_scale":part_scale,
                              "absolute_parent_fraction":absolute/parent_scale,
                              "absolute_compartment_fraction":absolute/part_scale if part_scale else None,
-                             "normalization_status":"positive" if part_scale else "zero compartment; ratio not applicable",
+                             "normalization_status":"positive" if part_scale else "zero compartment, ratio not applicable",
                              "small":bool(small),"tolerances":limits,"fraction_of_tolerance":fractions,
                              "meets":bool(meets) if applicable else None,"floor_eligible":bool(floor) if applicable else None,
                              "decision_status":"approved original hour/day profile" if part == "total" else
-                             "development engineering compartment-origin check; atmospheric threshold unavailable"})
+                             "development engineering compartment-origin check, atmospheric threshold unavailable"})
     return rows
 
 
@@ -418,7 +418,7 @@ def closure(state, design):
     residual = state.parent - state.labels[:, :3].sum(axis=1)
     scale = np.maximum(np.abs(state.parent), np.abs(state.labels[:, :3]).sum(axis=1))
     # A depleted endpoint retains an arithmetic bound from the positive
-    # amounts previously operated on; it gains no negative-water composition.
+    # amounts previously operated on. It gains no negative-water composition.
     scale = np.maximum.accumulate(scale, axis=0)
     allowance = design["profile_rules"]["roundoff_multiplier"] * np.finfo(float).eps * scale
     per_part = residual[:, :n].reshape(len(state.time), -1, 3)
@@ -438,7 +438,7 @@ def closure(state, design):
             "sum_per_compartment_gross":np.abs(per_part).sum(axis=(1,2)).tolist(),
             "gross_of_compartment_sum":np.abs(per_part.sum(axis=2)).sum(axis=1).tolist(),
             "boundary_signed_residual":residual[:, n:].tolist(),
-            "units":"kg m^-2", "scope":"arithmetic implementation verification; no production closure tolerance"}
+            "units":"kg m^-2", "scope":"arithmetic implementation verification, no production closure tolerance"}
 
 
 def parent_trajectory(candidate, expected, design):
@@ -561,7 +561,7 @@ def boundary_error_rows(state, truth, design, case):
                                "small":bool(small),"native_tolerance":limit,"fraction_of_tolerance":fraction,
                                "floor_eligible":fraction <= rules["floor_fraction"] if applicable else None,
                                "meets":fraction <= 1 if applicable else None,"units":"kg m^-2",
-                               "decision_status":"development engineering export-origin check; no atmospheric approval"})
+                               "decision_status":"development engineering export-origin check, no atmospheric approval"})
     return result
 
 
@@ -670,9 +670,9 @@ def audit_report(design,case,substeps):
             "variation_over_gross_transfer":(variation.sum(axis=1)/Q).tolist() if Q else [None]*6,
             "gross_transfer_Q":Q,"net_vs_pool_rule_spread":True,"reference_error":False,
             "precipitation_normalization":"unavailable: this closed frozen-rate replay exports no precipitation",
-            "decision_status":"REPORTED ONLY; OD15 audit normalization/trend pending",
+            "decision_status":"REPORTED ONLY, OD15 audit normalization/trend pending",
             "units":"kg m^-2","substeps":substeps,
-            "limitation":"output-interval retained variation; unobserved accepted applications remain blocked"}
+            "limitation":"output-interval retained variation, unobserved accepted applications remain blocked"}
 
 
 def declared_negative_map(raw_mass,labels,flows,dt):
@@ -680,7 +680,7 @@ def declared_negative_map(raw_mass,labels,flows,dt):
 
     Inputs are three raw compartment amounts and a signed rate matrix with
     nominal donor in the row. Only a pair touching negative raw water may
-    reverse a signed rate. Negative targets retain no label; their pool
+    reverse a signed rate. Negative targets retain no label. Their pool
     passes on at most the labelled inflow, and withheld label is reported.
     """
     raw=np.asarray(raw_mass,dtype=float);x=np.asarray(labels,dtype=float);F=np.asarray(flows,dtype=float)

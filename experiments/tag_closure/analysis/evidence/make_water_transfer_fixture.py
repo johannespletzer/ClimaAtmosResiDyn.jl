@@ -223,8 +223,8 @@ def evaluate_fixture(path):
                              "application_error":control["metrics"]["candidate_application_error"],"origin_failure_measured":fails,
                              "directed_balance":control["metrics"]["candidate_directed_balance"],
                              "mutation_verified":mutation_verified if result["meets"] else None},
-            "audit_rule_spread":audit,"runtime_minima_corrections_fallback_bounds":"missing actual native channels; NOT ASSESSABLE",
-            "OD15_campaign_status":"BLOCKED; proposed owner choices not supplied","artifacts":dict(sorted(bundle.used.items()))}
+            "audit_rule_spread":audit,"runtime_minima_corrections_fallback_bounds":"missing actual native channels, NOT ASSESSABLE",
+            "OD15_campaign_status":"BLOCKED, proposed owner choices not supplied","artifacts":dict(sorted(bundle.used.items()))}
 
 
 def run_suite(root,config):
@@ -246,7 +246,7 @@ def run_suite(root,config):
                       "result":case_id+"/known_answer_results.json"})
     exit_code=suite_exit_code(cases)
     report={"schema_version":1,"design_sha256":DESIGN_SHA256,"cases":cases,"exit_code":exit_code,"scope":FIXTURE_SCOPE,
-            "scientific_qualification":"NOT QUALIFIED","limitation":"synthetic rates/equations; runtime/PX14/PX25/OD15/held-out/EDMF/copies gates remain open"}
+            "scientific_qualification":"NOT QUALIFIED","limitation":"synthetic rates/equations, runtime/PX14/PX25/OD15/held-out/EDMF/copies gates remain open"}
     write_json(root/"suite_results.json",report);return report
 
 

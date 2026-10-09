@@ -1,4 +1,4 @@
-"""PX25 planning and unresolved decision observables; never approve a campaign."""
+"""PX25 planning and unresolved decision observables. Never approve a campaign."""
 
 import copy
 import json
@@ -28,7 +28,7 @@ def px25_matrix(base):
     for count in (1,10):
         pid="vanleer_limiter_dt10p0_sub"+str(count)
         setting=copy.deepcopy(base);setting.update(tracer_upwinding="vanleer_limiter",dt="10secs");setting[key]=count
-        parents.append({"id":pid,"settings":setting,"kind":"untagged","refinement":"substeps reported only; not two dt halvings"})
+        parents.append({"id":pid,"settings":setting,"kind":"untagged","refinement":"substeps reported only, not two dt halvings"})
     for parent in parents:
         for mode in ("tracer","increment"):
             setting=copy.deepcopy(parent["settings"])
@@ -37,11 +37,11 @@ def px25_matrix(base):
                                           {"name":"upper","region":{"type":"tanh_altitude","z_center":3000.,"width":300.,"above":True}},
                                           {"name":"evap","source":"surface_flux"}])
             tagged.append({"id":parent["id"]+"_"+mode,"parent_id":parent["id"],"kind":"tagged","settings":setting})
-    return {"schema_version":1,"kind":"DRAFT; NOT AUTHORIZED/EXECUTED CAMPAIGN","case":"PrecipitatingColumn development",
+    return {"schema_version":1,"kind":"DRAFT, NOT AUTHORIZED/EXECUTED CAMPAIGN","case":"PrecipitatingColumn development",
             "OD15_status":"PROPOSED/PENDING","short_case_end_seconds":1500,"effective_substep_key":key,
             "default_substeps":default,"parents":parents,"tagged_arms":tagged,"jobs":24,
             "cross_parent_provenance":"not assessable","first_order":"another scheme, not a rung",
-            "second_case":"unselected; OD2 established-rain measurement and OD14 independence required",
+            "second_case":"unselected, OD2 established-rain measurement and OD14 independence required",
             "held_out_overlap":"PrecipitatingColumn starts from RICO's theta and q_tot profiles. RICO 1M 24 h is the "
                                "held-out case (WA-SCOPE, 2026-10-08). Under OD14 (decision of 2026-10-09) this column "
                                "serves PX25's PT15 and PT16 arithmetic rows only and chooses no mode or default. The "
@@ -58,8 +58,8 @@ def void_substep_perturbation(default_parent,arm_parent):
 def short_case_rows(end_seconds):
     require(np.isfinite(end_seconds) and end_seconds>0,"invalid short case length")
     return [{"id":name,"required_seconds":seconds,"sample_available":end_seconds>=seconds,
-             "decision_status":status,"verdict":"NOT ASSESSABLE" if end_seconds<seconds else "UNSCORED; actual channel/window required",
-             "limitation":"OD15 must decide short-case applicability; no invented hourly/day sample"}
+             "decision_status":status,"verdict":"NOT ASSESSABLE" if end_seconds<seconds else "UNSCORED, actual channel/window required",
+             "limitation":"OD15 must decide short-case applicability, no invented hourly/day sample"}
             for name,seconds,status in (("closure_24h",86400,"approved original observable"),
                                          ("second_12h_growth",86400,"approved original observable"),
                                          ("audit_tag_precip_over_day",86400,"approved original observable"),
@@ -69,13 +69,13 @@ def short_case_rows(end_seconds):
 def proposed_audit_trend(values):
     require(len(values)==3 and np.isfinite(values).all() and min(values)>=0,"audit trend needs three nonnegative dt rung ratios")
     ratios=[values[i+1]/values[i] if values[i]>0 else None for i in range(2)]
-    if any(v is None for v in ratios):reading="unresolved; zero denominator"
+    if any(v is None for v in ratios):reading="unresolved, zero denominator"
     elif all(v<=.75 for v in ratios):reading="converging"
     elif any(v>1.1 for v in ratios):reading="growing"
     elif all(.9<=v<=1.1 for v in ratios):reading="systematic"
     else:reading="unresolved"
     return {"ratios":ratios,"proposed_reading":reading,"decision_status":"PROPOSED/PENDING OD15",
-            "verdict":"NOT ASSESSABLE","substeps":"reported only; non-doubling counts have no adopted trend rule"}
+            "verdict":"NOT ASSESSABLE","substeps":"reported only, non-doubling counts have no adopted trend rule"}
 
 
 DRAFT_README = """# PX25 draft configurations

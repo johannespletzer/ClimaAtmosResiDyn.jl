@@ -511,26 +511,26 @@
     }
   ],
   "decision_status": {
-    "OD12": "accepted; measured quarter floors and active nonshared rule scope required",
-    "OD13": "accepted gated probes; no runtime probe added",
-    "OD14": "accepted; all current cases development only",
-    "OD15": "PROPOSED/PENDING at exact base; no owner choice invented",
+    "OD12": "accepted, measured quarter floors and active nonshared rule scope required",
+    "OD13": "accepted gated probes, no runtime probe added",
+    "OD14": "accepted, all current cases development only",
+    "OD15": "PROPOSED/PENDING at exact base, no owner choice invented",
     "OD3": "approved unchanged for original observables/windows",
-    "audit_trend": "proposed; reported only, never PASS without OD15",
-    "compartment_origin_checks": "engineering development check; no new atmospheric threshold",
-    "runtime_precipitation": "not assessable; verified producer registry remains empty"
+    "audit_trend": "proposed, reported only, never PASS without OD15",
+    "compartment_origin_checks": "engineering development check, no new atmospheric threshold",
+    "runtime_precipitation": "not assessable, verified producer registry remains empty"
   },
   "development_only": true,
   "equations": {
-    "boundary": "independently specified absorbing exports carry the actual donor rain/snow label; no N reset in the reference",
+    "boundary": "independently specified absorbing exports carry the actual donor rain/snow label. No N reset in the reference",
     "constant_parent": "M(t)=M0+t*(incoming-outgoing) for fixed rates, with no negative parent permitted",
-    "coupling": "all directed legs evaluated simultaneously; no collapse to net compartment changes; explicit RK4 stages sample the evolving donor at their stage time",
+    "coupling": "all directed legs evaluated simultaneously. No collapse to net compartment changes. Explicit RK4 stages sample the evolving donor at their stage time",
     "empty": "X=0 at M=0. Nonzero physical outflow from an empty donor is refused. Kinetic zero outflow needs no ratio. Exact single-flow depletion uses its continuous limiting IC composition only at the endpoint.",
-    "kinetic": "F_c,d=k_c,d*M_c(t); M and X evolve using their independently assembled conservative generator, including separate absorbing exterior rain/snow reservoirs",
-    "negative": "no physical composition inferred at M<0. Separate declared numerical examples orient signed flows that touch negative compartments; positive-target parts stay zero there and withheld inflow is recorded. They are not positive provenance references.",
-    "pool": "declared diagnostic coarse rule: (M_c+dt*in_c)*psi_c-sum_d(dt*F_d,c*psi_d)=X_i,c(0); same independent np.linalg.solve diagnostic at 1/4/16/64; not the reference",
-    "positive": "M_c>0; f_i,c=X_i,c/M_c; each nonnegative directed F_c,d removes F*f_i,c from c and adds it to d simultaneously",
-    "reset": "isolate sedimentation by replacing only rain/snow outgoing composition with local N share; rates and parent trajectory unchanged; pool comparison is separate"
+    "kinetic": "F_c,d=k_c,d*M_c(t). M and X evolve using their independently assembled conservative generator, including separate absorbing exterior rain/snow reservoirs",
+    "negative": "no physical composition inferred at M<0. Separate declared numerical examples orient signed flows that touch negative compartments. Positive-target parts stay zero there and withheld inflow is recorded. They are not positive provenance references.",
+    "pool": "declared diagnostic coarse rule: (M_c+dt*in_c)*psi_c-sum_d(dt*F_d,c*psi_d)=X_i,c(0). Same independent np.linalg.solve diagnostic at 1/4/16/64. Not the reference",
+    "positive": "M_c>0. f_i,c=X_i,c/M_c. Each nonnegative directed F_c,d removes F*f_i,c from c and adds it to d simultaneously",
+    "reset": "isolate sedimentation by replacing only rain/snow outgoing composition with local N share. Rates and parent trajectory unchanged. Pool comparison is separate"
   },
   "excluded_processes": [
     "edmf",
@@ -549,20 +549,20 @@
   "mutations": {
     "opposing_net_zero": "erase equal opposing activity while leaving every parent compartment unchanged",
     "other_cases": "origin_a/b/c cyclic origin permutation at nonzero samples, with all source overlays invariant",
-    "rain_snow_sedimentation": "isolated N reset of rain/snow donor fractions for partition tags, simultaneously integrated with the same exact parent rates; compare rain/snow label ownership and exports",
-    "single_transfer": "wrong recipient initial share is used on the actual N->R accepted amount; same IC, parent, rates, geometry, boundary and source overlays",
-    "three_compartment_cycle": "replace origin_a/b/c by a cyclic origin permutation at nonzero samples; declared closed-origin corruption, not a wrong-donor kernel claim"
+    "rain_snow_sedimentation": "isolated N reset of rain/snow donor fractions for partition tags, simultaneously integrated with the same exact parent rates. Compare rain/snow label ownership and exports",
+    "single_transfer": "wrong recipient initial share is used on the actual N->R accepted amount. Same IC, parent, rates, geometry, boundary and source overlays",
+    "three_compartment_cycle": "replace origin_a/b/c by a cyclic origin permutation at nonzero samples. Declared closed-origin corruption, not a wrong-donor kernel claim"
   },
   "norms": {
-    "L1": "sum_cell(abs(delta_X_i))*native amount / sum_cell(abs(Xref_i)); density exports use native thickness",
-    "Linf": "max(abs(delta_specific))/max(abs(reference_specific)); same exact native rho",
-    "absolute": "sum_cell(abs(delta_X_i)); beside relative and max-specific errors",
-    "audit": "per-tag cumulative signed endpoint difference and sum over accepted synthetic interval abs(delta audit) separately; never sum tags as proof; normalize to positive gross transfer and actual rain/snow/paired tag precipitation only if denominator exists",
-    "closure": "signed R per compartment; per-compartment gross sum abs(R_c); gross of sum abs(sum_c R_c); overlays never enter partition",
-    "compartment": "each tag and N/R/S separately, same native weighting, absolute/relative/max and parent+compartment scales; reused numbers here are engineering fixture checks only",
-    "process_companion": "absolute weighted label mismatch and max share error; transfer Q and donor+recipient leg activity 2Q separately",
-    "process_weighted": "sum_e,t(A_e,t*abs(f_candidate-f_reference))/sum_e,t(A_e,t), A nonnegative integrated native applied transfer amount; zero activity explicitly NOT APPLICABLE",
-    "small": "tag system inventory fraction <.01: absolute <=2e-4*parent system amount replaces both relative tests; source overlays excluded from partition"
+    "L1": "sum_cell(abs(delta_X_i))*native amount / sum_cell(abs(Xref_i)). Density exports use native thickness",
+    "Linf": "max(abs(delta_specific))/max(abs(reference_specific)), same exact native rho",
+    "absolute": "sum_cell(abs(delta_X_i)), beside relative and max-specific errors",
+    "audit": "per-tag cumulative signed endpoint difference and sum over accepted synthetic interval abs(delta audit) separately. Never sum tags as proof. Normalize to positive gross transfer and actual rain/snow/paired tag precipitation only if denominator exists",
+    "closure": "signed R per compartment, per-compartment gross sum abs(R_c), gross of sum abs(sum_c R_c). Overlays never enter partition",
+    "compartment": "each tag and N/R/S separately, same native weighting, absolute/relative/max and parent+compartment scales. Reused numbers here are engineering fixture checks only",
+    "process_companion": "absolute weighted label mismatch and max share error, transfer Q and donor+recipient leg activity 2Q separately",
+    "process_weighted": "sum_e,t(A_e,t*abs(f_candidate-f_reference))/sum_e,t(A_e,t), A nonnegative integrated native applied transfer amount. Zero activity explicitly NOT APPLICABLE",
+    "small": "tag system inventory fraction <.01: absolute <=2e-4*parent system amount replaces both relative tests. Source overlays excluded from partition"
   },
   "profile_rules": {
     "day_L1": 0.02,
@@ -578,12 +578,12 @@
   },
   "reference": {
     "cycle": "closed-form 3-cycle exp with damped cosine/sine",
-    "floor": "reference selected support is RK4 rung64 measured in each applicable same norm plus 128*eps64 arithmetic bound; finest is not assumed true; if any applicable floor fails .25 budget, reference ineligible",
-    "independent_check": "separately assembled RK4 differential equations at every 1/4/16/64 substep rung, measured against the closed form or independent exponential; every rung retained",
+    "floor": "reference selected support is RK4 rung64 measured in each applicable same norm plus 128*eps64 arithmetic bound. Finest is not assumed true. If any applicable floor fails .25 budget, reference ineligible",
+    "independent_check": "separately assembled RK4 differential equations at every 1/4/16/64 substep rung, measured against the closed form or independent exponential, every rung retained",
     "one_way": "closed-form constant-composition transfer including exact depletion",
     "opposing": "closed-form exponential with lambda=F*(1/M_N+1/M_R)",
-    "other_cases": "independent high-precision scaled Taylor matrix exponential, 96 terms per scaled interval, including cumulative native edge integrals; no production helper",
-    "precision": "Float64 exported arrays; longdouble exponential accumulation; no dependency installation",
+    "other_cases": "independent high-precision scaled Taylor matrix exponential, 96 terms per scaled interval, including cumulative native edge integrals, no production helper",
+    "precision": "Float64 exported arrays, longdouble exponential accumulation, no dependency installation",
     "reference_mode_choices": [
       "exact",
       "rk4"
@@ -596,10 +596,10 @@
     "native per-tag/compartment corrections fallback/bound/clamp/zero-normalization counters",
     "all-state tagged/untagged bitwise parity for each parent arm",
     "checkpoint-linked no-gap captures and reset semantics",
-    "runtime producer implementation and reviewer registration; registry EMPTY",
+    "runtime producer implementation and reviewer registration, registry EMPTY",
     "OD2 case window and established rain measured in untagged case",
     "OD15 recorded owner decision before PX25 scoring",
-    "unsupported EDMF/copies stage2/3 refused; routed to existing work"
+    "unsupported EDMF/copies stage2/3 refused, routed to existing work"
   ],
   "schema_version": 1,
   "source_overlays": {
@@ -652,12 +652,12 @@
     86400.0
   ],
   "units": {
-    "accumulated_precipitation": "kg m^-2; positive outward exact integrated applied amount",
+    "accumulated_precipitation": "kg m^-2, positive outward exact integrated applied amount",
     "coefficient": "s^-1",
     "internal_export": "kg m^-3",
     "label_amount": "kg m^-2",
     "parent_amount": "kg m^-2",
-    "precipitation_flux": "kg m^-2 s^-1; upward-positive (exports negative)",
+    "precipitation_flux": "kg m^-2 s^-1, upward-positive (exports negative)",
     "rate": "kg m^-2 s^-1",
     "specific_export": "kg kg^-1",
     "time": "s",

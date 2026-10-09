@@ -299,7 +299,7 @@ def evaluate_water_transfer(bundle, declared=True):
     boundary_error=np.abs(candidate.labels[:,:,truth.internal_count:]-reference.labels[:,:,truth.internal_count:])
     metrics={"independent_rules":declaration["independent_rules"],"untested_or_shared_rules":[] if active else [rule],
              "floors":list(floors.values()),"ladder_floor_fractions":ladder,
-             "donor_rule_applicability":"applicable" if active else "not applicable; zero transfer activity",
+             "donor_rule_applicability":"applicable" if active else "not applicable, zero transfer activity",
              "pool_reference_errors":spread,"candidate_errors":rows,
              "candidate_closure":closure(candidate,design),"candidate_parent_trajectory":parent_trajectory(candidate,truth,design),
              "candidate_application_error":application_error(candidate,case,design),

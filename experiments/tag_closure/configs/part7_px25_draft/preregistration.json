@@ -14,7 +14,7 @@
   "first_order": "another scheme, not a rung",
   "held_out_overlap": "PrecipitatingColumn starts from RICO's theta and q_tot profiles. RICO 1M 24 h is the held-out case (WA-SCOPE, 2026-10-08). Under OD14 (decision of 2026-10-09) this column serves PX25's PT15 and PT16 arithmetic rows only and chooses no mode or default. The explicit-1M default is chosen on an independent second case, found together with OD15",
   "jobs": 24,
-  "kind": "DRAFT; NOT AUTHORIZED/EXECUTED CAMPAIGN",
+  "kind": "DRAFT, NOT AUTHORIZED/EXECUTED CAMPAIGN",
   "parents": [
     {
       "id": "first_order_dt10p0",
@@ -217,7 +217,7 @@
     {
       "id": "vanleer_limiter_dt10p0_sub1",
       "kind": "untagged",
-      "refinement": "substeps reported only; not two dt halvings",
+      "refinement": "substeps reported only, not two dt halvings",
       "settings": {
         "FLOAT_TYPE": "Float64",
         "approximate_linear_solve_iters": 2,
@@ -250,7 +250,7 @@
     {
       "id": "vanleer_limiter_dt10p0_sub10",
       "kind": "untagged",
-      "refinement": "substeps reported only; not two dt halvings",
+      "refinement": "substeps reported only, not two dt halvings",
       "settings": {
         "FLOAT_TYPE": "Float64",
         "approximate_linear_solve_iters": 2,
@@ -283,13 +283,13 @@
   ],
   "schema_version": 1,
   "score_status": "BLOCKED by OD15 and missing runtime accepted application producer",
-  "second_case": "unselected; OD2 established-rain measurement and OD14 independence required",
+  "second_case": "unselected, OD2 established-rain measurement and OD14 independence required",
   "short_case_end_seconds": 1500,
   "short_criteria": [
     {
       "decision_status": "approved original observable",
       "id": "closure_24h",
-      "limitation": "OD15 must decide short-case applicability; no invented hourly/day sample",
+      "limitation": "OD15 must decide short-case applicability, no invented hourly/day sample",
       "required_seconds": 86400,
       "sample_available": false,
       "verdict": "NOT ASSESSABLE"
@@ -297,7 +297,7 @@
     {
       "decision_status": "approved original observable",
       "id": "second_12h_growth",
-      "limitation": "OD15 must decide short-case applicability; no invented hourly/day sample",
+      "limitation": "OD15 must decide short-case applicability, no invented hourly/day sample",
       "required_seconds": 86400,
       "sample_available": false,
       "verdict": "NOT ASSESSABLE"
@@ -305,7 +305,7 @@
     {
       "decision_status": "approved original observable",
       "id": "audit_tag_precip_over_day",
-      "limitation": "OD15 must decide short-case applicability; no invented hourly/day sample",
+      "limitation": "OD15 must decide short-case applicability, no invented hourly/day sample",
       "required_seconds": 86400,
       "sample_available": false,
       "verdict": "NOT ASSESSABLE"
@@ -313,7 +313,7 @@
     {
       "decision_status": "proposed R9 hourly reading",
       "id": "R9_hourly_compartment",
-      "limitation": "OD15 must decide short-case applicability; no invented hourly/day sample",
+      "limitation": "OD15 must decide short-case applicability, no invented hourly/day sample",
       "required_seconds": 3600,
       "sample_available": false,
       "verdict": "NOT ASSESSABLE"
