@@ -92,7 +92,7 @@ scorer runs with `pilot_first_hour`, the TRMM 0M 6 h scope of 2026-10-07.
 | Closure                          | Gross residual at 6 h over raw untagged water, and over T+              | WATER_GROSS                                                                                   | Reported: the approved closure is at 24 h, no transplant                                                         |
 | Named remainder                  | Named-parts remainder                                                   | NAMED_REMAINDER_MAX                                                                           | Data failure: no field. Reported as a limitation                                                                 |
 | Copies eligibility               | Copies' own residual, repair per day, refinement, OD12 floors           | COPIES_RESIDUAL_MAX, COMPARATOR_REPAIR_PER_DAY, COMPARATOR_REFINEMENT_MAX, FLOOR_FRACTION_MAX | Reported from the tables. Eligibility waits for PX12                                                             |
-| Per-tag origins, 1 h             | A_i, L1_i, L∞_i at 1 h, small-tag rule                                  | ORIGIN_L1_FIRST_HOUR, ORIGIN_LINF_FIRST_HOUR, SMALL, SMALL_SHARE                              | Scored once PX12 makes the copies eligible. Until then not assessable, values kept                               |
+| Per-tag origins, 1 h             | A_i, L1_i, L∞_i at 1 h, small-tag rule                                  | ORIGIN_L1_FIRST_HOUR, ORIGIN_LINF_FIRST_HOUR, SMALL, SMALL_SHARE                              | Default bundle: not assessable until PX12, values kept. Copies bundle: no reference, so a data failure           |
 | Per-tag origins, 3 and 6 h       | L1 and L∞ default against copies                                        | none                                                                                          | Reported, as W58                                                                                                 |
 | Per-tag origins, 24 h            | none                                                                    | ORIGIN_L1_DAY, ORIGIN_LINF_DAY                                                                | Not applicable (pilot scope)                                                                                     |
 | Process/donor origins            | Process-weighted D_i                                                    | PROCESS_WEIGHTED_MAX                                                                          | Data failure: no applied process amounts. Part 7's references                                                    |
@@ -106,8 +106,16 @@ scorer runs with `pilot_first_hour`, the TRMM 0M 6 h scope of 2026-10-07.
 | Cost                             | Build, step, peak memory at 8 + 8, both modes, with ledgers             | OD3 cost rows, OD3 copies row                                                                 | Measured here (section 8), reported. Criterion 10 is scored in part 10                                           |
 | Held-out                         | none                                                                    | OD14, criterion 8                                                                             | Not assessable                                                                                                   |
 
-On W58 the scorer exits 2, through the named data failures above. The rerun
-is expected to do the same. An exit code alone establishes nothing.
+On W58 the scorer exits 2 on both bundles, and the rerun is expected to give
+the same rows. Every FAIL row is a data failure. None is a measured value over
+a limit. Both bundles fail COMMON.NEWTON_TRIAL, WATER.NAMED_REMAINDER,
+WATER.PROCESS_WEIGHTED and the per-tag WATER.LED_FIX rows in both windows
+(section 6). COMMON.EVIDENCE fails too. It lists every row data failure, and
+the submission record holds no hash for `LocalPreferences.toml`. The copies
+bundle has no reference (section 12, choice 8). So its three
+`WATER.ORIGINS.<tag>.3600` rows fail as data failures, and
+REFERENCE.PARENT_PARITY is not assessable with a data failure. The ranked
+table skips those origin rows. An exit code alone establishes nothing.
 
 ## 5. The OD2 window, read first
 
@@ -138,14 +146,16 @@ The reading is fixed now, before the rerun (proposed, 2026-10-09):
 ## 6. Converter, scorer and glue
 
 The converter and the scorer are used unchanged. `part8_pilot.py` adds the
-glue the pilot needs. It holds no threshold of its own: it imports every limit
-from the scorer, and a test pins them. It does four things.
+glue the pilot needs. It holds no threshold of its own. It imports every limit
+from the scorer, or from `closure_verdict.py` as the scorer does, and a test
+pins them. It does four things.
 
   - **`w58`** recomputes W58's table rows (R4, R5, R8) from the closure and
     audit tables with `g3base_score.py`'s arithmetic. On the repository's
     `output/g3base/data/` it reproduces all 18 recorded TRMM rows bit for
-    bit, with their verdicts. With `--prefix p8` it lists every row of the
-    rerun that differs from W58. That list answers H1 for these rows.
+    bit, with their verdicts. With `--prefix p8` it reads the rerun's tables
+    from each run's `output_0000` under the output root and lists every row
+    that differs from W58. That list answers H1 for these rows.
   - **`od2`** reads the OD2 boundary as in section 5.
   - **`tables`** writes one run's table rows. They carry the per-tag `led_fix`
     fractions from the audit's `_retained` columns, which are the 6.1.1
@@ -158,21 +168,57 @@ from the scorer, and a test pins them. It does four things.
   - **`rank`** builds the ranked table of section 7 from the scorer's JSON and
     the table rows.
 
-The order after the runs, all by the session or a `worker`:
+The scorer-level reproduction of W58's verdict is the existing test
+`test_w58_pilot_first_hour` in `test_convert_output.py`. It converts and
+scores W58's NetCDF output, and it skips where that output is absent, as on
+CI. `test_part8_pilot.py` reproduces the table rows from the repository's
+copy and always runs.
 
- 1. Check that every job finished. A failed job is an execution failure,
-    recorded as such.
- 2. `part8_pilot.py od2` on the twin, saved as `od2.json`.
- 3. `convert_output.py --family water --candidate default --reference copies --untagged twin --period 30m --pilot-first-hour --same-parent`, the
-    default bundle. Then `--candidate copies --untagged twin` with no
-    reference, the copies bundle. Both with `--planning-commit` and
-    `--scorer-commit` at the record commit of the run.
- 4. `score_acceptance.py score` on both bundles.
- 5. `part8_pilot.py tables` for each mode, then `rank` for each mode with
-    `--newton 4.10e-3 --newton-source "FINDINGS W57, D4-W, prior"`.
- 6. `part8_pilot.py w58 $OUT output/g3base/g3base_scores.csv --prefix p8`,
-    the rerun's table rows against W58's record.
- 7. `compare_runs.py --reference copies --run default --family water --hours 1,3,6`, for the 3 h and 6 h L1 rows that W58 reported.
+The order after the runs, all by the session or a `worker`. First, check that
+every job finished. A failed job is an execution failure, recorded as such.
+Then the commands below, numbered as steps 2 to 7. Run on W58's output, with
+`g3b` in place of `p8`, they run as written on 2026-10-09 and give W58's
+numbers of section 7.
+
+```sh
+# From experiments/tag_closure. REC is the record commit of the runs and
+# REPO a clone that holds it. B is a new directory for the results.
+OUT=$SCRATCH/tag_closure/output
+B=$SCRATCH/tag_closure/part8
+mkdir -p $B
+# 2. The OD2 reading on the twin.
+python3 analysis/evidence/part8_pilot.py od2 $OUT/p8_trmm0m_untagged_6h/output_0000 --period 10m \
+    --json $B/od2.json
+# 3. The default bundle, with the copies as reference, and the copies bundle, with none.
+python3 analysis/evidence/convert_output.py --family water \
+    --candidate $OUT/p8_trmm0m_default_6h/output_0000 --reference $OUT/p8_trmm0m_copies_6h/output_0000 \
+    --untagged $OUT/p8_trmm0m_untagged_6h/output_0000 --period 30m --pilot-first-hour --same-parent \
+    --planning-commit $REC --scorer-commit $REC --git-repo $REPO --out $B/default
+python3 analysis/evidence/convert_output.py --family water \
+    --candidate $OUT/p8_trmm0m_copies_6h/output_0000 \
+    --untagged $OUT/p8_trmm0m_untagged_6h/output_0000 --period 30m --pilot-first-hour \
+    --planning-commit $REC --scorer-commit $REC --git-repo $REPO --out $B/copies
+# 4. The scorer on both bundles.
+for m in default copies; do
+    python3 analysis/evidence/score_acceptance.py score $B/$m/manifest.json --json $B/${m}_score.json
+done
+# 5. The table rows and the ranked table of each mode.
+for m in default copies; do
+    python3 analysis/evidence/part8_pilot.py tables $OUT/p8_trmm0m_${m}_6h/output_0000 $m \
+        --json $B/${m}_tables.json
+    python3 analysis/evidence/part8_pilot.py rank --mode $m --score $B/${m}_score.json \
+        --tables $B/${m}_tables.json --newton 4.10e-3 --newton-source "FINDINGS W57, D4-W, prior" \
+        --out $B/${m}_rank.csv
+done
+# 6. The rerun's table rows against W58's record (H1).
+python3 analysis/evidence/part8_pilot.py w58 $OUT output/g3base/g3base_scores.csv --prefix p8 \
+    --json $B/w58.json
+# 7. The 3 h and 6 h L1 rows that W58 reported.
+python3 analysis/evidence/compare_runs.py --reference $OUT/p8_trmm0m_copies_6h/output_0000 \
+    --run $OUT/p8_trmm0m_default_6h/output_0000 --family water --hours 1,3,6
+```
+
+The converter and the scorer exit 2 on both bundles, as section 4 states.
 
 ## 7. The ranked table of error terms
 
@@ -198,22 +244,38 @@ with a cited limit is ranked by its value over that limit, largest first. An
 origin row uses the larger of `L1/ORIGIN_L1_FIRST_HOUR` and
 `L∞/ORIGIN_LINF_FIRST_HOUR`, or the small-tag absolute rule where the scorer
 applies it. A prior from another case and a term without a limit are listed
-after the ranked rows, without a rank. A fraction is a reading against a
-cited limit. It is not a verdict, and a six-hour reading against a 24 h limit
-is not a transplant.
+after the ranked rows, without a rank. So is a term the scorer marks NOT
+ASSESSABLE. It is a reading and keeps its fraction. Until PX12 attaches its
+eligibility file, the first-hour origin terms are such readings (section 9).
+Ties, such as several zeros, keep the order of the table above. A fraction is
+a reading against a cited limit. It is not a verdict, and a six-hour reading
+against a 24 h limit is not a transplant.
+
+**The origin comparator** (proposed, 2026-10-09). The brief asks for the
+first-hour L1 against the references that parts 6 and 7 made eligible. Those
+parts made references eligible on their own known-answer fixtures, not on
+TRMM 0M. Which comparator is eligible on this case is PX12's answer, and PX12
+is part 7's run, not yet made. So the default bundle reads its origin terms
+against the rerun's copies, as W58 did. The scorer marks them NOT ASSESSABLE,
+so they are listed, not ranked. Once PX12's eligibility file gives them a
+verdict, the rule above ranks them. If PX12 names another comparator, the
+record says so and reads the origin terms against it.
 
 **The prior order**, from W58's data on 2026-10-09:
 
-| Mode    | Rank 1                                                | Rank 2                           | Rank 3                       | Listed                                       |
-|:------- |:----------------------------------------------------- |:-------------------------------- |:---------------------------- |:-------------------------------------------- |
-| default | `evap` at 1 h, small-tag rule, 0.448 (not assessable) | `pbl` at 1 h, 0.0103             | `free` at 1 h, 0.0051        | Newton prior 4.1, 27,413 events, D_p 3.0e-19 |
-| copies  | Copies' repair, 0.253                                 | Closure at 6 h, 0.177 (reported) | Copies' own residual, 0.0116 | Newton prior 4.1, 15,317 events, D_p 3.4e-8  |
+| Mode    | Rank 1                             | Rank 2                           | Rank 3                       | Listed                                       |
+|:------- |:---------------------------------- |:-------------------------------- |:---------------------------- |:-------------------------------------------- |
+| default | Closure at 6 h, 1.9e-12 (reported) | Partition repair, 0              | `led_fix:pbl`, 0             | Newton prior 4.1, 27,413 events, D_p 3.0e-19 |
+| copies  | Copies' repair, 0.253              | Closure at 6 h, 0.177 (reported) | Copies' own residual, 0.0116 | Newton prior 4.1, 15,317 events, D_p 3.4e-8  |
 
-The default's partition repair and `led_fix` are zero, and its closure is
-1.9e-12 of the limit. So the default's only non-zero measured terms are the
-origin readings, which wait for PX12. Part 9 takes no fix from an origin
-reading that is not assessable. The listed parent Newton error is four times
-NEWTON_MAX on D4-W. It is not this case, and no fix in the queue addresses it.
+The default's closure is 1.9e-12 of the limit, and its partition repair and
+`led_fix` are zero. Its only non-zero readings against a limit are the
+first-hour origins, listed without a rank: `evap` 0.448 of the small-tag
+limit, `pbl` 0.0103 and `free` 0.0051. They wait for PX12, and part 9 takes
+no fix from an origin reading that is not assessable. The copies bundle has no
+origin terms, since it has no reference. The listed parent Newton error is
+four times NEWTON_MAX on D4-W. It is not this case, and no fix in the queue
+addresses it.
 
 ## 8. Runs and their cost
 
@@ -225,8 +287,12 @@ the owner approves it. All write under `$SCRATCH/tag_closure/output`.
 | p8_trmm0m_untagged_6h | `p8_trmm0m_untagged_6h.yml`                 | 0.2                  | 1 h   | 48G    | W58 job 14119365: 10.7 min                   |
 | p8_trmm0m_default_6h  | `p8_trmm0m_default_6h.yml`                  | 0.25                 | 1 h   | 48G    | W58 job 14119366: 14.8 min                   |
 | p8_trmm0m_copies_6h   | `p8_trmm0m_copies_6h.yml`                   | 0.25                 | 1 h   | 48G    | W58 job 14119367: 14.9 min                   |
-| p8_default_a, _b, _c  | D4, both families, default, 0 and 8:ledgers | 1.0 each             | 4 h   | 200G   | E88: both_d3c5 under 2 h, peak 14.5 GB       |
+| p8_default_a, _b, _c  | D4, both families, default, 0 and 8:ledgers | 1.0 each             | 4 h   | 200G   | E88 both_d3c5: 0 and 8:ledgers took 0.95 h   |
 | p8_copies_a, _b, _c   | D4, both families, copies, 0 and 8:ledgers  | 5.5 each             | 9 h   | 200G   | E88 addendum: build 4 h 16 min, peak 21.4 GB |
+
+E88's both_d3c5 job ran points 0, 8 and 8:ledgers in 1,140, 1,682 and 2,286 s
+(its `status.csv`). Its 8 + 8 point peaked at 14.5 GB without ledgers. The
+copies' 21.4 GB is also without ledgers. The 200G request covers both.
 
 About 20.2 node-hours expected and 42 at the limits. The cost set has energy
 tags and more than 24 h at its limits, so it goes to the owner as a set first
@@ -236,11 +302,12 @@ tags and more than 24 h at its limits, so it goes to the owner as a set first
 `submit_wp9.sh` with `SET=p8`. Each header carries its estimate.
 
 **The trio.** One job per run, a whole node each (`--exclusive`), 2 CPUs,
-through `g3base_submit.sh` with the run tree at `bb2bedf23`. The twin goes
-first. The pilot's own cost is read from these jobs: the build is the sum of
-the cache, tendency and integrator phases in the `.err` log, the step is the
-progress log's wall time over the 144 steps, and the peak memory is Slurm's
-MaxRSS. The step includes output and the closure audit. It is one sample on
+through `g3base_submit.sh` with the run tree at `bb2bedf23`. The twin is
+submitted first. The jobs are independent, so it need not start first. The
+pilot's own cost is read from these jobs: the build is the sum of
+the cache, tendency and integrator phases in the `.err` log, the step is the wall
+time of the progress log's last line over the steps it counts, and the peak
+memory is Slurm's MaxRSS. W58's last line counts 137 of the 144 steps. The step includes output and the closure audit. It is one sample on
 one node, reported, not the WP9 measure (proposed, 2026-10-09).
 
 **The cost pairs** (proposed, 2026-10-09). Each job runs the untagged point 0
@@ -259,10 +326,9 @@ and not quoted. Nothing is rerun. For each mode: the step ratio to its own
 point 0, the build ratio and seconds, allocation per step and peak memory, and
 the spread across the three nodes. If two replicates land on one node, that is
 reported. E88 (9.098x with ledgers, build 2.14x) and the addendum (copies
-build 15,377 s without ledgers) are quoted as prior. OD3's cost row (2x at 8
-
-  -  8. and its copies row (build within 4 h) are cited beside the readings. No
-        cost cap is proposed, and none is set.
+build 15,377 s without ledgers) are quoted as prior. OD3's cost row, 2x at
+the intended count, and its copies row, a build within 4 h, are cited beside
+the readings. No cost cap is proposed, and none is set.
 
 ## 9. What waits for PX12
 
@@ -276,7 +342,8 @@ bundles through `manifest.py --attach-acceptance`, with no rerun here.
     D4-W value is a prior.
   - PX5's growth clause, from its `dt` 150/75 s ladder. Until then PX5's
     reading on TRMM is the filter's share alone.
-  - The rank of the origin terms. Until PX12, they are readings only.
+  - The rank of the origin terms. Until PX12, they are readings only, listed
+    without a rank (section 7).
 
 ## 10. What stops the part, and what would change the plan
 
@@ -307,10 +374,12 @@ PR after the runs: 0.3M. The runs: section 8.
     the scorer's 30 min windows kept and the difference stated.
  5. The per-tag `led_fix` rows are reported from the audit's `_retained`
     columns. No step-cadence output is added.
- 6. The ranking rule and the fix candidates of section 7.
+ 6. The ranking rule and the fix candidates of section 7. NOT ASSESSABLE
+    terms, the first-hour origins until PX12, are listed without a rank.
  7. W57's D4-W Newton error is listed as a prior, unranked.
- 8. The default bundle has the copies as reference. The copies bundle has no
-    reference.
+ 8. The default bundle has the copies as reference, since no reference of
+    parts 6 and 7 is eligible on TRMM 0M before PX12 (section 7). The copies
+    bundle has no reference.
  9. The brief's "D4-W" for the cost pairs is read as WP9's D4 column,
     `wp9_energy_d4_edmf` (DYCOMS RF02, 1M, EDMF, 30 levels), where E88
     measured 8 + 8. The D4-W runs of W54 to W57 use another config.

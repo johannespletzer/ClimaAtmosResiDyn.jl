@@ -23,8 +23,9 @@
 # About 20 node-hours expected and 39 at the limits. The set has energy tags
 # and more than 24 hours at its limits, so it goes to the owner first
 # (DELIVERY_PLAN section 2). The copies estimate adds 10% to copies88's build
-# for the ledgers, as water copies with ledgers built 4.16x untagged against
-# 3.80x without (E88).
+# for the ledgers, since E88's energy copies at 8 tags built 4.16x untagged
+# with ledgers against 3.80x without (FINDINGS E88, 2446 s at 8 on D4). E88
+# has no water copies point with ledgers.
 #
 #   RUN_TREE=<clean detached tree at bb2bedf23> REC_TREE=<clean record worktree, pushed> \
 #       experiments/tag_closure/runscripts/part8_cost.sh [--submit] [arm ...]

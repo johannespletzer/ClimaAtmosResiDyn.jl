@@ -22,7 +22,7 @@ from netCDF4 import Dataset
 import part8_pilot
 from acceptance_data import DataError
 from part8_pilot import (FIX_CANDIDATES, LIMITS, compare_w58, main, od2_reading, rank_terms, row_at,
-                         run_tables)
+                         run_tables, table_rows)
 
 RECORD = Path(__file__).resolve().parents[2] / "output" / "g3base"
 DATA = RECORD / "data"
@@ -117,14 +117,18 @@ class W58RecordTests(unittest.TestCase):
             changed.write_text("".join(lines))
             self.assertEqual(len(compare_w58(DATA, changed)["differences"]), 1)
 
-    def test_rerun_prefix_reads_other_runs(self):
+    def test_rerun_prefix_reads_the_runs_output_tree(self):
+        # The model writes each run's tables under <run>/output_0000, as W58's
+        # output on scratch has them. The rerun is read from that tree.
         with tempfile.TemporaryDirectory() as tmp:
             for mode in ("default", "copies"):
-                src, dst = DATA / f"g3b_trmm0m_{mode}_6h", Path(tmp) / f"p8_trmm0m_{mode}_6h"
-                dst.mkdir()
+                src, dst = DATA / f"g3b_trmm0m_{mode}_6h", Path(tmp) / f"p8_trmm0m_{mode}_6h" / "output_0000"
+                dst.mkdir(parents=True)
                 for table in ("water_tag_closure.csv", "water_tag_audit.csv"):
                     (dst / table).write_bytes((src / table).read_bytes())
             self.assertEqual(compare_w58(tmp, SCORES, "p8")["differences"], [])
+            code, out, _ = run_main(["w58", tmp, SCORES, "--prefix", "p8"])
+            self.assertEqual((code, json.loads(out)["differences"]), (0, []))
             with self.assertRaisesRegex(DataError, "missing table"):
                 compare_w58(tmp, SCORES)
 
@@ -135,6 +139,44 @@ class W58RecordTests(unittest.TestCase):
         code, _, err = run_main(["w58", DATA / "absent", SCORES])
         self.assertEqual(code, 2)
         self.assertIn("DATA FAILURE", err)
+
+
+def audit_row(time, repair=0.0, uprepair=0.0, upfilter=0.0, residual=0.0):
+    return {"time": time, "led_repair_retained": repair, "led_fix_pbl_inventory_fraction": 0.0,
+            "led_fix_pbl_retained": 0.0, "led_fix_pbl_events": 0.0, "led_uprepair_events": 4.0,
+            "copy_residual_relative": residual, "led_uprepair_retained": uprepair, "copy_repair_relative": -uprepair,
+            "led_upfilter_retained": upfilter}
+
+
+class TableRowTests(unittest.TestCase):
+    """table_rows on one hand-made day, where every value is worked out exactly."""
+
+    def rows(self):
+        # The water is 1 at the end and its mean over the window is 4/3. The
+        # copies' repair retains 2e-3 in one day, exactly COMPARATOR_REPAIR_PER_DAY.
+        closure = [{"time": t, "gross_relative": g, "gross_residual": g, "total": w}
+                   for t, g, w in ((0.0, 0.0, 1.0), (43200.0, 1e-4, 2.0), (86400.0, 3e-4, 1.0))]
+        audit = [audit_row(0.0), audit_row(43200.0, 1e-3, 1e-3, 5e-4, 2e-5),
+                 audit_row(86400.0, 2e-3, 2e-3, 1e-3, 1e-5)]
+        return table_rows(closure, audit, "copies", end=86400.0, tags=("pbl",))
+
+    def test_values_windows_and_verdicts(self):
+        rows = {(r["rule"], r["metric"], r["window"]): r for r in self.rows()}
+        # The scored repair row and its reported whole-run twin carry one value.
+        # A value at the limit passes, as in g3base_score.py.
+        repair, twin = [r for r in self.rows() if r["metric"] == "copies' repair, gross, per day"]
+        self.assertEqual((repair["value"], repair["legacy_verdict"]), (2e-3, "pass"))
+        self.assertEqual((twin["value"], twin["legacy_verdict"]), (2e-3, "reported"))
+        self.assertIn("over the window's mean water 1.500e-03", repair["note"])
+        partition = rows[("R8", "partition repair retained gross per day", "whole run")]
+        self.assertEqual((partition["value"], partition["legacy_verdict"]), (2e-3, "pass"))
+        # PX5: the filter's share of the two corrections, 1e-3 / (1e-3 + 2e-3).
+        share = rows[("PX5", "the filter's share of the copies' two corrections", "whole run")]
+        self.assertAlmostEqual(share["value"], 1 / 3, places=15)
+        own = rows[("R5", "copies' own residual, max over outputs", "whole run")]
+        self.assertEqual(own["value"], 2e-5)
+        self.assertEqual(rows[("R4", "gross residual at 24 h, of the water", "24 h")]["value"], 3e-4)
+        self.assertEqual(sorted({r["window"] for r in self.rows()}), ["0-half-end", "24 h", "whole run"])
 
 
 def write_run(directory, times, water_column, z=(50.0, 200.0, 500.0), z_max=700.0, period="10m"):
@@ -199,6 +241,20 @@ class OD2Tests(unittest.TestCase):
         with self.assertRaisesRegex(DataError, "no hus_30m_inst.nc"):
             od2_reading(self.root / "run", "30m")
 
+    def test_command_line(self):
+        # The command reads the twin's 10 min output unless told otherwise.
+        times = np.arange(7) * 600.0
+        write_run(self.root / "run", times, 100.0 + np.cumsum([0.0, 6000.0, 3000.0, 300.0, 300.0, 300.0, 300.0]))
+        code, out, _ = run_main(["od2", self.root / "run"])
+        self.assertEqual(code, 0)
+        self.assertEqual((json.loads(out)["period"], json.loads(out)["startup_end_seconds"]), ("10m", 1200.0))
+        # A missing directory or a wrong top face is an input failure, exit 2.
+        code, _, err = run_main(["od2", self.root / "absent"])
+        self.assertEqual(code, 2)
+        self.assertIn("DATA FAILURE", err)
+        write_run(self.root / "tall", times, 100.0 + times, z_max=800.0)
+        self.assertEqual(run_main(["od2", self.root / "tall"])[0], 2)
+
 
 def score(rows):
     return {"rows": [{"id": k, "verdict": v, "metrics": m, "limitation": ""} for k, (v, m) in rows.items()]}
@@ -234,16 +290,40 @@ class RankTests(unittest.TestCase):
             "COMMON.ACCEPTED_APPLICATION_ACTIVITY": ("NOT ASSESSABLE", {}),
         })
 
+    def assessed_score(self):
+        """The origin rows as they read once PX12's eligibility file gives them a verdict."""
+        return score({
+            "WATER.CLOSURE": ("REPORTED ONLY", {"gross_over_raw": 1e-3}),
+            "WATER.ORIGINS.pbl.3600": ("FAIL", {"L1": 0.002, "Linf": 0.2}),
+            "WATER.ORIGINS.free.3600": ("PASS", {"L1": 0.004, "Linf": 0.01}),
+            "WATER.ORIGINS.evap.3600": ("PASS", {"L1": 0.03, "Linf": 0.05, "absolute_L1": 1e-3,
+                                                 "reference_share": 0.2}),
+        })
+
     def test_order_by_fraction_of_the_cited_limit(self):
-        rows = rank_terms("default", self.default_score(), tables("default"), 4e-3, "W57")
+        rows = rank_terms("default", self.assessed_score(), tables("default"), 4e-3, "W57")
         ranked = [(r["rank"], r["term"]) for r in rows if r["rank"] != ""]
-        # Fractions: pbl max(0.002/0.01, 0.2/0.25) = 0.8, led_fix 0.5, closure 0.5,
-        # free max(0.4, 0.04) = 0.4, evap 1e-4/4e-4 = 0.25, partition repair 0.2.
+        # Fractions: pbl max(0.002/0.01, 0.2/0.25) = 0.8, closure 0.5, led_fix 0.5,
+        # free max(0.4, 0.04) = 0.4, evap as a source tag max(0.03/0.10, 0.05/0.25) = 0.3,
+        # partition repair 0.2.
         self.assertEqual([t for _, t in ranked], ["origin_first_hour:pbl", "closure_residual", "led_fix:pbl",
                                                   "origin_first_hour:free", "origin_first_hour:evap",
                                                   "partition_repair"])
         self.assertEqual([k for k, _ in ranked], list(range(1, 7)))
         by = {r["term"]: r for r in rows}
+        self.assertAlmostEqual(by["origin_first_hour:pbl"]["fraction_of_limit"], 0.8)
+        self.assertAlmostEqual(by["origin_first_hour:evap"]["fraction_of_limit"], 0.3)
+        self.assertEqual(by["origin_first_hour:evap"]["observable"], "L1 at 1 h")
+
+    def test_not_assessable_origins_are_readings(self):
+        # Until PX12 the scorer marks the first-hour origins NOT ASSESSABLE. They
+        # keep their fraction and are listed after the ranked terms (design section 7).
+        rows = rank_terms("default", self.default_score(), tables("default"), 4e-3, "W57")
+        ranked = [(r["rank"], r["term"]) for r in rows if r["rank"] != ""]
+        self.assertEqual(ranked, [(1, "closure_residual"), (2, "led_fix:pbl"), (3, "partition_repair")])
+        by = {r["term"]: r for r in rows}
+        self.assertEqual((by["origin_first_hour:pbl"]["rank"], by["origin_first_hour:pbl"]["status"]),
+                         ("", "NOT ASSESSABLE"))
         self.assertAlmostEqual(by["origin_first_hour:pbl"]["fraction_of_limit"], 0.8)
         self.assertEqual(by["origin_first_hour:evap"]["observable"], "absolute L1 (small tag)")
         self.assertAlmostEqual(by["origin_first_hour:evap"]["fraction_of_limit"], 0.25)
@@ -251,11 +331,13 @@ class RankTests(unittest.TestCase):
     def test_prior_and_unlimited_terms_are_listed_not_ranked(self):
         rows = rank_terms("default", self.default_score(), tables("default"), 4e-3, "W57")
         tail = [r for r in rows if r["rank"] == ""]
-        self.assertEqual([r["term"] for r in tail], ["intervention_events", "parent_newton", "precip_sum_defect"])
-        newton = tail[1]
+        self.assertEqual([r["term"] for r in tail], ["origin_first_hour:pbl", "origin_first_hour:free",
+                                                     "origin_first_hour:evap", "intervention_events",
+                                                     "parent_newton", "precip_sum_defect"])
+        newton = tail[4]
         self.assertAlmostEqual(newton["fraction_of_limit"], 4.0)
         self.assertEqual((newton["status"], newton["source"]), ("prior, another case", "W57"))
-        self.assertTrue(all(rows.index(r) >= 6 for r in tail))
+        self.assertTrue(all(rows.index(r) >= 3 for r in tail))
 
     def test_copies_terms_and_no_comparator(self):
         s = score({"WATER.CLOSURE": ("REPORTED ONLY", {"gross_over_raw": 2e-4}),
@@ -307,6 +389,32 @@ def without_identity(text):
     return [line for line in text.splitlines() if not line.startswith("#") and not line.startswith("job_id:")]
 
 
+def active_lines(text):
+    """A script without its comment lines, so a header comment cannot satisfy a test."""
+    return "\n".join(line for line in text.splitlines() if not line.lstrip().startswith("#"))
+
+
+def run_beside_stub(root, script, stub, args):
+    """Run a copy of `script` with a stub of the script it calls, which prints its environment and arguments.
+
+    The copy sits at <root>/experiments/tag_closure/runscripts, so its own
+    tree is <root>. Nothing reaches Slurm or git.
+    """
+    import os
+    import subprocess
+    here = root / "experiments" / "tag_closure" / "runscripts"
+    here.mkdir(parents=True, exist_ok=True)
+    (here / script).write_text((TREE / "runscripts" / script).read_text())
+    (here / stub).write_text('#!/usr/bin/env bash\necho "CONFIG=${CONFIG:-} EXPECT_SHA=${EXPECT_SHA:-} '
+                             'KIND=${KIND:-} SET=${SET:-} ARGS=$*"\n')
+    (here / stub).chmod(0o755)
+    env = dict(os.environ, RUN_TREE=str(root / "run"), REC_TREE=str(root), SCRATCH=str(root / "scratch"))
+    done = subprocess.run(["bash", str(here / script), *args], capture_output=True, text=True, env=env)
+    lines = [dict(part.split("=", 1) for part in line.split(" ARGS=")[0].split()) | {"ARGS": line.split(" ARGS=")[1]}
+             for line in done.stdout.splitlines()]
+    return done.returncode, lines
+
+
 class JobScriptTests(unittest.TestCase):
     def test_trio_configs_are_w58s(self):
         for mode in ("untagged", "default", "copies"):
@@ -316,10 +424,43 @@ class JobScriptTests(unittest.TestCase):
             self.assertIn(f'job_id: "p8_trmm0m_{mode}_6h"', p8)
 
     def test_trio_script(self):
-        text = (TREE / "runscripts" / "part8_trio.sh").read_text()
+        text = active_lines((TREE / "runscripts" / "part8_trio.sh").read_text())
         self.assertIn(f"EXPECT_SHA={MAIN}", text)
-        self.assertIn("--exclusive", text)
         self.assertIn("RUNS=(untagged default copies)", text)
+
+    def test_trio_dry_run_by_default(self):
+        # Each job takes a whole node with W58's 2 CPUs and 48G, at most 1 h,
+        # and reads its own p8 config. Without --submit every call is a dry run.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            code, calls = run_beside_stub(root, "part8_trio.sh", "g3base_submit.sh", [])
+            self.assertEqual(code, 0)
+            self.assertEqual(len(calls), 3)
+            logs = root / "scratch" / "tag_closure" / "logs" / "part8"
+            for run, call in zip(("untagged", "default", "copies"), calls):
+                name = f"p8_trmm0m_{run}_6h"
+                self.assertEqual(call["CONFIG"], f"experiments/tag_closure/configs/{name}.yml")
+                self.assertTrue((TREE / "configs" / f"{name}.yml").is_file())
+                self.assertEqual((call["EXPECT_SHA"], call["KIND"]), (MAIN, "run"))
+                self.assertEqual(call["ARGS"].split(), [
+                    "--dry-run", "--account=pn49go-c", "--partition=hpda2_compute", "--time=01:00:00",
+                    "--nodes=1", "--ntasks=1", "--cpus-per-task=2", "--mem=48G", "--exclusive",
+                    f"--job-name={name}", f"--output={logs}/%x-%j.out", f"--error={logs}/%x-%j.err"])
+            code, calls = run_beside_stub(root, "part8_trio.sh", "g3base_submit.sh", ["--submit", "copies"])
+            self.assertEqual((code, len(calls)), (0, 1))
+            self.assertEqual(calls[0]["CONFIG"], "experiments/tag_closure/configs/p8_trmm0m_copies_6h.yml")
+            self.assertNotIn("--dry-run", calls[0]["ARGS"])
+            self.assertEqual(run_beside_stub(root, "part8_trio.sh", "g3base_submit.sh", ["twin"])[0], 1)
+
+    def test_cost_dry_run_by_default(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            code, calls = run_beside_stub(root, "part8_cost.sh", "submit_wp9.sh", [])
+            self.assertEqual((code, [(c["SET"], c["ARGS"]) for c in calls]), (0, [("p8", "--dry-run")]))
+            code, calls = run_beside_stub(root, "part8_cost.sh", "submit_wp9.sh", ["p8_copies_a", "p8_default_b"])
+            self.assertEqual([(c["SET"], c["ARGS"]) for c in calls], [("p8", "--dry-run p8_copies_a p8_default_b")])
+            code, calls = run_beside_stub(root, "part8_cost.sh", "submit_wp9.sh", ["--submit", "p8_copies_a"])
+            self.assertEqual([(c["SET"], c["ARGS"]) for c in calls], [("p8", "p8_copies_a")])
 
     def test_cost_table(self):
         text = (TREE / "runscripts" / "submit_wp9.sh").read_text()
@@ -333,8 +474,10 @@ class JobScriptTests(unittest.TestCase):
                                                                     "0,8:ledgers", "200G"))
             self.assertEqual(mode, arm.split("_")[1])
             self.assertEqual((time, limit), ("04:00:00", []) if mode == "default" else ("09:00:00", ["8h"]))
+        block = active_lines(block)
         self.assertIn("WP9_WARMUP=50 WP9_REPEATS=6", block)
         self.assertIn("OUT_ROOT=wp9_cost_p8", block)
+        self.assertIn("EXTRA=(--exclusive)", block)
 
     def test_scripts_parse(self):
         import subprocess
@@ -366,6 +509,13 @@ class W58OutputTests(unittest.TestCase):
         self.assertEqual(ten["startup_end_seconds"], 0.0)
         thirty = od2_reading(twin, "30m")
         self.assertIsNone(thirty["startup_end_seconds"])
+
+    def test_w58_rows_from_the_output_tree(self):
+        # The command of design section 6 step 6, on W58's own output tree.
+        root = w58_twin().parents[1]
+        code, out, _ = run_main(["w58", root, SCORES, "--prefix", "g3b"])
+        self.assertEqual(code, 0)
+        self.assertEqual((len(json.loads(out)["reproduced"]), json.loads(out)["differences"]), (18, []))
 
 
 if __name__ == "__main__":

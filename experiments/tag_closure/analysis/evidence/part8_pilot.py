@@ -8,21 +8,26 @@
 
 `w58` recomputes the table-derived rows of W58's record (R4, R5, R8) from the
 closure and audit tables in DATA_DIR and compares them with RECORDED_CSV, the
-recorded `g3base_scores.csv`. With `--prefix p8` it reads the rerun's runs and
-lists each row that differs from W58's record. `od2` reads OD2's boundary on the untagged twin
-at its own output cadence. `tables` writes the table-derived rows of one run.
+recorded `g3base_scores.csv`. DATA_DIR is either the record's flat copy
+(`output/g3base/data`) or the output root of the runs, where each run keeps
+its tables under `output_0000`. With `--prefix p8` it reads the rerun's runs
+and lists each row that differs from W58's record. `od2` reads OD2's boundary
+on the untagged twin at its own output cadence. `tables` writes the
+table-derived rows of one run.
 `rank` builds one mode's ranked table of error terms from the scorer's result
 and the table rows.
 
 It adds no threshold. Every limit it compares comes from score_acceptance.py,
-whose approved numbers are pinned by test_acceptance.py. The arithmetic of
+or from closure_verdict.py as the scorer does. test_acceptance.py pins the
+approved numbers. The arithmetic of
 the table rows is that of analysis/water/g3base_score.py, which wrote W58's
 record, so a recomputed value equals the recorded one bit for bit. The
 contract reading of each row is stated beside the legacy verdict, since a
 six-hour closure is reported under WA-SCOPE and no threshold is transplanted.
 
 Exit 0: done, and for `w58` every recorded row is reproduced. Exit 1: `w58`
-found a difference, which on the rerun is a changed number to report. Exit 2: an input is missing or inconsistent.
+found a difference, which on the rerun is a changed number to report.
+Exit 2: an input is missing or inconsistent.
 """
 
 import argparse
@@ -35,7 +40,7 @@ from pathlib import Path
 import numpy as np
 
 from acceptance_data import DataError, od2_start, require
-from convert_output import Run, faces_and_thickness, read_field
+from convert_output import ConversionError, Run, faces_and_thickness, read_field
 from score_acceptance import (AGGREGATE_REPAIR_PER_DAY, COMPARATOR_REPAIR_PER_DAY, COPIES_RESIDUAL_MAX,
                               LED_FIX_MAX, NEWTON_MAX, origin_limits)
 from closure_verdict import WATER_GROSS
@@ -47,6 +52,10 @@ TRMM_TAGS = ("pbl", "free", "evap")
 TRMM_KINDS = {"pbl": "region", "free": "region", "evap": "source"}
 # A term measured on another case or commit carries this status. It is listed, not ranked.
 PRIOR = "prior"
+# A scorer verdict that makes a measured term a reading only. Until PX12's
+# eligibility file is attached, the first-hour origin rows carry it. Such a
+# term keeps its fraction and is listed, not ranked (proposed, 2026-10-09).
+READING = "NOT ASSESSABLE"
 # Every limit used here, by the ID the design cites. Values come from the scorer.
 LIMITS = {
     "WATER_GROSS": WATER_GROSS,
@@ -186,6 +195,12 @@ def run_tables(directory, mode, end=TRMM_END):
     return table_rows(read_table(d / "water_tag_closure.csv"), read_table(d / "water_tag_audit.csv"), mode, end)
 
 
+def tables_dir(directory):
+    """Where a run keeps its tables: `output_0000` in the runs' output tree, the directory itself in the flat copy."""
+    d = Path(directory)
+    return d / "output_0000" if (d / "output_0000").is_dir() else d
+
+
 def same_value(a, b):
     """Recorded CSV numbers carry Python's shortest repr, so equal floats print equal."""
     if a is None or b in ("", None):
@@ -204,7 +219,7 @@ def compare_w58(data_dir, recorded_csv, prefix="g3b"):
     require(recorded, "the record has no TRMM R4, R5 or R8 rows")
     computed = {}
     for mode in ("default", "copies"):
-        for r in run_tables(Path(data_dir) / f"{prefix}_trmm0m_{mode}_6h", mode):
+        for r in run_tables(tables_dir(Path(data_dir) / f"{prefix}_trmm0m_{mode}_6h"), mode):
             computed.setdefault((r["rule"], mode, r["metric"]), []).append(r)
     checked, differences = [], []
     for rec in recorded:
@@ -260,7 +275,8 @@ def rank_terms(mode, score, tables, newton=None, newton_source=""):
     """One mode's error terms, ranked by the fraction of their cited limit (proposed, 2026-10-09).
 
     Terms measured on this pilot with a cited limit and a finite value come
-    first, largest fraction first. Prior terms from another case and terms
+    first, largest fraction first. Prior terms from another case, terms the
+    scorer marks NOT ASSESSABLE (the first-hour origins until PX12) and terms
     without a limit follow unranked, in the order of the design's section 7.
     A fraction is a reading against the cited limit, not a verdict.
     """
@@ -325,7 +341,8 @@ def rank_terms(mode, score, tables, newton=None, newton_source=""):
     value, status = metric("WATER.PRECIP_INSTANTANEOUS", "max_absolute_rate_defect")
     out.append(term(mode, "precip_sum_defect", "max absolute D_p over outputs", value, "kg m^-2 s^-1", None,
                     status, "score: WATER.PRECIP_INSTANTANEOUS max_absolute_rate_defect"))
-    measured = [t for t in out if t["fraction_of_limit"] is not None and not t["status"].startswith(PRIOR)]
+    measured = [t for t in out if t["fraction_of_limit"] is not None and not t["status"].startswith(PRIOR)
+                and t["status"] != READING]
     ranked = sorted(measured, key=lambda t: -t["fraction_of_limit"])
     rest = [t for t in out if all(t is not u for u in measured)]
     for i, t in enumerate(ranked, 1):
@@ -395,7 +412,7 @@ def main(argv=None):
             require((args.newton is None) == (not args.newton_source),
                     "a prior Newton error needs its source, and a source needs its value")
             write_csv(rank_terms(args.mode, score, tables, args.newton, args.newton_source), args.out)
-    except (DataError, OSError, KeyError, json.JSONDecodeError) as exc:
+    except (DataError, ConversionError, OSError, KeyError, json.JSONDecodeError) as exc:
         print(f"DATA FAILURE: {exc}", file=sys.stderr)
         return 2
     return 0

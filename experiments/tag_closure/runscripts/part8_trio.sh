@@ -14,7 +14,8 @@
 #
 # About 0.7 node-hours in all, 3 node-hours at the limits. The build is the
 # sum of the cache, tendency and integrator phases in the .err log. W58's
-# steps took 9.4 s (untagged) and 11.6 s (tagged) for the 144 steps.
+# last progress line, at 137 of the 144 steps, reads 9.4 s (untagged) and
+# 11.6 s (tagged) of step wall time.
 # W58 recorded no peak memory, and its 48G request held. Each job here takes
 # a whole node (--exclusive), so its build and step times are a reading on an
 # unshared node. They are one sample each, not the WP9 measure.
@@ -24,7 +25,8 @@
 #
 # Without --submit it runs g3base_submit.sh with --dry-run, which writes the
 # manifest and prints the sbatch line. Naming runs submits only those. The
-# twin goes first, since parity and OD2 read it.
+# twin is submitted first, since parity and OD2 read it. The jobs are
+# independent, so it need not start first.
 set -euo pipefail
 
 REC="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
