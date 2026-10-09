@@ -1,18 +1,18 @@
 # Water baseline and cost pilot
 
 The design is [design/PART8_BASELINE.md](../../design/PART8_BASELINE.md),
-pre-registered before any job. This record fills the trio's results: runs and
-provenance, the OD2 reading, parity and validity, the rows against W58, the
-contract rows and the ranked tables, plus the trio's own cost lines. It holds
-no number from the six cost jobs, which were still running when it was
-written, and no PX12 verdict. The cost pairs, the first-hour origin verdicts
-and the review record wait, each in its own section. Prior numbers (W54 to
+pre-registered before any job. This record holds the results of all nine
+jobs. They are the runs and their provenance, the OD2 reading, parity and
+validity, the rows against W58, the contract rows, the ranked tables and the
+cost. The section "Verdict" answers H1, H2 and H3 and applies the stop rules.
+No PX12 verdict is here. It waits in its own section. Prior numbers (W54 to
 W62, E87 to E90) are quoted as prior wherever they appear.
 
-Every number below comes from a file under `$SCRATCH/tag_closure/part8/` (called
-`$B`), whose log of each step is `$B/logs/<step>.txt`. The record commit is
-`9e5155325b6d778ca558b6dd2c6651006add0a80`. The steps are the design's
-section 6, steps 2 to 7, run unchanged on 2026-10-09 from this tree.
+The numbers of steps 2 to 7 come from files under `$SCRATCH/tag_closure/part8/`
+(called `$B`), whose log of each step is `$B/logs/<step>.txt`. The record
+commit is `9e5155325b6d778ca558b6dd2c6651006add0a80`. The steps are the
+design's section 6, steps 2 to 7, run unchanged on 2026-10-09 from this tree.
+The section "Cost" names its own sources.
 
 ## Runs and provenance
 
@@ -22,14 +22,22 @@ whole node. All three finished COMPLETED with Slurm exit 0:0 and driver exit 0.
 
 | Run                   | Slurm ID | Node          | Wall        | MaxRSS   | Archive    |
 |:--------------------- | --------:|:------------- | -----------:|:-------- |:---------- |
-| p8_trmm0m_untagged_6h | 14170100 | hpdar07c02s01 | 8 min 45 s  | 7436730K | not synced |
-| p8_trmm0m_default_6h  | 14170101 | hpdar07c04s11 | 14 min 04 s | 7838175K | not synced |
-| p8_trmm0m_copies_6h   | 14170103 | hpdar09c02s05 | 14 min 18 s | 9409121K | not synced |
+| p8_trmm0m_untagged_6h | 14170100 | hpdar07c02s01 | 8 min 45 s  | 7436730K | 2026-10-09 |
+| p8_trmm0m_default_6h  | 14170101 | hpdar07c04s11 | 14 min 04 s | 7838175K | 2026-10-09 |
+| p8_trmm0m_copies_6h   | 14170103 | hpdar09c02s05 | 14 min 18 s | 9409121K | 2026-10-09 |
 
 The outputs are under `$SCRATCH/tag_closure/output/p8_trmm0m_<run>_6h/output_0000`
-and the logs under `$SCRATCH/tag_closure/logs/part8/`. RUNS.md lists the same
-three rows as pending. W58's three runs and logs were synced to the archive on
-2026-10-09 and checked byte for byte (RUNS.md).
+and the logs under `$SCRATCH/tag_closure/logs/part8/`. RUNS.md lists the three
+runs and the cost set. The nine runs' outputs and logs, the manifests and the
+results under `$B` were synced to the archive on 2026-10-09 and checked byte
+for byte (the archive's README). W58's three runs and logs were synced the
+same day, before the first job.
+
+The copies' log has 12 warnings that the water tag closure residual exceeds
+the warning level of 1e-10, one at each 30 min output. They run from 2.85e-5
+at 30 min to 3.54e-4 at 6 h, the R4 value below. W58's copies log has the
+same 12. The default and the twin have none. A warning level is not an
+acceptance threshold.
 
 Exit codes of the steps: the OD2 reading, the tables, the ranks, the W58
 comparison and the L1 comparison exit 0. The converter and the scorer exit 2 on
@@ -46,8 +54,8 @@ cadence (37 samples, 0 to 6 h):
 | 10 min, the twin's own cadence    | yes, whole 6 h     | 0 s                 |
 | 30 min, scorer COMMON.OD2_WINDOWS | none (null)        | not defined         |
 
-The 10 min reading is the OD2 window of this record: a boundary at 0 s, so the
-whole 6 h is established flow and the startup window has zero length. The
+The 10 min reading is the OD2 window of this record. Its boundary is at 0 s,
+so the whole 6 h is established flow. The startup window has zero length. The
 scorer's own reading at the bundle's 30 min cadence finds no established
 window (`startup_end` null, windows startup 0 to 6 h, established null,
 sensitivity_1h 1 h to 6 h). The difference is the whole of the established
@@ -86,17 +94,22 @@ first stop does not apply.
 ## Rows against W58
 
 From `$B/w58.json` (`part8_pilot.py w58 --prefix p8`), from the scorer's
-rows and from `$B/logs/s7_compare.txt`. Each value is compared bit for bit.
+rows and from `$B/logs/s7_compare.txt`. Not every value is compared bit for
+bit. The `w58` command compares the 18 rows of R4, R5 and R8 to the last
+digit. R3's top-level change is compared to all digits. R7 is compared at the
+three printed digits at 3 h and 6 h, and to all digits at 1 h. C7 is not
+recomputed. The table below says what applies to each rule.
 
 **H1.** `$B/w58.json` lists 0 differences. All 18 recorded TRMM rows of R4,
 R5 and R8 are reproduced, value and verdict, to the last digit. So 0 of 18
 rows differ from W58, and no recorded pass became a fail. H1 is not falsified
-on these rows.
+on these rows. W58 reports R7 and C7 without a verdict, so neither can flip a
+pass. The section "Verdict" states H1.
 
 | W58 rule | Rows | Rerun against W58                                                     |
 |:-------- | ----:|:--------------------------------------------------------------------- |
 | R1       | 2    | 24 fields identical in step 7. Scorer parity: none differ             |
-| R3       | 9    | Top change 0.29980746438781125 K, as W58. Negative water 0.0          |
+| R3       | 9    | Top change 0.29980746438781125 K, W58's to all digits. Neg. water 0.0 |
 | R4       | 4    | Reproduced. Default 3.767955639221502e-15, copies 3.5435e-4           |
 | R5       | 3    | Reproduced. Own residual 2.3102e-6, repair 5.0522e-4 per day          |
 | R7       | 9    | L1 at 1, 3 and 6 h equal W58 to the printed digits (below)            |
@@ -173,6 +186,29 @@ The rows of the design's section 4, with the scorer's reading:
 | Cost                         | COMMON.COST                          | NOT ASSESSABLE                                    |
 | Held-out                     | COMMON.HELD_OUT                      | NOT ASSESSABLE                                    |
 
+Section 4 asks for some readings that the table above does not show. Each is
+read from the scorer's JSON or the tables JSON, or stated as not produced.
+
+  - **Closure over T+.** `gross_over_target` equals `gross_over_raw` in both
+    bundles, 3.781564603860974e-15 (default) and 3.543478145767747e-4
+    (copies). The positive target equals the raw water, 58.57910291455101.
+  - **`led_inc` fractions.** The default's whole-run `led_inc` inventory
+    fractions are 0.0221 (pbl), 0.0135 (free) and 0.0116 (evap). They have no
+    limit and are reported. The copies' output has no `led_inc` fields, so the
+    copies have no such reading.
+  - **0M precipitation.** The no-rain absolute defect is 0.0 in both bundles.
+    The tools give the maximum defect over the outputs, not D_p at each
+    output. No tool produces the source shares.
+  - **Copies' refinement and OD12 floors.** No tool produces them here. The
+    scorer reads both from PX12's eligibility file, so they wait for PX12.
+  - **Rain and snow, precipitation origins.** WATER.RAIN_SNOW_CLOSURE,
+    WATER.PRECIP_TAG_SUM and WATER.PRECIP_NET_FLOW_AUDIT are NOT APPLICABLE in
+    both bundles (0M).
+  - **Reproducibility.** COMMON.EVIDENCE is FAIL, DATA FAILURE in both
+    bundles. It lists the row data failures below and the missing hash of
+    `LocalPreferences.toml`. COMMON.RESTART_PHYSICAL is NOT ASSESSABLE, since
+    the pilot has no restart.
+
 The converter and scorer exit codes and the named data failures, from
 `$B/logs/s3_*.txt` and `$B/logs/s4_*.txt`. All are failures of data, none of
 the model.
@@ -194,7 +230,10 @@ the model.
 The per-tag WATER.LED_FIX failures are the cadence failure of the design's
 section 6: the ledger fields are written every 30 min against a 150 s step.
 The table path reads these from the audit, so the ranked table below has
-their values.
+their values. The tables JSON gives these rows the contract text "scored per
+OD2 window by the scorer, at accepted-step cadence". That is the contract's
+intended row. Under the owner's decision of 2026-10-09 they are reported, not
+scored.
 
 ## Ranked table of error terms
 
@@ -255,14 +294,15 @@ to its printed digits.
 The trio's cost, one sample each on an exclusive node, not the WP9 measure.
 Build is the sum of the cache, tendency and integrator phases in the `.err`
 log. Step is the progress log's last line (`wall_time_total` over its 137 of
-144 steps), with the log's own `wall_time_per_step` beside it. Peak memory is
-Slurm's MaxRSS. W58 is the prior (jobs 14119365 to 14119367, shared nodes).
+144 steps), with the log's own `wall_time_per_step` beside it. The log's value
+is `wall_time_spent` over the steps. Peak memory is Slurm's MaxRSS. W58 is the
+prior (jobs 14119365 to 14119367, shared nodes).
 
-| Run      | Cache  | Tendency | Integrator | Build   | Step total / per step | Peak memory         |
-|:-------- | ------:| --------:| ----------:| -------:|:--------------------- |:------------------- |
-| untagged | 52.0 s | 34.4 s   | 13.9 s     | 100.3 s | 6.04 s / 44.1 ms      | 7436730K (7.09 GiB) |
-| default  | 73.3 s | 75.5 s   | 61.1 s     | 209.9 s | 10.93 s / 79.8 ms     | 7838175K (7.48 GiB) |
-| copies   | 71.1 s | 104.8 s  | 47.7 s     | 223.6 s | 11.12 s / 81.2 ms     | 9409121K (8.97 GiB) |
+| Run      | Cache  | Tendency | Integrator | Build   | Step total / per step | Log's per-step at step 137 | Peak memory         |
+|:-------- | ------:| --------:| ----------:| -------:|:--------------------- |:-------------------------- |:------------------- |
+| untagged | 52.0 s | 34.4 s   | 13.9 s     | 100.3 s | 6.04 s / 44.1 ms      | 41.9 ms                    | 7436730K (7.09 GiB) |
+| default  | 73.3 s | 75.5 s   | 61.1 s     | 209.9 s | 10.93 s / 79.8 ms     | 75.9 ms                    | 7838175K (7.48 GiB) |
+| copies   | 71.1 s | 104.8 s  | 47.7 s     | 223.6 s | 11.12 s / 81.2 ms     | 77.2 ms                    | 9409121K (8.97 GiB) |
 
 | Run (W58, prior) | Build   | Step total / per step | Log's per-step at step 137 |
 |:---------------- | -------:|:--------------------- |:-------------------------- |
@@ -282,8 +322,9 @@ The header of `runscripts/part8_trio.sh` quotes W58's last line as 9.4 s and
 The six cost jobs (14170104 to 14170109) completed on 2026-10-09 with exit 0
 at every point. They ran on D4 with both families at the intended count, 0 and
 8 + 8 tags with ledgers, one node per job, and no two replicates shared a
-node. The table is `analysis/wp9_cost_table.py ... --discard 1`, so blocks 2 to
-6 are read. Its output is in `$SCRATCH/tag_closure/part8/cost/`
+node. The table is
+`analysis/wp9_cost_table.py $SCRATCH/tag_closure/output/wp9_cost_p8 --discard 1`,
+so blocks 2 to 6 are read. Its output is in `$SCRATCH/tag_closure/part8/cost/`
 (`wp9_cost_table.txt`). Every point's block spread is at most 2.4% and every
 ratio's spread at most 2.5%, under the 10% bound. So all six jobs are quoted.
 Nothing was rerun.
@@ -321,43 +362,121 @@ Slurm MaxRSS is the batch step's, over the whole job.
 | copies  | 8.737 to 8.986     | 2.9%                     | 10878.4 to 16140.9 | 48.4%                    | 23.59 to 25.30 | 26.37 to 39.38 (49.3%) | 24.94 to 25.00    |
 
 The six jobs ran on six different nodes. The step ratio is steady across the
-nodes. The absolute times are not. Point 0's step falls in two groups, 2.95
-to 3.17 ms (default b, copies a and c) and 4.46 to 4.53 ms (default a and c,
-copies b), and the 8 + 8 step follows its job's group. The ratio cancels this.
+nodes. The absolute times are not. Point 0's step falls in two groups. One
+is 2.95 to 3.17 ms (default b, copies a and c), the other 4.46 to 4.53 ms
+(default a and c, copies b). The 8 + 8 step follows its job's group. The
+ratio cancels this.
 The build ratio spreads 3.1% (default) and 7.3% (copies), against 37.6% and
 48.4% for the build seconds. The job p8_copies_b took 17,518 s for its 8 + 8
 point against 11,962 and 12,177 s for its siblings. Its build (16,140.9 s),
 first step (1,198.1 s) and block step (39.375 ms) are each 1.3 to 1.5 times
-its siblings', and its point 0 was slower too (build 638.0 s against 461.2 s
-and 458.7 s). The logs show a load average of 1.0 to 1.1 at the start of every
-job. They show no more.
+its siblings'. Its point 0 was slower too (build 638.0 s against 461.2 s and
+458.7 s). The arm CSVs record a one-minute load average of 1.00 to 1.27 at
+the twelve points. They show no more.
 
 Prior. E88's default 8 + 8 step with ledgers was 9.098x of its point 0 and its
 build 2.14x. The addendum built the copies at 8 + 8 without ledgers in
-15,377 s (4 h 16 min). The readings here are 8.998x to 9.379x and a build of
-2.135x to 2.201x for the default, and a build of 10,878 s to 16,141 s with
-ledgers for the copies. OD3's cost row is 2x at the intended count, and its
+15,377 s (4 h 16 min). E88's 8 + 8 point peaked at 14.5 GB and the
+addendum's copies at 21.4 GB, both without ledgers. The readings here are
+8.998x to 9.379x and a build of 2.135x to 2.201x for the default. The copies
+built in 10,878 s to 16,141 s with ledgers. The peaks are 13.2 to 16.4 GB
+(default) and 24.9 to 25.0 GB (copies). OD3's cost row is 2x at the intended count, and its
 copies row is a build within 4 h. The default's step ratio is 4.5 to 4.7 times
 OD3's 2x. The copies' step ratio is 8.7x to 9.0x. The copies' build was within
 4 h on two of the three nodes (3.02 h and 3.09 h) and 4.48 h on the third.
 
-**H3's answer.** The default half, an 8 + 8 step with ledgers above OD3's 2x,
-stands on all three nodes (8.998x to 9.379x), as E88's 9.098x did, so it is not
-falsified. The copies half says the copies do not build within 4 h. On
-p8_copies_b it holds (4.48 h) and on p8_copies_a and p8_copies_c it does not
-(3.02 h and 3.09 h), so the reading is split across the nodes. The design
-fixes no rule for a split build, so this record states the three builds and
-leaves the half to the owner. Neither half is a verdict. Criterion 10 is
-scored in part 10.
+**H3's answer.** The default half says an 8 + 8 step with ledgers stays above
+OD3's 2x. It holds on all three nodes (8.998x to 9.379x), as E88's 9.098x did.
+So it is not falsified. The copies half says the copies do not build within
+4 h. It holds on p8_copies_b (4.48 h). It does not hold on p8_copies_a and
+p8_copies_c (3.02 h and 3.09 h). So the reading is split across the nodes.
+The design fixes no rule for a split build. This record states the three
+builds and leaves the half to the owner. Neither half is a verdict.
+Criterion 10 is scored in part 10.
 
-No cost cap is set. None is proposed.
+No cost cap is set. None is proposed. WA-COST's cap waits for the owner
+(section "Verdict").
+
+## Verdict
+
+In the terms of the design's sections 1 and 10. This record sets no cap,
+threshold, tolerance or default.
+
+  - **H1, the prior stands: held.** No recorded pass of W58 became a fail.
+    The 18 rows of R4, R5 and R8 equal W58's to the last digit. R1 and R3
+    pass again. No parent field differs, and the top-level change equals
+    W58's to all digits. R7 equals W58 at the printed digits, and to all
+    digits at 1 h. C7 was not recomputed. W58 reports R7 and C7 without a
+    verdict, so neither could flip a pass.
+  - **H2, the order of the error terms: held.** The rerun ranks the prior's
+    first term first in each mode. In the default it is the closure residual
+    (1.89e-12 of WATER_GROSS). In the copies it is the copies' repair (0.2526
+    of COMPARATOR_REPAIR_PER_DAY). The first three terms of each mode are the
+    prior's. Part 9 takes the prior order.
+  - **H3, the cost: split.** The default half holds on all three nodes
+    (8.998x to 9.379x against OD3's 2x, E88 9.098x). It is not falsified.
+    The copies half is split. Two builds fall within 4 h (3.02 h and
+    3.09 h), and one does not (4.48 h). The design gives no rule for a split,
+    so the copies half waits for the owner. Neither half is a criterion 10
+    verdict.
+
+The stop rules of section 10, one by one:
+
+ 1. **A parent difference.** None. The scorer finds no differing exported
+    field in either tagged run (23 compared against the twin). Step 7 finds
+    default and copies bitwise identical in 24 fields. The rule does not
+    apply.
+ 2. **A flipped verdict.** None (H1). Nothing goes to the top of part 9's
+    queue under this rule.
+ 3. **Another first term.** None (H2). Part 9 follows the prior order, which
+    the rerun confirms.
+ 4. **A failed job.** None. All nine jobs finished COMPLETED with exit 0.
+    Nothing was rerun.
+
+Section 12's choices 4, 5 and 8 are decided (2026-10-09). So is choice 6's
+listing of NOT ASSESSABLE terms without a rank or a fraction. Choices 1, 2, 3,
+7 and 9 stay proposed. So do choice 6's ranking rule and fix candidates. This
+record decides none of them.
+
+What waits for the owner:
+
+  - The copies half of H3, with its three builds (3.02 h, 4.48 h, 3.09 h).
+  - WA-COST's cap. WA-COST asks for a cap based on the measured part 8 cost.
+    The entry in force says no cap for the pilot or for water alone, and
+    that caps gate level 4. This record sets no cap and proposes none.
+  - The proposed choices of section 12 listed above.
+  - The difference the design's section 2 lists. The part 8 brief puts the
+    walk fix's measurement in 12c, the delivery plan in part 9's queue.
+
+The follow-ups the owner decided on 2026-10-09 stay as decided. A scorer PR
+reads OD2 from the twin's cadence before part 10 scores rain on TRMM. A
+converter and scorer follow-up maps the per-tag `led_fix` columns before part
+10. The registered producer is part 9's queue item.
+
+What waits for PX12 is the next section. Part 8 is done except the owner's
+items and PX12's readings.
 
 ## What waits for PX12
 
-*Filled when PX12's eligibility file is attached.* The first-hour origin
-verdicts and the copies' eligibility, re-scored on the same bundles.
+*Filled when PX12's eligibility file is attached.* The same bundles are then
+re-scored, with no rerun. The design's section 9 lists what waits:
+
+  - the first-hour origin verdicts, `WATER.ORIGINS.<tag>.3600`, and their rank,
+  - the copies' eligibility: own residual, repair, refinement, OD12 floors,
+    KI4-COPIES and UP1,
+  - the parent's Newton error on TRMM, from PX12's P1 probe,
+  - PX5's growth clause, from its `dt` 150/75 s ladder.
 
 ## Review record
 
 *Filled by the record PR's review.* Agents, findings and the owner's
 decisions.
+
+2026-10-09, before the PR. A first-pass finder (worker, Sonnet high) checked
+the record against the design and recomputed about 30 numbers. A reviewer
+(clima-reviewer, Opus high) confirmed its findings and patched the record. It
+brought the intro and the runs table to the finished state and narrowed H1's
+"bit for bit" to what was compared. It added the log's per-step column, the
+section 4 readings, the load average of 1.00 to 1.27, the copies' closure
+warnings and the verdict. Tokens: the cost worker 81k, the finder 134k
+and the reviewer 127k.
