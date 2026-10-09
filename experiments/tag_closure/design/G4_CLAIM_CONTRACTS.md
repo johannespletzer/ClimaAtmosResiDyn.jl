@@ -58,7 +58,9 @@ representation only: every parent field must remain bitwise identical to the sam
 model operation and is outside this contract. Use `c = 110,495 J kg⁻¹` as the
 existing candidate for conditional source-tag tests. OD11's fixed convention
 remains proposed until the owner resolves it. No value of `c` is qualified for
-all temperatures or configurations.
+all temperatures or configurations. *Decided 2026-10-09 (DECISIONS):* the
+fixed `c` is 166,764 J kg⁻¹, dry internal energy counted from 150 K, from the
+first stored-tag run of part 11a or 11b. The rest of OD11 stays proposed.
 
 **Mass is not water.** For the source tags, a process's applied-update event
 gives `δp = δp^ρe + c δp^ρ` [J m⁻³ s⁻¹], from its `ρe_tot` and `ρ` tendencies.
@@ -253,7 +255,7 @@ forcing, boundary and solver option. Old configs are not current evidence.
 Set `energy_process_record: [radiation]`. **Zero source tags/copies**, hence
 no offset inventory, energy follower or per-tag intervention claim. The
 record's target is `ρe_tot` at the parent's unchanged Thermodynamics reference.
-The later stored-tag candidate retains fixed `c = 110,495 J kg⁻¹` and OD11.
+The later stored-tag candidate retains fixed `c = 110,495 J kg⁻¹` and OD11. *Decided 2026-10-09:* its fixed `c` is 166,764 J kg⁻¹.
 This proposal changes no repository default or production target.
 
 Output instantaneous `e_prc_radiation`, `rhoa`, vertical coordinates/weights,

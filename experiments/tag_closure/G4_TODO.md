@@ -132,6 +132,10 @@ Concrete remaining work, retaining all G4.n/PX obligations below:
     same-sign energy follower, offset change, comparator promotion or relaxation
     of a tolerance. OD7 remains the owner's choice after its recorded long-run
     prerequisites. C4's decided treatment is to document the size.
+    *Decided 2026-10-09 (DECISIONS):* 11c also attributes the offset of mass
+    changes as separate events and adopts the label partition (ATTRIBUTION_PATH
+    step 4a). It adds a separate offset for water only if 11b shows that
+    falling ice moves enough provenance upward.
   - [ ] **Part 11d, scoped energy qualification:** apply the canonical matrix
     only after owner accuracy/scope/cost choices and eligible evidence. Report
     record-only and source-provenance outcomes separately. OD14 freezes the
@@ -546,6 +550,11 @@ error. It is an input to OD7, not a decision.
     long runs is open.
   - *Scope added (provenance pathway, 2026-09-26):* every energy conclusion is
     stated at the fixed `c`, with the `c`/2`c` spread as a limitation.
+  - *Decided 2026-10-09 (DECISIONS):* U8 is answered. The fixed `c` is
+    166,764 J/kg, dry internal energy counted from 150 K. The sweep compares it
+    with `cp_d·T0` = 274,389 J/kg, and each conclusion is flagged robust to `c`
+    or convention-defined. A convention-defined conclusion cannot reach level 3
+    or 4. 110,495 J/kg runs once in 11b, for continuity.
 
 ### G4.11 Carried over from G3
 
@@ -565,7 +574,10 @@ error. It is an input to OD7, not a decision.
   - compartments for the energy falling water carries.
 
 Related, but beyond G4 (M8, in BACKLOG.md): how much provenance ice moves
-upward where it lasts (open question 3, FQ-10's remainder).
+upward where it lasts (open question 3, FQ-10's remainder). *Decided
+2026-10-09 (DECISIONS):* part 11b measures how much provenance falling ice
+moves upward, on a 1M case with ice. Part 11c adds a separate offset for water,
+counted from ice at 150 K, only if that matters.
 
 ### G4.12 Held-out columns for energy, a red team, and the owner's choice of the energy default
 
@@ -587,6 +599,10 @@ measures the cost first (the owner, 2026-09-24).
     per-step gross-loss accumulators and passes an output-cadence test first.
     It is an instantaneous loss timescale, not a residence time. Design at the
     end of this file.
+  - *Decided 2026-10-09 (DECISIONS):* `τ = E_c/L` comes with every energy
+    result, labelled as a turnover time set by the convention, not a
+    persistence. Results report region tags as shares of `E_c` and the
+    composition of new energy, never region-tag integrals compared across `c`.
 
 ### G4.15 The energy follower after the owner's review of #102
 

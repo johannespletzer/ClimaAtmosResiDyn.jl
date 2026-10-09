@@ -1,0 +1,54 @@
+cv_d = 717.5, R_d*T0 = 78396.92, cp_d*T0 = 274389.22
+cp_d * 110 K = 110495.0 (the offset in use)
+
+The family c(T_ref) = cp_d*T0 - cv_d*T_ref
+  in use         c =  110495.0  T_ref at z=0: 228.42 K, 1 km: 214.75 K, 3 km: 187.41 K; enthalpy zero 163.16 K
+  2c (E71, E19)  c =  220990.0  T_ref at z=0:  74.42 K, 1 km:  60.75 K, 3 km:  33.41 K; enthalpy zero  53.16 K
+  150 K rule     c =  166764.2  T_ref at z=0: 150.00 K, 1 km: 136.33 K, 3 km: 108.98 K; enthalpy zero 107.14 K
+  cp_d*T0        c =  274389.2  T_ref at z=0:   0.00 K, 1 km: -13.67 K, 3 km: -41.02 K; enthalpy zero   0.00 K
+
+D4 at 24 h: total 1.14160e+08 (c), 3.00328e+08 (2c), ratio 2.6308; column mass 1684.9 kg/m2; mean e_tot -42739 J/kg; mean E_c/rho 67756 J/kg
+D4 gross residual at 24 h: 266.9 (c), 509.4 (2c) J/m2
+  E71 factors 2.765, 2.515: strat share 0.463 -> 0.487 (+5.10%), tropo 0.537 -> 0.513 (-4.40%)
+  E71 factors 2.765, 2.520: strat share 0.452 -> 0.475 (+5.10%), tropo 0.548 -> 0.525 (-4.21%)
+  E71 factors 2.765, 2.525: strat share 0.441 -> 0.463 (+5.10%), tropo 0.559 -> 0.537 (-4.02%)
+  E71 factors 2.770, 2.515: strat share 0.454 -> 0.478 (+5.29%), tropo 0.546 -> 0.522 (-4.40%)
+  E71 factors 2.770, 2.520: strat share 0.443 -> 0.467 (+5.29%), tropo 0.557 -> 0.533 (-4.21%)
+  E71 factors 2.770, 2.525: strat share 0.432 -> 0.455 (+5.29%), tropo 0.568 -> 0.545 (-4.02%)
+  E71 factors 2.775, 2.515: strat share 0.445 -> 0.470 (+5.48%), tropo 0.555 -> 0.530 (-4.40%)
+  E71 factors 2.775, 2.520: strat share 0.434 -> 0.458 (+5.48%), tropo 0.566 -> 0.542 (-4.21%)
+  E71 factors 2.775, 2.525: strat share 0.423 -> 0.446 (+5.48%), tropo 0.577 -> 0.554 (-4.02%)
+  E71 source tags: largest pairwise ratio change 2.02%
+  well-mixed estimate of a source tag's change over 1 day, tau 4 d: 7.75%
+  well-mixed estimate of a source tag's change over 1 day, tau 8 d: 3.87%
+  well-mixed estimate of a source tag's change over 1 day, tau 11 d: 2.82%
+  well-mixed estimate of a source tag's change over 1 day, tau 20 d: 1.55%
+
+C4 sphere at t=0: ratio 2.2004; mass 5.2215e+18 kg; mean e_tot -18445 J/kg; mean E_c/rho 92050 J/kg
+
+E_c against the offset in use, mass-weighted mean
+  2c         D4 x2.63, sphere x2.20
+  150 K rule D4 x1.83, sphere x1.61
+  cp_d*T0    D4 x3.42, sphere x2.78
+
+Coldest cells at t=0 (R9): E_c/rho, extratropics and tropics
+  in use        10079 and    86809 J/kg, ratio 8.61
+  150 K rule    66348 and   143078 J/kg, ratio 2.16
+  cp_d*T0      173973 and   250703 J/kg, ratio 1.44
+
+E74's flush time scaled by the sphere's E_c ratio, and e^(-90/tau)
+  in use     tau    60 to    95 d; initial part left at day 90 0.22 to 0.39
+  150 K rule tau    97 to   153 d; initial part left at day 90 0.39 to 0.56
+  cp_d*T0    tau   167 to   264 d; initial part left at day 90 0.58 to 0.71
+
+Offset part of the surface-flux tag's daily production on D4
+  in use     3.60e+05 J/m2, 3.7%
+  150 K rule 5.43e+05 J/m2, 5.5%
+  cp_d*T0    8.94e+05 J/m2, 8.7%
+  water 303 kJ 9.89e+05 J/m2, 9.5%
+
+Most negative falling-ice energy, PrecipitatingColumn at t=0 (E41), c included
+  in use      -193000 J/kg
+  150 K rule  -136731 J/kg
+  cp_d*T0      -29106 J/kg
+  turns positive at c = 303495 J/kg

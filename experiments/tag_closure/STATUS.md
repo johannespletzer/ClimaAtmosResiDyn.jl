@@ -1,5 +1,38 @@
 # Status
 
+## The energy offset `c`, decided (2026-10-09)
+
+The owner decided proposals 1 to 6 of the
+[review of the offset](review/agent_reviews/offset_c_challenge_2026-10-09.md)
+(DECISIONS, 2026-10-09). The fixed `c` is 166,764 J/kg, dry internal energy
+counted from 150 K, from the first stored-tag run of part 11a or 11b. The
+sweep compares it with `cp_d·T0`, and each conclusion is flagged robust to `c`
+or convention-defined. Results report shares, the composition of new energy
+and `τ`. Part 11c attributes the offset of mass changes as separate events and
+adopts the label partition. Part 11b measures how much provenance falling ice
+moves upward first. OD6's absolute term reads in OD4 units for energy. The
+rest of OD11 stays proposed. The part 11a design merged in PR #164 froze
+110,495 J/kg per case before this decision. Its design JSON, hash pin and
+fixtures move to the fixed `c` in a follow-up.
+
+## Part 11a energy references, design (2026-10-09)
+
+The [pre-registered design](design/PART11A_ENERGY_REFERENCES.md) builds the
+eight cases of G4_CLAIM_CONTRACTS section 6 as offline known answers. Each
+case freezes its convention `c`. Stored-energy cases and the radiation record
+are separate references. The tools and tests are in `analysis/evidence/`
+(`energy_reference*.py`). Every case's wrong-origin mutant is caught in a
+test. The owner decided three choices on 2026-10-09:
+
+  - The design lists `opposing_net_zero`'s three unassessable rows. The suite
+    exits 0 when only those are unassessable and 3 for any other.
+  - The [PX22 draft](configs/part11a_px22_draft/README.md) uses three new
+    configs at `c`, `2c` and untagged. It waits for the owner's approval.
+  - The stored cases keep the constructed 128 eps floor as their gate.
+
+**Part 11a is not done.** No run, scorer, default or tolerance change
+is supplied.
+
 ## Part 8 water baseline and cost pilot, design (2026-10-09)
 
 The [pre-registered design](design/PART8_BASELINE.md) fixes the baseline of
@@ -1146,7 +1179,7 @@ accepts it ([PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), section 9).
 
 Each decision's current state is in ROADMAP.md's register, the single source.
 OD7 is the only open numbered decision. OD9 to OD11 and OD15 are proposed, not
-open. Open now, each with its entry in
+open. OD11's fixed `c` for energy was decided on 2026-10-09. Open now, each with its entry in
 [DECISIONS.md](DECISIONS.md), "Waiting for the owner":
 
   - **OD7**, G4.15's rule for energy, deferred until site 23 can be scored.
