@@ -34,8 +34,9 @@ from energy_reference_adapter import (
 
 
 # Check-name prefixes that each declared invariant of a mutant maps to.
+# `stage_fluxes` maps to the captured parent: the state holds no face flux.
 INVARIANT_CHECKS = {"parent": ("parent",), "partition": ("partition_closure",), "inputs": ("inputs",),
-                    "stage_fluxes": ("parent",)}
+                    "stage_fluxes": ("parent",), "overlay_sum": ("overlay_sum",), "records": ("records",)}
 
 
 def write_json(path, value):
@@ -80,9 +81,13 @@ def write_fixture(root, case_id):
 
 def mutant_caught(case, evaluation):
     """The mutant fails, and every invariant it declares to keep still holds."""
-    prefixes = tuple(p for name in case["mutant"]["preserves"] for p in INVARIANT_CHECKS.get(name, ()))
-    kept = all(ok for name, ok in evaluation["checks"].items() if name.startswith(prefixes)) if prefixes else True
-    return bool(evaluation["meets"] is False and kept)
+    kept = []
+    for name in case["mutant"]["preserves"]:
+        require(name in INVARIANT_CHECKS, "declared invariant has no check: " + name)
+        found = [ok for check, ok in evaluation["checks"].items() if check.startswith(INVARIANT_CHECKS[name])]
+        require(bool(found), "declared invariant was not evaluated: " + name)
+        kept += found
+    return bool(evaluation["meets"] is False and all(kept))
 
 
 VERDICTS = {True: "PASS", False: "FAIL", None: "NOT ASSESSABLE"}

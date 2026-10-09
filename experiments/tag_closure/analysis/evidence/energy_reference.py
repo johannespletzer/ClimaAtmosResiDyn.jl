@@ -621,6 +621,10 @@ def evaluate_candidate(design, case, candidate, reference):
     if kind == "radiation_record":
         checks["parent"] = _match(design, candidate.values["rho"], reference.values["rho"])
         checks["record"] = _match(design, candidate.values["prc_radiation"], reference.values["prc_radiation"])
+        # The stage route shares the flux with the candidate. The closed-form
+        # continuum does not, so its sign is scored in every cell (finder 2.2).
+        continuum = _radiation_continuum(design, case).values["prc_radiation"]
+        checks["record_sign"] = bool(np.all(np.sign(candidate.values["prc_radiation"][1:]) == np.sign(continuum[1:])))
         amounts = [(window_amount(candidate, 0, j), window_amount(reference, 0, j)) for j in range(1, len(reference.time))]
         checks["window_amounts"] = all(_match(design, a, b) for a, b in amounts)
         column = [float(np.sum(candidate.dz * candidate.values["prc_radiation"][j])) for j in range(len(reference.time))]
@@ -644,6 +648,12 @@ def evaluate_candidate(design, case, candidate, reference):
             checks["partition_closure" + suffix] = _match(design, partition, candidate.values["E_c" + suffix])
             identity = candidate.values["rho_e" + suffix] + c * candidate.values["rho" + suffix]
             checks["convention_identity" + suffix] = _match(design, identity, candidate.values["E_c" + suffix])
+            overlays = [t["name"] for t in case["tags"] if not t["partition"]]
+            checks["overlay_sum" + suffix] = _match(design, sum(candidate.values["tag_" + k + suffix] for k in overlays),
+                                                    sum(reference.values["tag_" + k + suffix] for k in overlays))
+        records = [name for name in reference.values if name.startswith("prc_")]
+        if records:
+            checks["records"] = all(_match(design, candidate.values[n], reference.values[n]) for n in records)
         if kind == "offset_change":
             checks["parent_bitwise_parity"] = all(np.array_equal(candidate.values[n + "@0"], candidate.values[n + "@1"])
                                                   for n in ("rho", "rho_e"))

@@ -10,6 +10,7 @@ import numpy as np
 
 import score_acceptance
 from acceptance_data import DataError
+from energy_reference import _radiation_continuum
 from energy_reference import (DESIGN_SHA256, activity_report, analytic, case_by_id, classify, evaluate_candidate,
                               load_design, mutant, numerical, stage_record, stage_reference, window_amount)
 from energy_reference_adapter import (LADDER_TIE, candidate_for, evaluate_energy_reference, reference_for,
@@ -86,8 +87,12 @@ class MutantTests(unittest.TestCase):
         # Finder 2.1: a wrong cooling overlay sits only in unassessable rows.
         c = case("opposing_net_zero")
         reference, candidate = reference_for(DESIGN, c), candidate_for(DESIGN, c)
-        candidate.values["tag_src_cool"] = 0.05 * candidate.values["E_c"]
+        moved = 0.001 * candidate.values["E_c"][1]
+        candidate.values["tag_src_cool"][1] += moved
+        candidate.values["tag_src_heat"][1] -= moved
         self.assertIsNone(evaluate_candidate(DESIGN, c, candidate, reference)["meets"])
+        candidate.values["tag_src_cool"] = 0.05 * candidate.values["E_c"]
+        self.assertFalse(evaluate_candidate(DESIGN, c, candidate, reference)["checks"]["overlay_sum"])
         # A one-ulp density change makes every origin row unassessable. The mutant must not pass.
         for case_id in ("heating_labels", "donor_cooling", "labelled_exchange", "boundary_offset_exchange"):
             c = case(case_id)
@@ -95,8 +100,9 @@ class MutantTests(unittest.TestCase):
             wrong = mutant(DESIGN, c, candidate_for(DESIGN, c))
             wrong.values["rho"] = np.nextafter(wrong.values["rho"], np.inf)
             result = evaluate_candidate(DESIGN, c, wrong, reference)
-            self.assertIsNone(result["meets"], case_id)
-            self.assertFalse(mutant_caught(c, result))
+            # Unassessable rows alone never pass. Other checks may still fail it.
+            self.assertIsNot(result["meets"], True, case_id)
+            self.assertTrue(all(row["meets"] is None for row in result["origin_rows"]))
 
     def test_offset_change_invariant_fractions(self):
         self.check("offset_change", "origins")
@@ -179,6 +185,36 @@ class EquationTests(unittest.TestCase):
         self.assertFalse(evaluate_candidate(DESIGN, c, moved, reference)["checks"]["record"])
         right, wrong = window_amount(reference, 1, 2), window_amount(reference, 1, 2, "specific_difference")
         self.assertGreater(np.max(np.abs(wrong - right)), 1e-6 * np.max(np.abs(right)))
+
+
+class RecordAndInvariantTests(unittest.TestCase):
+    def test_continuum_record_is_pinned_by_hand(self):
+        # Finder 2.2. -D_z F of F = 10 + 70 (z/H)^2 on 125 m cells, times the time integral.
+        c = case("radiation_record")
+        P = _radiation_continuum(DESIGN, c).values["prc_radiation"]
+        omega = 2.0 * np.pi / 86400.0
+        self.assertAlmostEqual(P[2, 0], -756.0, places=9)
+        self.assertAlmostEqual(P[2, 7], -11340.0, places=8)
+        self.assertAlmostEqual(P[1, 0], -0.00875 * (3600.0 + 0.3 * (1.0 - np.cos(np.pi / 12.0)) / omega), places=9)
+        errors = [float(np.max(np.abs(stage_reference(DESIGN, c, dt).values["prc_radiation"][1] - P[1])))
+                  for dt in (240, 120, 60)]
+        self.assertTrue(all(3.9 < a / b < 4.1 for a, b in zip(errors, errors[1:])), errors)
+        flipped = stage_record(DESIGN, c, 60, sign=-1.0)
+        self.assertFalse(evaluate_candidate(DESIGN, c, flipped, stage_reference(DESIGN, c, 60))["checks"]["record_sign"])
+
+    def test_mutant_caught_checks_every_declared_invariant(self):
+        # Finder 2.3.
+        c = case("heating_labels")
+        result = evaluate_candidate(DESIGN, c, mutant(DESIGN, c, candidate_for(DESIGN, c)), reference_for(DESIGN, c))
+        self.assertTrue(mutant_caught(c, result) and result["checks"]["overlay_sum"])
+        for name in ("overlay_sum", "parent", "partition_closure"):
+            self.assertFalse(mutant_caught(c, {**result, "checks": {**result["checks"], name: False}}), name)
+        exchange = case("labelled_exchange")
+        moved = evaluate_candidate(DESIGN, exchange, mutant(DESIGN, exchange, candidate_for(DESIGN, exchange)),
+                                   reference_for(DESIGN, exchange))
+        for c, result, preserves in ((c, result, ["unknown"]), (exchange, moved, ["records"])):
+            with self.assertRaises(DataError):
+                mutant_caught({**c, "mutant": {**c["mutant"], "preserves": preserves}}, result)
 
 
 class FixtureTests(unittest.TestCase):
