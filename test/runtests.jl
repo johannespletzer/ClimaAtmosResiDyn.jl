@@ -38,6 +38,7 @@ const KNOWN_TEST_GROUPS = (
     "tagging_water_increment_explicit",
     "tagging_water_leak",
     "tagging_water_precipitation",
+    "tagging_water_applications",
     "tagging_water_precipitation_sphere",
     "tagging_water_rainout_jacobian",
     "parameterizations",
@@ -340,6 +341,15 @@ end
 if TEST_GROUP in ("tagging_water_precipitation", "all")
     @safetestset "Water tags with rain and snow parts" begin
         @time include("tagged_water_precipitation_integration.jl")
+    end
+end
+
+# The water tags' application producer on the column of the rain and snow
+# parts. The file builds the column five times: with the producer in Float64
+# and Float32, without it in both, and once from a checkpoint.
+if TEST_GROUP in ("tagging_water_applications", "all")
+    @safetestset "Water tag application producer" begin
+        @time include("water_tag_applications_integration.jl")
     end
 end
 
