@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "design_sha256": "5231c54ce27ef8f20298620ef58ee63034265a43cfc9cfe56a55baaaddc9ee9c",
+  "scope": "preregistered energy known-answer development fixture",
+  "retain_all_rungs": true,
+  "case_ids": ["heating_labels", "donor_cooling", "labelled_exchange", "boundary_offset_exchange", "opposing_net_zero", "offset_change", "inventory_edge_cases", "radiation_record"]
+}
