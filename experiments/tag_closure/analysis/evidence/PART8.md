@@ -20,11 +20,11 @@ The trio ran on main `bb2bedf23` (record `9e5155325`, run tree
 `ClimaAtmosResiDyn-p8-run`), submitted 2026-10-09 at 13:56 CEST. Each took a
 whole node. All three finished COMPLETED with Slurm exit 0:0 and driver exit 0.
 
-| Run                   | Slurm ID | Node          | Wall      | MaxRSS    | Archive    |
-|:--------------------- | --------:|:------------- | ---------:|:--------- |:---------- |
-| p8_trmm0m_untagged_6h | 14170100 | hpdar07c02s01 | 8 min 45 s  | 7436730K  | not synced |
-| p8_trmm0m_default_6h  | 14170101 | hpdar07c04s11 | 14 min 04 s | 7838175K  | not synced |
-| p8_trmm0m_copies_6h   | 14170103 | hpdar09c02s05 | 14 min 18 s | 9409121K  | not synced |
+| Run                   | Slurm ID | Node          | Wall        | MaxRSS   | Archive    |
+|:--------------------- | --------:|:------------- | -----------:|:-------- |:---------- |
+| p8_trmm0m_untagged_6h | 14170100 | hpdar07c02s01 | 8 min 45 s  | 7436730K | not synced |
+| p8_trmm0m_default_6h  | 14170101 | hpdar07c04s11 | 14 min 04 s | 7838175K | not synced |
+| p8_trmm0m_copies_6h   | 14170103 | hpdar09c02s05 | 14 min 18 s | 9409121K | not synced |
 
 The outputs are under `$SCRATCH/tag_closure/output/p8_trmm0m_<run>_6h/output_0000`
 and the logs under `$SCRATCH/tag_closure/logs/part8/`. RUNS.md lists the same
@@ -41,10 +41,10 @@ QUALIFIED on both. Section "Contract rows" names the data failures.
 From `$B/od2.json`, `part8_pilot.py od2` on the twin at its own 10 min
 cadence (37 samples, 0 to 6 h):
 
-| Reading                         | Established window | Startup window ends |
-|:------------------------------- |:------------------ | -------------------:|
-| 10 min, the twin's own cadence  | yes, whole 6 h     | 0 s                 |
-| 30 min, scorer COMMON.OD2_WINDOWS | none (null)      | not defined         |
+| Reading                           | Established window | Startup window ends |
+|:--------------------------------- |:------------------ | -------------------:|
+| 10 min, the twin's own cadence    | yes, whole 6 h     | 0 s                 |
+| 30 min, scorer COMMON.OD2_WINDOWS | none (null)        | not defined         |
 
 The 10 min reading is the OD2 window of this record: a boundary at 0 s, so the
 whole 6 h is established flow and the startup window has zero length. The
@@ -65,14 +65,14 @@ before part 10 scores rain on TRMM.
 
 From `$B/default_score.json` and `$B/copies_score.json`.
 
-| Row                      | Default bundle                | Copies bundle                |
-|:------------------------ |:----------------------------- |:---------------------------- |
-| COMMON.PARENT_PARITY     | NOT ASSESSABLE, COMPLETE      | NOT ASSESSABLE, COMPLETE     |
-| differing exported fields | none (23 compared)           | none (23 compared)           |
-| REFERENCE.PARENT_PARITY  | NOT ASSESSABLE, COMPLETE      | NOT ASSESSABLE, DATA FAILURE |
-| COMMON.NEGATIVE_WATER    | PASS, max ratio 0, no latch   | PASS, max ratio 0, no latch  |
-| COMMON.PARENT_TEMPERATURE | PASS, min 192.459 K          | PASS, min 192.459 K          |
-| top-level change         | 0.29980746438781125 K         | 0.29980746438781125 K        |
+| Row                       | Default bundle              | Copies bundle                |
+|:------------------------- |:--------------------------- |:---------------------------- |
+| COMMON.PARENT_PARITY      | NOT ASSESSABLE, COMPLETE    | NOT ASSESSABLE, COMPLETE     |
+| differing exported fields | none (23 compared)          | none (23 compared)           |
+| REFERENCE.PARENT_PARITY   | NOT ASSESSABLE, COMPLETE    | NOT ASSESSABLE, DATA FAILURE |
+| COMMON.NEGATIVE_WATER     | PASS, max ratio 0, no latch | PASS, max ratio 0, no latch  |
+| COMMON.PARENT_TEMPERATURE | PASS, min 192.459 K         | PASS, min 192.459 K          |
+| top-level change          | 0.29980746438781125 K       | 0.29980746438781125 K        |
 
 The exported fields of both tagged runs are bit for bit the twin's: the
 scorer's `differing` list is empty and `exported_outputs_identical` is true.
@@ -93,15 +93,15 @@ R5 and R8 are reproduced, value and verdict, to the last digit. So 0 of 18
 rows differ from W58, and no recorded pass became a fail. H1 is not falsified
 on these rows.
 
-| W58 rule | Rows | Rerun against W58                                              |
-|:-------- | ----:|:-------------------------------------------------------------- |
-| R1       | 2    | 24 fields identical in step 7. Scorer parity: none differ      |
-| R3       | 9    | Top change 0.29980746438781125 K, as W58. Negative water 0.0   |
-| R4       | 4    | Reproduced. Default 3.767955639221502e-15, copies 3.5435e-4    |
-| R5       | 3    | Reproduced. Own residual 2.3102e-6, repair 5.0522e-4 per day   |
-| R7       | 9    | L1 at 1, 3 and 6 h equal W58 to the printed digits (below)     |
+| W58 rule | Rows | Rerun against W58                                                     |
+|:-------- | ----:|:--------------------------------------------------------------------- |
+| R1       | 2    | 24 fields identical in step 7. Scorer parity: none differ             |
+| R3       | 9    | Top change 0.29980746438781125 K, as W58. Negative water 0.0          |
+| R4       | 4    | Reproduced. Default 3.767955639221502e-15, copies 3.5435e-4           |
+| R5       | 3    | Reproduced. Own residual 2.3102e-6, repair 5.0522e-4 per day          |
+| R7       | 9    | L1 at 1, 3 and 6 h equal W58 to the printed digits (below)            |
 | R8       | 11   | Reproduced. Default led_fix all 0, copies led_fix 6.25e-7, 3.26e-7, 0 |
-| C7       | 2    | Not recomputed by any step. Scorer D_p below as the nearest    |
+| C7       | 2    | Not recomputed by any step. Scorer D_p below as the nearest           |
 
 R1 and R3 are read from step 7 and from the scorer's JSON, not from the
 `w58` command, which covers R4, R5 and R8. R7 is read from step 7, which
@@ -113,8 +113,8 @@ of steps 2 to 7 recomputes it. The scorer's WATER.PRECIP_INSTANTANEOUS
 
 The R7 reading of the default against the copies, step 7:
 
-| Tag  | L1 at 1 h | L1 at 3 h | L1 at 6 h | W58 (1, 3, 6 h)            |
-|:---- | ---------:| ---------:| ---------:|:-------------------------- |
+| Tag  | L1 at 1 h | L1 at 3 h | L1 at 6 h | W58 (1, 3, 6 h)              |
+|:---- | ---------:| ---------:| ---------:|:---------------------------- |
 | pbl  | 1.03e-04  | 4.55e-03  | 2.06e-02  | 1.03e-04, 4.55e-03, 2.06e-02 |
 | free | 5.06e-05  | 2.07e-03  | 1.11e-02  | 5.06e-05, 2.07e-03, 1.11e-02 |
 | evap | 7.42e-02  | 3.23e-02  | 4.14e-02  | 7.42e-02, 3.23e-02, 4.14e-02 |
@@ -134,13 +134,13 @@ From the scorer's JSON of both bundles. The scorer exits 2 on both and
 qualifies neither (NOT QUALIFIED). Of the 68 rows in each: 21 NOT APPLICABLE.
 The rest are below. None is a measured value over a limit.
 
-| Verdict, data status       | Default | Copies |
-|:-------------------------- | -------:| ------:|
-| PASS, COMPLETE             | 7       | 7      |
-| REPORTED ONLY, COMPLETE    | 3       | 3      |
-| NOT ASSESSABLE, COMPLETE   | 17      | 13     |
-| NOT ASSESSABLE, DATA FAILURE | 9     | 10     |
-| FAIL, DATA FAILURE         | 11      | 14     |
+| Verdict, data status         | Default | Copies |
+|:---------------------------- | -------:| ------:|
+| PASS, COMPLETE               | 7       | 7      |
+| REPORTED ONLY, COMPLETE      | 3       | 3      |
+| NOT ASSESSABLE, COMPLETE     | 17      | 13     |
+| NOT ASSESSABLE, DATA FAILURE | 9       | 10     |
+| FAIL, DATA FAILURE           | 11      | 14     |
 
 PASS rows, both bundles: COMMON.ROSTER, COMMON.NEGATIVE_WATER,
 COMMON.OD2_WINDOWS, COMMON.PARENT_TEMPERATURE, WATER.AGGREGATE_REPAIR on
@@ -149,29 +149,29 @@ COMMON.PILOT_SCOPE, WATER.CLOSURE, WATER.PRECIP_INSTANTANEOUS.
 
 The rows of the design's section 4, with the scorer's reading:
 
-| 6.1.2 row                 | Scorer row                         | Both bundles                  |
-|:------------------------- |:---------------------------------- |:----------------------------- |
-| Scope                     | COMMON.ROSTER, COMMON.PILOT_SCOPE  | PASS, REPORTED ONLY           |
-| Parent parity             | COMMON.PARENT_PARITY               | NOT ASSESSABLE (none differ)  |
-| Parent validity           | NEGATIVE_WATER, PARENT_TEMPERATURE | PASS, PASS                    |
-| Parent validity, Newton   | COMMON.NEWTON_TRIAL                | FAIL, DATA FAILURE            |
-| Closure                   | WATER.CLOSURE                      | REPORTED ONLY                 |
-| Named remainder           | WATER.NAMED_REMAINDER              | FAIL, DATA FAILURE            |
-| Copies eligibility        | REFERENCE.ELIGIBILITY.*            | NOT ASSESSABLE (PX12)         |
-| Per-tag origins, 1 h      | WATER.ORIGINS.<tag>.3600           | default NOT ASSESSABLE, copies FAIL, DATA FAILURE |
-| Per-tag origins, 24 h     | WATER.ORIGINS.<tag>.86400          | NOT APPLICABLE                |
-| Process/donor origins     | WATER.PROCESS_WEIGHTED.*           | FAIL, DATA FAILURE            |
-| Numerical intervention    | WATER.AGGREGATE_REPAIR.*           | PASS                          |
-| Numerical intervention    | WATER.LED_FIX.<tag>.*              | FAIL, DATA FAILURE            |
-| Numerical intervention    | WATER.LED_INC.<tag>.*              | NOT ASSESSABLE, DATA FAILURE  |
-| Accepted applications     | COMMON.ACCEPTED_APPLICATION_ACTIVITY | NOT ASSESSABLE              |
-| 0M precipitation sum      | WATER.PRECIP_INSTANTANEOUS         | REPORTED ONLY                 |
-| 0M precipitation, integrated | WATER.PRECIP_INTEGRATED.*       | NOT ASSESSABLE, DATA FAILURE  |
-| Convergence, refinement   | COMMON.CONVERGENCE, REFINEMENT     | NOT ASSESSABLE                |
-| Aggregation               | COMMON.AGGREGATION                 | NOT ASSESSABLE, DATA FAILURE  |
-| Restart                   | COMMON.RESTART_PHYSICAL            | NOT ASSESSABLE                |
-| Cost                      | COMMON.COST                        | NOT ASSESSABLE                |
-| Held-out                  | COMMON.HELD_OUT                    | NOT ASSESSABLE                |
+| 6.1.2 row                    | Scorer row                           | Both bundles                                      |
+|:---------------------------- |:------------------------------------ |:------------------------------------------------- |
+| Scope                        | COMMON.ROSTER, COMMON.PILOT_SCOPE    | PASS, REPORTED ONLY                               |
+| Parent parity                | COMMON.PARENT_PARITY                 | NOT ASSESSABLE (none differ)                      |
+| Parent validity              | NEGATIVE_WATER, PARENT_TEMPERATURE   | PASS, PASS                                        |
+| Parent validity, Newton      | COMMON.NEWTON_TRIAL                  | FAIL, DATA FAILURE                                |
+| Closure                      | WATER.CLOSURE                        | REPORTED ONLY                                     |
+| Named remainder              | WATER.NAMED_REMAINDER                | FAIL, DATA FAILURE                                |
+| Copies eligibility           | REFERENCE.ELIGIBILITY.*              | NOT ASSESSABLE (PX12)                             |
+| Per-tag origins, 1 h         | WATER.ORIGINS.<tag>.3600             | default NOT ASSESSABLE, copies FAIL, DATA FAILURE |
+| Per-tag origins, 24 h        | WATER.ORIGINS.<tag>.86400            | NOT APPLICABLE                                    |
+| Process/donor origins        | WATER.PROCESS_WEIGHTED.*             | FAIL, DATA FAILURE                                |
+| Numerical intervention       | WATER.AGGREGATE_REPAIR.*             | PASS                                              |
+| Numerical intervention       | WATER.LED_FIX.<tag>.*                | FAIL, DATA FAILURE                                |
+| Numerical intervention       | WATER.LED_INC.<tag>.*                | NOT ASSESSABLE, DATA FAILURE                      |
+| Accepted applications        | COMMON.ACCEPTED_APPLICATION_ACTIVITY | NOT ASSESSABLE                                    |
+| 0M precipitation sum         | WATER.PRECIP_INSTANTANEOUS           | REPORTED ONLY                                     |
+| 0M precipitation, integrated | WATER.PRECIP_INTEGRATED.*            | NOT ASSESSABLE, DATA FAILURE                      |
+| Convergence, refinement      | COMMON.CONVERGENCE, REFINEMENT       | NOT ASSESSABLE                                    |
+| Aggregation                  | COMMON.AGGREGATION                   | NOT ASSESSABLE, DATA FAILURE                      |
+| Restart                      | COMMON.RESTART_PHYSICAL              | NOT ASSESSABLE                                    |
+| Cost                         | COMMON.COST                          | NOT ASSESSABLE                                    |
+| Held-out                     | COMMON.HELD_OUT                      | NOT ASSESSABLE                                    |
 
 The converter and scorer exit codes and the named data failures, from
 `$B/logs/s3_*.txt` and `$B/logs/s4_*.txt`. All are failures of data, none of
@@ -198,43 +198,42 @@ their values.
 
 ## Ranked table of error terms
 
-From `$B/default_rank.csv` and `$B/copies_rank.csv`, built by `part8_pilot.py
-rank` from the scorer's JSON and the table rows. A fraction is a reading
+From `$B/default_rank.csv` and `$B/copies_rank.csv`, built by `part8_pilot.py rank` from the scorer's JSON and the table rows. A fraction is a reading
 against a cited limit, not a verdict. The ranking rule is the design's
 section 7. The zeros of the default keep the table order.
 
 **Default.**
 
-| Rank | Term                     | Value        | Comparator                    | Fraction of limit |
-| ----:|:------------------------ | ------------:|:----------------------------- | -----------------:|
-| 1    | Closure residual         | 3.78e-15     | WATER_GROSS, 2e-3             | 1.89e-12          |
-| 2    | Partition repair per day | 0.0          | AGGREGATE_REPAIR_PER_DAY, 5e-3 | 0                |
-| 3    | led_fix, pbl             | 0.0          | LED_FIX_MAX, 2e-2             | 0                 |
-| 4    | led_fix, free            | 0.0          | LED_FIX_MAX, 2e-2             | 0                 |
-| 5    | led_fix, evap            | 0.0          | LED_FIX_MAX, 2e-2             | 0                 |
+| Rank | Term                     | Value    | Comparator                     | Fraction of limit |
+| ----:|:------------------------ | --------:|:------------------------------ | -----------------:|
+| 1    | Closure residual         | 3.78e-15 | WATER_GROSS, 2e-3              | 1.89e-12          |
+| 2    | Partition repair per day | 0.0      | AGGREGATE_REPAIR_PER_DAY, 5e-3 | 0                 |
+| 3    | led_fix, pbl             | 0.0      | LED_FIX_MAX, 2e-2              | 0                 |
+| 4    | led_fix, free            | 0.0      | LED_FIX_MAX, 2e-2              | 0                 |
+| 5    | led_fix, evap            | 0.0      | LED_FIX_MAX, 2e-2              | 0                 |
 
 Listed without a rank, as the design's section 7 fixes:
 
-| Term                        | Value          | Comparator and status                      |
-|:--------------------------- | --------------:|:------------------------------------------ |
-| Origin at 1 h, pbl (L1)     | 1.03e-04       | the rerun's copies, NOT ASSESSABLE (PX12)  |
-| Origin at 1 h, free (L1)    | 5.06e-05       | the rerun's copies, NOT ASSESSABLE (PX12)  |
+| Term                         | Value          | Comparator and status                     |
+|:---------------------------- | --------------:|:----------------------------------------- |
+| Origin at 1 h, pbl (L1)      | 1.03e-04       | the rerun's copies, NOT ASSESSABLE (PX12) |
+| Origin at 1 h, free (L1)     | 5.06e-05       | the rerun's copies, NOT ASSESSABLE (PX12) |
 | Origin at 1 h, evap (abs L1) | 5.05e-03 kg/m2 | small-tag rule, SMALL, NOT ASSESSABLE     |
-| Intervention events         | 27413          | NOT ASSESSABLE, no registered producer     |
-| Parent Newton error         | 4.1e-3         | W57, D4-W, prior, 4.1 of NEWTON_MAX        |
-| 0M precipitation sum        | 2.98e-19       | max abs rate defect, REPORTED ONLY         |
+| Intervention events          | 27413          | NOT ASSESSABLE, no registered producer    |
+| Parent Newton error          | 4.1e-3         | W57, D4-W, prior, 4.1 of NEWTON_MAX       |
+| 0M precipitation sum         | 2.98e-19       | max abs rate defect, REPORTED ONLY        |
 
 **Copies.**
 
-| Rank | Term                      | Value      | Comparator                       | Fraction of limit |
-| ----:|:------------------------- | ----------:|:-------------------------------- | -----------------:|
-| 1    | Copies' repair per day    | 5.05e-04   | COMPARATOR_REPAIR_PER_DAY, 2e-3  | 0.2526            |
-| 2    | Closure residual          | 3.54e-04   | WATER_GROSS, 2e-3                | 0.1772            |
-| 3    | Copies' own residual      | 2.31e-06   | COPIES_RESIDUAL_MAX, 2e-4        | 0.01155           |
-| 4    | Partition repair per day  | 8.57e-07   | AGGREGATE_REPAIR_PER_DAY, 5e-3   | 1.7e-04           |
-| 5    | led_fix, pbl              | 6.25e-07   | LED_FIX_MAX, 2e-2                | 3.1e-05           |
-| 6    | led_fix, free             | 3.26e-07   | LED_FIX_MAX, 2e-2                | 1.6e-05           |
-| 7    | led_fix, evap             | 0.0        | LED_FIX_MAX, 2e-2                | 0                 |
+| Rank | Term                     | Value    | Comparator                      | Fraction of limit |
+| ----:|:------------------------ | --------:|:------------------------------- | -----------------:|
+| 1    | Copies' repair per day   | 5.05e-04 | COMPARATOR_REPAIR_PER_DAY, 2e-3 | 0.2526            |
+| 2    | Closure residual         | 3.54e-04 | WATER_GROSS, 2e-3               | 0.1772            |
+| 3    | Copies' own residual     | 2.31e-06 | COPIES_RESIDUAL_MAX, 2e-4       | 0.01155           |
+| 4    | Partition repair per day | 8.57e-07 | AGGREGATE_REPAIR_PER_DAY, 5e-3  | 1.7e-04           |
+| 5    | led_fix, pbl             | 6.25e-07 | LED_FIX_MAX, 2e-2               | 3.1e-05           |
+| 6    | led_fix, free            | 3.26e-07 | LED_FIX_MAX, 2e-2               | 1.6e-05           |
+| 7    | led_fix, evap            | 0.0      | LED_FIX_MAX, 2e-2               | 0                 |
 
 Unranked in the copies bundle: intervention events 15317 (copy_repair 13769),
 parent Newton error 4.1e-3 (prior, another case) and the 0M precipitation
@@ -259,17 +258,17 @@ log. Step is the progress log's last line (`wall_time_total` over its 137 of
 144 steps), with the log's own `wall_time_per_step` beside it. Peak memory is
 Slurm's MaxRSS. W58 is the prior (jobs 14119365 to 14119367, shared nodes).
 
-| Run      | Cache   | Tendency | Integrator | Build   | Step total / per step | Peak memory       |
-|:-------- | -------:| --------:| ----------:| -------:|:--------------------- |:----------------- |
-| untagged | 52.0 s  | 34.4 s   | 13.9 s     | 100.3 s | 6.04 s / 44.1 ms      | 7436730K (7.09 GiB) |
-| default  | 73.3 s  | 75.5 s   | 61.1 s     | 209.9 s | 10.93 s / 79.8 ms     | 7838175K (7.48 GiB) |
-| copies   | 71.1 s  | 104.8 s  | 47.7 s     | 223.6 s | 11.12 s / 81.2 ms     | 9409121K (8.97 GiB) |
+| Run      | Cache  | Tendency | Integrator | Build   | Step total / per step | Peak memory         |
+|:-------- | ------:| --------:| ----------:| -------:|:--------------------- |:------------------- |
+| untagged | 52.0 s | 34.4 s   | 13.9 s     | 100.3 s | 6.04 s / 44.1 ms      | 7436730K (7.09 GiB) |
+| default  | 73.3 s | 75.5 s   | 61.1 s     | 209.9 s | 10.93 s / 79.8 ms     | 7838175K (7.48 GiB) |
+| copies   | 71.1 s | 104.8 s  | 47.7 s     | 223.6 s | 11.12 s / 81.2 ms     | 9409121K (8.97 GiB) |
 
-| Run (W58, prior) | Build    | Step total / per step | Log's per-step at step 137 |
-|:---------------- | --------:|:--------------------- |:------------------------- |
-| untagged         | 158.0 s  | 9.36 s / 68.3 ms      | 65.0 ms                    |
-| default          | 265.2 s  | 11.61 s / 84.7 ms     | 80.6 ms                    |
-| copies           | 277.1 s  | 11.70 s / 85.4 ms     | 81.2 ms                    |
+| Run (W58, prior) | Build   | Step total / per step | Log's per-step at step 137 |
+|:---------------- | -------:|:--------------------- |:-------------------------- |
+| untagged         | 158.0 s | 9.36 s / 68.3 ms      | 65.0 ms                    |
+| default          | 265.2 s | 11.61 s / 84.7 ms     | 80.6 ms                    |
+| copies           | 277.1 s | 11.70 s / 85.4 ms     | 81.2 ms                    |
 
 The rerun's builds are 37% (untagged), 21% (default) and 19% (copies) shorter
 than W58's. Its steps are 35% shorter for the untagged twin, 6% for the
@@ -280,10 +279,78 @@ twin. These are single samples. Wall times of the jobs: 525, 844 and 858 s.
 The header of `runscripts/part8_trio.sh` quotes W58's last line as 9.4 s and
 11.6 s. These are `wall_time_total`, not `wall_time_spent` (8.9 s and 11.0 s).
 
-*To be filled from the six cost jobs (`analysis/wp9_cost_table.py` with
-`--discard 1`).* For each mode at 8 + 8 with ledgers: step ratio, build,
-allocation per step, peak memory, the block spreads and the node spread. E88
-and its addendum as prior. H3's answer. No cap is set.
+The six cost jobs (14170104 to 14170109) completed on 2026-10-09 with exit 0
+at every point. They ran on D4 with both families at the intended count, 0 and
+8 + 8 tags with ledgers, one node per job, and no two replicates shared a
+node. The table is `analysis/wp9_cost_table.py ... --discard 1`, so blocks 2 to
+6 are read. Its output is in `$SCRATCH/tag_closure/part8/cost/`
+(`wp9_cost_table.txt`). Every point's block spread is at most 2.4% and every
+ratio's spread at most 2.5%, under the 10% bound. So all six jobs are quoted.
+Nothing was rerun.
+
+| Job          | Mode    | Node          | Elapsed | Point 0 step, ms | 8 + 8 step, ms | Ratio (min) | Ratio (median) | Quoted | Point 0 spread | 8 + 8 spread | Ratio spread |
+|:------------ |:------- |:------------- | -------:| ----------------:| --------------:| -----------:| --------------:| ------:| --------------:| ------------:| ------------:|
+| p8_default_a | default | hpdar09c02s07 | 0:56:25 | 4.508            | 41.053         | 9.106       | 9.076          | 9.106  | 0.7%           | 0.5%         | 0.4%         |
+| p8_default_b | default | hpdar10c03s02 | 0:42:12 | 2.953            | 27.697         | 9.379       | 9.343          | 9.379  | 1.0%           | 0.6%         | 1.0%         |
+| p8_default_c | default | hpdar10c03s04 | 0:56:31 | 4.531            | 40.775         | 8.998       | 8.977          | 8.998  | 2.3%           | 0.3%         | 2.5%         |
+| p8_copies_a  | copies  | hpdar10c03s06 | 3:33:25 | 3.169            | 27.541         | 8.691       | 8.737          | 8.737  | 0.9%           | 2.4%         | 2.3%         |
+| p8_copies_b  | copies  | hpdar07c04s07 | 5:10:30 | 4.463            | 39.375         | 8.823       | 8.852          | 8.852  | 1.2%           | 2.2%         | 1.9%         |
+| p8_copies_c  | copies  | hpdar07c04s08 | 3:37:06 | 2.947            | 26.368         | 8.948       | 8.986          | 8.986  | 0.8%           | 2.2%         | 2.4%         |
+
+The ratio is the 8 + 8 step over the same job's point 0, the minimum over
+blocks 2 to 6 beside the median over the same blocks. The less favourable of
+the two is quoted, which is the larger one. Spreads are (max - min) / min over
+blocks 2 to 6.
+
+| Job          | Build, s | Build / point 0 build | Build, h | First step, s | Allocation per step, B | Script's peak, GB | Slurm MaxRSS |
+|:------------ | --------:| ---------------------:| --------:| -------------:| ----------------------:| -----------------:|:------------ |
+| p8_default_a | 1361.5   | 2.135                 | 0.38     | 817.4         | 6038456                | 16.36             | 16999679K    |
+| p8_default_b | 989.9    | 2.201                 | 0.27     | 629.6         | 6038456                | 13.22             | 13436392K    |
+| p8_default_c | 1361.9   | 2.137                 | 0.38     | 836.2         | 6038456                | 16.26             | 16898520K    |
+| p8_copies_a  | 10878.4  | 23.587                | 3.02     | 927.9         | 7180344                | 25.00             | 26052594K    |
+| p8_copies_b  | 16140.9  | 25.299                | 4.48     | 1198.1        | 7180344                | 24.98             | 26029573K    |
+| p8_copies_c  | 11114.3  | 24.230                | 3.09     | 910.7         | 7180344                | 24.94             | 25741104K    |
+
+Point 0 allocates 560216 B per step in every job. The script's peak is the
+process's maximum resident size after the 8 + 8 point, in the script's GB. The
+Slurm MaxRSS is the batch step's, over the whole job.
+
+| Mode    | Step ratio, quoted | Node spread of the ratio | Build, s           | Node spread of the build | Build ratio    | Step, ms (node spread) | Peak, script's GB |
+|:------- |:------------------ |:------------------------ |:------------------ |:------------------------ |:-------------- |:---------------------- |:----------------- |
+| default | 8.998 to 9.379     | 4.2%                     | 989.9 to 1361.9    | 37.6%                    | 2.135 to 2.201 | 27.70 to 41.05 (48.2%) | 13.22 to 16.36    |
+| copies  | 8.737 to 8.986     | 2.9%                     | 10878.4 to 16140.9 | 48.4%                    | 23.59 to 25.30 | 26.37 to 39.38 (49.3%) | 24.94 to 25.00    |
+
+The six jobs ran on six different nodes. The step ratio is steady across the
+nodes. The absolute times are not. Point 0's step falls in two groups, 2.95
+to 3.17 ms (default b, copies a and c) and 4.46 to 4.53 ms (default a and c,
+copies b), and the 8 + 8 step follows its job's group. The ratio cancels this.
+The build ratio spreads 3.1% (default) and 7.3% (copies), against 37.6% and
+48.4% for the build seconds. The job p8_copies_b took 17,518 s for its 8 + 8
+point against 11,962 and 12,177 s for its siblings. Its build (16,140.9 s),
+first step (1,198.1 s) and block step (39.375 ms) are each 1.3 to 1.5 times
+its siblings', and its point 0 was slower too (build 638.0 s against 461.2 s
+and 458.7 s). The logs show a load average of 1.0 to 1.1 at the start of every
+job. They show no more.
+
+Prior. E88's default 8 + 8 step with ledgers was 9.098x of its point 0 and its
+build 2.14x. The addendum built the copies at 8 + 8 without ledgers in
+15,377 s (4 h 16 min). The readings here are 8.998x to 9.379x and a build of
+2.135x to 2.201x for the default, and a build of 10,878 s to 16,141 s with
+ledgers for the copies. OD3's cost row is 2x at the intended count, and its
+copies row is a build within 4 h. The default's step ratio is 4.5 to 4.7 times
+OD3's 2x. The copies' step ratio is 8.7x to 9.0x. The copies' build was within
+4 h on two of the three nodes (3.02 h and 3.09 h) and 4.48 h on the third.
+
+**H3's answer.** The default half, an 8 + 8 step with ledgers above OD3's 2x,
+stands on all three nodes (8.998x to 9.379x), as E88's 9.098x did, so it is not
+falsified. The copies half says the copies do not build within 4 h. On
+p8_copies_b it holds (4.48 h) and on p8_copies_a and p8_copies_c it does not
+(3.02 h and 3.09 h), so the reading is split across the nodes. The design
+fixes no rule for a split build, so this record states the three builds and
+leaves the half to the owner. Neither half is a verdict. Criterion 10 is
+scored in part 10.
+
+No cost cap is set. None is proposed.
 
 ## What waits for PX12
 

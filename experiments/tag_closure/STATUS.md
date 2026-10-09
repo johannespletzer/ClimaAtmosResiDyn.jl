@@ -41,7 +41,7 @@ configuration, both modes and the twin, the contract's rows and which are
 scored or reported, the thresholds by ID, the OD2 reading, the ranked table of
 error terms with a fix candidate per term, and the cost at 8 + 8 tags on D4.
 Nine jobs are scripted with their estimates (`runscripts/part8_trio.sh`,
-`runscripts/part8_cost.sh`), about 20 node-hours. None is submitted.
+`runscripts/part8_cost.sh`), about 20 node-hours. The six cost jobs completed on 2026-10-09 and the record has the cost.
 
 `analysis/evidence/part8_pilot.py` is the glue. It reproduces W58's 18 TRMM
 table rows bit for bit from the repository's `output/g3base/data/`, reads OD2
