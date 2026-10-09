@@ -12,7 +12,7 @@ and `τ`. Part 11c attributes the offset of mass changes as separate events and
 adopts the label partition. Part 11b measures how much provenance falling ice
 moves upward first. OD6's absolute term reads in OD4 units for energy. The
 rest of OD11 stays proposed. The part 11a design, hash pin and fixtures moved
-to the fixed `c` on 2026-10-09 (this PR).
+to the fixed `c` on 2026-10-09 (PR #166).
 
 ## Part 11a energy references, design (2026-10-09)
 

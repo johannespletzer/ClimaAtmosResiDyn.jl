@@ -49,7 +49,7 @@
      "contract_row": "G4_CLAIM_CONTRACTS 6, row 2. Equation 2.2, loss by phi_k",
      "identity": "a_k(t) = a_k(0) E_c(t) / E_c(0) for pure donor loss with positive E_c and no other term",
      "independent_mechanism": "closed-form exponential cooling and a separate step allocator with clamped shares",
-     "convention": {"c_J_kg": 274389.0, "frozen": true, "basis": "c_p,d T_0 at the default parameters, the sweep alternative of G4.10 (DECISIONS 2026-10-09, in force). A second value shows that each case declares its own c"},
+     "convention": {"c_J_kg": 274389.0, "frozen": true, "basis": "c_p,d T_0 at the default parameters, the sweep alternative of G4.10 (DECISIONS 2026-10-09, in force). A second value shows that each case declares its own c. Its use in this case is proposed 2026-10-09"},
      "theta_x_window": {"start_seconds": 0.0, "end": "endpoint", "frozen": true, "basis": "the established window of the small-tag rule (OD2). These fixtures have no startup, so it starts at 0. Proposed 2026-10-09"},
      "c_delta_rho_applies": false, "od4_scales": ["theta_x", "theta_i"],
      "dz_m": [100.0, 100.0, 100.0], "rho_kg_m3": [1.2, 1.1, 1.0],

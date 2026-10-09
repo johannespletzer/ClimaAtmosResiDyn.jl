@@ -44,9 +44,14 @@ class ConstantTests(unittest.TestCase):
     def test_each_case_declares_and_freezes_its_convention(self):
         offsets = {c["id"]: c["convention"]["c_J_kg"] for c in DESIGN["cases"]}
         self.assertTrue(all(c["convention"]["frozen"] is True for c in DESIGN["cases"]))
-        self.assertEqual(offsets["heating_labels"], 166764.0)
-        self.assertEqual(offsets["donor_cooling"], 274389.0)
-        self.assertEqual(offsets["offset_change"], [166764.0, 333528.0])
+        # The fixed c is cp_d T0 - cv_d 150 K and the sweep alternative cp_d T0, both
+        # at the defaults the model resolves (ClimaParams 1.2.0, Thermodynamics 1.3.0).
+        cp_d, R_d, T0 = 1004.5, 287.0, 273.16
+        fixed = float(round(cp_d * T0 - (cp_d - R_d) * 150.0))
+        self.assertEqual(fixed, 166764.0)
+        self.assertEqual(offsets["heating_labels"], fixed)
+        self.assertEqual(offsets["donor_cooling"], float(round(cp_d * T0)))
+        self.assertEqual(offsets["offset_change"], [fixed, 2.0 * fixed])
         # The mass source changes sign in E_c between c and 2c (the case's identity).
         oc = case("offset_change")
         self.assertEqual([np.sign(np.add(oc["energy_source_J_m3_s"], c * np.array(oc["mass_source_kg_m3_s"]))).tolist()
@@ -166,14 +171,19 @@ class EquationTests(unittest.TestCase):
         truth = analytic(DESIGN, c)
         self.assertFalse(np.allclose(truth.values["rho_q"][-1] - truth.values["rho_q"][0],
                                      truth.values["rho"][-1] - truth.values["rho"][0]))
-        for wrong in ("water", "no_offset"):
+        offset = c["convention"]["c_J_kg"]
+        for wrong in ("right", "water", "no_offset"):
             values = {k: v.copy() for k, v in truth.values.items()}
-            if wrong == "water":
-                values["E_c"] = values["rho_e"] + 166764.0 * (values["rho"][0] + values["rho_q"] - values["rho_q"][0])
+            if wrong == "right":
+                values["E_c"] = values["rho_e"] + offset * values["rho"]
+            elif wrong == "water":
+                values["E_c"] = values["rho_e"] + offset * (values["rho"][0] + values["rho_q"] - values["rho_q"][0])
             else:
-                values["E_c"] = values["rho_e"] + 166764.0 * values["rho"][0]
+                values["E_c"] = values["rho_e"] + offset * values["rho"][0]
             state = type(truth)(truth.time, truth.dz, values, {})
-            self.assertFalse(evaluate_candidate(DESIGN, c, state, truth)["checks"]["convention_identity"])
+            # The right offset passes, so each failure is the mass, not the value of c.
+            checks = evaluate_candidate(DESIGN, c, state, truth)["checks"]
+            self.assertIs(checks["convention_identity"], wrong == "right", wrong)
 
     def test_opposing_activity_theta_x_and_theta_i_differ(self):
         c = case("opposing_net_zero")

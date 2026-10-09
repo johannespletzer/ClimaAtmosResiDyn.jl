@@ -1,7 +1,8 @@
 # Part 11a: energy references, pre-registered design
 
 Proposed 2026-10-09, for the owner. Base: `claude/plan-rev2` at `9e5155325`.
-The cases moved to the fixed `c` on 2026-10-09, at `ddbafbbfe`.
+The cases moved to the fixed `c` on 2026-10-09. The planning commit is now
+`ddbafbbfe`.
 The model code the cases describe is `main` at `bb2bedf23`. No run, threshold,
 default, tolerance or scorer change is part of this design.
 
@@ -36,14 +37,15 @@ cases use the fixed `c` of 166,764 J/kg, dry internal energy counted from
 110,495 J/kg as historical results. E71 showed that doubling `c` moved the
 region tags' integrals by 152% and 177%, so every energy verdict names its
 `c`. `donor_cooling` uses `c_p,d T_0` = 274,389 J/kg, the sweep alternative of
-G4.10, to show that the tools read `c` per case. Three inputs follow `c`.
+G4.10, to show that the tools read `c` per case. Two inputs follow `c`.
 `offset_change` sets its energy source to −1.5 `c` times its mass source, so
 the source changes sign in `E_c` between `c` and `2c`. `inventory_edge_cases`
-sets `ρe` so that its cells hold `E_c` = 130,495, 0 and −9,505 J/m³. In
-`boundary_offset_exchange`, `F_c` points upward while `e_fall + c < 0`, which
-holds for `c` below 3e5 J/kg. `cΔρ` enters only `boundary_offset_exchange`
-and `offset_change`, the cases with a mass change. Θx is defined for `heating_labels`, `donor_cooling`,
-`opposing_net_zero` and `offset_change`. Θi is computed where records exist.
+sets `ρe` so that its cells hold `E_c` = 130,495, 0 and −9,505 J/m³. One
+condition depends on `c`. In `boundary_offset_exchange`, `F_c` points upward
+while `e_fall + c < 0`, which holds for `c` below 3e5 J/kg. `cΔρ` enters only
+`boundary_offset_exchange` and `offset_change`, the cases with a mass change.
+Θx is defined for `heating_labels`, `donor_cooling`, `opposing_net_zero` and
+`offset_change`. Θi is computed where records exist.
 The other cases have no source, so a percentage of Θx is not assessable there.
 
 Stored-energy cases and the radiation record are separate references with
@@ -96,9 +98,9 @@ must read zero arrays in the candidate.
 The owner decided four choices on 2026-10-09
 ([DECISIONS.md](../DECISIONS.md), 2026-10-09). They are in force.
 
-  - Decided 2026-10-09: the fixed `c` is 166,764 J/kg (OD11). Each case
-    freezes it, except `donor_cooling`, which uses `c_p,d T_0` = 274,389 J/kg
-    as the sweep alternative. `offset_change` adds `2c` = 333,528 J/kg.
+  - Decided 2026-10-09: the fixed `c` is 166,764 J/kg (OD11). The cases
+    freeze it, and `offset_change` adds `2c` = 333,528 J/kg. `donor_cooling`
+    is listed below.
   - Decided 2026-10-09: `opposing_net_zero` lists its expected NOT
     ASSESSABLE rows in the frozen design. They are `src_heat` at one hour and
     `src_cool` at both endpoints. `src_cool` has no gain path, so the fixture
@@ -120,6 +122,8 @@ The choices below stay proposed.
     code reads it, and the adapter refuses a fixture whose window is missing
     or differs.
   - The surface donor of the boundary case is the bottom cell.
+  - `donor_cooling` uses `c_p,d T_0` = 274,389 J/kg, the sweep alternative
+    that is in force, instead of the fixed `c`.
   - The record floor is reported relative to the record, never scored.
   - Rule names per case in `energy_reference_adapter.RULES`.
   - The roundoff allowance of 128 eps, the use of `SECOND_HALF_TIE` as the

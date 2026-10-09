@@ -1120,5 +1120,5 @@ python3 -m pytest test_energy_reference.py -q
 ```
 
 Exit codes 0 to 4 as for the water fixtures. Here 3 also means that a
-candidate has an origin row the scorer's reading cannot assess. The config
-exits 3 for that reason. See [PART11A.md](PART11A.md).
+candidate has an origin row the scorer's reading cannot assess and the design
+does not list. The config exits 0. See [PART11A.md](PART11A.md).
