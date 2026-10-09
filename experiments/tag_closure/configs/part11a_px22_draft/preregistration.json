@@ -4,10 +4,11 @@
   "question": "At a fixed c, does each energy tag's change equal its named process terms from the same state, and how large is C4?",
   "model_commit": "bb2bedf230a70ca9d7afc293180f8d30c1a9bb88",
   "jobs": [
-    {"config": "configs/g46_d4_budget.yml", "c_J_kg": 110495.0, "role": "fixed convention"},
-    {"config": "configs/g46_d4_budget_2c.yml", "c_J_kg": 220990.0, "role": "C4 pair, convention spread"},
-    {"config": "configs/g411x_d4_untagged.yml", "c_J_kg": null, "role": "untagged parity twin"}
+    {"config": "configs/part11a_px22_draft/px22_d4_c.yml", "c_J_kg": 110495.0, "role": "fixed convention"},
+    {"config": "configs/part11a_px22_draft/px22_d4_2c.yml", "c_J_kg": 220990.0, "role": "C4 pair, convention spread"},
+    {"config": "configs/part11a_px22_draft/px22_d4_untagged.yml", "c_J_kg": null, "role": "untagged parity twin"}
   ],
+  "configs": {"decided": "owner, 2026-10-09", "derived_from": {"px22_d4_c.yml": "configs/g411x_d4_default.yml", "px22_d4_2c.yml": "configs/g411x_d4_default.yml with energy_source_tag_offset 220990.0", "px22_d4_untagged.yml": "configs/g411x_d4_untagged.yml"}, "added_keys": {"tagged": ["e_src_led_src_<tag> and e_src_led_src_res", "e_src_led_srcgross_res", "e_src_led_inc_<tag>", "e_src_led_fix_<tag>", "e_src_fixgross_<tag>", "water_process_record: [surface_flux, subsidence, microphysics]", "q_prc_surface_flux, q_prc_subsidence, q_prc_microphysics", "pr, averaged over 1 h"], "untagged": ["pr, averaged over 1 h"]}, "why": "the per-tag identity needs each tag's ledgers from the same state (challenge, section B). EA-C4 separates c times the integral of pr dt with the water records and pr. Output keys only. The source configs are unchanged"},
   "convention": {"c_J_kg": 110495.0, "frozen_before_evidence": true, "basis": "OD11 candidate, a historical baseline. Not an approved universal choice"},
   "stored_tag_eligibility": "under OD7 (deferred) and OD11 (proposed). Verdicts are conditional on c and list the c/2c spread and C4",
   "checks": [
