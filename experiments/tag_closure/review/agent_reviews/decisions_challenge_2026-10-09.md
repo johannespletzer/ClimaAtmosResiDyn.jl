@@ -27,7 +27,7 @@ Strength: **breaks** means the decision contradicts its own record or rule.
 | 4  | W49's V2 counts as option C's validation (2026-10-01)         | weakens  | Rerun option C's V1 to V5 on post-#139 `main` before the 90-day sphere.                            |
 | 5  | Criterion 9's rounding floor (2026-10-02)                     | weakens  | Write the floor's authorized step count into the decision before 12a.                              |
 | 6  | Inapplicable completeness flags are true (2026-10-08)         | weakens  | Make the flag three-valued, and have the scorer check the basis.                                   |
-| 7  | Each energy test states its `c` (2026-10-07)                  | weakens  | A claim whose `c`/`2c` spread exceeds its tolerance is reported, not qualified.                    |
+| 7  | Each energy test states its `c` (2026-10-07)                  | weakens  | A claim whose `c`/`2c` spread, in shares, exceeds its tolerance is reported, not qualified.        |
 | 8  | The missing tolerances are deferred (2026-10-07)              | weakens  | A use-derived tolerance as a condition of level 4.                                                 |
 | 9  | The design hash shows integrity only (2026-10-08)             | weakens  | Make W62's push-time check the standard.                                                           |
 | 10 | Record consistency                                            | breaks   | Mark stale and session-scoped entries, reword the GPU entry, copy memory-only decisions in.        |
@@ -216,6 +216,14 @@ up to 177% for E71's region tags. Against a per-tag tolerance of 2% L1, a
 **Proposal.** A per-tag energy claim whose `c`/`2c` spread exceeds its own
 tolerance is reported as convention-defined and cannot reach level 3 or 4.
 This needs no choice of `c`.
+
+*Correction, the same day (`offset_c_challenge_2026-10-09.md`, section 2.4):*
+the 177% is the change of `strat`'s integral. The region tags partition
+`∫(ρe_tot + cρ)`, which itself grew 163% when `c` doubled on E71's D4 pair. As
+shares of that total, `strat` and `tropo` moved by about +5% and −4%, the
+source tags by 4 to 6%, and their pairwise ratios by about 2%. The spread
+still exceeds the 2% L1 tolerance, so the proposal stands, with the spread
+measured in shares, not integrals.
 
 ## 8. "Qualified" needs a use
 
