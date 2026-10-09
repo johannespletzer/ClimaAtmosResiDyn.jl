@@ -1,0 +1,23 @@
+{
+  "kind": "DRAFT, NOT AUTHORIZED OR EXECUTED",
+  "status": "proposed, 2026-10-09",
+  "question": "At a fixed c, does each energy tag's change equal its named process terms from the same state, and how large is C4?",
+  "model_commit": "bb2bedf230a70ca9d7afc293180f8d30c1a9bb88",
+  "jobs": [
+    {"config": "configs/part11a_px22_draft/px22_d4_c.yml", "c_J_kg": 110495.0, "role": "fixed convention"},
+    {"config": "configs/part11a_px22_draft/px22_d4_2c.yml", "c_J_kg": 220990.0, "role": "C4 pair, convention spread"},
+    {"config": "configs/part11a_px22_draft/px22_d4_untagged.yml", "c_J_kg": null, "role": "untagged parity twin"}
+  ],
+  "configs": {"decided": "owner, 2026-10-09", "derived_from": {"px22_d4_c.yml": "configs/g411x_d4_default.yml", "px22_d4_2c.yml": "configs/g411x_d4_default.yml with energy_source_tag_offset 220990.0", "px22_d4_untagged.yml": "configs/g411x_d4_untagged.yml"}, "added_keys": {"tagged": ["e_src_led_src_<tag> and e_src_led_src_res", "e_src_led_srcgross_res", "e_src_led_inc_<tag>", "e_src_led_fix_<tag>", "e_src_fixgross_<tag>", "water_process_record: [surface_flux, subsidence, microphysics]", "q_prc_surface_flux, q_prc_subsidence, q_prc_microphysics", "pr, averaged over 1 h"], "untagged": ["pr, averaged over 1 h"]}, "why": "the per-tag identity needs each tag's ledgers from the same state (challenge, section B). EA-C4 separates c times the integral of pr dt with the water records and pr. Output keys only. The source configs are unchanged"},
+  "convention": {"c_J_kg": 110495.0, "frozen_before_evidence": true, "basis": "OD11 candidate, a historical baseline. Not an approved universal choice"},
+  "stored_tag_eligibility": "under OD7 (deferred) and OD11 (proposed). Verdicts are conditional on c and list the c/2c spread and C4",
+  "checks": [
+    {"id": "parity", "definition": "isequal on every parent field against the untagged twin at matched endpoints"},
+    {"id": "per_tag_identity", "definition": "Delta a_k = Delta L_src,k + T_k + C_inc,k + C_repair,k + X_k per tag, from the same state (G4 section 2.3)", "threshold": "rounding, proposed as 128 eps times the tag's absolute inventory"},
+    {"id": "repair_screen", "definition": "2 x e_src_fixgross_k over the window, a screen and never a bound"},
+    {"id": "C4", "definition": "c M_U = c Delta M - [Delta B_src(2c) - Delta B_src(c)], with c * integral of pr dt separated (EA-C4)", "threshold": "none, reported"}
+  ],
+  "falsified_if": "a per-tag identity does not close to rounding at the fixed c. Then Fid-2 fails for energy and every energy verdict is not assessable",
+  "budget": "three single-node D4 day jobs, about 1 to 2 h each (proposed, from the earlier D4 day jobs). Below the 12-job and 24-h approval limits",
+  "not_covered": ["PX15 and the follower's split (OD7)", "the radiation record pilot (EA-USE)", "EDMF origin qualification"]
+}

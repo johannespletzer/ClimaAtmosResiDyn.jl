@@ -417,6 +417,32 @@ an adversarial challenge of each recommendation.
     exists. Part 9's template admits it as instrumentation. It gates parts 10
     and 11d.
 
+The owner decided these on 2026-10-09 in the review of the Part 11a PR, after
+an adversarial challenge of each recommendation.
+
+  - **`opposing_net_zero` lists its expected NOT ASSESSABLE rows.** **In
+    force.** Θx is zero there by design. The frozen design names the rows:
+    `src_heat` at one hour and `src_cool` at both endpoints. `src_cool` has
+    no gain path, so the fixture checks that it reads exactly zero. The
+    suite exits 0 when only the listed rows are unassessable and 3 for any
+    other. A permanent exit 3 would hide a new unassessable row. The scorer
+    is unchanged. This follows Part 7's zero-activity case.
+  - **PX22 uses three new configs at `c`, `2c` and untagged.** **In force.**
+    `px22_d4_c` and `px22_d4_2c` derive from `g411x_d4_default`.
+    `px22_d4_untagged` derives from `g411x_d4_untagged`. They add the per-tag
+    ledger keys, the water records and the averaged `pr`. The per-tag
+    identity and EA-C4 need them. The `g411x` and `g46` files stay as they
+    are, so earlier evidence keeps its provenance. Submission stays the
+    owner's, and every number stays proposed.
+  - **The stored cases keep the constructed 128 eps floor as their gate.**
+    **In force.** The stepped rung is a cross-check only. A closed form
+    claims no convergence, so the stepped ladder is not the reference's
+    error.
+
+The challenge found that F, the `c` dependence of the energy scale and the
+region tags, is already recorded under OD9 to OD11 (2026-10-07), so it needs
+no new decision.
+
 ## 2026-10-08
 
 The owner decided these on 2026-10-08, after PRs #150 and #151 merged into

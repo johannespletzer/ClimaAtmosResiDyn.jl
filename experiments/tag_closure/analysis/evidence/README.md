@@ -1109,3 +1109,16 @@ comparing across any of those needs a numerical tolerance instead, not a
 bitwise check. `manifest.py` exists to pin down which of those a given run
 actually used, so a later comparison can tell whether it is entitled to
 expect bitwise agreement at all.
+
+## Independent energy known answers
+
+Part 11a's eight cases, from this directory:
+
+```sh
+python3 make_energy_reference_fixture.py NEW_DIR --config ../../configs/energy_reference_known_answers.json
+python3 -m pytest test_energy_reference.py -q
+```
+
+Exit codes 0 to 4 as for the water fixtures. Here 3 also means that a
+candidate has an origin row the scorer's reading cannot assess. The config
+exits 3 for that reason. See [PART11A.md](PART11A.md).
