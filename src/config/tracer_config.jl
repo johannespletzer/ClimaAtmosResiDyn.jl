@@ -1447,7 +1447,8 @@ function check_energy_source_offset_given(value)
         kilogram of air in J/kg that the tags add to `ρe_tot`. Without one each \
         tag's share is undefined wherever `ρe_tot` is not positive, which is \
         much of a typical domain. The shipped baroclinic-wave configuration \
-        uses 110495 J/kg. In earlier validation runs the smallest offsets that \
+        uses 166764 J/kg, the dry internal energy counted from 150 K \
+        (cp_d*T0 - cv_d*150 K at the default parameters). In earlier validation runs the smallest offsets that \
         made the total positive were 45.4 kJ/kg on a DYCOMS RF02 column and \
         100.4 kJ/kg on the moist baroclinic wave sphere. The offset a run needs \
         depends on its state and energy reference, so neither value guarantees \
