@@ -86,6 +86,22 @@ must read zero arrays in the candidate.
 
 ## 5. Proposed choices, 2026-10-09
 
+The owner decided three choices on 2026-10-09
+([DECISIONS.md](../DECISIONS.md), 2026-10-09). They are in force.
+
+  - Decided 2026-10-09: `opposing_net_zero` lists its expected NOT
+    ASSESSABLE rows in the frozen design. They are `src_heat` at one hour and
+    `src_cool` at both endpoints. `src_cool` has no gain path, so the fixture
+    checks that it reads exactly zero. The suite exits 0 when only the listed
+    rows are unassessable and 3 for any other. The scorer is unchanged.
+  - Decided 2026-10-09: PX22 uses three new configs in
+    `configs/part11a_px22_draft/`. They are `px22_d4_c.yml`, `px22_d4_2c.yml`
+    and `px22_d4_untagged.yml`. They add output keys only.
+  - Decided 2026-10-09: the stored cases keep the constructed 128 eps floor as
+    their gate. The stepped rung is a cross-check only.
+
+The choices below stay proposed.
+
   - The fixtures are self-contained directories, not scorer Bundles. The scorer
     has no energy known-answer hook and is unchanged.
   - The Θx window of the small-tag rule is `[0, endpoint]` in these fixtures.

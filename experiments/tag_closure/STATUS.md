@@ -7,9 +7,15 @@ eight cases of G4_CLAIM_CONTRACTS section 6 as offline known answers. Each
 case freezes its convention `c`. Stored-energy cases and the radiation record
 are separate references. The tools and tests are in `analysis/evidence/`
 (`energy_reference*.py`). Every case's wrong-origin mutant is caught in a
-test. The suite exits 3, because `opposing_net_zero` has origin rows the
-scorer's reading cannot assess. The [PX22 draft](configs/part11a_px22_draft/README.md) waits for the
-owner. **Part 11a is not done.** No run, scorer, default or tolerance change
+test. The owner decided three choices on 2026-10-09:
+
+  - The design lists `opposing_net_zero`'s three unassessable rows. The suite
+    exits 0 when only those are unassessable and 3 for any other.
+  - The [PX22 draft](configs/part11a_px22_draft/README.md) uses three new
+    configs at `c`, `2c` and untagged. It waits for the owner's approval.
+  - The stored cases keep the constructed 128 eps floor as their gate.
+
+**Part 11a is not done.** No run, scorer, default or tolerance change
 is supplied.
 
 ## Part 8 water baseline and cost pilot, design (2026-10-09)

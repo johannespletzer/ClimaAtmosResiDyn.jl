@@ -7,8 +7,8 @@ Proposed 2026-10-09. The design is
 
 `energy_reference.py`, `energy_reference_adapter.py`,
 `make_energy_reference_fixture.py` and `test_energy_reference.py`. The suite
-`configs/energy_reference_known_answers.json` exits 3 after review: eight
-eligible references and eight mutants caught. Seven manufactured candidates
+`configs/energy_reference_known_answers.json` exits 0: eight eligible
+references and eight mutants caught. Seven manufactured candidates
 pass. For the six closed-form cases the candidate is the closed form itself,
 so its pass checks the evaluator, not the equations. The stepped allocator
 checks those. `opposing_net_zero` is NOT ASSESSABLE. Its overlays are small
@@ -16,13 +16,18 @@ at one hour, Θx is zero, and the scorer's small-tag rule needs a positive Θx.
 `src_cool` is NOT ASSESSABLE at both endpoints and `src_heat` at one hour.
 Before review such rows counted as passing.
 
+The frozen design lists these three rows (owner decision of 2026-10-09). The
+suite exits 0 when only the listed rows are unassessable, and 3 for any other
+unassessable row. The case keeps its NOT ASSESSABLE verdict in the results.
+`src_cool` has no gain path, so the check `no_gain_path_zero` requires it to
+read exactly zero. That check stands beside the scorer's rows and never
+replaces them. The scorer is unchanged.
+
 ## Not delivered
 
   - A per-case floor table here.
-  - A Part 7 style generator for the PX22 draft. The draft names
-    `g46_d4_budget`, `_2c` and `g411x_d4_untagged`, while PX22 names
-    `g411x_d4_default` and its twin. No named config writes per-tag source
-    ledgers for all eight tags.
+  - A Part 7 style generator for the PX22 draft. The three configs are
+    written by hand (see below).
   - The G4.7 ladder and the G4.8 pulse. Neither is reused or routed here.
   - Case 5's temporal grouping sweep.
   - An independent divergence implementation for G4 row 8. The stage route
@@ -51,4 +56,9 @@ Filled by the suite's `known_answer_results.json` per case, after review.
 ## Measured: PX22
 
 Filled after the owner approves the three jobs of `configs/part11a_px22_draft/`
-and they run. Empty until then.
+and they run. Empty until then. The configs are `px22_d4_c.yml` and
+`px22_d4_2c.yml`, from `g411x_d4_default.yml` at `c` and `2c`, and
+`px22_d4_untagged.yml`, from `g411x_d4_untagged.yml` (owner decision of
+2026-10-09). The tagged two add each tag's ledgers, `e_src_fixgross_*`, the
+water records and the averaged `pr`. The twin adds the averaged `pr`. The
+per-tag identity and EA-C4 need these keys.
