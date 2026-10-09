@@ -44,11 +44,12 @@ is caught. Two inputs follow `c`.
 the source changes sign in `E_c` between `c` and `2c`. `inventory_edge_cases`
 sets `ρe` so that its cells hold `E_c` = 130,495, 0 and −9,505 J/m³. One
 condition depends on `c`. In `boundary_offset_exchange`, `F_c` points upward
-while `e_fall + c < 0`, which holds for `c` below 3e5 J/kg. The wrong-origin mutant misses by 2.74
-times the tolerance at the fixed `c`, and the margin vanishes as `c`
-approaches 3e5 J/kg. The owner accepted this on 2026-10-09. `c` is fixed, so
-`e_fall` stays, and if `c` ever rises `e_fall` is lowered first. `cΔρ` enters only
-`boundary_offset_exchange` and `offset_change`, the cases with a mass change.
+while `e_fall + c < 0`, which holds for `c` below 3e5 J/kg. The wrong-origin
+mutant misses by 2.74 times the tolerance at the fixed `c`, and the margin
+vanishes as `c` approaches 3e5 J/kg. The owner accepted this on 2026-10-09.
+`c` is fixed, so `e_fall` stays, and if `c` ever rises `e_fall` is lowered
+first. `cΔρ` enters only `boundary_offset_exchange` and `offset_change`, the
+cases with a mass change.
 Θx is defined for `heating_labels`, `donor_cooling`, `opposing_net_zero` and
 `offset_change`. Θi is computed where records exist.
 The other cases have no source, so a percentage of Θx is not assessable there.
@@ -121,8 +122,9 @@ case's mutant margin (below).
     their gate. The stepped rung is a cross-check only.
   - Decided 2026-10-09, after PRs #166 and #167: `donor_cooling` keeps
     `c_p,d T_0` = 274,389 J/kg, the sweep alternative that is in force, as
-    the per-case control. It is `c_p,d T_0` at ClimaParams 1.2.0 (`c_p,d` =
-    1004.5, `T_0` = 273.16). The other seven cases use the fixed `c`.
+    the per-case control. It is `c_p,d T_0` at the default parameters
+    (`c_p,d` = 1004.5, `T_0` = 273.16 in ClimaParams 1.2.0 and 1.3.0). The other
+    seven cases use the fixed `c`.
   - Decided 2026-10-09, after PRs #166 and #167: the boundary case's halved
     mutant margin is accepted (2.74 times the tolerance at the fixed `c`).
 

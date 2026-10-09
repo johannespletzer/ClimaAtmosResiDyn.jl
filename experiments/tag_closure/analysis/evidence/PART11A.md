@@ -6,8 +6,8 @@ Every case freezes the fixed `c` = 166,764 J/kg (DECISIONS, 2026-10-09),
 except `donor_cooling` at `c_p,d T_0` = 274,389 J/kg. That case is the
 per-case control (decided 2026-10-09, after PRs #166 and #167). It shows that
 the adapter reads `c` per case and refuses a mismatch, so a hard-coded `c` in
-a producer is caught. It is `c_p,d T_0` at ClimaParams 1.2.0 (`c_p,d` = 1004.5,
-`T_0` = 273.16). The design, its hash
+a producer is caught. It is `c_p,d T_0` at the default parameters (`c_p,d` =
+1004.5, `T_0` = 273.16 in ClimaParams 1.2.0 and 1.3.0). The design, its hash
 `24290e41…` and the fixtures moved to the fixed `c` on 2026-10-09.
 
 ## Software

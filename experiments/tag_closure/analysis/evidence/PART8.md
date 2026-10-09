@@ -431,10 +431,10 @@ threshold, tolerance or default.
     nodes (8.998x to 9.379x against OD3's 2x, E88 9.098x). It is not
     falsified. The copies half is not falsified either. Two builds fall
     within 4 h (3.02 h and 3.09 h), and one does not (4.48 h). The owner
-    decided on 2026-10-09 that the slowest build is quoted, as section 8's
-    rule says for the blocks of one job. So the copies' build is 4.48 h, and
-    the other two are the favourable case. Neither half is a criterion 10
-    verdict.
+    decided on 2026-10-09 that section 8's rule "less favourable quoted"
+    extends from the blocks of one job to the nodes of a cost set. So the
+    copies' build is quoted as 4.48 h, and the other two are the favourable
+    case. Neither half is a criterion 10 verdict.
 
 The stop rules of section 10, one by one:
 
@@ -477,8 +477,8 @@ The difference the design's section 2 lists is closed. Commit `dd2df01e8`
 (2026-10-09, before the runs) moved the part 8 brief's walk fix measurement
 to part 9's queue, as the delivery plan's section 3 has it.
 
-What waits for PX12 is the next section. Part 8 is done except the owner's
-items and PX12's readings.
+What waits for PX12 is the next section. Part 8 is done except PX12's
+readings.
 
 ## What waits for PX12
 

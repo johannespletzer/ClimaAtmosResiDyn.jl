@@ -449,7 +449,8 @@ The owner decided these on 2026-10-09 after PRs #166 and #167 merged.
     control.** **In force.** It is the one case that shows the adapter reads
     `c` per case and refuses a mismatch. So a hard-coded `c` in a producer is
     caught. The other seven cases use the fixed `c` = 166,764 J/kg. The number
-    is `c_p,d T_0` at ClimaParams 1.2.0 (`c_p,d` = 1004.5, `T_0` = 273.16).
+    is `c_p,d T_0` at the default parameters (`c_p,d` = 1004.5, `T_0` =
+    273.16 in ClimaParams 1.2.0 and 1.3.0).
   - **The boundary case's halved mutant margin is accepted.** **In force.**
     The wrong-origin mutant misses by 2.74 times the tolerance at the fixed
     `c`. The margin vanishes as `c` approaches 300,000 J/kg. `c` is fixed, so

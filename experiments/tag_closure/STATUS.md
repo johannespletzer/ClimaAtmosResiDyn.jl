@@ -19,8 +19,9 @@ to the fixed `c` on 2026-10-09 (PR #166).
 The [pre-registered design](design/PART11A_ENERGY_REFERENCES.md) builds the
 eight cases of G4_CLAIM_CONTRACTS section 6 as offline known answers. Each
 case freezes the fixed `c` except `donor_cooling`, which uses `cp_d·T0` as the
-sweep alternative and the per-case control. Stored-energy cases and the radiation record
-are separate references. The tools and tests are in `analysis/evidence/`
+sweep alternative and the per-case control. Stored-energy cases and the
+radiation record are separate references. The tools and tests are in
+`analysis/evidence/`
 (`energy_reference*.py`). Every case's wrong-origin mutant is caught in a
 test. The owner decided three choices on 2026-10-09:
 
@@ -57,8 +58,9 @@ repair). H3's default half was not falsified, with an 8 + 8 step of 8.998x to
 (owner decision of 2026-10-09, after PRs #166 and #167).
 No stop rule of the design's section 10 applied.
 
-**Part 8 is done except PX12's readings.** The owner decided its items on 2026-10-09, after PRs #166
-and #167. WA-COST's cap is deferred until the walk fix is measured, and no cap
+**Part 8 is done except PX12's readings.** The owner decided its items on
+2026-10-09, after PRs #166 and #167. WA-COST's cap is deferred until the walk
+fix is measured, and no cap
 is set from this cost set. Choices 1, 2, 3, 7 and 9 of the design's section
 12 and choice 6's ranking rule and fix candidates are decided as proposed.
 The first-hour origin verdicts and

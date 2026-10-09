@@ -1,8 +1,8 @@
 # Part 8: water baseline and cost pilot, pre-registered
 
 Proposed 2026-10-09. The owner decided the open choices on 2026-10-09, after
-PRs #166 and #167 (section 12). Written before any job of this
-part. Record branch `claude/part8-baseline` from `claude/plan-rev2` at
+PRs #166 and #167 (section 12). Written before any job of this part. Record
+branch `claude/part8-baseline` from `claude/plan-rev2` at
 `aa3e80ea9`. The runs use `main` at `bb2bedf23`. The brief is
 [DELIVERY_PLAN section 5, part 8](../DELIVERY_PLAN.md#part-8-water-baseline-and-cost-pilot).
 The contract is [G3_PLAN 6.1.1](../G3_PLAN.md#611-water-observables-and-accounting-conventions-part-2)
@@ -11,7 +11,8 @@ Where this note and a source differ, the source wins.
 
 A baseline is not a qualification. It raises no level, sets no threshold,
 default or tolerance, and changes no model code. Every choice this note makes
-is marked "proposed, 2026-10-09" and listed in section 12.
+was marked "proposed, 2026-10-09" and is listed in section 12, which marks
+each decided choice.
 
 ## 1. The question
 
@@ -252,8 +253,9 @@ and metric, or a table column.
 | Parent Newton error    | W57's E at 2 iterations, prior from D4-W. PX12's P1 probe for TRMM               | None known in the queue. The Newton count is OD1's configuration |
 | 0M precipitation sum   | WATER.PRECIP_INSTANTANEOUS `max_absolute_rate_defect`                            | WP4b stages 2 and 3 (criterion 7)                                |
 
-**The ranking rule** (decided 2026-10-09, after PRs #166 and #167). A term measured on the pilot
-with a cited limit is ranked by its value over that limit, largest first. An
+**The ranking rule** (decided 2026-10-09, after PRs #166 and #167). A term
+measured on the pilot with a cited limit is ranked by its value over that limit,
+largest first. An
 origin row uses the larger of `L1/ORIGIN_L1_FIRST_HOUR` and
 `L∞/ORIGIN_LINF_FIRST_HOUR`, or the small-tag absolute rule where the scorer
 applies it. A prior from another case and a term without a limit are listed
@@ -336,11 +338,12 @@ spread of the untagged build, so the node spread is read here. The driver,
 the warm-up of 50 steps and the six blocks are WP9 section 10's.
 
 **How the cost is read.** WP9 section 11's rule: blocks 2 to 6, the minimum
-and the median, the less favourable quoted. The rule extends to the nodes
-of a cost set (decided 2026-10-09, after PRs #166 and #167). The slowest
-node's build is quoted, and the other nodes are recorded as the favourable
-case. Each point's block spread and its
-ratio's block spread are at most 10%, or the job is reported with its spreads
+and the median, the less favourable quoted. The rule extends from the blocks
+of one job to the nodes of a cost set (decided 2026-10-09, after PRs #166
+and #167). The less favourable node is quoted, for the copies' build the
+slowest, and the other nodes are recorded as the favourable case. Each
+point's block spread and its ratio's block spread are at most 10%, or the job is
+reported with its spreads
 and not quoted. Nothing is rerun. For each mode: the step ratio to its own
 point 0, the build ratio and seconds, allocation per step and peak memory, and
 the spread across the three nodes. If two replicates land on one node, that is
