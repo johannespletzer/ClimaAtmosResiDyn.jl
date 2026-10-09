@@ -310,6 +310,31 @@ The list as it stood before this classification, kept as written:
 >     and the copies under first-order upwinding (W25). **Waiting.**
 >     [FINDINGS W25](FINDINGS.md)
 
+## 2026-10-09
+
+The owner decided these on 2026-10-09, in the review of PR #159 (Part 7).
+
+  - **Part 7's zero-activity case covers no rule by design.** **In force.**
+    The design marks `zero_activity` as expected to cover no rule. The
+    suite driver counts it as not applicable and keeps NOT ASSESSABLE in
+    its results. The suites exit 0 when the other eight references are
+    eligible. The scorer is unchanged and still reads the case's reference
+    as covering no rule.
+  - **OD14 and PX25's development case.** **In force.** PrecipitatingColumn
+    starts from RICO's profiles, and RICO 1M 24 h is held out (WA-SCOPE).
+    PrecipitatingColumn serves PX25's PT15 and PT16 arithmetic rows only.
+    It chooses no mode or default. The explicit-1M default is chosen on an
+    independent second case, found together with OD15.
+  - **Part 7 uses the scorer's tie on its substep ladder.** **In force.**
+    Part 6's rule applies: a floor that rises by at most `SECOND_HALF_TIE`
+    (1e-12 of the tolerance) along the 1/4/16/64 ladder is a tie. Two cases
+    converge through the tie: `depleted_donor` (largest rise 3.3e-13, a
+    margin of 3.0) and `single_transfer` (2.3e-13, a margin of 4.3). Both
+    floors sit at the arithmetic bound. This holds on that ladder only.
+  - **OD15 stays proposed.** **In force.** The PX25 matrix stays a draft
+    pending the owner. Part 7's design hash shows integrity only, as decided
+    for Part 6 on 2026-10-08.
+
 ## 2026-10-08
 
 The owner decided these on 2026-10-08, after PRs #150 and #151 merged into

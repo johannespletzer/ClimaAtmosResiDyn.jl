@@ -1,4 +1,8 @@
 date,decided_by,decision,doc,section,still_in_force,superseded_by
+2026-10-09,owner,"Part 7's zero_activity case is marked in the design as expected to cover no rule. The suite driver counts it as not applicable, keeps NOT ASSESSABLE in its results and exits 0 when the other eight references are eligible. The scorer is unchanged.",DECISIONS.md,2026-10-09,yes,
+2026-10-09,owner,"OD14: PrecipitatingColumn starts from RICO's profiles, and RICO 1M 24 h is held out. It serves PX25's PT15 and PT16 arithmetic rows only and chooses no mode or default. The explicit-1M default is chosen on an independent second case, found together with OD15.",DECISIONS.md,2026-10-09,yes,
+2026-10-09,owner,"Part 7 uses the scorer's SECOND_HALF_TIE on its 1/4/16/64 substep ladder. depleted_donor and single_transfer converge through the tie, with margins of 3.0 and 4.3, on that ladder only.",DECISIONS.md,2026-10-09,yes,
+2026-10-09,owner,"OD15 stays proposed. The PX25 matrix stays a draft pending the owner. Part 7's design hash shows integrity only.",DECISIONS.md,2026-10-09,yes,
 2026-10-08,owner,"Part 6 delivers known-answer references for label arithmetic. The code's transport operators are not tested by it. Operator fidelity belongs to the PX runs of Part 7.",DECISIONS.md,2026-10-08,yes,
 2026-10-08,owner,"The Part 6 ladder refines dx and dt at fixed CFL and uses the scorer's tie. The dt-only ladder and the 128 eps multiplier are dropped.",DECISIONS.md,2026-10-08,yes,
 2026-10-08,owner,"Part 6's register row is amended: PR #154's known-answer references. The PX runs and the mixing-test reuse move to Part 7.",DECISIONS.md,2026-10-08,yes,
