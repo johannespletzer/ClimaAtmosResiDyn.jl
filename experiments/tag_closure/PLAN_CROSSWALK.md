@@ -21,6 +21,25 @@ registers below also retain items already completed or outside this roadmap.
 An unassigned outside item remains explicitly deferred pending classification,
 not silently discarded or activated.
 
+## Part 8 design routing (2026-10-09)
+
+This supplement marks the routes part 8 takes in PR part 8, the design PR.
+The baseline rows below keep their meaning and their source gates. See
+[design/PART8_BASELINE.md](design/PART8_BASELINE.md).
+
+| Existing route                            | Evidence in PR part 8                                                   | Remaining obligation                            |
+|:----------------------------------------- |:----------------------------------------------------------------------- |:----------------------------------------------- |
+| Part 8 / ROADMAP row 8 / W54 to W62 reuse | Pre-registered baseline, W58's trio rescripted on `bb2bedf23`           | The runs and the record PR                      |
+| Part 8 / G3_PLAN 6.1.2 matrix rows        | Each row's observable, threshold ID and pilot status (design section 4) | Verdicts after the runs                         |
+| Part 8 / OD2 windows                      | The rule read on the twin at 10 min, the cadence difference stated      | The rerun's reading. Scorer cadence: owner item |
+| Part 8 / dominant errors before part 9    | Ranked-table rule, sources and fix candidates, prior order from W58     | The rerun's table. Part 9's order follows it    |
+| Part 8 / G3 criterion 10, WP9, OD3 cost   | Six cost jobs at 8 + 8 on D4, both modes, with ledgers                  | The reading. Criterion 10 is scored in part 10  |
+| Part 8 / Part 4 converter and scorer      | Unchanged. `part8_pilot.py` glue, W58's 18 table rows reproduced        | None for this PR                                |
+| PX12 / KI4-COPIES / UP1                   | What waits for PX12 is listed (design section 9)                        | PX12 in part 7                                  |
+
+No baseline row, accepted tolerance, historical failure or owner decision is
+changed. The 1-2-day sphere pilot stays with 12d.
+
 ## Part 7 implementation routing (2026-10-08)
 
 This supplement reports the bounded implementation. The baseline rows below

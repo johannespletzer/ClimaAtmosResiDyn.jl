@@ -143,6 +143,25 @@ elif [[ "${SET:-}" == copies88 ]]; then
     EXTRA=(--exclusive)
     OUT_ROOT=wp9_copies_d3c5
 fi
+# SET=p8 submits part 8's cost pairs (design/PART8_BASELINE.md, section 8) at
+# main bb2bedf23. Each job runs the untagged point 0 and then 8 water and 8
+# energy tags with both families' per-tag ledgers, on D4, in one mode. Three
+# jobs per mode, so the replicates can fall on three nodes. A copies point
+# gets an 8 h limit, since E88's copies88 built in 4 h 16 min without ledgers.
+if [[ "${SET:-}" == p8 ]]; then
+    EXPECT_SHA=bb2bedf23
+    export WP9_WARMUP=50 WP9_REPEATS=6
+    TABLE=(
+      "p8_default_a both default 0 wp9_energy_d4_edmf 0,8:ledgers 200G 04:00:00"
+      "p8_default_b both default 0 wp9_energy_d4_edmf 0,8:ledgers 200G 04:00:00"
+      "p8_default_c both default 0 wp9_energy_d4_edmf 0,8:ledgers 200G 04:00:00"
+      "p8_copies_a both copies 0 wp9_energy_d4_edmf 0,8:ledgers 200G 09:00:00 8h"
+      "p8_copies_b both copies 0 wp9_energy_d4_edmf 0,8:ledgers 200G 09:00:00 8h"
+      "p8_copies_c both copies 0 wp9_energy_d4_edmf 0,8:ledgers 200G 09:00:00 8h"
+    )
+    EXTRA=(--exclusive)
+    OUT_ROOT=wp9_cost_p8
+fi
 export OUT_ROOT
 [[ "${RUN_SHA}" == "${EXPECT_SHA}"* ]] || [[ -n "${ALLOW_OTHER_MODEL_COMMIT:-}" ]] || {
     echo "ERROR: the model tree is at ${RUN_SHA}, not ${EXPECT_SHA}." >&2; exit 1; }
