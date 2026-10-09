@@ -9,7 +9,9 @@ declaration that differs from its recompute. The scorer does not import it.
 The fixtures are self-contained directories, not the scorer's Bundles. The
 scorer has no energy known-answer hook, and Part 11a changes no scorer code.
 Its declared fields use the scorer's names, so a later converter can carry
-them into a Bundle unchanged.
+them into a Bundle unchanged. One exception: a closed form does not claim
+`converged`. It declares null, because its ladder is a cross-check only. The
+scorer reads null as not assessable, so the converter needs a rule for it.
 """
 
 import io
@@ -194,7 +196,9 @@ def measure(design, case, stored=None):
         constructed = max([row["worst_fraction"] for row in rows if row.get("meets") is not None] or [0.0])
         basis = ("Constructed, not measured. The answer is a closed form. The floor is the error of a 128 eps "
                  "relative perturbation of every tag. The stepped rungs are a cross-check and gate nothing.")
-    return {"reference_discretization": constructed, "rungs": floors, "converged": True,
+    # A closed form has no refinement ladder of its own. Its stepped rungs are a
+    # cross-check, so convergence is not claimed. The value follows the basis.
+    return {"reference_discretization": constructed, "rungs": floors, "converged": None,
             "cross_check_converged": converges(float64), "basis": basis,
             "converged_basis": "Inapplicable. A closed-form answer has no refinement ladder."}
 
@@ -211,7 +215,7 @@ def declaration(design, case, measured):
         "producer": producer_identity(),
         "floors": floors,
         "floor_basis": {"reference_discretization": measured["basis"], **STATED_FLOORS},
-        "converged": bool(measured["converged"]),
+        "converged": None if measured["converged"] is None else bool(measured["converged"]),
         "mirrors_complete": True,
         "jacobian_complete": True,
         "eligibility_basis": {
@@ -225,12 +229,18 @@ def declaration(design, case, measured):
 
 
 def eligible(case, declared):
-    """The scorer's reading of a declaration. A record floor is reported, not compared."""
-    common = (declared["converged"] is True and declared["mirrors_complete"] is True and
+    """The scorer's reading of a declaration. A record floor is reported, not compared.
+
+    The record claims a converged stage ladder. A closed form claims none, so
+    its `converged` must be null. Its floor is the constructed one.
+    """
+    common = (declared["mirrors_complete"] is True and
               declared["jacobian_complete"] is True and bool(declared["independent_rules"]))
     if case["kind"] == "radiation_record":
-        return common and declared["independent_rules"] == ["radiation_divergence"]
-    return common and all(0 <= v <= FLOOR_FRACTION_MAX for v in declared["floors"].values())
+        return (common and declared["converged"] is True and
+                declared["independent_rules"] == ["radiation_divergence"])
+    return (common and declared["converged"] is None and
+            all(0 <= v <= FLOOR_FRACTION_MAX for v in declared["floors"].values()))
 
 
 def evaluate_energy_reference(root, declared=True, candidate_name="candidate.npz"):

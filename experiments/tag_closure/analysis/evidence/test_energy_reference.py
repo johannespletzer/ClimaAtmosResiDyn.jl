@@ -13,8 +13,8 @@ from acceptance_data import DataError
 from energy_reference import _match, _radiation_continuum
 from energy_reference import (BASE_COMMIT, DESIGN_SHA256, MODEL_COMMIT, EnergyState, origin_row, share, theta_x, activity_report, analytic, case_by_id, classify, evaluate_candidate,
                               load_design, mutant, numerical, stage_record, stage_reference, window_amount)
-from energy_reference_adapter import (LADDER_TIE, RULES, candidate_for, converges, eligible,
-                                      evaluate_energy_reference, load_state, reference_for, rungs)
+from energy_reference_adapter import (LADDER_TIE, RULES, candidate_for, converges, declaration, eligible,
+                                      evaluate_energy_reference, load_state, measure, reference_for, rungs)
 from make_energy_reference_fixture import (evaluate_fixture, main, mutant_caught, suite_exit_code,
                                            write_fixture, write_json)
 
@@ -243,13 +243,29 @@ class ThresholdTests(unittest.TestCase):
         self.assertFalse(_match(DESIGN, b * (1 + 1e-9), b))
         self.assertTrue(converges([1.0, 1.0 + 1e-13, 0.5]))
         self.assertFalse(converges([1.0, 1.0 + 2e-12]))
-        declared = {"converged": True, "mirrors_complete": True, "jacobian_complete": True,
+        declared = {"converged": None, "mirrors_complete": True, "jacobian_complete": True,
                     "independent_rules": ["declared_source_allocation"]}
         stored = case("heating_labels")
         self.assertTrue(eligible(stored, {**declared, "floors": {"a": 0.25, "b": 0.0}}))
         for value in (0.2500001, -1e-12):
             self.assertFalse(eligible(stored, {**declared, "floors": {"a": value}}), value)
+        # A closed form that claims convergence from a cross-check ladder is refused.
+        self.assertFalse(eligible(stored, {**declared, "converged": True, "floors": {"a": 0.0}}))
         self.assertFalse(eligible(case("radiation_record"), {**declared, "floors": {}}))
+        self.assertTrue(eligible(case("radiation_record"), {**declared, "converged": True, "floors": {},
+                                                            "independent_rules": ["radiation_divergence"]}))
+
+    def test_declared_converged_follows_its_basis(self):
+        """R9: a closed form's ladder is a cross-check, so it claims no convergence."""
+        for c in DESIGN["cases"]:
+            declared = declaration(DESIGN, c, measure(DESIGN, c))
+            basis = declared["eligibility_basis"]["converged"]
+            if c["kind"] == "radiation_record":
+                self.assertIs(declared["converged"], True, c["id"])
+                self.assertTrue(basis.startswith("Measured. The floor does not rise"), c["id"])
+            else:
+                self.assertIsNone(declared["converged"], c["id"])
+                self.assertTrue(basis.startswith("Inapplicable."), c["id"])
 
     def test_theta_x_and_shares(self):
         self.assertEqual(theta_x(DESIGN, case("heating_labels"), 0.0, 3600.0), 504000.0)

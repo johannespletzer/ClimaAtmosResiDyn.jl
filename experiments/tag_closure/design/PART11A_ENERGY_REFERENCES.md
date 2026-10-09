@@ -67,7 +67,10 @@ the six closed-form stored cases the reference-discretization floor is
 constructed, not measured. It is the error of a 128 eps relative change of
 every tag, about 1e-10 of the tolerance. It cannot reach the quarter rule, so
 that test is empty there. The stepped rungs are measured and reported. They
-gate nothing. For the classifier the floor is zero by construction. For the
+gate nothing. So a closed form claims no convergence. It declares `converged`
+null with the basis "Inapplicable" and reports the ladder as
+`cross_check_converged`. The scorer reads null as not assessable, so a later
+converter needs a rule for closed forms. For the classifier the floor is zero by construction. For the
 record no tolerance is approved (EA-ACCURACY), so its floor is measured
 relative to the record's window amount and is reported only. Every case but
 `inventory_edge_cases` runs a step ladder of three rungs, and
