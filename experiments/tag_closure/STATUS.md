@@ -1,5 +1,27 @@
 # Status
 
+## Part 8 water baseline and cost pilot, design (2026-10-09)
+
+The [pre-registered design](design/PART8_BASELINE.md) fixes the baseline of
+the TRMM 0M 6 h pilot on `main` `bb2bedf23` before any job: the
+configuration, both modes and the twin, the contract's rows and which are
+scored or reported, the thresholds by ID, the OD2 reading, the ranked table of
+error terms with a fix candidate per term, and the cost at 8 + 8 tags on D4.
+Nine jobs are scripted with their estimates (`runscripts/part8_trio.sh`,
+`runscripts/part8_cost.sh`), about 20 node-hours. None is submitted.
+
+`analysis/evidence/part8_pilot.py` is the glue. It reproduces W58's 18 TRMM
+table rows bit for bit from the repository's `output/g3base/data/`, reads OD2
+at the twin's own cadence and builds the ranked table. It adds no threshold.
+On W58's twin OD2 finds the boundary at 0 s at 10 min and no established
+window at 30 min, so the design fixes which reading the record states. The
+[record skeleton](analysis/evidence/PART8.md) has its sections and no numbers.
+
+**Part 8 is not done.** The runs, the record and the ranked table wait for
+the owner's approval of each job and for W58's archive sync. The first-hour
+origin verdicts wait for PX12 (part 7). The choices of the design's section
+12 are proposed. No model, default, tolerance or scorer change is supplied.
+
 ## Part 7 independent water-transfer software (2026-10-08)
 
 The [transfer design and obligation inventory](analysis/evidence/PART7.md)

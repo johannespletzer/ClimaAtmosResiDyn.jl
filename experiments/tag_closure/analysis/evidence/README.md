@@ -511,6 +511,37 @@ TRMM 0M pilot and E87's D4 process budget, when present
 reason otherwise. On both, the rebuilt Δz reproduce the model's own column
 integrals to 1e-15.
 
+## The part 8 pilot: part8_pilot.py
+
+`part8_pilot.py` is the glue of the TRMM 0M 6 h baseline
+([design](../../design/PART8_BASELINE.md), [record](PART8.md)). It uses the
+converter and the scorer unchanged and adds no threshold. It imports every
+limit from `score_acceptance.py`.
+
+```sh
+python3 experiments/tag_closure/analysis/evidence/part8_pilot.py w58 \
+  experiments/tag_closure/output/g3base/data experiments/tag_closure/output/g3base/g3base_scores.csv
+python3 experiments/tag_closure/analysis/evidence/part8_pilot.py od2 TWIN/output_0000 --period 10m
+python3 experiments/tag_closure/analysis/evidence/part8_pilot.py tables RUN/output_0000 default --json T.json
+python3 experiments/tag_closure/analysis/evidence/part8_pilot.py rank --mode default \
+  --score BUNDLE/score.json --tables T.json --newton 4.10e-3 --newton-source "FINDINGS W57, prior" --out RANK.csv
+```
+
+`w58` recomputes W58's TRMM rows R4, R5 and R8 from the closure and audit
+tables with `g3base_score.py`'s arithmetic. On the repository's tables it
+reproduces all 18 recorded rows bit for bit and exits 0. With `--prefix p8`
+it reads the rerun's runs and lists each row that differs, with exit 1.
+`od2` reads OD2's boundary on the untagged twin at a named output period.
+`tables` writes one run's table rows with the limit ID each cites. `rank`
+builds one mode's ranked table of error terms from the scorer's JSON and the
+table rows. Its rule is the design's section 7.
+
+`test_part8_pilot.py` checks the reproduction and that a changed value or
+verdict is found, the OD2 reading on hand-made runs, the ranking on hand-made
+inputs, the trio's configs against W58's and the cost table in
+`submit_wp9.sh`. Its last test reads W58's twin where it is present, and
+skips with the reason otherwise.
+
 ## Legacy G3 phase 1 evidence pipeline
 
 Four standalone tools (`compare_runs.py`, `test_compare_runs.py`,
