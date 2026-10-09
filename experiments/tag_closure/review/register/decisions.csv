@@ -164,3 +164,8 @@ date,decided_by,decision,doc,section,still_in_force,superseded_by
 2026-09-23,owner,"Set G3 (re-scoped same day): water tags under EDMF, operational in production; G4 (energy) follows using G3's learnings.",memory: programme-after-g2.md,n/a,yes,
 2026-09-23,owner,"A separate session runs the energy jobs and owns PR #95's fix (worktrees -upd, -upd-run); not reachable through SendMessage, relay findings through the owner.",memory: programme-after-g2.md,n/a,yes,
 2026-09-16,owner,"gh repo set-default johannespletzer/ClimaAtmosResiDyn.jl set in the main clone so gh targets the fork, not upstream CliMA/ClimaAtmos.jl.",memory: gh-upstream-remote-default.md,n/a,yes,
+2026-10-09,owner,"Part 11a: donor_cooling keeps c_p,d T_0 = 274,389 J/kg as the per-case control that shows the adapter reads c per case. The other seven cases use the fixed c = 166,764 J/kg.",DECISIONS.md,2026-10-09,yes,
+2026-10-09,owner,"Part 11a: the boundary case's halved mutant margin (2.74 times the tolerance at the fixed c) is accepted. e_fall stays. If c ever rises, e_fall is lowered first.",DECISIONS.md,2026-10-09,yes,
+2026-10-09,owner,"Part 8: H3's copies half quotes the slowest build (4.48 h). Section 8's less-favourable rule extends to the nodes of a cost set. The half is not falsified. Neither half is a criterion 10 verdict.",DECISIONS.md,2026-10-09,yes,
+2026-10-09,owner,"WA-COST's cap is deferred until the walk fix is measured. No cap is set from part 8's cost set. Caps gate level 4.",DECISIONS.md,2026-10-09,yes,
+2026-10-09,owner,"Part 8's design choices 1, 2, 3, 7 and 9 and choice 6's ranking rule and fix candidates are decided as proposed.",DECISIONS.md,2026-10-09,yes,
