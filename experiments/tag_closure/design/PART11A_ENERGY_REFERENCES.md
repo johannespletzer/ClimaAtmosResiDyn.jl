@@ -89,6 +89,9 @@ must read zero arrays in the candidate.
   - The fixtures are self-contained directories, not scorer Bundles. The scorer
     has no energy known-answer hook and is unchanged.
   - The Θx window of the small-tag rule is `[0, endpoint]` in these fixtures.
+    Each case declares it, frozen, as `theta_x_window` in the design. The
+    code reads it, and the adapter refuses a fixture whose window is missing
+    or differs.
   - The surface donor of the boundary case is the bottom cell.
   - `donor_cooling` uses `c = 274388` J/kg.
   - The record floor is reported relative to the record, never scored.

@@ -26,7 +26,7 @@ from score_acceptance import FLOOR_FRACTION_MAX, OD12_FLOOR_SOURCES, SECOND_HALF
 from energy_reference import (
     BASE_COMMIT, DESIGN_SHA256, MODEL_COMMIT, EnergyState, analytic, case_by_id, classify,
     conventions, evaluate_candidate, floor_rows, load_design, numerical, origin_rows,
-    stage_record, stage_reference,
+    stage_record, stage_reference, theta_x_start,
 )
 
 
@@ -267,6 +267,10 @@ def evaluate_energy_reference(root, declared=True, candidate_name="candidate.npz
     require(detail.get("convention") == case["convention"] and case["convention"]["frozen"] is True,
             "the fixture's convention differs from the frozen design")
     conventions(case)
+    # So is the Theta_x window of the small-tag rule.
+    require(detail.get("theta_x_window") == case.get("theta_x_window"),
+            "the fixture's Theta_x window differs from the frozen design")
+    theta_x_start(case)
     rule = rule_for(case)
     require(detail.get("active_rules") == [rule] and detail.get("shared_rules") == [],
             "shared, missing or extra active rule in the energy fixture")

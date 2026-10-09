@@ -26,7 +26,7 @@ from score_acceptance import SMALL, SMALL_SHARE, origin_limits
 # the model tree whose mechanisms the cases describe.
 BASE_COMMIT = "9e5155325b6d778ca558b6dd2c6651006add0a80"
 MODEL_COMMIT = "bb2bedf230a70ca9d7afc293180f8d30c1a9bb88"
-DESIGN_SHA256 = "4950b60808ed0b43c7bf362ae88fd386457153fc5235b20bdc3c5d9498dcfdb2"
+DESIGN_SHA256 = "4c19dedf9ad8020f202943664146029f4ce86a97874327e2f1eaf37a327f185c"
 DESIGN_PATH = Path(__file__).with_name("energy_reference_design.json")
 STATUS_CODES = {"positive_parent": 0, "zero_parent": 1, "negative_parent": 2}
 
@@ -51,6 +51,15 @@ def conventions(case):
     if c is None:
         return []
     return [float(v) for v in c] if isinstance(c, list) else [float(c)]
+
+
+def theta_x_start(case):
+    """The start of the case's declared, frozen Theta_x window. It ends at the endpoint."""
+    window = case.get("theta_x_window")
+    require(isinstance(window, dict) and window.get("frozen") is True and window.get("end") == "endpoint" and
+            isinstance(window.get("start_seconds"), (int, float)),
+            "the case declares no frozen Theta_x window ending at the endpoint")
+    return float(window["start_seconds"])
 
 
 def suffixes(case):
@@ -571,7 +580,7 @@ def origin_row(candidate, reference, design, case, tag, j, suffix=""):
         return {**row, "verdict": "NOT ASSESSABLE", "meets": None, "why": "signed reference holding"}
     if inventory / scale < SMALL_SHARE:
         index = int(suffix[1:]) if suffix else 0
-        theta = theta_x(design, case, 0.0, t, index)
+        theta = theta_x(design, case, theta_x_start(case), t, index)
         if theta <= 0:
             return {**row, "verdict": "NOT ASSESSABLE", "meets": None, "why": "small tag with zero Theta_x"}
         fraction = {"absolute_L1": absolute / (SMALL * theta)}

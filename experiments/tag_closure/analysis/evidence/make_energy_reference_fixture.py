@@ -62,11 +62,12 @@ def write_fixture(root, case_id):
     save_state(root / "candidate.npz", candidate, design["excluded_processes"])
     save_state(root / "mutant.npz", mutant(design, case, candidate), design["excluded_processes"])
     artifacts = {path.name: sha256_file(path) for path in sorted(root.iterdir()) if path.suffix == ".npz"}
-    # The convention is written from the frozen design before any floor or
-    # candidate verdict is measured.
+    # The convention and the Theta_x window are written from the frozen design
+    # before any floor or candidate verdict is measured.
     detail = {"schema_version": 1, "identity": design["identity"], "development_only": True,
               "scope": FIXTURE_SCOPE, "case_id": case_id, "family": case["family"],
-              "convention": case["convention"], "design": DESIGN_PATH.name, "design_sha256": DESIGN_SHA256,
+              "convention": case["convention"], "theta_x_window": case["theta_x_window"],
+              "design": DESIGN_PATH.name, "design_sha256": DESIGN_SHA256,
               "planning_commit": BASE_COMMIT, "model_commit": MODEL_COMMIT,
               "approved_numbers_sha256": approved_numbers_sha256(),
               "evaluator_files": evaluator_identities(), "sources": sources, "artifacts": artifacts,

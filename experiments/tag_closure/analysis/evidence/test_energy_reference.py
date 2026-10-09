@@ -352,14 +352,38 @@ class FixtureTests(unittest.TestCase):
             self.assertEqual(detail["approved_numbers_sha256"], score_acceptance.approved_numbers_sha256())
             self.assertEqual(detail["convention"]["c_J_kg"], 110495.0)
             self.assertEqual(detail["rungs"], rungs(case("labelled_exchange")))
+            self.assertEqual(detail["theta_x_window"]["start_seconds"], 0.0)
             for key, value in (("convention", {**detail["convention"], "c_J_kg": 220990.0}),
+                               ("theta_x_window", {**detail["theta_x_window"], "start_seconds": 1800.0}),
+                               ("theta_x_window", None),
                                ("floors", {**detail["floors"], "reference_discretization": 0.0})):
                 changed = {**detail, key: value}
+                if value is None:
+                    changed.pop(key)
                 write_json(root / "evidence.json", changed)
-                with self.assertRaises(DataError):
+                with self.assertRaises(DataError, msg=key):
                     evaluate_energy_reference(root)
             write_json(root / "evidence.json", detail)
             evaluate_energy_reference(root)
+
+    def test_theta_x_window_is_declared_and_read(self):
+        """Challenge E: the small-tag rule reads the frozen window, and a case without one is refused."""
+        self.assertTrue(all(c["theta_x_window"] == {**c["theta_x_window"], "start_seconds": 0.0, "end": "endpoint",
+                                                    "frozen": True} for c in DESIGN["cases"]))
+        c = case("heating_labels")
+        truth = analytic(DESIGN, c)
+        small = [(t, j) for t in c["tags"] for j in range(1, len(truth.time))
+                 if "absolute_L1" in origin_row(truth, truth, DESIGN, c, t, j).get("fraction_of_tolerance", {})]
+        self.assertTrue(small, "the test needs a small-tag row")
+        tag, j = small[0]
+        for window in (None, {**c["theta_x_window"], "frozen": False}, {**c["theta_x_window"], "end": 3600.0}):
+            edited = copy.deepcopy(c)
+            if window is None:
+                edited.pop("theta_x_window")
+            else:
+                edited["theta_x_window"] = window
+            with self.assertRaises(DataError, msg=str(window)):
+                origin_row(truth, truth, DESIGN, edited, tag, j)
 
     def test_exit_codes(self):
         row = {"candidate_verdict": "PASS", "mutant_caught": True, "reference_eligible": True}
