@@ -1,0 +1,21 @@
+{
+  "candidate": "independent exact equation answer",
+  "case_ids": [
+    "single_transfer",
+    "opposing_net_zero",
+    "three_compartment_cycle",
+    "unequal_compositions",
+    "empty_replenished",
+    "depleted_donor",
+    "stiff_opposing_floor",
+    "zero_activity",
+    "rain_snow_sedimentation"
+  ],
+  "design_sha256": "f2f881dfd789031efb08a37bd7ccc03aec27f278b802b70647acdd75c0ccea81",
+  "reference_mode": "rk4",
+  "reference_substeps": 64,
+  "retain_all_rungs": true,
+  "schema_version": 1,
+  "scientific_qualification": "NOT QUALIFIED",
+  "scope": "preregistered independent water-transfer development fixture"
+}

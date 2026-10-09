@@ -12,6 +12,9 @@ in [PART5.md](PART5.md). Its offline implementation does not complete Part 5.
 The independent water references, the producer of their declared
 eligibility and their frozen development cases are documented in
 [PART6.md](PART6.md). They do not complete physical water qualification.
+The directed transfer references, the producer of their declared
+eligibility and their development cases are documented in
+[PART7.md](PART7.md). Actual PX14 and PX25 evidence remains unqualified.
 
 The input is a separately identified extended manifest, not a second
 submission record format. Attach a predeclared extension to an archived
@@ -98,6 +101,59 @@ capture, physical restart/parity/device/cost and OD14 held-out evidence remain
 required. The two-reservoir linear Newton test cannot establish the model's
 nonlinear solver floor. Part 5's verified runtime-producer registry is empty.
 No missing channel is inferred as zero outside these manufactured cases.
+
+## Independent water-transfer fixtures
+
+Run the two complete frozen configurations into separate new directories
+from the repository root:
+
+```sh
+python3 experiments/tag_closure/analysis/evidence/make_water_transfer_fixture.py \
+  NEW/transfer-exact --config experiments/tag_closure/configs/water_transfer_exact.json
+python3 experiments/tag_closure/analysis/evidence/make_water_transfer_fixture.py \
+  NEW/transfer-rk4 --config experiments/tag_closure/configs/water_transfer_rk4.json
+python3 -m unittest discover -s experiments/tag_closure/analysis/evidence \
+  -p 'test_water_transfer_reference.py' -v
+```
+
+Both output roots must be absent. The exit codes are those of the transport
+fixtures above. Both configurations cover the nine cases of
+[PART7.md](PART7.md) and retain 36 RK4 rungs and 28 pool diagnostic rungs.
+Both exit 0. The other eight cases have eligible references, passing
+candidates and verified origin controls. The zero-activity case covers no
+rule by design (decision of 2026-10-09). The scorer reads its reference as
+ineligible and its candidate stays not assessable. The driver counts it as
+not applicable when its floors are eligible.
+
+`water_transfer_adapter.py` is the producing script of the declared
+eligibility file, as in Part 6. It reconstructs every rung, checks native
+geometry, units, precision, physical times, the three compartments, the
+separate rain and snow export owners, the pinned rates and the source
+identities, and requires zero arrays for excluded processes. It writes
+`independent_rules`, the producer's name and sha256, one floor per OD12
+source, `converged`, `mirrors_complete` and `jacobian_complete` into
+`transfer_reference_evidence.json`, each with its basis. The scorer reads
+the declaration through its own reader and does not import the adapter.
+
+The candidate's declared convention is the exact integrated interval. Its
+application list is empty, and the reader rebuilds one applied mean share
+per edge and interval from the native cumulative amounts. Water amounts must
+reproduce the pinned rates. Endpoint changes must reconcile with the directed
+amounts, and each edge's applied partition labels must sum to its applied
+water. Each case's control keeps the totals and fails an origin row: a wrong
+donor in the one-way case, an erased exchange in the opposing case, an
+owner reset in the sedimentation case and an origin permutation in the
+other six. Zero transfer activity is not donor-rule coverage.
+
+The sedimentation case stores instantaneous upward-positive precipitation
+apart from the exact integrated exterior amounts. Synthetic paired parent and
+tag interval rates share the same accepted application, and Part 5's reader
+checks them. The paired row stays reported accounting (WA-PRECIP). A
+synthetic receipt cannot populate the empty verified-producer registry.
+
+The [PX25 draft](../../configs/part7_px25_draft/README.md) is written by
+`save_px25_draft` and is a draft pending the owner. A test checks that the
+committed files are its output.
 
 ## Minimum evidence layout and extension
 

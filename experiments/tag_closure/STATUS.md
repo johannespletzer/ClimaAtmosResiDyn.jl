@@ -1,5 +1,42 @@
 # Status
 
+## Part 7 independent water-transfer software (2026-10-08)
+
+The [transfer design and obligation inventory](analysis/evidence/PART7.md)
+have runnable independent donor-composition equations for one-way transfer,
+opposing net-zero exchange, a three-compartment cycle, unequal compositions,
+empty and depleted donors, zero activity and separate rain and snow column
+exports. A declared negative-water map is an engineering test, not a
+physical negative composition. Pool replay and pool/net audit spread stay
+apart from reference error. Each case's control keeps the parent and every
+total and fails an origin row. Only the one-way case has a true wrong-donor
+control. The opposing case erases the exchange, the sedimentation case
+resets the owner and the other six permute origins.
+
+The adapter follows Part 6's reviewed pattern. It is the producer of a
+declared eligibility file that the unchanged scorer reads. Both nine-case
+suites, exact and RK4, retain 36 RK4 and 28 pool rungs and exit 0. Eight
+cases have eligible rung-64 references, the largest floor fraction being
+`8.310061860770055e-5`. Zero activity covers no rule by design (decision of
+2026-10-09), so its candidate stays not assessable and the driver counts it
+as not applicable. [Commands](analysis/evidence/README.md#independent-water-transfer-fixtures)
+reproduce this work. The whole evidence directory passes.
+
+**Part 7 physical qualification remains incomplete.** These six-label
+prescribed-rate development cases check conditional attribution equations,
+not model microphysics rates, atmospheric PX14 or PX25, or precipitation and
+EDMF stages 2 and 3. The [PX25 draft matrix](configs/part7_px25_draft/README.md)
+of 16 tagged arms and 8 parents is a draft pending the owner. OD15 is
+proposed. The 1500 s case has no approved hour or day score, and the second
+established-rain case is unselected. Its PrecipitatingColumn starts from
+RICO's profiles, and RICO 1M 24 h is the held-out case (WA-SCOPE), so OD14
+independence is an owner item. Accepted rates and substeps, corrections,
+Part 5 production capture, eight tags and full windows, parity, restart,
+device and cost remain required. The full acceptance scorer on a development
+fixture keeps `NOT QUALIFIED` and exit 2. No model, default, tolerance,
+dependency or CI change is supplied. Older dated records below retain their
+scope.
+
 ## Part 6 independent water reference software (2026-10-08)
 
 The [frozen design and obligation inventory](analysis/evidence/PART6.md)

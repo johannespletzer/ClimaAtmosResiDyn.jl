@@ -1,0 +1,1284 @@
+{
+  "OD15_status": "PROPOSED/PENDING",
+  "capture_blockers": [
+    "native per-tag N/R/S minima/residual/correction/fallback/bound/zero channels",
+    "same accepted parent/tag applied precipitation and six directed flow applications",
+    "checkpoint-linked restart/trial acceptance/rollback/device/parity/performance validation",
+    "OD2 startup/rain window measured from own untagged run",
+    "OD15 recorded owner decisions"
+  ],
+  "case": "PrecipitatingColumn development",
+  "cross_parent_provenance": "not assessable",
+  "default_substeps": 2,
+  "effective_substep_key": "microphysics_n_substeps_quadrature",
+  "first_order": "another scheme, not a rung",
+  "held_out_overlap": "PrecipitatingColumn starts from RICO's theta and q_tot profiles. RICO 1M 24 h is the held-out case (WA-SCOPE, 2026-10-08). Under OD14 (decision of 2026-10-09) this column serves PX25's PT15 and PT16 arithmetic rows only and chooses no mode or default. The explicit-1M default is chosen on an independent second case, found together with OD15",
+  "jobs": 24,
+  "kind": "DRAFT, NOT AUTHORIZED/EXECUTED CAMPAIGN",
+  "parents": [
+    {
+      "id": "first_order_dt10p0",
+      "kind": "untagged",
+      "refinement": "dt ladder within this scheme",
+      "settings": {
+        "FLOAT_TYPE": "Float64",
+        "approximate_linear_solve_iters": 2,
+        "cloud_model": "grid_scale",
+        "config": "column",
+        "dt": "10secs",
+        "dt_save_state_to_disk": "10secs",
+        "implicit_diffusion": true,
+        "implicit_microphysics": true,
+        "initial_condition": "PrecipitatingColumn",
+        "microphysics_model": "1M",
+        "microphysics_n_substeps": 3,
+        "microphysics_n_substeps_quadrature": 2,
+        "output_default_diagnostics": false,
+        "reproducibility_test": false,
+        "surface_setup": "DefaultMoninObukhov",
+        "t_end": "1500secs",
+        "toml": [
+          "toml/single_column_precipitation_test.toml"
+        ],
+        "tracer_upwinding": "first_order",
+        "turbconv": null,
+        "use_sgs_quadrature": true,
+        "vert_diff": "DecayWithHeightDiffusion",
+        "z_elem": 30,
+        "z_max": 6000.0,
+        "z_stretch": false
+      }
+    },
+    {
+      "id": "first_order_dt5p0",
+      "kind": "untagged",
+      "refinement": "dt ladder within this scheme",
+      "settings": {
+        "FLOAT_TYPE": "Float64",
+        "approximate_linear_solve_iters": 2,
+        "cloud_model": "grid_scale",
+        "config": "column",
+        "dt": "5secs",
+        "dt_save_state_to_disk": "10secs",
+        "implicit_diffusion": true,
+        "implicit_microphysics": true,
+        "initial_condition": "PrecipitatingColumn",
+        "microphysics_model": "1M",
+        "microphysics_n_substeps": 3,
+        "microphysics_n_substeps_quadrature": 2,
+        "output_default_diagnostics": false,
+        "reproducibility_test": false,
+        "surface_setup": "DefaultMoninObukhov",
+        "t_end": "1500secs",
+        "toml": [
+          "toml/single_column_precipitation_test.toml"
+        ],
+        "tracer_upwinding": "first_order",
+        "turbconv": null,
+        "use_sgs_quadrature": true,
+        "vert_diff": "DecayWithHeightDiffusion",
+        "z_elem": 30,
+        "z_max": 6000.0,
+        "z_stretch": false
+      }
+    },
+    {
+      "id": "first_order_dt2p5",
+      "kind": "untagged",
+      "refinement": "dt ladder within this scheme",
+      "settings": {
+        "FLOAT_TYPE": "Float64",
+        "approximate_linear_solve_iters": 2,
+        "cloud_model": "grid_scale",
+        "config": "column",
+        "dt": "2.5secs",
+        "dt_save_state_to_disk": "10secs",
+        "implicit_diffusion": true,
+        "implicit_microphysics": true,
+        "initial_condition": "PrecipitatingColumn",
+        "microphysics_model": "1M",
+        "microphysics_n_substeps": 3,
+        "microphysics_n_substeps_quadrature": 2,
+        "output_default_diagnostics": false,
+        "reproducibility_test": false,
+        "surface_setup": "DefaultMoninObukhov",
+        "t_end": "1500secs",
+        "toml": [
+          "toml/single_column_precipitation_test.toml"
+        ],
+        "tracer_upwinding": "first_order",
+        "turbconv": null,
+        "use_sgs_quadrature": true,
+        "vert_diff": "DecayWithHeightDiffusion",
+        "z_elem": 30,
+        "z_max": 6000.0,
+        "z_stretch": false
+      }
+    },
+    {
+      "id": "vanleer_limiter_dt10p0",
+      "kind": "untagged",
+      "refinement": "dt ladder within this scheme",
+      "settings": {
+        "FLOAT_TYPE": "Float64",
+        "approximate_linear_solve_iters": 2,
+        "cloud_model": "grid_scale",
+        "config": "column",
+        "dt": "10secs",
+        "dt_save_state_to_disk": "10secs",
+        "implicit_diffusion": true,
+        "implicit_microphysics": true,
+        "initial_condition": "PrecipitatingColumn",
+        "microphysics_model": "1M",
+        "microphysics_n_substeps": 3,
+        "microphysics_n_substeps_quadrature": 2,
+        "output_default_diagnostics": false,
+        "reproducibility_test": false,
+        "surface_setup": "DefaultMoninObukhov",
+        "t_end": "1500secs",
+        "toml": [
+          "toml/single_column_precipitation_test.toml"
+        ],
+        "tracer_upwinding": "vanleer_limiter",
+        "turbconv": null,
+        "use_sgs_quadrature": true,
+        "vert_diff": "DecayWithHeightDiffusion",
+        "z_elem": 30,
+        "z_max": 6000.0,
+        "z_stretch": false
+      }
+    },
+    {
+      "id": "vanleer_limiter_dt5p0",
+      "kind": "untagged",
+      "refinement": "dt ladder within this scheme",
+      "settings": {
+        "FLOAT_TYPE": "Float64",
+        "approximate_linear_solve_iters": 2,
+        "cloud_model": "grid_scale",
+        "config": "column",
+        "dt": "5secs",
+        "dt_save_state_to_disk": "10secs",
+        "implicit_diffusion": true,
+        "implicit_microphysics": true,
+        "initial_condition": "PrecipitatingColumn",
+        "microphysics_model": "1M",
+        "microphysics_n_substeps": 3,
+        "microphysics_n_substeps_quadrature": 2,
+        "output_default_diagnostics": false,
+        "reproducibility_test": false,
+        "surface_setup": "DefaultMoninObukhov",
+        "t_end": "1500secs",
+        "toml": [
+          "toml/single_column_precipitation_test.toml"
+        ],
+        "tracer_upwinding": "vanleer_limiter",
+        "turbconv": null,
+        "use_sgs_quadrature": true,
+        "vert_diff": "DecayWithHeightDiffusion",
+        "z_elem": 30,
+        "z_max": 6000.0,
+        "z_stretch": false
+      }
+    },
+    {
+      "id": "vanleer_limiter_dt2p5",
+      "kind": "untagged",
+      "refinement": "dt ladder within this scheme",
+      "settings": {
+        "FLOAT_TYPE": "Float64",
+        "approximate_linear_solve_iters": 2,
+        "cloud_model": "grid_scale",
+        "config": "column",
+        "dt": "2.5secs",
+        "dt_save_state_to_disk": "10secs",
+        "implicit_diffusion": true,
+        "implicit_microphysics": true,
+        "initial_condition": "PrecipitatingColumn",
+        "microphysics_model": "1M",
+        "microphysics_n_substeps": 3,
+        "microphysics_n_substeps_quadrature": 2,
+        "output_default_diagnostics": false,
+        "reproducibility_test": false,
+        "surface_setup": "DefaultMoninObukhov",
+        "t_end": "1500secs",
+        "toml": [
+          "toml/single_column_precipitation_test.toml"
+        ],
+        "tracer_upwinding": "vanleer_limiter",
+        "turbconv": null,
+        "use_sgs_quadrature": true,
+        "vert_diff": "DecayWithHeightDiffusion",
+        "z_elem": 30,
+        "z_max": 6000.0,
+        "z_stretch": false
+      }
+    },
+    {
+      "id": "vanleer_limiter_dt10p0_sub1",
+      "kind": "untagged",
+      "refinement": "substeps reported only, not two dt halvings",
+      "settings": {
+        "FLOAT_TYPE": "Float64",
+        "approximate_linear_solve_iters": 2,
+        "cloud_model": "grid_scale",
+        "config": "column",
+        "dt": "10secs",
+        "dt_save_state_to_disk": "10secs",
+        "implicit_diffusion": true,
+        "implicit_microphysics": true,
+        "initial_condition": "PrecipitatingColumn",
+        "microphysics_model": "1M",
+        "microphysics_n_substeps": 3,
+        "microphysics_n_substeps_quadrature": 1,
+        "output_default_diagnostics": false,
+        "reproducibility_test": false,
+        "surface_setup": "DefaultMoninObukhov",
+        "t_end": "1500secs",
+        "toml": [
+          "toml/single_column_precipitation_test.toml"
+        ],
+        "tracer_upwinding": "vanleer_limiter",
+        "turbconv": null,
+        "use_sgs_quadrature": true,
+        "vert_diff": "DecayWithHeightDiffusion",
+        "z_elem": 30,
+        "z_max": 6000.0,
+        "z_stretch": false
+      }
+    },
+    {
+      "id": "vanleer_limiter_dt10p0_sub10",
+      "kind": "untagged",
+      "refinement": "substeps reported only, not two dt halvings",
+      "settings": {
+        "FLOAT_TYPE": "Float64",
+        "approximate_linear_solve_iters": 2,
+        "cloud_model": "grid_scale",
+        "config": "column",
+        "dt": "10secs",
+        "dt_save_state_to_disk": "10secs",
+        "implicit_diffusion": true,
+        "implicit_microphysics": true,
+        "initial_condition": "PrecipitatingColumn",
+        "microphysics_model": "1M",
+        "microphysics_n_substeps": 3,
+        "microphysics_n_substeps_quadrature": 10,
+        "output_default_diagnostics": false,
+        "reproducibility_test": false,
+        "surface_setup": "DefaultMoninObukhov",
+        "t_end": "1500secs",
+        "toml": [
+          "toml/single_column_precipitation_test.toml"
+        ],
+        "tracer_upwinding": "vanleer_limiter",
+        "turbconv": null,
+        "use_sgs_quadrature": true,
+        "vert_diff": "DecayWithHeightDiffusion",
+        "z_elem": 30,
+        "z_max": 6000.0,
+        "z_stretch": false
+      }
+    }
+  ],
+  "schema_version": 1,
+  "score_status": "BLOCKED by OD15 and missing runtime accepted application producer",
+  "second_case": "unselected, OD2 established-rain measurement and OD14 independence required",
+  "short_case_end_seconds": 1500,
+  "short_criteria": [
+    {
+      "decision_status": "approved original observable",
+      "id": "closure_24h",
+      "limitation": "OD15 must decide short-case applicability, no invented hourly/day sample",
+      "required_seconds": 86400,
+      "sample_available": false,
+      "verdict": "NOT ASSESSABLE"
+    },
+    {
+      "decision_status": "approved original observable",
+      "id": "second_12h_growth",
+      "limitation": "OD15 must decide short-case applicability, no invented hourly/day sample",
+      "required_seconds": 86400,
+      "sample_available": false,
+      "verdict": "NOT ASSESSABLE"
+    },
+    {
+      "decision_status": "approved original observable",
+      "id": "audit_tag_precip_over_day",
+      "limitation": "OD15 must decide short-case applicability, no invented hourly/day sample",
+      "required_seconds": 86400,
+      "sample_available": false,
+      "verdict": "NOT ASSESSABLE"
+    },
+    {
+      "decision_status": "proposed R9 hourly reading",
+      "id": "R9_hourly_compartment",
+      "limitation": "OD15 must decide short-case applicability, no invented hourly/day sample",
+      "required_seconds": 3600,
+      "sample_available": false,
+      "verdict": "NOT ASSESSABLE"
+    }
+  ],
+  "tagged_arms": [
+    {
+      "id": "first_order_dt10p0_tracer",
+      "kind": "tagged",
+      "parent_id": "first_order_dt10p0",
+      "settings": {
+        "FLOAT_TYPE": "Float64",
+        "approximate_linear_solve_iters": 2,
+        "cloud_model": "grid_scale",
+        "config": "column",
+        "dt": "10secs",
+        "dt_save_state_to_disk": "10secs",
+        "implicit_diffusion": true,
+        "implicit_microphysics": true,
+        "initial_condition": "PrecipitatingColumn",
+        "microphysics_model": "1M",
+        "microphysics_n_substeps": 3,
+        "microphysics_n_substeps_quadrature": 2,
+        "output_default_diagnostics": false,
+        "reproducibility_test": false,
+        "surface_setup": "DefaultMoninObukhov",
+        "t_end": "1500secs",
+        "toml": [
+          "toml/single_column_precipitation_test.toml"
+        ],
+        "tracer_upwinding": "first_order",
+        "turbconv": null,
+        "use_sgs_quadrature": true,
+        "vert_diff": "DecayWithHeightDiffusion",
+        "water_tag_ledger_per_tag": true,
+        "water_tag_precipitation": true,
+        "water_tag_transport": "tracer",
+        "water_tracers": [
+          {
+            "name": "lower",
+            "region": {
+              "above": false,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "upper",
+            "region": {
+              "above": true,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "evap",
+            "source": "surface_flux"
+          }
+        ],
+        "z_elem": 30,
+        "z_max": 6000.0,
+        "z_stretch": false
+      }
+    },
+    {
+      "id": "first_order_dt10p0_increment",
+      "kind": "tagged",
+      "parent_id": "first_order_dt10p0",
+      "settings": {
+        "FLOAT_TYPE": "Float64",
+        "approximate_linear_solve_iters": 2,
+        "cloud_model": "grid_scale",
+        "config": "column",
+        "dt": "10secs",
+        "dt_save_state_to_disk": "10secs",
+        "implicit_diffusion": true,
+        "implicit_microphysics": true,
+        "initial_condition": "PrecipitatingColumn",
+        "microphysics_model": "1M",
+        "microphysics_n_substeps": 3,
+        "microphysics_n_substeps_quadrature": 2,
+        "output_default_diagnostics": false,
+        "reproducibility_test": false,
+        "surface_setup": "DefaultMoninObukhov",
+        "t_end": "1500secs",
+        "toml": [
+          "toml/single_column_precipitation_test.toml"
+        ],
+        "tracer_upwinding": "first_order",
+        "turbconv": null,
+        "use_sgs_quadrature": true,
+        "vert_diff": "DecayWithHeightDiffusion",
+        "water_tag_ledger_per_tag": true,
+        "water_tag_precipitation": true,
+        "water_tag_transport": "increment",
+        "water_tracers": [
+          {
+            "name": "lower",
+            "region": {
+              "above": false,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "upper",
+            "region": {
+              "above": true,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "evap",
+            "source": "surface_flux"
+          }
+        ],
+        "z_elem": 30,
+        "z_max": 6000.0,
+        "z_stretch": false
+      }
+    },
+    {
+      "id": "first_order_dt5p0_tracer",
+      "kind": "tagged",
+      "parent_id": "first_order_dt5p0",
+      "settings": {
+        "FLOAT_TYPE": "Float64",
+        "approximate_linear_solve_iters": 2,
+        "cloud_model": "grid_scale",
+        "config": "column",
+        "dt": "5secs",
+        "dt_save_state_to_disk": "10secs",
+        "implicit_diffusion": true,
+        "implicit_microphysics": true,
+        "initial_condition": "PrecipitatingColumn",
+        "microphysics_model": "1M",
+        "microphysics_n_substeps": 3,
+        "microphysics_n_substeps_quadrature": 2,
+        "output_default_diagnostics": false,
+        "reproducibility_test": false,
+        "surface_setup": "DefaultMoninObukhov",
+        "t_end": "1500secs",
+        "toml": [
+          "toml/single_column_precipitation_test.toml"
+        ],
+        "tracer_upwinding": "first_order",
+        "turbconv": null,
+        "use_sgs_quadrature": true,
+        "vert_diff": "DecayWithHeightDiffusion",
+        "water_tag_ledger_per_tag": true,
+        "water_tag_precipitation": true,
+        "water_tag_transport": "tracer",
+        "water_tracers": [
+          {
+            "name": "lower",
+            "region": {
+              "above": false,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "upper",
+            "region": {
+              "above": true,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "evap",
+            "source": "surface_flux"
+          }
+        ],
+        "z_elem": 30,
+        "z_max": 6000.0,
+        "z_stretch": false
+      }
+    },
+    {
+      "id": "first_order_dt5p0_increment",
+      "kind": "tagged",
+      "parent_id": "first_order_dt5p0",
+      "settings": {
+        "FLOAT_TYPE": "Float64",
+        "approximate_linear_solve_iters": 2,
+        "cloud_model": "grid_scale",
+        "config": "column",
+        "dt": "5secs",
+        "dt_save_state_to_disk": "10secs",
+        "implicit_diffusion": true,
+        "implicit_microphysics": true,
+        "initial_condition": "PrecipitatingColumn",
+        "microphysics_model": "1M",
+        "microphysics_n_substeps": 3,
+        "microphysics_n_substeps_quadrature": 2,
+        "output_default_diagnostics": false,
+        "reproducibility_test": false,
+        "surface_setup": "DefaultMoninObukhov",
+        "t_end": "1500secs",
+        "toml": [
+          "toml/single_column_precipitation_test.toml"
+        ],
+        "tracer_upwinding": "first_order",
+        "turbconv": null,
+        "use_sgs_quadrature": true,
+        "vert_diff": "DecayWithHeightDiffusion",
+        "water_tag_ledger_per_tag": true,
+        "water_tag_precipitation": true,
+        "water_tag_transport": "increment",
+        "water_tracers": [
+          {
+            "name": "lower",
+            "region": {
+              "above": false,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "upper",
+            "region": {
+              "above": true,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "evap",
+            "source": "surface_flux"
+          }
+        ],
+        "z_elem": 30,
+        "z_max": 6000.0,
+        "z_stretch": false
+      }
+    },
+    {
+      "id": "first_order_dt2p5_tracer",
+      "kind": "tagged",
+      "parent_id": "first_order_dt2p5",
+      "settings": {
+        "FLOAT_TYPE": "Float64",
+        "approximate_linear_solve_iters": 2,
+        "cloud_model": "grid_scale",
+        "config": "column",
+        "dt": "2.5secs",
+        "dt_save_state_to_disk": "10secs",
+        "implicit_diffusion": true,
+        "implicit_microphysics": true,
+        "initial_condition": "PrecipitatingColumn",
+        "microphysics_model": "1M",
+        "microphysics_n_substeps": 3,
+        "microphysics_n_substeps_quadrature": 2,
+        "output_default_diagnostics": false,
+        "reproducibility_test": false,
+        "surface_setup": "DefaultMoninObukhov",
+        "t_end": "1500secs",
+        "toml": [
+          "toml/single_column_precipitation_test.toml"
+        ],
+        "tracer_upwinding": "first_order",
+        "turbconv": null,
+        "use_sgs_quadrature": true,
+        "vert_diff": "DecayWithHeightDiffusion",
+        "water_tag_ledger_per_tag": true,
+        "water_tag_precipitation": true,
+        "water_tag_transport": "tracer",
+        "water_tracers": [
+          {
+            "name": "lower",
+            "region": {
+              "above": false,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "upper",
+            "region": {
+              "above": true,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "evap",
+            "source": "surface_flux"
+          }
+        ],
+        "z_elem": 30,
+        "z_max": 6000.0,
+        "z_stretch": false
+      }
+    },
+    {
+      "id": "first_order_dt2p5_increment",
+      "kind": "tagged",
+      "parent_id": "first_order_dt2p5",
+      "settings": {
+        "FLOAT_TYPE": "Float64",
+        "approximate_linear_solve_iters": 2,
+        "cloud_model": "grid_scale",
+        "config": "column",
+        "dt": "2.5secs",
+        "dt_save_state_to_disk": "10secs",
+        "implicit_diffusion": true,
+        "implicit_microphysics": true,
+        "initial_condition": "PrecipitatingColumn",
+        "microphysics_model": "1M",
+        "microphysics_n_substeps": 3,
+        "microphysics_n_substeps_quadrature": 2,
+        "output_default_diagnostics": false,
+        "reproducibility_test": false,
+        "surface_setup": "DefaultMoninObukhov",
+        "t_end": "1500secs",
+        "toml": [
+          "toml/single_column_precipitation_test.toml"
+        ],
+        "tracer_upwinding": "first_order",
+        "turbconv": null,
+        "use_sgs_quadrature": true,
+        "vert_diff": "DecayWithHeightDiffusion",
+        "water_tag_ledger_per_tag": true,
+        "water_tag_precipitation": true,
+        "water_tag_transport": "increment",
+        "water_tracers": [
+          {
+            "name": "lower",
+            "region": {
+              "above": false,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "upper",
+            "region": {
+              "above": true,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "evap",
+            "source": "surface_flux"
+          }
+        ],
+        "z_elem": 30,
+        "z_max": 6000.0,
+        "z_stretch": false
+      }
+    },
+    {
+      "id": "vanleer_limiter_dt10p0_tracer",
+      "kind": "tagged",
+      "parent_id": "vanleer_limiter_dt10p0",
+      "settings": {
+        "FLOAT_TYPE": "Float64",
+        "approximate_linear_solve_iters": 2,
+        "cloud_model": "grid_scale",
+        "config": "column",
+        "dt": "10secs",
+        "dt_save_state_to_disk": "10secs",
+        "implicit_diffusion": true,
+        "implicit_microphysics": true,
+        "initial_condition": "PrecipitatingColumn",
+        "microphysics_model": "1M",
+        "microphysics_n_substeps": 3,
+        "microphysics_n_substeps_quadrature": 2,
+        "output_default_diagnostics": false,
+        "reproducibility_test": false,
+        "surface_setup": "DefaultMoninObukhov",
+        "t_end": "1500secs",
+        "toml": [
+          "toml/single_column_precipitation_test.toml"
+        ],
+        "tracer_upwinding": "vanleer_limiter",
+        "turbconv": null,
+        "use_sgs_quadrature": true,
+        "vert_diff": "DecayWithHeightDiffusion",
+        "water_tag_ledger_per_tag": true,
+        "water_tag_precipitation": true,
+        "water_tag_transport": "tracer",
+        "water_tracers": [
+          {
+            "name": "lower",
+            "region": {
+              "above": false,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "upper",
+            "region": {
+              "above": true,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "evap",
+            "source": "surface_flux"
+          }
+        ],
+        "z_elem": 30,
+        "z_max": 6000.0,
+        "z_stretch": false
+      }
+    },
+    {
+      "id": "vanleer_limiter_dt10p0_increment",
+      "kind": "tagged",
+      "parent_id": "vanleer_limiter_dt10p0",
+      "settings": {
+        "FLOAT_TYPE": "Float64",
+        "approximate_linear_solve_iters": 2,
+        "cloud_model": "grid_scale",
+        "config": "column",
+        "dt": "10secs",
+        "dt_save_state_to_disk": "10secs",
+        "implicit_diffusion": true,
+        "implicit_microphysics": true,
+        "initial_condition": "PrecipitatingColumn",
+        "microphysics_model": "1M",
+        "microphysics_n_substeps": 3,
+        "microphysics_n_substeps_quadrature": 2,
+        "output_default_diagnostics": false,
+        "reproducibility_test": false,
+        "surface_setup": "DefaultMoninObukhov",
+        "t_end": "1500secs",
+        "toml": [
+          "toml/single_column_precipitation_test.toml"
+        ],
+        "tracer_upwinding": "vanleer_limiter",
+        "turbconv": null,
+        "use_sgs_quadrature": true,
+        "vert_diff": "DecayWithHeightDiffusion",
+        "water_tag_ledger_per_tag": true,
+        "water_tag_precipitation": true,
+        "water_tag_transport": "increment",
+        "water_tracers": [
+          {
+            "name": "lower",
+            "region": {
+              "above": false,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "upper",
+            "region": {
+              "above": true,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "evap",
+            "source": "surface_flux"
+          }
+        ],
+        "z_elem": 30,
+        "z_max": 6000.0,
+        "z_stretch": false
+      }
+    },
+    {
+      "id": "vanleer_limiter_dt5p0_tracer",
+      "kind": "tagged",
+      "parent_id": "vanleer_limiter_dt5p0",
+      "settings": {
+        "FLOAT_TYPE": "Float64",
+        "approximate_linear_solve_iters": 2,
+        "cloud_model": "grid_scale",
+        "config": "column",
+        "dt": "5secs",
+        "dt_save_state_to_disk": "10secs",
+        "implicit_diffusion": true,
+        "implicit_microphysics": true,
+        "initial_condition": "PrecipitatingColumn",
+        "microphysics_model": "1M",
+        "microphysics_n_substeps": 3,
+        "microphysics_n_substeps_quadrature": 2,
+        "output_default_diagnostics": false,
+        "reproducibility_test": false,
+        "surface_setup": "DefaultMoninObukhov",
+        "t_end": "1500secs",
+        "toml": [
+          "toml/single_column_precipitation_test.toml"
+        ],
+        "tracer_upwinding": "vanleer_limiter",
+        "turbconv": null,
+        "use_sgs_quadrature": true,
+        "vert_diff": "DecayWithHeightDiffusion",
+        "water_tag_ledger_per_tag": true,
+        "water_tag_precipitation": true,
+        "water_tag_transport": "tracer",
+        "water_tracers": [
+          {
+            "name": "lower",
+            "region": {
+              "above": false,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "upper",
+            "region": {
+              "above": true,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "evap",
+            "source": "surface_flux"
+          }
+        ],
+        "z_elem": 30,
+        "z_max": 6000.0,
+        "z_stretch": false
+      }
+    },
+    {
+      "id": "vanleer_limiter_dt5p0_increment",
+      "kind": "tagged",
+      "parent_id": "vanleer_limiter_dt5p0",
+      "settings": {
+        "FLOAT_TYPE": "Float64",
+        "approximate_linear_solve_iters": 2,
+        "cloud_model": "grid_scale",
+        "config": "column",
+        "dt": "5secs",
+        "dt_save_state_to_disk": "10secs",
+        "implicit_diffusion": true,
+        "implicit_microphysics": true,
+        "initial_condition": "PrecipitatingColumn",
+        "microphysics_model": "1M",
+        "microphysics_n_substeps": 3,
+        "microphysics_n_substeps_quadrature": 2,
+        "output_default_diagnostics": false,
+        "reproducibility_test": false,
+        "surface_setup": "DefaultMoninObukhov",
+        "t_end": "1500secs",
+        "toml": [
+          "toml/single_column_precipitation_test.toml"
+        ],
+        "tracer_upwinding": "vanleer_limiter",
+        "turbconv": null,
+        "use_sgs_quadrature": true,
+        "vert_diff": "DecayWithHeightDiffusion",
+        "water_tag_ledger_per_tag": true,
+        "water_tag_precipitation": true,
+        "water_tag_transport": "increment",
+        "water_tracers": [
+          {
+            "name": "lower",
+            "region": {
+              "above": false,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "upper",
+            "region": {
+              "above": true,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "evap",
+            "source": "surface_flux"
+          }
+        ],
+        "z_elem": 30,
+        "z_max": 6000.0,
+        "z_stretch": false
+      }
+    },
+    {
+      "id": "vanleer_limiter_dt2p5_tracer",
+      "kind": "tagged",
+      "parent_id": "vanleer_limiter_dt2p5",
+      "settings": {
+        "FLOAT_TYPE": "Float64",
+        "approximate_linear_solve_iters": 2,
+        "cloud_model": "grid_scale",
+        "config": "column",
+        "dt": "2.5secs",
+        "dt_save_state_to_disk": "10secs",
+        "implicit_diffusion": true,
+        "implicit_microphysics": true,
+        "initial_condition": "PrecipitatingColumn",
+        "microphysics_model": "1M",
+        "microphysics_n_substeps": 3,
+        "microphysics_n_substeps_quadrature": 2,
+        "output_default_diagnostics": false,
+        "reproducibility_test": false,
+        "surface_setup": "DefaultMoninObukhov",
+        "t_end": "1500secs",
+        "toml": [
+          "toml/single_column_precipitation_test.toml"
+        ],
+        "tracer_upwinding": "vanleer_limiter",
+        "turbconv": null,
+        "use_sgs_quadrature": true,
+        "vert_diff": "DecayWithHeightDiffusion",
+        "water_tag_ledger_per_tag": true,
+        "water_tag_precipitation": true,
+        "water_tag_transport": "tracer",
+        "water_tracers": [
+          {
+            "name": "lower",
+            "region": {
+              "above": false,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "upper",
+            "region": {
+              "above": true,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "evap",
+            "source": "surface_flux"
+          }
+        ],
+        "z_elem": 30,
+        "z_max": 6000.0,
+        "z_stretch": false
+      }
+    },
+    {
+      "id": "vanleer_limiter_dt2p5_increment",
+      "kind": "tagged",
+      "parent_id": "vanleer_limiter_dt2p5",
+      "settings": {
+        "FLOAT_TYPE": "Float64",
+        "approximate_linear_solve_iters": 2,
+        "cloud_model": "grid_scale",
+        "config": "column",
+        "dt": "2.5secs",
+        "dt_save_state_to_disk": "10secs",
+        "implicit_diffusion": true,
+        "implicit_microphysics": true,
+        "initial_condition": "PrecipitatingColumn",
+        "microphysics_model": "1M",
+        "microphysics_n_substeps": 3,
+        "microphysics_n_substeps_quadrature": 2,
+        "output_default_diagnostics": false,
+        "reproducibility_test": false,
+        "surface_setup": "DefaultMoninObukhov",
+        "t_end": "1500secs",
+        "toml": [
+          "toml/single_column_precipitation_test.toml"
+        ],
+        "tracer_upwinding": "vanleer_limiter",
+        "turbconv": null,
+        "use_sgs_quadrature": true,
+        "vert_diff": "DecayWithHeightDiffusion",
+        "water_tag_ledger_per_tag": true,
+        "water_tag_precipitation": true,
+        "water_tag_transport": "increment",
+        "water_tracers": [
+          {
+            "name": "lower",
+            "region": {
+              "above": false,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "upper",
+            "region": {
+              "above": true,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "evap",
+            "source": "surface_flux"
+          }
+        ],
+        "z_elem": 30,
+        "z_max": 6000.0,
+        "z_stretch": false
+      }
+    },
+    {
+      "id": "vanleer_limiter_dt10p0_sub1_tracer",
+      "kind": "tagged",
+      "parent_id": "vanleer_limiter_dt10p0_sub1",
+      "settings": {
+        "FLOAT_TYPE": "Float64",
+        "approximate_linear_solve_iters": 2,
+        "cloud_model": "grid_scale",
+        "config": "column",
+        "dt": "10secs",
+        "dt_save_state_to_disk": "10secs",
+        "implicit_diffusion": true,
+        "implicit_microphysics": true,
+        "initial_condition": "PrecipitatingColumn",
+        "microphysics_model": "1M",
+        "microphysics_n_substeps": 3,
+        "microphysics_n_substeps_quadrature": 1,
+        "output_default_diagnostics": false,
+        "reproducibility_test": false,
+        "surface_setup": "DefaultMoninObukhov",
+        "t_end": "1500secs",
+        "toml": [
+          "toml/single_column_precipitation_test.toml"
+        ],
+        "tracer_upwinding": "vanleer_limiter",
+        "turbconv": null,
+        "use_sgs_quadrature": true,
+        "vert_diff": "DecayWithHeightDiffusion",
+        "water_tag_ledger_per_tag": true,
+        "water_tag_precipitation": true,
+        "water_tag_transport": "tracer",
+        "water_tracers": [
+          {
+            "name": "lower",
+            "region": {
+              "above": false,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "upper",
+            "region": {
+              "above": true,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "evap",
+            "source": "surface_flux"
+          }
+        ],
+        "z_elem": 30,
+        "z_max": 6000.0,
+        "z_stretch": false
+      }
+    },
+    {
+      "id": "vanleer_limiter_dt10p0_sub1_increment",
+      "kind": "tagged",
+      "parent_id": "vanleer_limiter_dt10p0_sub1",
+      "settings": {
+        "FLOAT_TYPE": "Float64",
+        "approximate_linear_solve_iters": 2,
+        "cloud_model": "grid_scale",
+        "config": "column",
+        "dt": "10secs",
+        "dt_save_state_to_disk": "10secs",
+        "implicit_diffusion": true,
+        "implicit_microphysics": true,
+        "initial_condition": "PrecipitatingColumn",
+        "microphysics_model": "1M",
+        "microphysics_n_substeps": 3,
+        "microphysics_n_substeps_quadrature": 1,
+        "output_default_diagnostics": false,
+        "reproducibility_test": false,
+        "surface_setup": "DefaultMoninObukhov",
+        "t_end": "1500secs",
+        "toml": [
+          "toml/single_column_precipitation_test.toml"
+        ],
+        "tracer_upwinding": "vanleer_limiter",
+        "turbconv": null,
+        "use_sgs_quadrature": true,
+        "vert_diff": "DecayWithHeightDiffusion",
+        "water_tag_ledger_per_tag": true,
+        "water_tag_precipitation": true,
+        "water_tag_transport": "increment",
+        "water_tracers": [
+          {
+            "name": "lower",
+            "region": {
+              "above": false,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "upper",
+            "region": {
+              "above": true,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "evap",
+            "source": "surface_flux"
+          }
+        ],
+        "z_elem": 30,
+        "z_max": 6000.0,
+        "z_stretch": false
+      }
+    },
+    {
+      "id": "vanleer_limiter_dt10p0_sub10_tracer",
+      "kind": "tagged",
+      "parent_id": "vanleer_limiter_dt10p0_sub10",
+      "settings": {
+        "FLOAT_TYPE": "Float64",
+        "approximate_linear_solve_iters": 2,
+        "cloud_model": "grid_scale",
+        "config": "column",
+        "dt": "10secs",
+        "dt_save_state_to_disk": "10secs",
+        "implicit_diffusion": true,
+        "implicit_microphysics": true,
+        "initial_condition": "PrecipitatingColumn",
+        "microphysics_model": "1M",
+        "microphysics_n_substeps": 3,
+        "microphysics_n_substeps_quadrature": 10,
+        "output_default_diagnostics": false,
+        "reproducibility_test": false,
+        "surface_setup": "DefaultMoninObukhov",
+        "t_end": "1500secs",
+        "toml": [
+          "toml/single_column_precipitation_test.toml"
+        ],
+        "tracer_upwinding": "vanleer_limiter",
+        "turbconv": null,
+        "use_sgs_quadrature": true,
+        "vert_diff": "DecayWithHeightDiffusion",
+        "water_tag_ledger_per_tag": true,
+        "water_tag_precipitation": true,
+        "water_tag_transport": "tracer",
+        "water_tracers": [
+          {
+            "name": "lower",
+            "region": {
+              "above": false,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "upper",
+            "region": {
+              "above": true,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "evap",
+            "source": "surface_flux"
+          }
+        ],
+        "z_elem": 30,
+        "z_max": 6000.0,
+        "z_stretch": false
+      }
+    },
+    {
+      "id": "vanleer_limiter_dt10p0_sub10_increment",
+      "kind": "tagged",
+      "parent_id": "vanleer_limiter_dt10p0_sub10",
+      "settings": {
+        "FLOAT_TYPE": "Float64",
+        "approximate_linear_solve_iters": 2,
+        "cloud_model": "grid_scale",
+        "config": "column",
+        "dt": "10secs",
+        "dt_save_state_to_disk": "10secs",
+        "implicit_diffusion": true,
+        "implicit_microphysics": true,
+        "initial_condition": "PrecipitatingColumn",
+        "microphysics_model": "1M",
+        "microphysics_n_substeps": 3,
+        "microphysics_n_substeps_quadrature": 10,
+        "output_default_diagnostics": false,
+        "reproducibility_test": false,
+        "surface_setup": "DefaultMoninObukhov",
+        "t_end": "1500secs",
+        "toml": [
+          "toml/single_column_precipitation_test.toml"
+        ],
+        "tracer_upwinding": "vanleer_limiter",
+        "turbconv": null,
+        "use_sgs_quadrature": true,
+        "vert_diff": "DecayWithHeightDiffusion",
+        "water_tag_ledger_per_tag": true,
+        "water_tag_precipitation": true,
+        "water_tag_transport": "increment",
+        "water_tracers": [
+          {
+            "name": "lower",
+            "region": {
+              "above": false,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "upper",
+            "region": {
+              "above": true,
+              "type": "tanh_altitude",
+              "width": 300.0,
+              "z_center": 3000.0
+            }
+          },
+          {
+            "name": "evap",
+            "source": "surface_flux"
+          }
+        ],
+        "z_elem": 30,
+        "z_max": 6000.0,
+        "z_stretch": false
+      }
+    }
+  ]
+}
