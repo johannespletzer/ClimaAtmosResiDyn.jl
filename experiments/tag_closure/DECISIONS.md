@@ -184,7 +184,9 @@ record; the answered and superseded entries are in the next section.
     [G3T](G3_TODO.md)
 
   - **OD9 to OD11, the provenance labels.** Added 2026-10-02: they stay
-    proposed until a gated result exists (below).
+    proposed until a gated result exists (below). *Partly answered
+    2026-10-09:* OD11's fixed `c` for energy is decided (below). The rest
+    stays proposed.
     [PROVENANCE_PATHWAY.md](PROVENANCE_PATHWAY.md), section 9.
 
   - **OD15, WP4b's acceptance for precipitation provenance.** Added
@@ -311,6 +313,59 @@ The list as it stood before this classification, kept as written:
 >     [FINDINGS W25](FINDINGS.md)
 
 ## 2026-10-09
+
+The owner decided these on 2026-10-09, on proposals 1 to 6 of the review of the
+energy offset `c`
+([offset_c_challenge_2026-10-09.md](review/agent_reviews/offset_c_challenge_2026-10-09.md),
+PR #165). Proposal 7, describing `c` in the docs, was not put to the owner.
+
+  - **The energy offset is `c` = 166,764 J/kg, dry internal energy counted
+    from 150 K (OD11, the fixed `c` only).** **In force.** It is
+    `cp_d·T0 − cv_d·150 K` at the default parameters, recorded as the number.
+    It keeps `ρe_tot + cρ` positive for dry, still air at or above sea level in
+    every state that passes OD3's validity row, and it is one value for every
+    configuration. So U8 is answered. It applies from the first stored-tag run
+    of part 11a or 11b. G1 and G2 keep 110,495 J/kg as historical results.
+    OD11's rule classification, admissible alternatives and source convention
+    stay proposed. The shipped configuration, the docs and the refusal message
+    still quote 110,495 J/kg, and a separate PR on `main` changes them.
+  - **Falling ice is measured first.** **In force.** Under this `c`, falling
+    ice still carries negative energy, so its provenance moves upward (E41).
+    Part 11b measures how much provenance it moves, on a 1M case with ice named
+    in 11b's pre-registration. Only if that matters does part 11c add a
+    separate offset for water, counted from ice at 150 K (about 0.59 MJ/kg).
+    A single `c` large enough to make ice positive is not taken.
+  - **The offset sweep compares the fixed `c` with `cp_d·T0` = 274,389 J/kg
+    (G4.10).** **In force.** Each conclusion is flagged robust to `c`, when its
+    sign and ranking hold and it moves by less than its own tolerance, or
+    convention-defined. A convention-defined conclusion is reported and cannot
+    reach level 3 or 4. 110,495 J/kg runs once in 11b, for continuity with G1
+    and G2. The sweep stays a comparison of conventions, never a bound.
+  - **Energy results report shares, the composition of new energy and `τ`
+    (G4.14, part 4's scorer).** **In force.** Region tags are reported as
+    shares of `E_c`, never as integrals compared across `c`. E71's +177% for
+    `strat` is mostly the total growing 163%, and as shares the change is
+    about 5%. The composition of new energy is the source tags' ratios, or the
+    label partition's tags over their sum. `τ = E_c/L` comes with every result,
+    labelled as a turnover time set by the convention, not a persistence or a
+    residence time.
+  - **The offset that comes with mass changes is attributed as separate
+    events (part 11c).** **In force.** Each attributed process's change splits
+    into `Δρe_tot` and `cΔρ`, each attributed by its own sign. So the split
+    into production and loss no longer depends on `c`, and process tags hold no
+    offset energy. It is model code. It can raise Θx, so OD3's energy
+    tolerances read against a larger scale (OD4, annotated). Where the offset
+    events go is part of 11c's design, and the label partition gives them a
+    home. The review had recommended a reported record only.
+  - **The label partition is adopted (part 11c, ATTRIBUTION_PATH step 4a).**
+    **In force.** An `initial` tag plus one tag per process label, summing to
+    `E_c`. The offset's reservoir sits in `initial`, and the repair only trades
+    within the partition (E35, E36).
+  - **OD6's absolute term for energy is read in OD4 units.** **In force.**
+    For energy, the 2e-4 is a fraction of the window's gross source throughput,
+    as OD3's small-tag row reads the rule that OD6 cites. The `0.02 S_min` term
+    stays relative to the partition. `c` is fixed before part 12d's 90-day
+    sphere (G4.13).
 
 The owner decided these on 2026-10-09, in the review of PR #159 (Part 7).
 
