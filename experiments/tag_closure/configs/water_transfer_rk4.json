@@ -11,7 +11,7 @@
     "zero_activity",
     "rain_snow_sedimentation"
   ],
-  "design_sha256": "a2ddfccc6ca5e781633458fd2d6a7230f5121776ea1f17593a8bc0e272146b71",
+  "design_sha256": "99d06a4075ede14b914febf1758ef98191bb7d9f84c9c198b21728e360ca36f3",
   "reference_mode": "rk4",
   "reference_substeps": 64,
   "retain_all_rungs": true,

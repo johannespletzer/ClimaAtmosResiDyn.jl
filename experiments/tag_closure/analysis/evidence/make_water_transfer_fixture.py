@@ -239,6 +239,8 @@ def run_suite(root,config):
         manifest=write_fixture(root/case_id,case_id,config["reference_mode"],64)
         result=evaluate_fixture(manifest);write_json(manifest.with_name("known_answer_results.json"),result)
         cases.append({"case_id":case_id,"reference_eligible":result["measured_reference"]["meets"],
+                      "rule_coverage":result["measured_reference"]["rule_coverage"],
+                      "floor_eligible":result["measured_reference"]["floor_eligible"],
                       "candidate_verdict":result["candidate_verdict"],"mutation_verified":result["origin_mutant"]["mutation_verified"],
                       "floor_fraction":result["measured_reference"]["metrics"]["floor_fraction_of_tolerance"],
                       "result":case_id+"/known_answer_results.json"})
@@ -249,10 +251,19 @@ def run_suite(root,config):
 
 
 def suite_exit_code(cases):
-    """1 for a failed check, else 3 for an ineligible reference, else 0."""
+    """1 for a failed check, else 3 for an ineligible reference, else 0.
+
+    A case the design expects to cover no rule is not applicable (decision of
+    2026-10-09). It stays NOT ASSESSABLE in the results and does not make the
+    suite exit 3, provided its floors are eligible.
+    """
     if any(c["candidate_verdict"]=="FAIL" or c["mutation_verified"] is False for c in cases):
         return 1
-    return 3 if any(not c["reference_eligible"] for c in cases) else 0
+    def counted_eligible(c):
+        if c.get("rule_coverage","measured")!="measured":
+            return c["floor_eligible"] is True
+        return c["reference_eligible"]
+    return 3 if any(not counted_eligible(c) for c in cases) else 0
 
 
 def main(argv=None):

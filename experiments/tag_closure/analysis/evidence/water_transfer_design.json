@@ -364,6 +364,7 @@
         2.0
       ],
       "edges": [],
+      "expected_rule_coverage": "none",
       "fractions": [
         [
           0.6,

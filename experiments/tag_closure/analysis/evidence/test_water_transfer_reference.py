@@ -86,6 +86,28 @@ class EquationTests(unittest.TestCase):
         wrong = mutation(self.design, case, truth)
         process = application_error(wrong, case)
         self.assertEqual(process["meets"], bool(np.all(np.asarray(process["weighted_share_error"]) <= .05)))
+        # The code reads the design's numbers, so the pinned file and the code cannot disagree.
+        changed = copy.deepcopy(self.design)
+        changed["profile_rules"].update(day_L1=.5, hour_Linf=.7, process_weighted=.3)
+        rows = {(r["tag"], r["compartment"], r["endpoint_seconds"]): r for r in error_rows(truth, truth, changed)}
+        self.assertEqual(rows[("origin_a", "total", 86400.)]["tolerances"]["L1"], .5)
+        self.assertEqual(rows[("origin_a", "total", 3600.)]["tolerances"]["Linf"], .7)
+        self.assertEqual(application_error(wrong, case, changed)["meets"],
+                         bool(np.all(np.asarray(process["weighted_share_error"]) <= .3)))
+        # Rows are judged at the scorer's two approved endpoints only.
+        judged = sorted({r["endpoint_seconds"] for r in error_rows(truth, truth, self.design) if r["meets"] is not None})
+        self.assertEqual(judged, [score_acceptance.FIRST_HOUR, score_acceptance.DAY])
+        judged = sorted({r["endpoint_seconds"] for r in boundary_error_rows(rain, rain, self.design, rain_case)
+                         if r["meets"] is not None})
+        self.assertEqual(judged, [score_acceptance.FIRST_HOUR, score_acceptance.DAY])
+        # The source overlays are the design's stated definitions.
+        self.assertEqual(self.design["source_overlays"], {"source_overlap": ".45*origin_a + .25*parent",
+                                                          "tiny_source": ".001*parent", "zero_source": "0"})
+        for each in self.design["cases"]:
+            parent, labels = initial(each)
+            np.testing.assert_array_equal(labels[3], .45 * labels[0] + .25 * parent)
+            np.testing.assert_array_equal(labels[4], .001 * parent)
+            np.testing.assert_array_equal(labels[5], 0.)
 
     def test_wrong_donor_closes_compartments_and_each_global_label_but_fails_origins(self):
         case, truth = self.state("single_transfer")
@@ -304,9 +326,27 @@ class PlanningTests(unittest.TestCase):
             self.assertEqual(generated,sorted(p.name for p in committed.iterdir()))
             for name in generated:
                 self.assertEqual((Path(scratch)/"draft"/name).read_text(),(committed/name).read_text(),name)
+        # Every yml is its arm's settings plus a job id, at the registered values.
+        arms={arm["id"]:arm for arm in matrix["parents"]+matrix["tagged_arms"]}
+        self.assertEqual(json.loads((committed/"preregistration.json").read_text())["parents"],matrix["parents"])
+        for name,arm in arms.items():
+            self.assertEqual(json.loads((committed/(name+".yml")).read_text()),
+                             {**arm["settings"],"job_id":"part7_px25_draft_"+name})
+        settings=[arm["settings"] for arm in arms.values()]
+        self.assertEqual({s["dt"] for s in settings},{"10secs","5secs","2.5secs"})
+        self.assertEqual({(s["z_elem"],s["z_max"],s["t_end"],s["initial_condition"],s["microphysics_model"])
+                          for s in settings},{(30,6000.,"1500secs","PrecipitatingColumn","1M")})
+        self.assertEqual(sorted({s["microphysics_n_substeps_quadrature"] for s in settings}),[1,2,10])
+        self.assertEqual({s["microphysics_n_substeps"] for s in settings},{3})
+        self.assertEqual({s["tracer_upwinding"] for s in settings},{"first_order","vanleer_limiter"})
+        regions=[t["region"] for arm in matrix["tagged_arms"] for t in arm["settings"]["water_tracers"] if "region" in t]
+        self.assertEqual({(r["z_center"],r["width"]) for r in regions},{(3000.,300.)})
+        self.assertEqual([r["required_seconds"] for r in matrix["short_criteria"]],[86400,86400,86400,3600])
+        self.assertIn("PT15 and PT16",matrix["held_out_overlap"])
         self.assertTrue(matrix["kind"].startswith("DRAFT"))
         self.assertEqual(matrix["OD15_status"],"PROPOSED/PENDING")
         self.assertIn("RICO 1M 24 h is the held-out case",matrix["held_out_overlap"])
+        self.assertIn("chooses no mode or default",matrix["held_out_overlap"])
         self.assertIn("draft pending the owner",(committed/"README.md").read_text())
         self.assertEqual(len([p for p in committed.iterdir() if p.suffix==".yml"]),24)
 
@@ -496,6 +536,10 @@ class BundleTests(unittest.TestCase):
         # covers none. The scorer reads it as ineligible and the rule as untested.
         self.assertLess(report["declaration"]["floors"]["reference_discretization"],1e-10)
         self.assertFalse(report["meets"])
+        # The design marks the case as covering no rule (decision of 2026-10-09).
+        self.assertEqual(case_by_id(load_design(),"zero_activity")["expected_rule_coverage"],"none")
+        self.assertTrue(report["rule_coverage"].startswith("not applicable"))
+        self.assertTrue(report["floor_eligible"])
         scorer=Scorer(Bundle(path))
         self.assertFalse(scorer.reference_eligibility(0,DAY)["meets"])
         coverage=scorer.active_rule_coverage()
@@ -574,6 +618,30 @@ class DriverExitTests(unittest.TestCase):
                                                    "mutation_verified":None,"reference_eligible":False}]),3)
         self.assertEqual(suite_exit_code([passing,{**passing,"candidate_verdict":"FAIL"}]),1)
         self.assertEqual(suite_exit_code([{**passing,"mutation_verified":False}]),1)
+        # A case the design expects to cover no rule is not applicable, if its floors are eligible.
+        expected_none={"candidate_verdict":"NOT ASSESSABLE","mutation_verified":None,"reference_eligible":False,
+                       "rule_coverage":"not applicable, expected by the design","floor_eligible":True}
+        self.assertEqual(suite_exit_code([passing,expected_none]),0)
+        self.assertEqual(suite_exit_code([passing,{**expected_none,"floor_eligible":False}]),3)
+        self.assertEqual(suite_exit_code([passing,{**expected_none,"rule_coverage":"measured"}]),3)
+
+    def test_complete_exact_suite_through_main(self):
+        # The real run_suite path, not a mock. Zero activity is not applicable.
+        config=self.root/"exact.json"
+        write_json(config,self.config)
+        self.assertEqual(self.main(self.root/"exact","--config",config),0)
+        report=json.loads((self.root/"exact"/"suite_results.json").read_text())
+        self.assertEqual(report["exit_code"],0)
+        rows={row["case_id"]:row for row in report["cases"]}
+        self.assertEqual(list(rows),self.config["case_ids"])
+        zero=rows.pop("zero_activity")
+        self.assertEqual((zero["candidate_verdict"],zero["reference_eligible"],zero["floor_eligible"]),
+                         ("NOT ASSESSABLE",False,True))
+        self.assertTrue(zero["rule_coverage"].startswith("not applicable"))
+        for row in rows.values():
+            self.assertEqual((row["candidate_verdict"],row["reference_eligible"],row["mutation_verified"],
+                              row["rule_coverage"]),("PASS",True,True,"measured"))
+            self.assertLess(row["floor_fraction"],.25)
 
     def test_main_maps_failures_to_the_scorer_codes(self):
         config=self.root/"config.json"

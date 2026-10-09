@@ -258,6 +258,10 @@ def evaluate_water_transfer(bundle, declared=True):
     # no independent rule, and the scorer's reader reads the reference as
     # covering none (ineligible, coverage not met).
     active=bool(len(case["edges"]) and truth.activity[-1].sum()>0)
+    # The design marks a case that is expected to cover no rule (decision of
+    # 2026-10-09). Its pinned rates must then move no water.
+    expected_none=case.get("expected_rule_coverage")=="none"
+    require(not (expected_none and active),"the design expects no rule coverage, but the pinned rates move water")
     declaration={
         "independent_rules":[rule] if active else [],
         "producer":producer_identity(),
@@ -276,14 +280,15 @@ def evaluate_water_transfer(bundle, declared=True):
                                 "diagnostic's linear solve is not the reference.",
             "mirrors_complete":"Inapplicable. Source-free equations, no copies, and every excluded process reads zero.",
             "independent_rules":"Measured. The pinned rates move water." if active else
-                                "Measured. Zero transfer activity exercises no donor rule.",
+                                "Measured. Zero transfer activity exercises no donor rule." +
+                                (" The design expects this case to cover no rule." if expected_none else ""),
         },
     }
     # The scorer's own reading of a declaration (score_acceptance.py, reference_eligibility).
-    eligible=(bool(set(declaration["independent_rules"]) & set(spec.get("active_rules",[]))) and
-              declaration["converged"] is True and
-              all(0<=value<=FLOOR_FRACTION_MAX for value in declaration["floors"].values()) and
-              declaration["mirrors_complete"] is True and declaration["jacobian_complete"] is True)
+    floor_eligible=(declaration["converged"] is True and
+                    all(0<=value<=FLOOR_FRACTION_MAX for value in declaration["floors"].values()) and
+                    declaration["mirrors_complete"] is True and declaration["jacobian_complete"] is True)
+    eligible=bool(set(declaration["independent_rules"]) & set(spec.get("active_rules",[]))) and floor_eligible
     if declared:
         for key in DECLARED_FIELDS:
             require(detail.get(key)==declaration[key],
@@ -297,7 +302,7 @@ def evaluate_water_transfer(bundle, declared=True):
              "donor_rule_applicability":"applicable" if active else "not applicable; zero transfer activity",
              "pool_reference_errors":spread,"candidate_errors":rows,
              "candidate_closure":closure(candidate,design),"candidate_parent_trajectory":parent_trajectory(candidate,truth,design),
-             "candidate_application_error":application_error(candidate,case),
+             "candidate_application_error":application_error(candidate,case,design),
              "candidate_directed_balance":directed_balance(candidate,case,design),
              "candidate_applied_partition":applied_partition(candidate,design),
              "boundary_label_absolute_error":boundary_error.tolist(),
@@ -325,4 +330,6 @@ def evaluate_water_transfer(bundle, declared=True):
         verdict="ineligible"
     bundle.reverify()
     return {"meets":bool(eligible),"reference_eligibility":verdict,"declaration":declaration,"metrics":metrics,
+            "floor_eligible":bool(floor_eligible),
+            "rule_coverage":"not applicable, expected by the design" if expected_none else "measured",
             "limitation":"offline independent transfer increment. Atmospheric, PX14, PX25, held-out, EDMF and copies remain unqualified"}

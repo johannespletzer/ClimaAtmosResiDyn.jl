@@ -19,7 +19,7 @@ from manifest import sha256_file
 # base_commit records the commit it was written against.
 BASE_COMMIT = "7c96c2046f440990b070ed65e38c08f2afeb8d92"
 DESIGN_PATH = Path(__file__).with_name("water_transfer_design.json")
-DESIGN_SHA256 = "a2ddfccc6ca5e781633458fd2d6a7230f5121776ea1f17593a8bc0e272146b71"
+DESIGN_SHA256 = "99d06a4075ede14b914febf1758ef98191bb7d9f84c9c198b21728e360ca36f3"
 PARTS = ("N", "R", "S")
 
 
@@ -369,6 +369,7 @@ def error_rows(candidate, reference, design):
     require(same_bits(candidate.time, reference.time) and same_bits(candidate.faces, reference.faces) and
             same_bits(candidate.rho, reference.rho), "transfer error native coordinates/density differ")
     n, cells = reference.internal_count, len(reference.weights)
+    rules = design["profile_rules"]
     rows = []
     for j, seconds in enumerate(reference.time[1:], 1):
         m = reference.parent[j, :n].reshape(cells, 3)
@@ -386,17 +387,19 @@ def error_rows(candidate, reference, design):
                 part_scale = float(mass.sum())
                 maximum = float(np.max(np.abs(difference) / (reference.weights * reference.rho)))
                 peak = float(np.max(np.abs(bb[i]) / (reference.weights * reference.rho)))
-                small = burden / parent_scale < .01
+                small = burden / parent_scale < rules["small_inventory_fraction"]
                 hour = seconds == 3600
                 applicable = seconds in (3600, 86400)
-                l1_tolerance = (.01 if tag["kind"] == "region" else .10) if hour else .02
-                linf_tolerance = .25 if hour else .05
-                limits = {"absolute":2e-4*parent_scale} if small else {"L1":l1_tolerance,"Linf":linf_tolerance}
+                l1_tolerance = (rules["hour_region_L1"] if tag["kind"] == "region" else rules["hour_source_L1"]) \
+                    if hour else rules["day_L1"]
+                linf_tolerance = rules["hour_Linf"] if hour else rules["day_Linf"]
+                limits = ({"absolute":rules["small_absolute_parent_fraction"]*parent_scale} if small else
+                          {"L1":l1_tolerance,"Linf":linf_tolerance})
                 metrics = {"absolute":absolute, "L1":absolute/burden if burden else (0. if absolute == 0 else None),
                            "Linf":maximum/peak if peak else (0. if maximum == 0 else None)}
                 fractions = {key:metrics[key]/limit if metrics[key] is not None else None for key,limit in limits.items()}
                 meets = all(value is not None and value <= 1 for value in fractions.values())
-                floor = all(value is not None and value <= .25 for value in fractions.values())
+                floor = all(value is not None and value <= rules["floor_fraction"] for value in fractions.values())
                 rows.append({"tag":tag["name"],"compartment":part,"endpoint_seconds":float(seconds),
                              **metrics,"max_specific_error":maximum,"reference_absolute_inventory":burden,
                              "parent_scale":parent_scale,"compartment_scale":part_scale,
@@ -480,7 +483,7 @@ def directed_balance(state, case, design):
             "scope":"native directed-amount endpoint consistency, including boundary sinks"}
 
 
-def application_error(state, case):
+def application_error(state, case, design=None):
     """Compare before netting edges/stages. Pool means are applied mean shares.
 
     For a pool's one additive application the reference share is its exact
@@ -488,6 +491,7 @@ def application_error(state, case):
     RK4 uses the actual stage sampling time. These are distinct declared
     temporal observables, not a continuum time-L1 bound or rate validation.
     """
+    rules = (design or load_design())["profile_rules"]
     apps = state.applications
     if not apps:
         apps = []
@@ -529,8 +533,9 @@ def application_error(state, case):
             "transfer_amount_Q":denominator,"donor_recipient_leg_activity_2Q":2*denominator,
             "normalization":"sum of nonnegative applied native directed amounts before edge/stage netting",
             "units":"kg m^-2","sampling":[*sorted({a["sampling"] for a in apps})],
-            "meets":bool(np.all(numerator/denominator <= .05)) if denominator else None,
-            "floor_eligible":bool(np.all(numerator/denominator <= .0125)) if denominator else None,
+            "meets":bool(np.all(numerator/denominator <= rules["process_weighted"])) if denominator else None,
+            "floor_eligible":bool(np.all(numerator/denominator <= rules["process_weighted"]*rules["floor_fraction"]))
+            if denominator else None,
             "rate_validation":False}
 
 
@@ -544,15 +549,17 @@ def boundary_error_rows(state, truth, design, case):
                 expected = abs(float(truth.labels[j, i, sink["index"]]))
                 absolute = abs(float(state.labels[j, i, sink["index"]] - truth.labels[j, i, sink["index"]]))
                 small = expected / scale < design["profile_rules"]["small_inventory_fraction"]
-                tolerance = ((.01 if tag["kind"] == "region" else .10) if seconds == 3600 else .02)
-                limit = 2e-4 * scale if small else tolerance * expected
+                rules = design["profile_rules"]
+                tolerance = ((rules["hour_region_L1"] if tag["kind"] == "region" else rules["hour_source_L1"])
+                             if seconds == 3600 else rules["day_L1"])
+                limit = rules["small_absolute_parent_fraction"] * scale if small else tolerance * expected
                 fraction = absolute / limit
                 applicable = seconds in (3600, 86400)
                 result.append({"tag":tag["name"],"boundary":sink["species"],"endpoint_seconds":float(seconds),
                                "absolute_native_error":absolute,"reference_absolute_inventory":expected,
                                "parent_scale":scale,"boundary_parent_scale":float(truth.parent[j,sink["index"]]),
                                "small":bool(small),"native_tolerance":limit,"fraction_of_tolerance":fraction,
-                               "floor_eligible":fraction <= .25 if applicable else None,
+                               "floor_eligible":fraction <= rules["floor_fraction"] if applicable else None,
                                "meets":fraction <= 1 if applicable else None,"units":"kg m^-2",
                                "decision_status":"development engineering export-origin check; no atmospheric approval"})
     return result
@@ -560,7 +567,8 @@ def boundary_error_rows(state, truth, design, case):
 
 def floor_result(state, truth, design, case):
     errors=error_rows(state,truth,design)
-    process=application_error(state,case)
+    process=application_error(state,case,design)
+    quarter=design["profile_rules"]["floor_fraction"]
     check=closure(state,design)
     balance=directed_balance(state,case,design)
     applicable=[r for r in errors if r["floor_eligible"] is not None]
@@ -584,13 +592,13 @@ def floor_result(state, truth, design, case):
     if process["applicability"] == "applicable":
         shares=np.divide(truth.labels,truth.parent[:,None,:],out=np.zeros_like(truth.labels),where=truth.parent[:,None,:]>0)
         process["arithmetic_share_bound"]=(arithmetic*np.max(np.abs(shares),axis=(0,2))).tolist()
-        process["combined_floor_fraction"]=[(v+b)/.05 for v,b in zip(process["weighted_share_error"],process["arithmetic_share_bound"])]
+        process["combined_floor_fraction"]=[(v+b)/design["profile_rules"]["process_weighted"] for v,b in zip(process["weighted_share_error"],process["arithmetic_share_bound"])]
         fractions.extend(process["combined_floor_fraction"])
     else:
         process["arithmetic_share_bound"]=[None]*6
         process["combined_floor_fraction"]=[None]*6
     max_fraction=max((v for v in fractions if v is not None),default=None)
-    eligible=bool(applicable and all(v is not None and v <= .25 for v in fractions) and check["meets"] and
+    eligible=bool(applicable and all(v is not None and v <= quarter for v in fractions) and check["meets"] and
                   check["complete_label_conservation"] and balance["meets"])
     return {"eligible":eligible,"errors":errors,"process":process,"closure":check,
             "boundary_errors":exports,

@@ -12,7 +12,7 @@
   "default_substeps": 2,
   "effective_substep_key": "microphysics_n_substeps_quadrature",
   "first_order": "another scheme, not a rung",
-  "held_out_overlap": "PrecipitatingColumn starts from RICO's theta and q_tot profiles. RICO 1M 24 h is the held-out case (WA-SCOPE, 2026-10-08). Whether a 1M rule developed on this column keeps RICO held out is an owner decision under OD14",
+  "held_out_overlap": "PrecipitatingColumn starts from RICO's theta and q_tot profiles. RICO 1M 24 h is the held-out case (WA-SCOPE, 2026-10-08). Under OD14 (decision of 2026-10-09) this column serves PX25's PT15 and PT16 arithmetic rows only and chooses no mode or default. The explicit-1M default is chosen on an independent second case, found together with OD15",
   "jobs": 24,
   "kind": "DRAFT; NOT AUTHORIZED/EXECUTED CAMPAIGN",
   "parents": [
