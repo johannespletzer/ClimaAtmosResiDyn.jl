@@ -33,8 +33,7 @@ STATUS_CODES = {"positive_parent": 0, "zero_parent": 1, "negative_parent": 2}
 
 def load_design(path=DESIGN_PATH):
     raw = Path(path).read_bytes()
-    if hashlib.sha256(raw).hexdigest() != DESIGN_SHA256:
-        raise ValueError("energy reference design differs from the preregistration")
+    require(hashlib.sha256(raw).hexdigest() == DESIGN_SHA256, "energy reference design differs from the preregistration")
     return json.loads(raw)
 
 

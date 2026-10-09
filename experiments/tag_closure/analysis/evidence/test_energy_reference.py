@@ -10,11 +10,11 @@ import numpy as np
 
 import score_acceptance
 from acceptance_data import DataError
-from energy_reference import _radiation_continuum
-from energy_reference import (DESIGN_SHA256, activity_report, analytic, case_by_id, classify, evaluate_candidate,
+from energy_reference import _match, _radiation_continuum
+from energy_reference import (BASE_COMMIT, DESIGN_SHA256, MODEL_COMMIT, EnergyState, origin_row, share, theta_x, activity_report, analytic, case_by_id, classify, evaluate_candidate,
                               load_design, mutant, numerical, stage_record, stage_reference, window_amount)
-from energy_reference_adapter import (LADDER_TIE, candidate_for, evaluate_energy_reference, reference_for,
-                                      rungs)
+from energy_reference_adapter import (LADDER_TIE, RULES, candidate_for, converges, eligible,
+                                      evaluate_energy_reference, load_state, reference_for, rungs)
 from make_energy_reference_fixture import (evaluate_fixture, main, mutant_caught, suite_exit_code,
                                            write_fixture, write_json)
 
@@ -215,6 +215,114 @@ class RecordAndInvariantTests(unittest.TestCase):
         for c, result, preserves in ((c, result, ["unknown"]), (exchange, moved, ["records"])):
             with self.assertRaises(DataError):
                 mutant_caught({**c, "mutant": {**c["mutant"], "preserves": preserves}}, result)
+
+
+class ThresholdTests(unittest.TestCase):
+    """Finder 1.5: every number the module reads, pinned where it is used."""
+
+    def test_pinned_constants(self):
+        self.assertEqual((BASE_COMMIT, MODEL_COMMIT), ("9e5155325b6d778ca558b6dd2c6651006add0a80",
+                                                      "bb2bedf230a70ca9d7afc293180f8d30c1a9bb88"))
+        self.assertEqual(DESIGN["times_seconds"], [0, 3600, 86400])
+        self.assertEqual(DESIGN["profile_rules"]["roundoff_multiplier"], 128)
+        self.assertEqual({c["id"]: c["convention"]["c_J_kg"] for c in DESIGN["cases"]}, {
+            "heating_labels": 110495.0, "donor_cooling": 274388.0, "labelled_exchange": 110495.0,
+            "boundary_offset_exchange": 110495.0, "opposing_net_zero": 110495.0,
+            "offset_change": [110495.0, 220990.0], "inventory_edge_cases": 110495.0, "radiation_record": None})
+        self.assertEqual(RULES, {
+            "heating_labels": "declared_source_allocation", "donor_cooling": "donor_loss_allocation",
+            "reservoir_exchange": "donor_transport_share", "falling_mass_boundary": "offset_boundary_flux",
+            "opposing_net_zero": "sequential_event_allocation", "offset_change": "fixed_offset_representation",
+            "admissibility": "share_admissibility", "radiation_record": "radiation_divergence"})
+
+    def test_roundoff_allowance_tie_and_floor_limit(self):
+        b = np.full(3, 1.0e5)
+        eps = np.finfo(np.float64).eps
+        self.assertTrue(_match(DESIGN, b * (1 + 2 * eps), b))
+        self.assertFalse(_match(DESIGN, b * (1 + 200 * eps), b))
+        self.assertFalse(_match(DESIGN, b * (1 + 1e-9), b))
+        self.assertTrue(converges([1.0, 1.0 + 1e-13, 0.5]))
+        self.assertFalse(converges([1.0, 1.0 + 2e-12]))
+        declared = {"converged": True, "mirrors_complete": True, "jacobian_complete": True,
+                    "independent_rules": ["declared_source_allocation"]}
+        stored = case("heating_labels")
+        self.assertTrue(eligible(stored, {**declared, "floors": {"a": 0.25, "b": 0.0}}))
+        for value in (0.2500001, -1e-12):
+            self.assertFalse(eligible(stored, {**declared, "floors": {"a": value}}), value)
+        self.assertFalse(eligible(case("radiation_record"), {**declared, "floors": {}}))
+
+    def test_theta_x_and_shares(self):
+        self.assertEqual(theta_x(DESIGN, case("heating_labels"), 0.0, 3600.0), 504000.0)
+        offset = copy.deepcopy(case("offset_change"))
+        offset["mass_source_kg_m3_s"] = [3e-7, 1e-7]
+        expected = 100.0 * (abs(-0.0331485 + 220990.0 * 3e-7) + abs(-0.01657425 + 220990.0 * 1e-7)) * 3600.0
+        self.assertAlmostEqual(theta_x(DESIGN, offset, 0.0, 3600.0, 1), expected, places=6)
+        self.assertEqual(share([2.0, -1.0, 1.0, 1.0], [1.0, 1.0, 0.0, -1.0]).tolist(), [1.0, 0.0, 0.0, 0.0])
+        edge = copy.deepcopy(case("inventory_edge_cases"))
+        for fraction, small in ((0.009, True), (0.011, False)):
+            edge["tag_values_J_m3"]["overlay"] = [fraction * 52198000.0 / 600.0] * 6
+            self.assertIs(classify(edge).diagnostics["inventory"]["overlay"]["small"], small, fraction)
+
+    def test_origin_row_rules(self):
+        c = case("heating_labels")
+        reference = reference_for(DESIGN, c)
+        tags = {t["name"]: t for t in c["tags"]}
+        # The small-tag rule: SMALL x Theta_x(0, 1 h) = 100.8 J m^-2.
+        for factor, verdict in ((0.9, "PASS"), (1.1, "FAIL")):
+            wrong = candidate_for(DESIGN, c)
+            wrong.values["tag_src_a"][1, 0] += factor * 100.8 / 100.0
+            self.assertEqual(origin_row(wrong, reference, DESIGN, c, tags["src_a"], 1)["verdict"], verdict)
+        # A region tag reads the region limit: 5% L1 at 1 h fails.
+        wrong = candidate_for(DESIGN, c)
+        wrong.values["tag_lower"][1] *= 1.05
+        self.assertEqual(origin_row(wrong, reference, DESIGN, c, tags["lower"], 1)["verdict"], "FAIL")
+        # The L-infinity test: L1 1.5% passes, L-infinity 15% fails at one day.
+        synthetic = {"kind": "admissibility", "tags": [{"name": "r", "kind": "region", "partition": True}]}
+        ones = np.ones((2, 10))
+        truth = EnergyState(np.array([0.0, 86400.0]), np.ones(10), {"rho": ones, "tag_r": ones.copy()}, {})
+        wrong = EnergyState(truth.time, truth.dz, {"rho": ones, "tag_r": ones.copy()}, {})
+        wrong.values["tag_r"][1, 0] += 0.15
+        row = origin_row(wrong, truth, DESIGN, synthetic, synthetic["tags"][0], 1)
+        self.assertEqual((row["verdict"], round(row["L1"], 12)), ("FAIL", 0.015))
+        truth.values["tag_r"][1, 3] = -0.5
+        self.assertEqual(origin_row(wrong, truth, DESIGN, synthetic, synthetic["tags"][0], 1)["verdict"],
+                         "NOT ASSESSABLE")
+
+
+class IntegrityTests(unittest.TestCase):
+    """Finder 5.1: every integrity pin of a fixture refuses a change."""
+
+    def test_every_pin_refuses_a_change(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = write_fixture(Path(tmp) / "f", "labelled_exchange")
+            detail = json.loads((root / "evidence.json").read_text())
+            for key, value in (("planning_commit", "0" * 40), ("model_commit", "0" * 40),
+                               ("approved_numbers_sha256", "0" * 64), ("design_sha256", "0" * 64),
+                               ("evaluator_files", {**detail["evaluator_files"], "energy_reference.py": "0" * 64}),
+                               ("artifacts", {**detail["artifacts"], "mutant.npz": "0" * 64})):
+                write_json(root / "evidence.json", {**detail, key: value})
+                with self.assertRaises(DataError, msg=key):
+                    evaluate_energy_reference(root)
+            write_json(root / "evidence.json", detail)
+            design = (root / detail["design"]).read_bytes()
+            (root / detail["design"]).write_bytes(design.replace(b'"precision": "Float64"', b'"precision": "Float32"'))
+            with self.assertRaises(DataError):
+                evaluate_energy_reference(root)
+            (root / detail["design"]).write_bytes(design)
+            with np.load(root / "candidate.npz") as raw:
+                original = {k: raw[k].copy() for k in raw.files}
+            roster = [k for k in original if k.startswith("excluded_activity__")]
+            first = "field__" + next(n for n in reference_for(DESIGN, case("labelled_exchange")).values)
+            for name, edit in (("roster", lambda d: d.pop(roster[0])),
+                               ("activity", lambda d: d[roster[0]].__setitem__((1, 0), 1e-30)),
+                               ("initial", lambda d: d[first].__setitem__((0, 0), d[first][0, 0] * (1 + 1e-9)))):
+                data = {k: v.copy() for k, v in original.items()}
+                edit(data)
+                np.savez(root / "edited.npz", **data)
+                with self.assertRaises(DataError, msg=name):
+                    evaluate_energy_reference(root, candidate_name="edited.npz")
+            np.savez(root / "edited.npz", **original)
+            self.assertTrue(evaluate_energy_reference(root, candidate_name="edited.npz")["candidate"]["meets"])
 
 
 class FixtureTests(unittest.TestCase):
