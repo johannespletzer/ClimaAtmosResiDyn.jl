@@ -21,6 +21,18 @@ registers below also retain items already completed or outside this roadmap.
 An unassigned outside item remains explicitly deferred pending classification,
 not silently discarded or activated.
 
+## Part 11a design routing (2026-10-09)
+
+This supplement marks the routes part 11a takes in PR part 11a. See
+[design/PART11A_ENERGY_REFERENCES.md](design/PART11A_ENERGY_REFERENCES.md).
+
+| Existing route                | Evidence in PR part 11a                           | Remaining obligation     |
+|:----------------------------- |:------------------------------------------------- |:------------------------ |
+| G4 section 6 / eight cases    | Known answers, frozen `c` per case, a mutant each | Review, owner decisions  |
+| G4 section 2.4 / record pilot | Independent stage route and density conversion    | EA-USE, the pilot run    |
+| PX22 / G4.7 / OD11            | Draft of three D4 jobs, PR part 11a               | Owner approval, the runs |
+| PX15 / OD7                    | Stays a design                                    | OD7                      |
+
 ## Part 8 design routing (2026-10-09)
 
 This supplement marks the routes part 8 takes in PR part 8, the design PR.

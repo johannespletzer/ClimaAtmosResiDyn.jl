@@ -1,5 +1,16 @@
 # Status
 
+## Part 11a energy references, design (2026-10-09)
+
+The [pre-registered design](design/PART11A_ENERGY_REFERENCES.md) builds the
+eight cases of G4_CLAIM_CONTRACTS section 6 as offline known answers. Each
+case freezes its convention `c`. Stored-energy cases and the radiation record
+are separate references. The tools and tests are in `analysis/evidence/`
+(`energy_reference*.py`). Every case's wrong-origin mutant is caught in a
+test. The [PX22 draft](configs/part11a_px22_draft/README.md) waits for the
+owner. **Part 11a is not done.** No run, scorer, default or tolerance change
+is supplied.
+
 ## Part 8 water baseline and cost pilot, design (2026-10-09)
 
 The [pre-registered design](design/PART8_BASELINE.md) fixes the baseline of
