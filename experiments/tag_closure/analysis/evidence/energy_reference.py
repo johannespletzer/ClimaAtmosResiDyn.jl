@@ -26,7 +26,7 @@ from score_acceptance import SMALL, SMALL_SHARE, origin_limits
 # the model tree whose mechanisms the cases describe.
 BASE_COMMIT = "9e5155325b6d778ca558b6dd2c6651006add0a80"
 MODEL_COMMIT = "bb2bedf230a70ca9d7afc293180f8d30c1a9bb88"
-DESIGN_SHA256 = "4c19dedf9ad8020f202943664146029f4ce86a97874327e2f1eaf37a327f185c"
+DESIGN_SHA256 = "5231c54ce27ef8f20298620ef58ee63034265a43cfc9cfe56a55baaaddc9ee9c"
 DESIGN_PATH = Path(__file__).with_name("energy_reference_design.json")
 STATUS_CODES = {"positive_parent": 0, "zero_parent": 1, "negative_parent": 2}
 
@@ -60,6 +60,20 @@ def theta_x_start(case):
             isinstance(window.get("start_seconds"), (int, float)),
             "the case declares no frozen Theta_x window ending at the endpoint")
     return float(window["start_seconds"])
+
+
+def expected_not_assessable(case):
+    """The origin rows the frozen design expects NOT ASSESSABLE (decision of 2026-10-09).
+
+    Each row names its tag, endpoint and reason. A row marked `no_gain_path`
+    belongs to a tag that the case gives no gain path, so the fixture checks
+    that the tag reads exactly zero. The scorer is unchanged.
+    """
+    return case.get("expected_not_assessable", {}).get("rows", [])
+
+
+def no_gain_path_tags(case):
+    return sorted({row["tag"] for row in expected_not_assessable(case) if row["no_gain_path"]})
 
 
 def suffixes(case):
@@ -665,6 +679,12 @@ def evaluate_candidate(design, case, candidate, reference):
         if kind == "offset_change":
             checks["parent_bitwise_parity"] = all(np.array_equal(candidate.values[n + "@0"], candidate.values[n + "@1"])
                                                   for n in ("rho", "rho_e"))
+        # A tag with no gain path must read exactly zero. This fixture check
+        # stands beside the scorer's NOT ASSESSABLE row and never replaces it.
+        zero = [("tag_" + name + suffix) for name in no_gain_path_tags(case) for suffix in suffixes(case)]
+        if zero:
+            require(all(np.all(reference.values[n] == 0.0) for n in zero), "a no-gain-path tag has a nonzero reference")
+            checks["no_gain_path_zero"] = all(bool(np.all(candidate.values[n] == 0.0)) for n in zero)
         rows = origin_rows(candidate, reference, design, case)
         assessed = [row for row in rows if row["meets"] is not None]
         checks["origins"] = all(row["meets"] is True for row in assessed)

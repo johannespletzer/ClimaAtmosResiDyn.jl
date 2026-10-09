@@ -10,7 +10,9 @@ Exit codes follow the scorer's. 0: every case's checks passed with an
 eligible reference and every mutant was caught. 1: a fixture check failed or
 a mutant was not caught. 2: evidence is missing, corrupt or inconsistent.
 3: a reference is ineligible, or a candidate has an origin row the scorer's
-reading cannot assess, so that candidate is NOT ASSESSABLE. 4: nothing
+reading cannot assess that the frozen design does not list. A candidate whose
+unassessable rows are exactly the listed ones stays NOT ASSESSABLE in the
+results and does not make the suite exit 3 (decision of 2026-10-09). 4: nothing
 was evaluated. The output exists, the command line is invalid, or the driver
 itself raised an error.
 """
@@ -25,7 +27,8 @@ from acceptance_data import DataError, require
 from manifest import sha256_file
 from score_acceptance import approved_numbers_sha256
 from energy_reference import (
-    BASE_COMMIT, DESIGN_PATH, DESIGN_SHA256, MODEL_COMMIT, case_by_id, evaluate_candidate, load_design, mutant,
+    BASE_COMMIT, DESIGN_PATH, DESIGN_SHA256, MODEL_COMMIT, case_by_id, evaluate_candidate, expected_not_assessable,
+    load_design, mutant,
 )
 from energy_reference_adapter import (
     DECLARED_FIELDS, FIXTURE_SCOPE, SOURCE_FILES, candidate_for, evaluate_energy_reference,
@@ -94,6 +97,17 @@ def mutant_caught(case, evaluation):
 VERDICTS = {True: "PASS", False: "FAIL", None: "NOT ASSESSABLE"}
 
 
+def _row_key(row):
+    return (row["tag"], float(row["endpoint_seconds"]), row["why"])
+
+
+def unassessable_against_design(case, rows):
+    """The realized NOT ASSESSABLE rows that the design does not list, and the listed rows not realized."""
+    declared = {_row_key(row) for row in expected_not_assessable(case)}
+    realized = {_row_key(row) for row in rows}
+    return sorted(realized - declared), sorted(declared - realized)
+
+
 def evaluate_fixture(root):
     root = Path(root)
     measured = evaluate_energy_reference(root)
@@ -102,10 +116,17 @@ def evaluate_fixture(root):
     reference, _ = load_state(root / "reference.npz")
     wrong, _ = load_state(root / "mutant.npz")
     wrong_eval = evaluate_candidate(design, case, wrong, reference)
+    verdict = VERDICTS[measured["candidate"]["meets"]] if measured["meets"] else "NOT ASSESSABLE"
+    unlisted, unrealized = unassessable_against_design(case, measured["candidate"]["not_assessable_rows"])
+    as_declared = bool(verdict == "NOT ASSESSABLE" and measured["meets"] and expected_not_assessable(case)
+                       and not unlisted and not unrealized)
     return {"schema_version": 1, "scope": FIXTURE_SCOPE, "scientific_qualification": "NOT QUALIFIED",
             "case_id": case["id"], "convention": case["convention"], "measured_reference": measured,
-            "candidate_verdict": VERDICTS[measured["candidate"]["meets"]] if measured["meets"] else "NOT ASSESSABLE",
+            "candidate_verdict": verdict,
             "not_assessable_rows": measured["candidate"]["not_assessable_rows"],
+            "unlisted_not_assessable_rows": [list(key) for key in unlisted],
+            "listed_rows_not_realized": [list(key) for key in unrealized],
+            "not_assessable_as_declared": as_declared,
             "mutant": {"kind": case["mutant"]["kind"], "checks": wrong_eval["checks"],
                        "caught": mutant_caught(case, wrong_eval)}}
 
@@ -126,6 +147,7 @@ def run_suite(root, config):
         write_json(fixture / "known_answer_results.json", result)
         results.append({"case_id": case_id, "reference_eligible": result["measured_reference"]["meets"],
                         "candidate_verdict": result["candidate_verdict"],
+                        "not_assessable_as_declared": result["not_assessable_as_declared"],
                         "mutant_caught": result["mutant"]["caught"],
                         "result": case_id + "/known_answer_results.json"})
     report = {"schema_version": 1, "design_sha256": DESIGN_SHA256, "cases": results,
@@ -138,10 +160,20 @@ def run_suite(root, config):
 
 def suite_exit_code(results):
     """1 for a failed check or an uncaught mutant, else 3 for an ineligible reference or a
-    candidate with a row the scorer's reading cannot assess, else 0."""
+    candidate with a row the scorer's reading cannot assess, else 0.
+
+    A candidate whose NOT ASSESSABLE rows are exactly the ones the frozen
+    design lists counts as passing here (decision of 2026-10-09). Its verdict
+    stays NOT ASSESSABLE in the results. Any other unassessable row exits 3.
+    """
     if any(row["candidate_verdict"] == "FAIL" or row["mutant_caught"] is False for row in results):
         return 1
-    return 3 if any(not row["reference_eligible"] or row["candidate_verdict"] != "PASS" for row in results) else 0
+
+    def counted(row):
+        if row["candidate_verdict"] == "NOT ASSESSABLE" and row.get("not_assessable_as_declared") is True:
+            return row["reference_eligible"] is True
+        return row["reference_eligible"] is True and row["candidate_verdict"] == "PASS"
+    return 3 if any(not counted(row) for row in results) else 0
 
 
 def main(argv=None):

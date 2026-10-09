@@ -108,6 +108,12 @@
      "c_delta_rho_applies": false, "od4_scales": ["theta_x", "theta_i"],
      "dz_m": [100.0, 100.0], "rho_kg_m3": [1.2, 1.0], "e_tot_J_kg": [20000.0, 20000.0],
      "heating_W_m3": [0.1, 0.05], "event_order": ["heat", "cool"],
+     "expected_not_assessable": {
+       "basis": "decided 2026-10-09. Theta_x is zero by design, so a small overlay row is NOT ASSESSABLE. A tag with no gain path must read exactly zero, a fixture check beside the scorer's row. The scorer is unchanged",
+       "rows": [
+         {"tag": "src_heat", "endpoint_seconds": 3600.0, "why": "small tag with zero Theta_x", "no_gain_path": false},
+         {"tag": "src_cool", "endpoint_seconds": 3600.0, "why": "small tag with zero Theta_x", "no_gain_path": true},
+         {"tag": "src_cool", "endpoint_seconds": 86400.0, "why": "small tag with zero Theta_x", "no_gain_path": true}]},
      "tags": [
        {"name": "lower", "kind": "region", "partition": true, "mask": [0.7, 0.2], "sources": []},
        {"name": "upper", "kind": "region", "partition": true, "mask": [0.3, 0.8], "sources": []},

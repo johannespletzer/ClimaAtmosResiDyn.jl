@@ -16,7 +16,7 @@ from energy_reference import (BASE_COMMIT, DESIGN_SHA256, MODEL_COMMIT, EnergySt
 from energy_reference_adapter import (LADDER_TIE, RULES, candidate_for, converges, declaration, eligible,
                                       evaluate_energy_reference, load_state, measure, reference_for, rungs)
 from make_energy_reference_fixture import (evaluate_fixture, main, mutant_caught, suite_exit_code,
-                                           write_fixture, write_json)
+                                           unassessable_against_design, write_fixture, write_json)
 
 DESIGN = load_design()
 CONFIG = Path(__file__).resolve().parents[2] / "configs" / "energy_reference_known_answers.json"
@@ -82,6 +82,35 @@ class MutantTests(unittest.TestCase):
         result = evaluate_candidate(DESIGN, c, candidate_for(DESIGN, c), reference_for(DESIGN, c))
         self.assertEqual([(r["tag"], r["endpoint_seconds"]) for r in result["not_assessable_rows"]],
                          [("src_heat", 3600.0), ("src_cool", 3600.0), ("src_cool", 86400.0)])
+        # The design lists exactly these rows (decision of 2026-10-09).
+        self.assertEqual(unassessable_against_design(c, result["not_assessable_rows"]), ([], []))
+        self.assertIs(result["checks"]["no_gain_path_zero"], True)
+
+    def test_no_gain_path_tag_reading_nonzero_fails(self):
+        # src_cool has no gain path. A nonzero reading fails the fixture's zero
+        # check although its scorer rows stay NOT ASSESSABLE.
+        c = case("opposing_net_zero")
+        reference, candidate = reference_for(DESIGN, c), candidate_for(DESIGN, c)
+        candidate.values["tag_src_cool"][2] += 1e-300
+        result = evaluate_candidate(DESIGN, c, candidate, reference)
+        self.assertIs(result["checks"]["no_gain_path_zero"], False)
+        self.assertIs(result["meets"], False)
+        self.assertEqual(unassessable_against_design(c, result["not_assessable_rows"]), ([], []))
+
+    def test_unlisted_unassessable_row_exits_three(self):
+        # A one-ulp density defect at one day makes rows the design does not list.
+        c = case("opposing_net_zero")
+        reference, candidate = reference_for(DESIGN, c), candidate_for(DESIGN, c)
+        candidate.values["rho"][2] = np.nextafter(candidate.values["rho"][2], 0.0)
+        result = evaluate_candidate(DESIGN, c, candidate, reference)
+        self.assertIsNone(result["meets"])
+        unlisted, unrealized = unassessable_against_design(c, result["not_assessable_rows"])
+        self.assertIn(("lower", 86400.0, "same-parent density required"), unlisted)
+        self.assertEqual(unrealized, [("src_cool", 86400.0, "small tag with zero Theta_x")])
+        row = {"candidate_verdict": "NOT ASSESSABLE", "mutant_caught": True, "reference_eligible": True,
+               "not_assessable_as_declared": False}
+        self.assertEqual(suite_exit_code([row]), 3)
+        self.assertEqual(suite_exit_code([{**row, "not_assessable_as_declared": True}]), 0)
 
     def test_unassessable_rows_never_pass(self):
         # Finder 2.1: a wrong cooling overlay sits only in unassessable rows.
@@ -90,7 +119,11 @@ class MutantTests(unittest.TestCase):
         moved = 0.001 * candidate.values["E_c"][1]
         candidate.values["tag_src_cool"][1] += moved
         candidate.values["tag_src_heat"][1] -= moved
-        self.assertIsNone(evaluate_candidate(DESIGN, c, candidate, reference)["meets"])
+        # The rows stay NOT ASSESSABLE. The zero check of 2026-10-09 fails the move.
+        result = evaluate_candidate(DESIGN, c, candidate, reference)
+        self.assertEqual([(r["tag"], r["endpoint_seconds"]) for r in result["not_assessable_rows"]],
+                         [("src_heat", 3600.0), ("src_cool", 3600.0), ("src_cool", 86400.0)])
+        self.assertIs(result["meets"], False)
         candidate.values["tag_src_cool"] = 0.05 * candidate.values["E_c"]
         self.assertFalse(evaluate_candidate(DESIGN, c, candidate, reference)["checks"]["overlay_sum"])
         # A one-ulp density change makes every origin row unassessable. The mutant must not pass.
@@ -392,16 +425,24 @@ class FixtureTests(unittest.TestCase):
         self.assertEqual(suite_exit_code([{**row, "candidate_verdict": "FAIL"}]), 1)
         self.assertEqual(suite_exit_code([{**row, "reference_eligible": False}]), 3)
         self.assertEqual(suite_exit_code([{**row, "candidate_verdict": "NOT ASSESSABLE"}]), 3)
+        listed = {**row, "candidate_verdict": "NOT ASSESSABLE", "not_assessable_as_declared": True}
+        self.assertEqual(suite_exit_code([listed]), 0)
+        self.assertEqual(suite_exit_code([{**listed, "reference_eligible": False}]), 3)
+        self.assertEqual(suite_exit_code([{**listed, "mutant_caught": False}]), 1)
         with tempfile.TemporaryDirectory() as tmp:
             self.assertEqual(main([tmp, "--config", str(CONFIG)]), 4)
             bad = Path(tmp) / "bad.json"
             bad.write_text("{}")
             self.assertEqual(main([str(Path(tmp) / "new"), "--config", str(bad)]), 2)
 
-    def test_complete_suite_exits_three_with_one_unassessable_candidate(self):
+    def test_complete_suite_exits_zero_with_only_the_listed_unassessable_rows(self):
         with tempfile.TemporaryDirectory() as tmp:
-            self.assertEqual(main([str(Path(tmp) / "suite"), "--config", str(CONFIG)]), 3)
+            self.assertEqual(main([str(Path(tmp) / "suite"), "--config", str(CONFIG)]), 0)
             report = json.loads((Path(tmp) / "suite" / "suite_results.json").read_text())
+            self.assertEqual(report["exit_code"], 0)
+            declared = {row["case_id"]: row["not_assessable_as_declared"] for row in report["cases"]}
+            self.assertIs(declared.pop("opposing_net_zero"), True)
+            self.assertFalse(any(declared.values()))
             verdicts = {row["case_id"]: row["candidate_verdict"] for row in report["cases"]}
             self.assertEqual(verdicts.pop("opposing_net_zero"), "NOT ASSESSABLE")
             self.assertEqual(set(verdicts.values()), {"PASS"})
