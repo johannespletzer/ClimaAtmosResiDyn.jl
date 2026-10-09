@@ -10,6 +10,12 @@ read. None changes a challenge below. The third supports point 1: no
 reference of parts 6 and 7 is eligible on TRMM 0M, and if PX12 finds the
 copies ineligible, the first-hour origin terms stay unranked.
 
+A review of this file at the PR's head (clima-reviewer, 2026-10-09) changed
+three things. Point 3 is a weakening, not a break, since its evidence is prior
+evidence under the rule of 2026-10-02. Point 4 counted one passed row where
+W49 records four. Point 5 compared the floor with the lower bound of OD6's
+ceiling. Each change names its source in place.
+
 The challenge of 2026-10-07 (`plan_parts_1_to_3_review_2026-10-07.md`) is not
 repeated. Where a point builds on one of its items, it names the item and adds
 only what is new.
@@ -23,7 +29,7 @@ Strength: **breaks** means the decision contradicts its own record or rule.
 |:-- |:------------------------------------------------------------- |:-------- |:-------------------------------------------------------------------------------------------------- |
 | 1  | Option D and WA-SCOPE's cases (2026-10-02, 2026-10-08)        | weakens  | A precipitating 1M development case with a candidate reference, and a reference for RICO.          |
 | 2  | OD3's 2× at 8 + 8 gates part 10 (2026-10-07)                  | weakens  | State part 10's scope without rain and snow tags, and take the 8 + 8 measurement out of 11b.       |
-| 3  | OD7 stays deferred until site 23 is rerun (2026-10-07)        | breaks   | Decide OD7 for energy now, from E81.                                                               |
+| 3  | OD7 stays deferred until site 23 is rerun (2026-10-07)        | weakens  | Decide OD7 for energy now, from E81 as prior evidence.                                             |
 | 4  | W49's V2 counts as option C's validation (2026-10-01)         | weakens  | Rerun option C's V1 to V5 on post-#139 `main` before the 90-day sphere.                            |
 | 5  | Criterion 9's rounding floor (2026-10-02)                     | weakens  | Write the floor's authorized step count into the decision before 12a.                              |
 | 6  | Inapplicable completeness flags are true (2026-10-08)         | weakens  | Make the flag three-valued, and have the scorer check the basis.                                   |
@@ -58,7 +64,7 @@ fixed without spending it.
 
 And the held-out case has no established reference either. PX23 states that
 criterion 8's columns do not qualify for the air twin: "RICO and BOMEX set
-`subsidence_forcing`". So RICO needs eligible copies (PX12-style) or PP-TRACER
+`subsidence_forcing`" (PROVENANCE_PATHWAY.md). So RICO needs eligible copies (PX12-style) or PP-TRACER
 (PX17). Until one exists, PX23 is not assessable. Level 4 asks for "the
 applicable held-out evidence". OD8 removed the aggregation bridge, so nothing
 else stands behind the copies.
@@ -95,14 +101,14 @@ without rain and snow tags, and that criterion 10's rain and snow measurement
 stays open until stage 2. Schedule the post-fix 8 + 8 measurement as its own
 step before part 10, not inside 11b.
 
-## 3. OD7's deferral does not apply to energy
+## 3. OD7's deferral buys little for energy
 
 **The decision** (2026-10-07): OD7 stays deferred, with no lean, until the
-post-#139 site-23 long runs are scored. The register says OD7 is "to be
-decided by the registered rule".
+post-#139 site-23 long runs are scored. The entry of 2026-09-24 says OD7 is
+"to be decided by the registered rule" (DECISIONS.md, section 2026-09-24).
 
-**Why it breaks.** The registered rule has already given its energy verdict.
-E81 records the energy long runs of W36:
+**Why it weakens.** The registered rule has already given an energy verdict,
+on prior evidence. E81 records the energy long runs of W36:
 
 | Site, last check | Same sign gross | `|m|` gross | Slopes (same sign, `|m|`) | Moved, both rules |
 |:---------------- | ---------------:| -----------:|:------------------------- | -----------------:|
@@ -123,11 +129,21 @@ rule separates roundoff residuals, and the moved ledger is the same under both
 rules (as E79 found on D4). The copies are not an eligible comparator for
 energy there (E81), so the tie-break cannot be used.
 
-So waiting buys no information, while OD7 blocks G4.7, G4.8 and the energy
-default.
+So waiting buys little information about energy, while OD7 blocks G4.7,
+G4.8 and the energy default.
 
-**Proposal.** Decide OD7 for energy now. Either accept the registered verdict
-(same sign, E81), or, since the rule cannot separate the placements, choose on
+**Why it does not break.** W36 ran on 2026-09-24, before #139. By the rule of
+2026-10-02, its numbers count as prior evidence only, which is the rule point
+4 applies to W49. E81's verdict used the design note's budget, 1e-4 of
+`∫(ρe_tot + cρ)`, which the owner did not adopt on 2026-10-08. FINDINGS also
+says E81 cannot be restated in OD4's units without a rerun (the OD4
+restatement, after E81). So the deferral to post-#139 runs follows the record.
+The estimate above argues that the rerun will very likely agree, not that it
+is unneeded.
+
+**Proposal.** Decide OD7 for energy now, as a provisional choice on prior
+evidence that the post-#139 rerun confirms or reverses. Either accept the
+registered verdict (same sign, E81), or, since the rule cannot separate the placements, choose on
 cost and simplicity and record why. If placement accuracy matters, it needs an
 energy reference that shows where a column total should land. That belongs to
 part 11a, not to the long runs.
@@ -151,9 +167,11 @@ part 11a, not to the long runs.
     goes negative runs the revision's rule (`TargetGain()` is the default).
 
 The decision keeps V5 as an open failure, which is right. The word
-"validation" claims more: one row of five passed, on old physics.
+"validation" claims more. In W49, V1 to V4 passed and V5 failed at site 23,
+all on old physics (FINDINGS W49, the tables of both sites). V2 is the row
+the revision was built to fix (W42's failure).
 
-**Proposal.** Call W49 "V2 passed on pre-#139 physics". Before the 90-day
+**Proposal.** Call W49 "V1 to V4 passed and V5 failed, on pre-#139 physics". Before the 90-day
 sphere, rerun V1 to V5 on post-#139 `main`. Let the W53 follow-up decide
 between the revision's rule and the parent's gain before that run, not after.
 
@@ -165,7 +183,8 @@ between the revision's rule and the parent's gain before that run, not after.
 The record already notes that a longer run needs its own check (W60 addendum,
 W62). The decision does not say so. G3_PLAN 6.1.4 preserves the rule "with the
 existing accumulated measure and its actual step count", and part 12a uses it
-"only as authorized" without naming what is authorized. The kept sphere
+"only as authorized" (ROADMAP, part 12a's row) without naming what is
+authorized. The kept sphere
 configuration is Float32, so 12a is where this is read.
 
 At OD1's 20 s step, the rule gives:
@@ -176,9 +195,13 @@ At OD1's 20 s step, the rule gives:
 | 10 days       | 43,200    | 7.43e-5 |
 | 90 days (OD6) | 388,800   | 2.23e-4 |
 
-At 90 days the floor is above OD6's absolute ceiling for the gross residual,
-2e-4 of the partition. A Float32 allowance as large as the acceptance ceiling
-no longer measures sensitivity to precision. W62 also found one measure,
+At 90 days the floor reaches OD6's ceiling for the gross residual. That
+ceiling is `max(0.02 S_min, 2e-4)` of the partition, with `S_min` the smallest
+analysed tag's share (ROADMAP, "OD6's ceiling"). So the floor is above it
+whenever the smallest analysed tag holds less than about 1.1% of the
+partition, and it is never less than 0.45 of it while `S_min` is below 2.5%.
+A Float32 allowance as large as the acceptance ceiling no longer measures
+sensitivity to precision. W62 also found one measure,
 `q_tag_inc_left`, growing faster than `√n` (0.28, 0.33 and 0.45 of the floor
 at 3, 12 and 24 h), so its margin shrinks with run length.
 
@@ -217,11 +240,12 @@ up to 177% for E71's region tags. Against a per-tag tolerance of 2% L1, a
 tolerance is reported as convention-defined and cannot reach level 3 or 4.
 This needs no choice of `c`.
 
-*Correction, the same day (`offset_c_challenge_2026-10-09.md`, section 2.4):*
-the 177% is the change of `strat`'s integral. The region tags partition
-`∫(ρe_tot + cρ)`, which itself grew 163% when `c` doubled on E71's D4 pair. As
-shares of that total, `strat` and `tropo` moved by about +5% and −4%, the
-source tags by 4 to 6%, and their pairwise ratios by about 2%. The spread
+*Correction, the same day (`offset_c_challenge_2026-10-09.md`, section 2.4,
+PR #165, not merged when this was written):* the 177% is the change of
+`strat`'s integral. The region tags partition `∫(ρe_tot + cρ)`, which itself
+grew 163% when `c` doubled on E71's D4 pair. As shares of that total, `strat`
+and `tropo` moved by about +5% and −4%. The source tags' amounts moved by 4 to
+6%, and their pairwise ratios by about 2%. The spread
 still exceeds the 2% L1 tolerance, so the proposal stands, with the spread
 measured in shares, not integrals.
 
@@ -262,16 +286,17 @@ results" can be claimed where it is true.
     in force. ROADMAP says GPU "remain[s] unapproved", and G3 runs the sphere
     on CPU with MPI (2026-09-23). They can be read together, since the GPU
     check "comes last", at M6. Reword the entry so it says that.
-  - **Session-scoped entries marked in force.** 2026-09-23: "This session's
-    goal is G3's WP0 and WP1 ... the only model code is WP1's"; "This
-    session (`ClimaAtmosResiDyn-exp`) runs G3's jobs"; "The job session is
-    not reachable through SendMessage". Also the session goal of 2026-09-24
-    and the WP3 extension of 2026-09-23. An agent reading the file as
+  - **Session-scoped entries marked in force.** Three entries of
+    2026-09-23 read "This session's goal is G3's WP0 and WP1 ... the only
+    model code is WP1's", "This session (`ClimaAtmosResiDyn-exp`) runs G3's
+    jobs" and "The job session is not reachable through SendMessage". Also
+    the session goal of 2026-09-24 and the WP3 extension of 2026-09-23. An agent reading the file as
     instructed would take these as binding.
   - **Stale waiting list.** "Option C's revision, after W47. Open." ROADMAP
     records it built, validated and merged on 2026-10-01. "E89 is approved,
     to run after the PR head is final. Waiting for the head." FINDINGS has
-    E89. (The 10-07 review raised E89 as F18. It is still there.) The
+    E89. (The 10-07 review's F18 listed E89 among the waiting items missing
+    from the new list. The entry is still marked waiting.) The
     2026-10-05 update inside the 2026-10-02 entry still says #146 is
     "waiting", answered on 2026-10-07.
   - **Decisions outside the repository.** Eleven entries cite the owner's
@@ -286,10 +311,15 @@ register.
 
 ## What held
 
-These were tried and stood: WA-SCOPE's refusal of a three-tag or six-hour
-scope; EA-STATE's growth-only scoring with the state reported; the EA-C4
-reading of E87; parity blocking the origin rows while the run's own accounting
-is still scored; the producer-bound completeness gate; naming the held-out
-case before PX11; OD12's quarter rule for floors; keeping OD5's wording, since
-the obvious replacement, "screened", would collide with OD9's "exposure
-screen".
+These were tried and stood:
+
+  - WA-SCOPE's refusal of a three-tag or six-hour scope.
+  - EA-STATE's growth-only scoring with the state reported.
+  - The EA-C4 reading of E87.
+  - Parity blocking the origin rows while the run's own accounting is still
+    scored.
+  - The producer-bound completeness gate.
+  - Naming the held-out case before PX11.
+  - OD12's quarter rule for floors.
+  - Keeping OD5's wording, since the obvious replacement, "screened", would
+    collide with OD9's "exposure screen".
