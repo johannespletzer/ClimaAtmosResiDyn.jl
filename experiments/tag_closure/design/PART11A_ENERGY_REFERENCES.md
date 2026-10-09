@@ -44,7 +44,10 @@ separate families. The record's stage route integrates each face flux over
 the accepted stages first, then differentiates. It shares the flux, the faces
 and the tableau with the candidate, so it checks the stage weights and the
 order of operations, not the divergence. The continuum record is closed form
-and shares none of them. Its sign is scored in every cell. The window amount is
+in time. It shares the faces and the `-diff/dz` operator with the stage route,
+so it is independent in time only. In a flat column that operator is the
+exact cell average, so nothing is wrong in 11a. No route here is an
+independent divergence implementation. Its sign is scored in every cell. The window amount is
 `ρ(t1) e_prc(t1) − ρ(t0) e_prc(t0)` on a changing density.
 
 ## 3. Controls
@@ -71,8 +74,11 @@ gate nothing. So a closed form claims no convergence. It declares `converged`
 null with the basis "Inapplicable" and reports the ladder as
 `cross_check_converged`. The scorer reads null as not assessable, so a later
 converter needs a rule for closed forms. For the classifier the floor is zero by construction. For the
-record no tolerance is approved (EA-ACCURACY), so its floor is measured
-relative to the record's window amount and is reported only. Every case but
+record no tolerance is approved. EA-ACCURACY lapsed on 2026-10-07
+([DECISIONS.md](../DECISIONS.md), EA-USE). EA-USE sets what 11a verifies: the
+record against the independent accepted-stage flux, reported. So the record's
+floor is measured relative to the record's window amount and is reported
+only. Every case but
 `inventory_edge_cases` runs a step ladder of three rungs, and
 `heating_labels` a Float32 rung. The record's ladder is its stage ladder. A floor that rises by at most
 `SECOND_HALF_TIE` along the ladder is a tie (Part 6's rule). Excluded processes

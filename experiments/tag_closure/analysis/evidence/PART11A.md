@@ -25,9 +25,14 @@ Before review such rows counted as passing.
     ledgers for all eight tags.
   - The G4.7 ladder and the G4.8 pulse. Neither is reused or routed here.
   - Case 5's temporal grouping sweep.
-  - Case 8's independent divergence implementation. The stage route shares
-    the flux, the faces and the tableau with the candidate. Only the
-    closed-form continuum is independent of them.
+  - An independent divergence implementation for G4 row 8. The stage route
+    shares the flux, the faces and the tableau with the candidate. The
+    continuum shares the faces and the `-diff/dz` operator with the stage
+    route, so it is independent in time only. EA-ACCURACY lapsed on
+    2026-10-07 ([DECISIONS.md](../../DECISIONS.md), EA-USE). EA-USE sets what
+    11a verifies, the record against the independent accepted-stage flux,
+    and the stage route meets it. The independent divergence is required
+    before any qualification.
   - Registered mutants for the other wrong implementations of the contract:
     a swapped flux direction and a missing label transport (row 3), Θx read
     as gross and a signed ledger read as zero activity (row 5), spread read as
