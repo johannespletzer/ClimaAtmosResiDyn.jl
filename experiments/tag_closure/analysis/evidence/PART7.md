@@ -16,7 +16,7 @@ production default. Physical precipitation qualification remains incomplete.
 | 0M subdomain rain-out, WP4a-V/J       | Environment/updraft N → external loss; density tendency kg m^-3 s^-1, explicit/implicit evaluation                                       | `tagged_water_rainout.jl`, existing reconstruction/Jacobian, `ZERO_M_SPLIT`/`ZERO_M_RECONSTRUCTION_CHECK`; W32/W51 retained | Existing copies/reconstruction experiment reused; cannot validate its shared rain-out or establish stage-2 donor truth                                                      | Actual eligible copies, Newton ladder, subdomain applied losses; Julia/producer unavailable here                                             |
 | Six 1M inter-compartment flows        | NR, NS, RN, RS, SR, SN; rate kg kg^-1 s^-1 averaged over model dt; coefficient times solved donor per microphysics substep               | `tagged_water_precipitation.jl:620–709`; repeats CloudMicrophysics linearized averaging and SGS evaluator                   | New positive-M independent ODE references identify wrong donor and erased opposing exchange. Frozen-rate replay validates conditional label evolution only, not model rates | Cache/substep/evaluation and accepted dt*b amounts required; original substep tests call production helper and are not an independent oracle |
 | Pool attribution, WR13                | Donor pool composition mixes initial content with incoming integrated rates in one 3x3 solve                                             | `tagged_water_precipitation.jl:927–984`; local `Y` shares, stage/cache averaged rates                                       | New independent differential equation versus separately evaluated declared pool rule; temporal ordering error separated from spread                                         | Need frozen rate state/cadence/model identity; synthetic replay is runnable, actual PX14 run remains blocked                                 |
-| Net-flow fallback, WR14               | Losing compartments → gaining compartments by start donor share; net tendency rate, no exchange at net zero                              | `tagged_water_precipitation.jl:988–1106`, bracket snapshots at 1487–1548                                                    | Opposing-flow closed-compartment counterexample must fail label origin despite zero net parent changes                                                                      | Need six gross flows and fallback/bound/zero counters. Audit is rule spread, not reference error                                             |
+| Net-flow fallback, WR14               | Losing compartments → gaining compartments by start donor share; net tendency rate, no exchange at net zero                              | `tagged_water_precipitation.jl:988–1106`, before and after snapshots at 1487–1548                                           | Opposing-flow closed-compartment counterexample must fail label origin despite zero net parent changes                                                                      | Need six gross flows and fallback/bound/zero counters. Audit is rule spread, not reference error                                             |
 | Negative numerical treatment          | Signed flows touching a negative compartment are oriented; zero target labels there; inflow withheld or passed on with donor composition | `tagged_water_precipitation.jl:1109–1242`; positive-target rule and ledgers                                                 | Separate declared-rule examples with hand answers; never infer physical f=X/M for M<0                                                                                       | Raw parent, flags, withheld/negative ledgers and accepted applications; physical references refuse negatives                                 |
 | Rain/snow sedimentation with key      | Each level's R/S → lower level or separate boundary export, own R/S label; density rate and upward-positive face flux                    | `_sediment_precip_parts!` at 501–533; own parent species linear flux, Jacobian diagonal; explicit/implicit paths            | New independent column compartment chain with distinct levels/species/densities; separately integrated export label inventories                                             | Applied face/step parent+tag flux and geometry; shared parent flux alone cannot validate donor correctness                                   |
 | Per-level reset without key, WR12     | Species' falling water takes local total/N composition instead of its rain/snow ownership                                                | `tagged_water.jl:770–1010`; renormalized partition shares inside flux                                                       | Isolated reset mutation against actual rain/snow label owner with identical parent/rates. Pool test is separate                                                             | No unbuilt EDMF stage assumed; real reset/PX14 rain window unavailable                                                                       |
@@ -27,7 +27,8 @@ production default. Physical precipitation qualification remains incomplete.
 
 ## Frozen design and independence
 
-`water_transfer_design.json` fixes the cases. Its SHA256 is pinned in
+`water_transfer_design.json` fixes the cases. Its SHA256,
+`99d06a4075ede14b914febf1758ef98191bb7d9f84c9c198b21728e360ca36f3`, is pinned in
 `water_transfer_reference.py` and in both fixture configs. The hash shows
 integrity only. It shows that the file has not changed since it was pinned,
 not when it was written (decision of 2026-10-08 for Part 6, applied here).
@@ -81,17 +82,17 @@ normalization denominators block that row; they do not become zeros.
 OD15 is **proposed/pending** at this dependency. No approval is invented. The
 analytic development suite proceeds; dependent campaign scores remain blocked.
 
-| Choice                                    | Frozen planning draft                                                                                                                           | Current decision / dependent score                                                                                                        |
-|:----------------------------------------- |:----------------------------------------------------------------------------------------------------------------------------------------------- |:----------------------------------------------------------------------------------------------------------------------------------------- |
-| Case/window/length                        | PrecipitatingColumn, W43's 6 km/30 levels/dt10 s/1500 s; second case not selected until untagged established rain is measured under OD2         | Owner decision required; short case has no hourly/day output                                                                              |
-| Short-case reading                        | Record original 24 h/second-12 h and day-audit rows as not assessable; original missing-hour failure rule and R9 hourly proposal remain visible | Draft only; owner decides whether missing-short hours fail or are not assessable                                                          |
-| van Leer R/S closure                      | Retain approved 1e-8 against own compartment; no relaxed replacement                                                                            | Original row unchanged; hourly applicability pending                                                                                      |
-| Nonprecipitating residual                 | Report signed identity Nres=−(Rres+Sres) under increment plus both normalizations                                                               | No approved own-compartment tolerance; reported only                                                                                      |
-| Accumulated precipitation                 | Pair actual accepted parent/tag applications over identical steps; report separately from instantaneous sum                                     | No additional scoring until owner decides                                                                                                 |
-| Audit/gross-transfer normalization        | Six gross flows, native accepted amounts; per-tag max/integral endpoint and variation plus part/precip scales                                   | Reported only; missing producer/denominator blocks                                                                                        |
-| Audit trend                               | dt-halving ratios <=.75 twice converging; >1.1 either growing; .9–1.1 twice systematic; otherwise unresolved                                    | Proposed, never PASS. Non-doubling 1/default/10 substeps reported only                                                                    |
-| Pool ordering within evolving model rates | Actual substep donor/rate capture or model-substep replay would be required                                                                     | Frozen rates do not validate changing rates; no diagnostic added under OD13                                                               |
-| Held-out case                             | RICO 1M, 24 h is held out (WA-SCOPE, 2026-10-08). Criterion 8's columns are not held out for site-23 rules                                      | PrecipitatingColumn starts from RICO's θ and q_tot. Whether a 1M rule developed on it keeps RICO held out is an owner decision under OD14 |
+| Choice                                    | Planning draft                                                                                                                                  | Current decision / dependent score                                                                                                                                                                                                        |
+|:----------------------------------------- |:----------------------------------------------------------------------------------------------------------------------------------------------- |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Case/window/length                        | PrecipitatingColumn, W43's 6 km/30 levels/dt10 s/1500 s; second case not selected until untagged established rain is measured under OD2         | Owner decision required; short case has no hourly/day output                                                                                                                                                                              |
+| Short-case reading                        | Record original 24 h/second-12 h and day-audit rows as not assessable; original missing-hour failure rule and R9 hourly proposal remain visible | Draft only; owner decides whether missing-short hours fail or are not assessable                                                                                                                                                          |
+| van Leer R/S closure                      | Retain approved 1e-8 against own compartment; no relaxed replacement                                                                            | Original row unchanged; hourly applicability pending                                                                                                                                                                                      |
+| Nonprecipitating residual                 | Report signed identity Nres=−(Rres+Sres) under increment plus both normalizations                                                               | No approved own-compartment tolerance; reported only                                                                                                                                                                                      |
+| Accumulated precipitation                 | Pair actual accepted parent/tag applications over identical steps; report separately from instantaneous sum                                     | No additional scoring until owner decides                                                                                                                                                                                                 |
+| Audit/gross-transfer normalization        | Six gross flows, native accepted amounts; per-tag max/integral endpoint and variation plus part/precip scales                                   | Reported only; missing producer/denominator blocks                                                                                                                                                                                        |
+| Audit trend                               | dt-halving ratios <=.75 twice converging; >1.1 either growing; .9–1.1 twice systematic; otherwise unresolved                                    | Proposed, never PASS. Non-doubling 1/default/10 substeps reported only                                                                                                                                                                    |
+| Pool ordering within evolving model rates | Actual substep donor/rate capture or model-substep replay would be required                                                                     | Frozen rates do not validate changing rates; no diagnostic added under OD13                                                                                                                                                               |
+| Held-out case                             | RICO 1M, 24 h is held out (WA-SCOPE, 2026-10-08). Criterion 8's columns are not held out for site-23 rules                                      | PrecipitatingColumn starts from RICO's θ and q_tot. Under OD14 (2026-10-09) it serves PT15 and PT16 arithmetic rows only and chooses no mode or default. The explicit-1M default is chosen on an independent second case, found with OD15 |
 
 PX25 must use tracer/increment × first_order/vanleer_limiter × dt/dt2/dt4;
 only van Leer baseline also uses 1/10 microphysics substeps beside default.
@@ -105,29 +106,29 @@ audit cannot validate WR13 or WR14. No 12/24-hour rule is applied to 1500 s.
 
 ## Full Part7 obligation mapping
 
-| Obligation                                                          | Reused / new / blocked                                | Evidence or remaining action                                                                                            |
-|:------------------------------------------------------------------- |:----------------------------------------------------- |:----------------------------------------------------------------------------------------------------------------------- |
-| Exact dependency/refs/merge/intervening changes                     | Reconciled                                            | Merged with plan-rev2 at `7c96c2046` and ported to the declared-eligibility pattern. The scorer is unchanged            |
-| Applicable guides and acceptance/code inventory                     | Reused/new                                            | Root/shared/repo guides; G3_PLAN/ROADMAP/G3_TODO/provenance; actual source/test paths above                             |
-| Preregister all equations, IC, rates, BC, ladders, norms, decisions | New                                                   | Frozen design and configs, before code/results                                                                          |
-| One-way, opposing net-zero, three-cycle, unequal compositions       | New                                                   | Independent equation cases plus wrong-donor/erased-opposition controls                                                  |
-| Empty/near-depleted/depletion, zero activity                        | New                                                   | Positive reference limits and refusal of unsupported outflow; explicit N/A                                              |
-| Negative-rule handling                                              | Reused/new engineering tests                          | Separate declared numerical examples; no physical positive-composition claim                                            |
-| Distinct rain/snow levels/export/accumulation                       | New plus existing readers                             | Native chain, owner reset isolation, complete labelled exterior conservation                                            |
-| Pool/reset/closing totals versus labels                             | New plus Parts5/6                                     | Separate pool replay/reset; base closing absent; ledger-total cancellation tested without importing main                |
-| PX14 full 1/4/16/64 conditional replay and measured floors          | New synthetic; runtime blocked                        | Every rung retained; actual rain window/states/rates/substeps missing                                                   |
-| PX25 matrix/effective key/parent parity/void perturbation           | New config/planning artifact; runtime blocked         | OD15/effective settings/untagged/rain evidence needed; no campaign score                                                |
-| PT15/PT16 original closure/audit interpretations                    | Reused; pending score                                 | Signed identities and proposed trend status preserved; no threshold/default change                                      |
-| Process-weighted and native per-tag/compartment diagnostics         | New                                                   | Positive applied amounts, explicit denominator rules; net/gross/sum distinguished                                       |
-| Correction gross/retained/applications/fallback/minima              | Reuse Parts4/5; runtime blocked                       | VERIFIED_PRODUCERS stays empty; synthetic metadata cannot certify production                                            |
-| Paired accepted precipitation/restart/reset/duplicate handling      | Reuse existing reader/tests + focused transfer faults | No snapshot integration or invented capture                                                                             |
-| Bundle/manifest/scorer native identity/coverage/ladder gates        | Reused narrow optional adapter                        | Pin exact model/spec/config/source/rates/time/geometry/dtype; reconstruct floors                                        |
-| Part6 parent scaling/closure/mutation invariant guards              | Reuse/generalize narrowly                             | Candidate must match prescribed parent and closure; mutation certificate exact IC/rates/overlays                        |
-| Unit/direction/geometry/hash/time/scope/reference faults            | New + affected suites                                 | Exact analytic/cancellation/refinement failure and malformed evidence tests                                             |
-| Runtime parity/restart/device/performance/allocation                | Blocked and separately routed                         | No Julia/prepared cluster; no model hot-path changes; exact unrun commands in handoff                                   |
-| Review                                                              | Recorded in the PR                                    | No earlier independent review is on record. The review of 2026-10-08 is summarized in [Review record](#review-record)   |
-| STATUS/TODO/CROSSWALK/evidence docs                                 | New                                                   | Scoped offline increment, not atmospheric qualification. NEWS has no entry, since experiment tools are not listed there |
-| Residence-time/energy/parent physics/closure tuning                 | Excluded                                              | Existing parts only; no new reference or physical model changes                                                         |
+| Obligation                                                          | Reused / new / blocked                                | Evidence or remaining action                                                                                                         |
+|:------------------------------------------------------------------- |:----------------------------------------------------- |:------------------------------------------------------------------------------------------------------------------------------------ |
+| Exact dependency/refs/merge/intervening changes                     | Reconciled                                            | Merged with plan-rev2 at `7c96c2046` and ported to the declared-eligibility pattern. The scorer is unchanged                         |
+| Applicable guides and acceptance/code inventory                     | Reused/new                                            | Root/shared/repo guides; G3_PLAN/ROADMAP/G3_TODO/provenance; actual source/test paths above                                          |
+| Preregister all equations, IC, rates, BC, ladders, norms, decisions | New                                                   | Design and configs pinned by SHA256 (integrity only, not timing)                                                                     |
+| One-way, opposing net-zero, three-cycle, unequal compositions       | New                                                   | Independent equation cases. One-way has a wrong-donor control, opposing an erased-exchange control, the others an origin permutation |
+| Empty/near-depleted/depletion, zero activity                        | New                                                   | Positive reference limits and refusal of unsupported outflow; explicit N/A                                                           |
+| Negative-rule handling                                              | Reused/new engineering tests                          | Separate declared numerical examples; no physical positive-composition claim                                                         |
+| Distinct rain/snow levels/export/accumulation                       | New plus existing readers                             | Native chain, owner reset isolation, complete labelled exterior conservation                                                         |
+| Pool/reset/closing totals versus labels                             | New plus Parts5/6                                     | Separate pool replay/reset; base closing absent; ledger-total cancellation tested without importing main                             |
+| PX14 full 1/4/16/64 conditional replay and measured floors          | New synthetic; runtime blocked                        | Every rung retained; actual rain window/states/rates/substeps missing                                                                |
+| PX25 matrix/effective key/parent parity/void perturbation           | New config/planning artifact; runtime blocked         | OD15/effective settings/untagged/rain evidence needed; no campaign score                                                             |
+| PT15/PT16 original closure/audit interpretations                    | Reused; pending score                                 | Signed identities and proposed trend status preserved; no threshold/default change                                                   |
+| Process-weighted and native per-tag/compartment diagnostics         | New                                                   | Positive applied amounts, explicit denominator rules; net/gross/sum distinguished                                                    |
+| Correction gross/retained/applications/fallback/minima              | Reuse Parts4/5; runtime blocked                       | VERIFIED_PRODUCERS stays empty; synthetic metadata cannot certify production                                                         |
+| Paired accepted precipitation/restart/reset/duplicate handling      | Reuse existing reader/tests + focused transfer faults | No snapshot integration or invented capture                                                                                          |
+| Bundle/manifest/scorer native identity/coverage/ladder gates        | Reused narrow optional adapter                        | Pin exact model/spec/config/source/rates/time/geometry/dtype; reconstruct floors                                                     |
+| Part6 parent scaling/closure/mutation invariant guards              | Reuse/generalize narrowly                             | Candidate must match prescribed parent and closure; mutation certificate exact IC/rates/overlays                                     |
+| Unit/direction/geometry/hash/time/scope/reference faults            | New + affected suites                                 | Exact analytic/cancellation/refinement failure and malformed evidence tests                                                          |
+| Runtime parity/restart/device/performance/allocation                | Blocked and separately routed                         | No Julia/prepared cluster; no model hot-path changes; exact unrun commands in handoff                                                |
+| Review                                                              | Recorded in the PR                                    | No earlier independent review is on record. The review of 2026-10-08 is summarized in [Review record](#review-record)                |
+| STATUS/TODO/CROSSWALK/evidence docs                                 | New                                                   | Scoped offline increment, not atmospheric qualification. NEWS has no entry, since experiment tools are not listed there              |
+| Residence-time/energy/parent physics/closure tuning                 | Excluded                                              | Existing parts only; no new reference or physical model changes                                                                      |
 
 ## Declared eligibility and the unchanged scorer
 
@@ -143,33 +144,35 @@ eligibility reader. Rerun on a finished bundle, the adapter refuses a
 declaration that differs from its recompute. The fixture driver requires the
 scorer's reading to agree with the producer's.
 
-| Declared value                                                          | What it rests on                                                                                                                                                                                                                                                  |
-|:----------------------------------------------------------------------- |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `independent_rules`                                                     | Measured. The case's one rule when the pinned rates move water. Empty for zero activity, which exercises no donor rule.                                                                                                                                           |
-| Reference-discretization floor                                          | Measured. The RK4 rung 64 against the closed form or the independent exponential, in each applicable same norm plus the 128 eps arithmetic bound. The frozen design fixes this floor for both reference modes. Applied-share and export-origin rows are included. |
-| Source-injection, initialization, parent-solve and contamination floors | Stated as zero, each with its reason. A nonzero initial state or an active excluded process refuses the evidence instead of entering a floor. In the kinetic cases the RK4 parent error is inside the reference-discretization floor.                             |
-| `converged`                                                             | Measured. No step of the 1/4/16/64 ladder raises the floor by more than the scorer's `SECOND_HALF_TIE`. This is Part 6's ladder rule of 2026-10-08, reused. Every case converges.                                                                                 |
-| `mirrors_complete`, `jacobian_complete`                                 | Declared true as inapplicable. The equations have no source and no copies. RK4 and the closed forms have no implicit tag solve.                                                                                                                                   |
+| Declared value                                                          | What it rests on                                                                                                                                                                                                                                                                          |
+|:----------------------------------------------------------------------- |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `independent_rules`                                                     | Measured. The case's one rule when the pinned rates move water. Empty for zero activity, which exercises no donor rule.                                                                                                                                                                   |
+| Reference-discretization floor                                          | Measured. The RK4 rung 64 against the closed form or the independent exponential, in each applicable same norm plus the 128 eps arithmetic bound. The frozen design fixes this floor for both reference modes. Applied-share and export-origin rows are included.                         |
+| Source-injection, initialization, parent-solve and contamination floors | Stated as zero, each with its reason. A nonzero initial state or an active excluded process refuses the evidence instead of entering a floor. In the kinetic cases the RK4 parent error is inside the reference-discretization floor.                                                     |
+| `converged`                                                             | Measured. No step of the 1/4/16/64 ladder raises the floor by more than the scorer's `SECOND_HALF_TIE`. Part 6's rule, accepted for Part 7 on 2026-10-09. Every case converges on this ladder. `depleted_donor` and `single_transfer` do so through the tie, with margins of 3.0 and 4.3. |
+| `mirrors_complete`, `jacobian_complete`                                 | Declared true as inapplicable. The equations have no source and no copies. RK4 and the closed forms have no implicit tag solve.                                                                                                                                                           |
 
 A rung-64 reference that does not conserve its own water and labels, or
 fails its directed balance, is refused as a broken reference. The adapter's
 own floor eligibility used to include those checks. Every rung of every
 case passes them.
 
-Zero activity is read by the scorer as an ineligible reference that covers
-no rule, so its candidate is not assessable and the full scorer's
-eligibility rows read FAIL. Before the port, a scorer hook reported its
-coverage as not applicable and its reference as eligible. Which reading the
-owner wants is an open item.
+Zero activity covers no rule by design (decision of 2026-10-09). The design
+marks the case with `expected_rule_coverage: none`, and the producer refuses
+the mark if the pinned rates move water. The scorer, unchanged, reads its
+reference as covering no rule, so its candidate is not assessable and the
+full scorer's eligibility rows read FAIL. The suite driver counts the case
+as not applicable when its floors are eligible, keeps NOT ASSESSABLE in its
+results and does not exit 3 for it.
 
 ## Measured offline increment
 
 Both configurations, exact and selected RK4, cover the nine development
 cases. Each retains 36 RK4 rungs (nine cases by four) and 28 separate pool
-diagnostic rungs (seven fixed-rate cases by four). Both exit 3, because the
-zero-activity reference covers no rule. The other eight cases have eligible
-references, their candidates pass and their registered origin controls are
-verified. The rung-64 floors, including their arithmetic bounds, are:
+diagnostic rungs (seven fixed-rate cases by four). Both exit 0. Eight cases
+have eligible references, their candidates pass and their registered origin
+controls are verified. Zero activity is not applicable. The rung-64 floors,
+including their arithmetic bounds, are:
 
 | Case                                    | Rung-64 maximum floor / tolerance |
 |:--------------------------------------- | ---------------------------------:|
@@ -180,13 +183,17 @@ verified. The rung-64 floors, including their arithmetic bounds, are:
 | Empty replenished donor                 | 1.0644126818743075e-9             |
 | Exact depleted endpoint                 | 3.31216528779494e-12              |
 | Stiff opposing floor                    | 8.310061860770055e-5              |
-| Zero activity (covers no rule)          | 2.853819184610238e-12             |
+| Zero activity (not applicable)          | 2.853819184610238e-12             |
 | Separate rain/snow sedimentation/export | 1.4004315613630354e-6             |
 
 These are manufactured development measurements, not atmospheric reference
 floors. The RK4 floors fall by about 16 for each fourfold refinement, second
 order, because the applied-share row samples the stage donor. The stiff
 case's rung 1 floor is 29 times the tolerance. Its rung 64 floor is 8.3e-5.
+Pool rungs 1 and 4 fail in four cases, as expected of a coarse rule. The
+depleted case's pool rung 16 also fails, from roundoff alone: one label
+reaches -5.9e-17 at the depleted donor, where the closure allowance is
+128 eps times 2e-6. The pool rungs are diagnostics and select nothing.
 
 What passes by construction. The fixture candidate is the exact answer
 itself. In exact mode its errors are zero, and in RK4 mode they equal the
@@ -194,17 +201,24 @@ rung-64 floor. Its PASS checks the reader and the equations, not a model.
 In the one-way and depleted cases the donor composition is constant, so any
 consistent integrator, the pool rule included, is exact there. Their floors
 sit at the arithmetic bound. The zero-activity floor is the arithmetic bound
-alone. In the single-cell cases the approved total profile rows cannot see a
-fault that moves labels between N, R and S of the same cell. Only the
-per-compartment rows, which are development engineering checks, detect the
-wrong-donor and erased-exchange controls there.
+alone. The depleted case moves 2e-6 kg m^-2 against about 3 kg m^-2. A
+candidate that moves no label there meets all 12 total rows and all 36
+compartment rows, so the case cannot detect a missing transfer. The eight
+cases without exports are single cells. There the approved total profile
+rows are met by any candidate that moves labels only between N, R and S,
+a no-transfer candidate included (12 of 12 in each). Only the
+per-compartment rows discriminate, and they are development engineering
+checks. In the sedimentation case the export-origin rows also discriminate.
+All of them fall under the small-tag absolute rule.
 
 The registered controls each keep the parent, every compartment closure and
-every tag's total, and fail an origin row. The wrong donor applies the
-recipient's initial share to the one-way amount. The erased exchange keeps
-the opposing water amounts and moves no label. The owner reset sends rain
-and snow with their level's initial N composition. Each is checked through
-the bundle path. A fourth gap was found in review: two opposing edges that
+every tag's total, and fail an origin row. Only the one-way case has a true
+wrong-donor control: it applies the recipient's initial share to the
+transferred amount. The opposing case erases the exchange: it keeps the
+opposing water amounts and moves no label. The sedimentation case resets
+the owner: rain and snow fall with their level's initial N composition. The
+other six cases permute origins cyclically, a corruption control, not a
+donor claim. The first three are checked through the bundle path. A fourth gap was found in review: two opposing edges that
 both carry 4% extra of one origin leave labels, closure, directed balance
 and the 5% applied-share row unchanged or within limits. The candidate check
 now also requires each edge's applied partition labels to sum to its applied
@@ -227,3 +241,13 @@ No record of such a review exists in the repository, so that statement is
 withdrawn. The review of 2026-10-08 ported the
 adapter, checked the equations and the controls by computation and added
 the applied-partition check, the PX25 draft pin and the driver's exit codes.
+
+A mutation pass on 2026-10-09 found numbers that no test pinned. The code
+now reads the design's `profile_rules` instead of repeating them, and a
+test ties them to the scorer's approved constants. Tests also pin the
+judged endpoints to the scorer's `FIRST_HOUR` and `DAY`, the source overlay
+definitions, the trend bounds and every PX25 value against its
+preregistration. The exponential's internal settings (96 terms, the 0.5
+scaling bound, the 16 eps depletion allowance and the 2e-15 initial
+partition check) stay unpinned. A wrong value there would show in the
+rung-64 floors, which are measured.

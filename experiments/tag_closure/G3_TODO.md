@@ -8,7 +8,8 @@ compartment, owner and export diagnostics, every 1/4/16/64 rung and measured
 same-norm floors. The adapter is the producer of a declared eligibility file
 that the unchanged scorer reads, as in Part 6. Eight cases have eligible
 references, passing candidates and verified origin controls. The
-zero-activity reference covers no rule, so both suites exit 3.
+zero-activity case covers no rule by design and is not applicable (decision
+of 2026-10-09). Both suites exit 0.
 
 This completes no physical checkbox below. PX14's real rain window, native
 accepted gross flows and evolving donor and substep samples are missing. The
@@ -142,8 +143,9 @@ is promoted by preparing this documentation.
       + Offline equation/known-owner checks and preregistration planning are
         saved in [PART7](analysis/evidence/PART7.md), with reproducible
         [commands](analysis/evidence/README.md#independent-water-transfer-fixtures).
-        Origin mutants expose wrong donors, erased opposing exchange and local
-        owner resets despite closed totals. Complete RK4 and pool ladders,
+        Origin controls keep closed totals and expose a wrong donor
+        (one-way case only), an erased opposing exchange, a local owner reset
+        and, in six cases, an origin permutation. Complete RK4 and pool ladders,
         native process, profile and export errors, signed, gross and retained
         audit activity and paired synthetic accepted precipitation are retained.
         Prescribed-rate replay cannot validate evolving model rates. Runtime

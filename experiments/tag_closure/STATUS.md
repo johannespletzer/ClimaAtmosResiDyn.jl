@@ -8,15 +8,18 @@ opposing net-zero exchange, a three-compartment cycle, unequal compositions,
 empty and depleted donors, zero activity and separate rain and snow column
 exports. A declared negative-water map is an engineering test, not a
 physical negative composition. Pool replay and pool/net audit spread stay
-apart from reference error. The wrong-donor, erased-exchange and owner-reset
-controls keep the parent and every total and fail an origin row.
+apart from reference error. Each case's control keeps the parent and every
+total and fails an origin row. Only the one-way case has a true wrong-donor
+control. The opposing case erases the exchange, the sedimentation case
+resets the owner and the other six permute origins.
 
 The adapter follows Part 6's reviewed pattern. It is the producer of a
 declared eligibility file that the unchanged scorer reads. Both nine-case
-suites, exact and RK4, retain 36 RK4 and 28 pool rungs and exit 3. Eight
+suites, exact and RK4, retain 36 RK4 and 28 pool rungs and exit 0. Eight
 cases have eligible rung-64 references, the largest floor fraction being
-`8.310061860770055e-5`. The zero-activity reference covers no rule, so its
-candidate is not assessable. [Commands](analysis/evidence/README.md#independent-water-transfer-fixtures)
+`8.310061860770055e-5`. Zero activity covers no rule by design (decision of
+2026-10-09), so its candidate stays not assessable and the driver counts it
+as not applicable. [Commands](analysis/evidence/README.md#independent-water-transfer-fixtures)
 reproduce this work. The whole evidence directory passes.
 
 **Part 7 physical qualification remains incomplete.** These six-label

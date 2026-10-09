@@ -119,9 +119,11 @@ python3 -m unittest discover -s experiments/tag_closure/analysis/evidence \
 Both output roots must be absent. The exit codes are those of the transport
 fixtures above. Both configurations cover the nine cases of
 [PART7.md](PART7.md) and retain 36 RK4 rungs and 28 pool diagnostic rungs.
-Both exit 3. The zero-activity reference covers no rule, so the scorer reads
-it as ineligible and its candidate is not assessable. The other eight cases
-have eligible references, passing candidates and verified origin controls.
+Both exit 0. The other eight cases have eligible references, passing
+candidates and verified origin controls. The zero-activity case covers no
+rule by design (decision of 2026-10-09). The scorer reads its reference as
+ineligible and its candidate stays not assessable. The driver counts it as
+not applicable when its floors are eligible.
 
 `water_transfer_adapter.py` is the producing script of the declared
 eligibility file, as in Part 6. It reconstructs every rung, checks native
@@ -138,9 +140,10 @@ application list is empty, and the reader rebuilds one applied mean share
 per edge and interval from the native cumulative amounts. Water amounts must
 reproduce the pinned rates. Endpoint changes must reconcile with the directed
 amounts, and each edge's applied partition labels must sum to its applied
-water. A wrong donor, an erased exchange and an owner reset each keep the
-totals and fail an origin row. Zero transfer activity is not donor-rule
-coverage.
+water. Each case's control keeps the totals and fails an origin row: a wrong
+donor in the one-way case, an erased exchange in the opposing case, an
+owner reset in the sedimentation case and an origin permutation in the
+other six. Zero transfer activity is not donor-rule coverage.
 
 The sedimentation case stores instantaneous upward-positive precipitation
 apart from the exact integrated exterior amounts. Synthetic paired parent and
