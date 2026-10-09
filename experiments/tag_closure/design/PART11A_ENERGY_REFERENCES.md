@@ -40,17 +40,21 @@ cases with a mass change. Θx is defined for `heating_labels`, `donor_cooling`,
 The other cases have no source, so a percentage of Θx is not assessable there.
 
 Stored-energy cases and the radiation record are separate references with
-separate families. The record case is tested against an independent route:
-it integrates each captured face flux over the accepted stages first, then
-differentiates. The continuum record is closed form. The window amount is
+separate families. The record's stage route integrates each face flux over
+the accepted stages first, then differentiates. It shares the flux, the faces
+and the tableau with the candidate, so it checks the stage weights and the
+order of operations, not the divergence. The continuum record is closed form
+and shares none of them. Its sign is scored in every cell. The window amount is
 `ρ(t1) e_prc(t1) − ρ(t0) e_prc(t0)` on a changing density.
 
 ## 3. Controls
 
 Every case has its registered mutant in the design, caught by a test in
 `test_energy_reference.py` (`MutantTests`). Each mutant keeps the invariants it
-declares (parent, partition closure, inputs or stage fluxes) and fails an
-origin, record or classification check. Further wrong implementations from
+declares (parent, partition closure, overlay sum, records, inputs or stage
+fluxes) and fails an origin, record or classification check. A declared
+invariant without a check is refused. An origin row that the scorer's reading
+cannot assess never passes. It makes the candidate NOT ASSESSABLE. Further wrong implementations from
 the contract are tested too: omitted offset flux, mass replaced by water, a
 changed parent at `2c`, an omitted stage weight, a transported record,
 specific-output differencing, a region burden pass and a duplicated restart
@@ -58,13 +62,16 @@ gross.
 
 ## 4. Floors, ladder and tie
 
-Floors follow OD12, one per source. Four are stated with their basis. The
-reference-discretization floor is measured. For the stored cases it is a
-fraction of the scorer's origin tolerance, in the scorer's energy reading, and
-must be at most `FLOOR_FRACTION_MAX`. For the record no tolerance is approved
-(EA-ACCURACY), so its floor is relative to the record's window amount and is
-reported only. Each case also runs a step ladder of three rungs, and
-`heating_labels` a Float32 rung. A floor that rises by at most
+Floors follow OD12, one per source. Four are stated with their basis. For
+the six closed-form stored cases the reference-discretization floor is
+constructed, not measured. It is the error of a 128 eps relative change of
+every tag, about 1e-10 of the tolerance. It cannot reach the quarter rule, so
+that test is empty there. The stepped rungs are measured and reported. They
+gate nothing. For the classifier the floor is zero by construction. For the
+record no tolerance is approved (EA-ACCURACY), so its floor is measured
+relative to the record's window amount and is reported only. Every case but
+`inventory_edge_cases` runs a step ladder of three rungs, and
+`heating_labels` a Float32 rung. The record's ladder is its stage ladder. A floor that rises by at most
 `SECOND_HALF_TIE` along the ladder is a tie (Part 6's rule). Excluded processes
 must read zero arrays in the candidate.
 
@@ -77,6 +84,9 @@ must read zero arrays in the candidate.
   - `donor_cooling` uses `c = 274388` J/kg.
   - The record floor is reported relative to the record, never scored.
   - Rule names per case in `energy_reference_adapter.RULES`.
+  - The roundoff allowance of 128 eps, the use of `SECOND_HALF_TIE` as the
+    ladder tie, the excluded-process roster and the falsification rule of
+    section 7.
 
 ## 6. What stays a design
 
@@ -87,6 +97,8 @@ approval.
 
 ## 7. Falsification
 
-A case fails if its exact candidate fails a check, if its mutant passes, or
-if its reference floor exceeds the quarter rule. Any of these blocks the case
-as a reference.
+A case fails if its exact candidate fails a check, if its mutant is not
+caught, or if its reference floor exceeds the quarter rule. Any of these
+blocks the case as a reference. The floor test is empty for the closed-form
+cases (section 4). A candidate with an unassessable origin row is NOT
+ASSESSABLE, not a pass.

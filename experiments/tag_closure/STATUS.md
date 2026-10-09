@@ -7,7 +7,8 @@ eight cases of G4_CLAIM_CONTRACTS section 6 as offline known answers. Each
 case freezes its convention `c`. Stored-energy cases and the radiation record
 are separate references. The tools and tests are in `analysis/evidence/`
 (`energy_reference*.py`). Every case's wrong-origin mutant is caught in a
-test. The [PX22 draft](configs/part11a_px22_draft/README.md) waits for the
+test. The suite exits 3, because `opposing_net_zero` has origin rows the
+scorer's reading cannot assess. The [PX22 draft](configs/part11a_px22_draft/README.md) waits for the
 owner. **Part 11a is not done.** No run, scorer, default or tolerance change
 is supplied.
 

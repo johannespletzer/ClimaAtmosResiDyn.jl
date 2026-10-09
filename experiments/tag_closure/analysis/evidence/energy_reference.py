@@ -668,8 +668,10 @@ def evaluate_candidate(design, case, candidate, reference):
 def activity_report(design, case, state, start, end):
     """Application activity, Theta_x and Theta_i on one window, kept apart (section 4.2).
 
-    Theta_i is the interim record estimate with end density, as od4_restate
-    computes it. It omits c Delta rho. None of the three bounds another.
+    Theta_i is the interim record estimate with end density, on the window's
+    two endpoints and every `prc_` field. od4_restate sums every output
+    interval of its source list. The two agree here because these records
+    are monotone. It omits c Delta rho. None of the three bounds another.
     """
     i, j = (int(np.flatnonzero(state.time == t)[0]) for t in (start, end))
     dz = state.dz
