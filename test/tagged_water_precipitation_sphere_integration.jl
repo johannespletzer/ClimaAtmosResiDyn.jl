@@ -79,12 +79,23 @@ sphere_part_sum(x, prefix) =
         type = "float"
         """,
     )
-    sphere = run!(
-        build(
-            merge(sphere_config(sponge_toml), sphere_tag_config()),
-            "water_tags_precipitation_sphere",
-        ),
+    sphere = build(
+        merge(sphere_config(sponge_toml), sphere_tag_config()),
+        "water_tags_precipitation_sphere",
     )
+    # As in `tagged_water_precipitation_integration.jl`: the follow and the
+    # rescale are compiled before the first step. On Julia 1.10, a first step
+    # that also infers the follow's call tree needs more than the 16 GB of a
+    # GitHub runner, and the runner shut the sphere down. Neither call runs
+    # the code, so no result changes.
+    let Y = sphere.integrator.u, p = sphere.integrator.p
+        @test precompile(CA.follow_water_tag_precipitation!, (typeof(Y), typeof(p)))
+        @test precompile(
+            CA.rescale_water_tags!,
+            (typeof(Y), typeof(p), typeof(p.scratch.ᶜtemp_scalar_2)),
+        )
+    end
+    run!(sphere)
     sphere_plain = run!(
         build(sphere_config(sponge_toml), "water_tags_precipitation_sphere_plain"),
     )
