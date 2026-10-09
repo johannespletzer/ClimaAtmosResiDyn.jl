@@ -42,15 +42,16 @@ and the six cost jobs (14170104 to 14170109), all archived.
 `analysis/evidence/part8_pilot.py` is the glue. The
 [record](analysis/evidence/PART8.md) holds the OD2 reading, the rows against
 W58, the contract rows, the ranked table of each mode and the cost. Its
-verdict: H1 and H2 held. No recorded pass of W58 failed, and each mode's first
-term is the prior's (the default's closure, the copies' repair). H3's default
-half held, with an 8 + 8 step of 8.998x to 9.379x against OD3's 2x. Its
-copies half is split, with builds of 3.02 h, 4.48 h and 3.09 h against 4 h.
+verdict: H1 and H2 were not falsified. No recorded pass of W58 failed, and
+each mode's first term is the prior's (the default's closure, the copies'
+repair). H3's default half was not falsified, with an 8 + 8 step of 8.998x to
+9.379x against OD3's 2x. Its copies half is split, with builds of 3.02 h,
+4.48 h and 3.09 h against 4 h.
 No stop rule of the design's section 10 applied.
 
 **Part 8 is done except the owner's items.** They are the copies half of H3,
-WA-COST's cap (none set or proposed), the proposed choices of the design's
-section 12 and the walk fix's placement. The first-hour origin verdicts and
+WA-COST's cap (none set or proposed) and the proposed choices of the design's
+section 12. The first-hour origin verdicts and
 the copies' eligibility wait for PX12 (part 7). No model, default, tolerance
 or scorer change is supplied.
 

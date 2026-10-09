@@ -108,7 +108,7 @@ pass. The section "Verdict" states H1.
 
 | W58 rule | Rows | Rerun against W58                                                     |
 |:-------- | ----:|:--------------------------------------------------------------------- |
-| R1       | 2    | 24 fields identical in step 7. Scorer parity: none differ             |
+| R1       | 2    | Scorer: 23 fields against the twin, none differ. Review: 24 of 24     |
 | R3       | 9    | Top change 0.29980746438781125 K, W58's to all digits. Neg. water 0.0 |
 | R4       | 4    | Reproduced. Default 3.767955639221502e-15, copies 3.5435e-4           |
 | R5       | 3    | Reproduced. Own residual 2.3102e-6, repair 5.0522e-4 per day          |
@@ -116,8 +116,12 @@ pass. The section "Verdict" states H1.
 | R8       | 11   | Reproduced. Default led_fix all 0, copies led_fix 6.25e-7, 3.26e-7, 0 |
 | C7       | 2    | Not recomputed by any step. Scorer D_p below as the nearest           |
 
-R1 and R3 are read from step 7 and from the scorer's JSON, not from the
-`w58` command, which covers R4, R5 and R8. R7 is read from step 7, which
+R1 and R3 are read from the scorer's JSON, not from the `w58` command, which
+covers R4, R5 and R8. The scorer compares 23 fields of each tagged run with
+the twin. Step 7 compares default with copies, not with the twin. W58's R1
+compared the 24 fields the twin writes at 30 min. The record PR's review
+compared those 24 fields of each tagged run with the twin, bit for bit, and
+found all equal. R7 is read from step 7, which
 prints three digits. C7 is W58's relative sum of `pr_tag` against `pr`. None
 of steps 2 to 7 recomputes it. The scorer's WATER.PRECIP_INSTANTANEOUS
 `max_absolute_rate_defect` is a different observable: 2.981555974335137e-19
@@ -198,7 +202,7 @@ read from the scorer's JSON or the tables JSON, or stated as not produced.
     copies have no such reading.
   - **0M precipitation.** The no-rain absolute defect is 0.0 in both bundles.
     The tools give the maximum defect over the outputs, not D_p at each
-    output. No tool produces the source shares.
+    output. None of steps 2 to 7 produces the source shares.
   - **Copies' refinement and OD12 floors.** No tool produces them here. The
     scorer reads both from PX12's eligibility file, so they wait for PX12.
   - **Rain and snow, precipitation origins.** WATER.RAIN_SNOW_CLOSURE,
@@ -210,8 +214,8 @@ read from the scorer's JSON or the tables JSON, or stated as not produced.
     the pilot has no restart.
 
 The converter and scorer exit codes and the named data failures, from
-`$B/logs/s3_*.txt` and `$B/logs/s4_*.txt`. All are failures of data, none of
-the model.
+`$B/logs/s3_*.txt` and `$B/logs/s4_*.txt`. Each is a missing field, column or
+hash. None is a measured value over a limit.
 
   - **Default bundle.** Converter exit 2, scorer exit 2. Candidate variables
     missing: `named_remainder`, `newton_error`, `process_amount`,
@@ -284,7 +288,8 @@ three terms are the same as W58's. The default's first term is the closure
 residual, the copies' first term is the copies' repair. So H2 is not
 falsified, and part 9 takes the prior order: default closure, partition
 repair, `led_fix:pbl`, and copies' repair, closure, copies' own residual. The
-default's ranks 2 to 5 are zeros and carry no information beyond the limit.
+default's ranks 2 to 5 are zeros. Their order is the tie rule's table order,
+not a measured order.
 The default's first-hour origins wait for PX12 and give part 9 nothing.
 Event counts (27413 and 15317) equal the design's prior. D_p equals the prior
 to its printed digits.
@@ -313,9 +318,10 @@ prior (jobs 14119365 to 14119367, shared nodes).
 The rerun's builds are 37% (untagged), 21% (default) and 19% (copies) shorter
 than W58's. Its steps are 35% shorter for the untagged twin, 6% for the
 default. The tagged-to-untagged step ratio is 1.81 (default) and 1.84
-(copies) on this pilot, against 1.24 and 1.25 in W58 (shared nodes). The
-twin ran on an unshared node, which may explain part of the faster
-twin. These are single samples. Wall times of the jobs: 525, 844 and 858 s.
+(copies) on this pilot, against 1.24 and 1.25 in W58. All three rerun jobs
+had a whole node, and W58's jobs shared nodes. These are single samples, and
+this record reads no cause from them. Wall times of the jobs: 525, 844 and
+858 s.
 The header of `runscripts/part8_trio.sh` quotes W58's last line as 9.4 s and
 11.6 s. These are `wall_time_total`, not `wall_time_spent` (8.9 s and 11.0 s).
 
@@ -348,9 +354,9 @@ blocks 2 to 6.
 | p8_default_a | 1361.5   | 2.135                 | 0.38     | 817.4         | 6038456                | 16.36             | 16999679K    |
 | p8_default_b | 989.9    | 2.201                 | 0.27     | 629.6         | 6038456                | 13.22             | 13436392K    |
 | p8_default_c | 1361.9   | 2.137                 | 0.38     | 836.2         | 6038456                | 16.26             | 16898520K    |
-| p8_copies_a  | 10878.4  | 23.587                | 3.02     | 927.9         | 7180344                | 25.00             | 26052594K    |
-| p8_copies_b  | 16140.9  | 25.299                | 4.48     | 1198.1        | 7180344                | 24.98             | 26029573K    |
-| p8_copies_c  | 11114.3  | 24.230                | 3.09     | 910.7         | 7180344                | 24.94             | 25741104K    |
+| p8_copies_a  | 10878.4  | 23.589                | 3.02     | 927.9         | 7180344                | 25.00             | 26052594K    |
+| p8_copies_b  | 16140.9  | 25.300                | 4.48     | 1198.1        | 7180344                | 24.98             | 26029573K    |
+| p8_copies_c  | 11114.3  | 24.231                | 3.09     | 910.7         | 7180344                | 24.94             | 25741104K    |
 
 Point 0 allocates 560216 B per step in every job. The script's peak is the
 process's maximum resident size after the 8 + 8 point, in the script's GB. The
@@ -390,8 +396,12 @@ OD3's 2x. It holds on all three nodes (8.998x to 9.379x), as E88's 9.098x did.
 So it is not falsified. The copies half says the copies do not build within
 4 h. It holds on p8_copies_b (4.48 h). It does not hold on p8_copies_a and
 p8_copies_c (3.02 h and 3.09 h). So the reading is split across the nodes.
-The design fixes no rule for a split build. This record states the three
-builds and leaves the half to the owner. Neither half is a verdict.
+The design fixes no rule for a split build. Two readings are open. Read as
+written, a build within 4 h falsifies the copies half, and two did. Read with
+section 8's "less favourable quoted", which the design states for the blocks
+of one job, the slowest build of 4.48 h is quoted and the half holds. This
+record states the three builds and leaves the half to the owner. Neither
+half is a verdict.
 Criterion 10 is scored in part 10.
 
 No cost cap is set. None is proposed. WA-COST's cap waits for the owner
@@ -402,17 +412,17 @@ No cost cap is set. None is proposed. WA-COST's cap waits for the owner
 In the terms of the design's sections 1 and 10. This record sets no cap,
 threshold, tolerance or default.
 
-  - **H1, the prior stands: held.** No recorded pass of W58 became a fail.
-    The 18 rows of R4, R5 and R8 equal W58's to the last digit. R1 and R3
-    pass again. No parent field differs, and the top-level change equals
+  - **H1, the prior stands: not falsified.** No recorded pass of W58 became a
+    fail. The 18 rows of R4, R5 and R8 equal W58's to the last digit. R1 and
+    R3 pass again. No parent field differs, and the top-level change equals
     W58's to all digits. R7 equals W58 at the printed digits, and to all
     digits at 1 h. C7 was not recomputed. W58 reports R7 and C7 without a
     verdict, so neither could flip a pass.
-  - **H2, the order of the error terms: held.** The rerun ranks the prior's
-    first term first in each mode. In the default it is the closure residual
-    (1.89e-12 of WATER_GROSS). In the copies it is the copies' repair (0.2526
-    of COMPARATOR_REPAIR_PER_DAY). The first three terms of each mode are the
-    prior's. Part 9 takes the prior order.
+  - **H2, the order of the error terms: not falsified.** The rerun ranks the
+    prior's first term first in each mode. In the default it is the closure
+    residual (1.89e-12 of WATER_GROSS). In the copies it is the copies' repair
+    (0.2526 of COMPARATOR_REPAIR_PER_DAY). The first three terms of each mode
+    are the prior's. Part 9 takes the prior order.
   - **H3, the cost: split.** The default half holds on all three nodes
     (8.998x to 9.379x against OD3's 2x, E88 9.098x). It is not falsified.
     The copies half is split. Two builds fall within 4 h (3.02 h and
@@ -445,13 +455,15 @@ What waits for the owner:
     The entry in force says no cap for the pilot or for water alone, and
     that caps gate level 4. This record sets no cap and proposes none.
   - The proposed choices of section 12 listed above.
-  - The difference the design's section 2 lists. The part 8 brief puts the
-    walk fix's measurement in 12c, the delivery plan in part 9's queue.
 
 The follow-ups the owner decided on 2026-10-09 stay as decided. A scorer PR
 reads OD2 from the twin's cadence before part 10 scores rain on TRMM. A
 converter and scorer follow-up maps the per-tag `led_fix` columns before part
 10. The registered producer is part 9's queue item.
+
+The difference the design's section 2 lists is closed. Commit `dd2df01e8`
+(2026-10-09, before the runs) moved the part 8 brief's walk fix measurement
+to part 9's queue, as the delivery plan's section 3 has it.
 
 What waits for PX12 is the next section. Part 8 is done except the owner's
 items and PX12's readings.
@@ -480,3 +492,12 @@ brought the intro and the runs table to the finished state and narrowed H1's
 section 4 readings, the load average of 1.00 to 1.27, the copies' closure
 warnings and the verdict. Tokens: the cost worker 81k, the finder 134k
 and the reviewer 127k.
+
+2026-10-09, the PR's review (clima-reviewer, Opus high). It re-ran the `w58`
+command, with the same result, and recomputed about 40 numbers from the
+results, logs, CSVs and Slurm. Three build ratios of the copies were rounded
+from rounded seconds and are now 23.589, 25.300 and 24.231. R1's evidence now
+names what each tool compares, and the review compared the twin's 24 fields
+with both tagged runs. It removed a cause offered for the faster twin, stated
+H1 and H2 as not falsified, named the two readings of H3's copies half, and
+dropped the walk fix owner item, closed by `dd2df01e8` before the runs.
