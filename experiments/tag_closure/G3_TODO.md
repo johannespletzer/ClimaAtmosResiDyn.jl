@@ -77,7 +77,7 @@ Part 8 identifies the dominant remaining error and costs the workflow.
 Part 9 fixes it. Part 10 qualifies without held-out retuning. Required
 precipitation/EDMF stages remain in WP4b. All later parts retain their gates. "Step n" below means the earlier order's step. The crosswalk maps it.
 
-PR #146 is built, with the owner's review points 1 and 3 answered in `b702ff17`. It is still open at
+PR #146 is built, with the owner's review points 1 and 3 answered in `b702ff17`. It merged on `main` at `12377fb88` on 2026-10-07, from head
 `33cbfd4fa282618788cea54de7a69696b592ead8` (2026-10-05). Its own description
 reports the #121 follow-ups already in #127. Verify that merge evidence before
 closing the historical checkbox. The current plan does not repeat those
@@ -1087,7 +1087,7 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
   - [~] **The WP4b fix PR** (decided 2026-10-02, option A, two to three days;
     DECISIONS.md). It covers P1 to P5 and the review's four open should-fix
     findings. No model field changes, and the tags change under the key.
-    Open as #146 (head `9dc512f1` on 2026-10-02), not merged. It holds:
+    Merged as #146 at `12377fb88` on 2026-10-07 (head `9dc512f1` on 2026-10-02). It holds:
 
       + [ ] a per-compartment closing step after the follow, booked in the
         rescale's ledgers (micro-1 on every path, and P2's revision);

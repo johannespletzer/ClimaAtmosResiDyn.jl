@@ -13,8 +13,8 @@ The original section 5 order below is historical dependency context. Use the
 roadmap for execution. Water parity and restart checks apply to every relevant
 change, not only the later production-expansion parts.
 
-PR #146 is open at `33cbfd4fa282618788cea54de7a69696b592ead8` on
-2026-10-05. Its stage-1 fixes do not establish WP4b stage 2/3 or precipitation
+PR #146 merged on `main` at `12377fb88` on 2026-10-07, from head
+`33cbfd4fa282618788cea54de7a69696b592ead8` of 2026-10-05. Its stage-1 fixes do not establish WP4b stage 2/3 or precipitation
 origin validity. Signed closing-ledger cancellation stays in part 5.
 Validation of origins against known compositions stays in part 7. Preserve W33, W54 and W60's registered
 failures. W62 does not retrospectively change W60.
@@ -1232,7 +1232,7 @@ must validate the actual denominators, window applicability and data states.
 window/precision readings only. Existing ledger and diagnostic fields do not
 yet constitute complete directed origin reference coverage.
 
-PR #146, if merged, changes rows here. A closing step brings each tag's rain
+PR #146, merged on 2026-10-07, changes rows here. A closing step brings each tag's rain
 and snow parts to their compartment after the correction after each solve.
 Their compartment closure then holds by construction and is no attribution
 evidence. The PR adds the ledger `q_tag_led_close`, which the intervention row

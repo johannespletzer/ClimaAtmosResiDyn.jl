@@ -110,8 +110,8 @@ tolerance. For water, complete cancellation-safe accounting of applied
 corrections and compartment legs is a condition of a qualified claim
 (WA-GATES (a), in force since 2026-10-07). For energy, the G4 contract's
 intervention row leaves the full intervention claim not assessable while
-activity is missing. Whether completeness is also a condition of a qualified
-energy claim is waiting for the owner. Physical qualification, origin correctness and
+activity is missing. Complete cancellation-safe accounting is a condition of a qualified
+energy claim too (WA-GATES (a) extended to energy, in force since 2026-10-08). Physical qualification, origin correctness and
 propagated error bounds remain separate. The required real producer,
 Float32/Float64 on/off parent bitwise parity, continuous/restarted all-channel
 accounting, device/distributed checks and cost must be run in the prepared
