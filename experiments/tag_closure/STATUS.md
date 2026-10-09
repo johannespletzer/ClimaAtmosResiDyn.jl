@@ -11,15 +11,15 @@ or convention-defined. Results report shares, the composition of new energy
 and `τ`. Part 11c attributes the offset of mass changes as separate events and
 adopts the label partition. Part 11b measures how much provenance falling ice
 moves upward first. OD6's absolute term reads in OD4 units for energy. The
-rest of OD11 stays proposed. The part 11a design merged in PR #164 froze
-110,495 J/kg per case before this decision. Its design JSON, hash pin and
-fixtures move to the fixed `c` in a follow-up.
+rest of OD11 stays proposed. The part 11a design, hash pin and fixtures moved
+to the fixed `c` on 2026-10-09 (PR #166).
 
 ## Part 11a energy references, design (2026-10-09)
 
 The [pre-registered design](design/PART11A_ENERGY_REFERENCES.md) builds the
 eight cases of G4_CLAIM_CONTRACTS section 6 as offline known answers. Each
-case freezes its convention `c`. Stored-energy cases and the radiation record
+case freezes the fixed `c` except `donor_cooling`, which uses `cp_d·T0` as the
+sweep alternative. Stored-energy cases and the radiation record
 are separate references. The tools and tests are in `analysis/evidence/`
 (`energy_reference*.py`). Every case's wrong-origin mutant is caught in a
 test. The owner decided three choices on 2026-10-09:

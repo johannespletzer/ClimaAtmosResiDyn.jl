@@ -44,9 +44,18 @@ class ConstantTests(unittest.TestCase):
     def test_each_case_declares_and_freezes_its_convention(self):
         offsets = {c["id"]: c["convention"]["c_J_kg"] for c in DESIGN["cases"]}
         self.assertTrue(all(c["convention"]["frozen"] is True for c in DESIGN["cases"]))
-        self.assertEqual(offsets["heating_labels"], 110495.0)
-        self.assertEqual(offsets["donor_cooling"], 274388.0)
-        self.assertEqual(offsets["offset_change"], [110495.0, 220990.0])
+        # The fixed c is cp_d T0 - cv_d 150 K and the sweep alternative cp_d T0, both
+        # at the defaults the model resolves (ClimaParams 1.2.0, Thermodynamics 1.3.0).
+        cp_d, R_d, T0 = 1004.5, 287.0, 273.16
+        fixed = float(round(cp_d * T0 - (cp_d - R_d) * 150.0))
+        self.assertEqual(fixed, 166764.0)
+        self.assertEqual(offsets["heating_labels"], fixed)
+        self.assertEqual(offsets["donor_cooling"], float(round(cp_d * T0)))
+        self.assertEqual(offsets["offset_change"], [fixed, 2.0 * fixed])
+        # The mass source changes sign in E_c between c and 2c (the case's identity).
+        oc = case("offset_change")
+        self.assertEqual([np.sign(np.add(oc["energy_source_J_m3_s"], c * np.array(oc["mass_source_kg_m3_s"]))).tolist()
+                          for c in offsets["offset_change"]], [[-1.0, -1.0], [1.0, 1.0]])
         self.assertIsNone(offsets["radiation_record"])
         self.assertEqual([c["family"] for c in DESIGN["cases"]].count("radiation_record"), 1)
 
@@ -162,14 +171,19 @@ class EquationTests(unittest.TestCase):
         truth = analytic(DESIGN, c)
         self.assertFalse(np.allclose(truth.values["rho_q"][-1] - truth.values["rho_q"][0],
                                      truth.values["rho"][-1] - truth.values["rho"][0]))
-        for wrong in ("water", "no_offset"):
+        offset = c["convention"]["c_J_kg"]
+        for wrong in ("right", "water", "no_offset"):
             values = {k: v.copy() for k, v in truth.values.items()}
-            if wrong == "water":
-                values["E_c"] = values["rho_e"] + 110495.0 * (values["rho"][0] + values["rho_q"] - values["rho_q"][0])
+            if wrong == "right":
+                values["E_c"] = values["rho_e"] + offset * values["rho"]
+            elif wrong == "water":
+                values["E_c"] = values["rho_e"] + offset * (values["rho"][0] + values["rho_q"] - values["rho_q"][0])
             else:
-                values["E_c"] = values["rho_e"] + 110495.0 * values["rho"][0]
+                values["E_c"] = values["rho_e"] + offset * values["rho"][0]
             state = type(truth)(truth.time, truth.dz, values, {})
-            self.assertFalse(evaluate_candidate(DESIGN, c, state, truth)["checks"]["convention_identity"])
+            # The right offset passes, so each failure is the mass, not the value of c.
+            checks = evaluate_candidate(DESIGN, c, state, truth)["checks"]
+            self.assertIs(checks["convention_identity"], wrong == "right", wrong)
 
     def test_opposing_activity_theta_x_and_theta_i_differ(self):
         c = case("opposing_net_zero")
@@ -254,14 +268,14 @@ class ThresholdTests(unittest.TestCase):
     """Finder 1.5: every number the module reads, pinned where it is used."""
 
     def test_pinned_constants(self):
-        self.assertEqual((BASE_COMMIT, MODEL_COMMIT), ("9e5155325b6d778ca558b6dd2c6651006add0a80",
+        self.assertEqual((BASE_COMMIT, MODEL_COMMIT), ("ddbafbbfe2434a39b823eb76cde9de89114016cc",
                                                       "bb2bedf230a70ca9d7afc293180f8d30c1a9bb88"))
         self.assertEqual(DESIGN["times_seconds"], [0, 3600, 86400])
         self.assertEqual(DESIGN["profile_rules"]["roundoff_multiplier"], 128)
         self.assertEqual({c["id"]: c["convention"]["c_J_kg"] for c in DESIGN["cases"]}, {
-            "heating_labels": 110495.0, "donor_cooling": 274388.0, "labelled_exchange": 110495.0,
-            "boundary_offset_exchange": 110495.0, "opposing_net_zero": 110495.0,
-            "offset_change": [110495.0, 220990.0], "inventory_edge_cases": 110495.0, "radiation_record": None})
+            "heating_labels": 166764.0, "donor_cooling": 274389.0, "labelled_exchange": 166764.0,
+            "boundary_offset_exchange": 166764.0, "opposing_net_zero": 166764.0,
+            "offset_change": [166764.0, 333528.0], "inventory_edge_cases": 166764.0, "radiation_record": None})
         self.assertEqual(RULES, {
             "heating_labels": "declared_source_allocation", "donor_cooling": "donor_loss_allocation",
             "reservoir_exchange": "donor_transport_share", "falling_mass_boundary": "offset_boundary_flux",
@@ -304,7 +318,7 @@ class ThresholdTests(unittest.TestCase):
         self.assertEqual(theta_x(DESIGN, case("heating_labels"), 0.0, 3600.0), 504000.0)
         offset = copy.deepcopy(case("offset_change"))
         offset["mass_source_kg_m3_s"] = [3e-7, 1e-7]
-        expected = 100.0 * (abs(-0.0331485 + 220990.0 * 3e-7) + abs(-0.01657425 + 220990.0 * 1e-7)) * 3600.0
+        expected = 100.0 * (abs(-0.0500292 + 333528.0 * 3e-7) + abs(-0.0250146 + 333528.0 * 1e-7)) * 3600.0
         self.assertAlmostEqual(theta_x(DESIGN, offset, 0.0, 3600.0, 1), expected, places=6)
         self.assertEqual(share([2.0, -1.0, 1.0, 1.0], [1.0, 1.0, 0.0, -1.0]).tolist(), [1.0, 0.0, 0.0, 0.0])
         edge = copy.deepcopy(case("inventory_edge_cases"))
@@ -381,12 +395,12 @@ class FixtureTests(unittest.TestCase):
             result = evaluate_fixture(root)
             self.assertTrue(result["measured_reference"]["meets"] and result["mutant"]["caught"])
             detail = json.loads((root / "evidence.json").read_text())
-            self.assertEqual(detail["planning_commit"], "9e5155325b6d778ca558b6dd2c6651006add0a80")
+            self.assertEqual(detail["planning_commit"], "ddbafbbfe2434a39b823eb76cde9de89114016cc")
             self.assertEqual(detail["approved_numbers_sha256"], score_acceptance.approved_numbers_sha256())
-            self.assertEqual(detail["convention"]["c_J_kg"], 110495.0)
+            self.assertEqual(detail["convention"]["c_J_kg"], 166764.0)
             self.assertEqual(detail["rungs"], rungs(case("labelled_exchange")))
             self.assertEqual(detail["theta_x_window"]["start_seconds"], 0.0)
-            for key, value in (("convention", {**detail["convention"], "c_J_kg": 220990.0}),
+            for key, value in (("convention", {**detail["convention"], "c_J_kg": 333528.0}),
                                ("theta_x_window", {**detail["theta_x_window"], "start_seconds": 1800.0}),
                                ("theta_x_window", None),
                                ("floors", {**detail["floors"], "reference_discretization": 0.0})):

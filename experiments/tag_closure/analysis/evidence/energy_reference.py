@@ -24,9 +24,9 @@ from score_acceptance import SMALL, SMALL_SHARE, origin_limits
 
 # The planning tree whose scorer and approved numbers these fixtures use, and
 # the model tree whose mechanisms the cases describe.
-BASE_COMMIT = "9e5155325b6d778ca558b6dd2c6651006add0a80"
+BASE_COMMIT = "ddbafbbfe2434a39b823eb76cde9de89114016cc"
 MODEL_COMMIT = "bb2bedf230a70ca9d7afc293180f8d30c1a9bb88"
-DESIGN_SHA256 = "5231c54ce27ef8f20298620ef58ee63034265a43cfc9cfe56a55baaaddc9ee9c"
+DESIGN_SHA256 = "24290e41e447223bc002434d37a49d29cbc7dc7f757eb06e24c77cd9790aac08"
 DESIGN_PATH = Path(__file__).with_name("energy_reference_design.json")
 STATUS_CODES = {"positive_parent": 0, "zero_parent": 1, "negative_parent": 2}
 
