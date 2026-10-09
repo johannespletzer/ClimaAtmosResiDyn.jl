@@ -1722,6 +1722,24 @@ function _apply_part_closing!(ᶜY, ledger, sums, ᶜshift, ᶜtarget, tags::Tup
             ᶜneg,
             ᶜpos_nonprecip,
         )
+        meter = ledger_water_meter(ledger)
+        isnothing(meter) || meter_water_leg!(
+            meter,
+            :close,
+            tag,
+            part,
+            ᶜshift,
+            ᶜY.ρq_tot,
+            (@. lazy(
+                water_tag_closing_flags(
+                    ᶜρq_part,
+                    ᶜtarget,
+                    ᶜpos,
+                    ᶜneg,
+                    ᶜpos_nonprecip,
+                ),
+            )),
+        )
         # The water enters or leaves the tag, as in the rescale, so its
         # signed ledger takes it. The closing step has a ledger per mechanism
         # of its own, so its work stays apart from the rescale's.
@@ -1872,11 +1890,14 @@ end
 # `q_tag_fix_<name>` does. The moves between a tag's parts leave it alone.
 # Only the rescale and the closing step add to the ledgers per mechanism. Their
 # callers open and close those ledgers around them.
-_water_tag_fix_ledger(Y, p, model) = tag_ledger(
-    p.tagging.ᶜwater_fix,
-    p.tagging.ᶜwater_fix_gross,
-    p.tagging.ᶜwater_fix_count,
-    water_tag_fix_ledger_view(Y, model),
+_water_tag_fix_ledger(Y, p, model) = with_water_meter(
+    tag_ledger(
+        p.tagging.ᶜwater_fix,
+        p.tagging.ᶜwater_fix_gross,
+        p.tagging.ᶜwater_fix_count,
+        water_tag_fix_ledger_view(Y, model),
+    ),
+    water_meter(p),
 )
 
 # The non-precipitating parts take the change of `N` from `ᶜN_before` to
@@ -2028,6 +2049,32 @@ function _apply_part_follow!(
     # transfer between tags counts.
     @. ᶜgross += 2 * abs(ᶜshift)
     @. ᶜcount += tag_event(ᶜshift, ᶜY.ρq_tot)
+    # The producer's two legs of the move, read before the parts change.
+    meter = ledger_water_meter(ledger)
+    if !isnothing(meter)
+        ᶜflags =
+            _is_partition_tag(tag) ?
+            (@. lazy(
+                water_tag_follow_flags(
+                    ᶜρq_part,
+                    ᶜρq_nonprecip,
+                    ᶜafter,
+                    ᶜbefore,
+                    ᶜpos_part,
+                    ᶜpos_nonprecip,
+                ),
+            )) : (@. lazy(water_tag_source_follow_flags(ᶜρq_part, ᶜafter)))
+        meter_water_leg!(meter, :follow, tag, part, ᶜshift, ᶜY.ρq_tot, ᶜflags)
+        meter_water_leg!(
+            meter,
+            :follow,
+            tag,
+            NonPrecipitatingPart(),
+            (@. lazy(-(ᶜshift))),
+            ᶜY.ρq_tot,
+            ᶜflags,
+        )
+    end
     @. ᶜρq_part += ᶜshift
     @. ᶜρq_nonprecip -= ᶜshift
     return _apply_part_follow!(

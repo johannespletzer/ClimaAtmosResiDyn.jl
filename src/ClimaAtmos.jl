@@ -130,6 +130,11 @@ include(joinpath("parameterized_tendencies", "tagged_tracers", "tagged_water_rai
 include(
     joinpath("parameterized_tendencies", "tagged_tracers", "tagged_water_increment.jl"),
 )
+# The water tags' accepted applications, an opt-in producer
+# (`water_tag_applications`). After the writers it meters, for their part types.
+include(
+    joinpath("parameterized_tendencies", "tagged_tracers", "water_tag_applications.jl"),
+)
 # Process-change records (the signed change of each process, prognostic but not transported)
 include(joinpath("parameterized_tendencies", "tagged_tracers", "process_record.jl"))
 include(
