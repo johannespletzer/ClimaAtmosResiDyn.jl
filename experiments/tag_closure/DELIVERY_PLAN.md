@@ -94,12 +94,16 @@ last.
 
 The inventory for this plan found statements that contradict the tree or each
 other. One small document PR against `plan-rev2` fixes them before the part 8
-brief is instantiated, so the author reads a consistent base.
+brief is instantiated, so the author reads a consistent base. Done on
+2026-10-09 in the housekeeping PR, except the archive sync and the owner's word
+on the `wp9_cost_namewalk` runs. The check found two of the items overstated,
+and the corrected wording is below.
 
   - ROADMAP, G3_TODO, G3_PLAN and STATUS still call PR #146 open. It is merged at
     `12377fb88`, as PART5.md says.
-  - The crosswalk rows for PX7, PX5, PX9 and PX3 still route "6 / 8". The
-    2026-10-08 decision moved the PX runs to part 7.
+  - The crosswalk rows for PX1, PX8, PX7, PX11, PX24 and PX12 still route to
+    part 6. The 2026-10-08 decision moved those runs to part 7. PX3, PX5 and PX9
+    are not named by the decision and keep their rows.
   - PART5.md says the energy cancellation-safe accounting condition waits for the
     owner. DECISIONS.md of 2026-10-08 has it in force.
   - STATUS.md says OD7 is the only open numbered decision. OD9 to OD11 and OD15
@@ -111,8 +115,9 @@ brief is instantiated, so the author reads a consistent base.
     2026-10-03) are in no register. RUNS.md gets a row that names them as
     unregistered attempts, pending the owner's word on what they were.
   - The tools `sub_probe.jl`, `tag_process_probe.jl` and `perturb_probe.jl` are
-    named in the PX designs and do not exist. Part 7 owns them. The crosswalk rows
-    that name them say so.
+    named in the PX designs and do not exist. Part 7 owns the first two with PX8
+    and PX24. The third belongs to PX9, which is conditional and not assigned.
+    The crosswalk rows that name them say so.
   - W58's outputs exist on scratch only. The archive sync is a prerequisite of
     part 8 and is done before its rerun.
 
@@ -442,6 +447,7 @@ after the owner's explicit run approval. **Budget.** 0.8M plus 0.3M.
 | Multi-node, GPU, the 90-day sphere          | 12b, 12c, 12d | Not approved.                                       |
 | The three-tag pilot to eight-tag claim path | 10            | The part 10 design proposes it.                     |
 | The unregistered `wp9_cost_namewalk` runs   | housekeeping  | Named as unregistered until the owner says.         |
+| PX3, PX5 and PX9 routing                    | 8, 9          | Not named by the 2026-10-08 decision. Unchanged.    |
 
 ## 7. Records
 
