@@ -311,3 +311,6 @@ PR after the runs: 0.3M. The runs: section 8.
  7. W57's D4-W Newton error is listed as a prior, unranked.
  8. The default bundle has the copies as reference. The copies bundle has no
     reference.
+ 9. The brief's "D4-W" for the cost pairs is read as WP9's D4 column,
+    `wp9_energy_d4_edmf` (DYCOMS RF02, 1M, EDMF, 30 levels), where E88
+    measured 8 + 8. The D4-W runs of W54 to W57 use another config.
