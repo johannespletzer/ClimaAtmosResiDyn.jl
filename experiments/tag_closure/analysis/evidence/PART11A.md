@@ -2,6 +2,9 @@
 
 Proposed 2026-10-09. The design is
 [PART11A_ENERGY_REFERENCES](../../design/PART11A_ENERGY_REFERENCES.md).
+Every case freezes the fixed `c` = 166,764 J/kg (DECISIONS, 2026-10-09),
+except `donor_cooling` at `c_p,d T_0` = 274,389 J/kg. The design, its hash
+`2ffdaf7d…` and the fixtures moved to the fixed `c` on 2026-10-09.
 
 ## Software
 

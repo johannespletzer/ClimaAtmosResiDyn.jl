@@ -1,11 +1,12 @@
 # PX22 draft, proposed 2026-10-09. Not authorized or submitted.
 # Derived from g411x_d4_default.yml, at 2c, the C4 pair's other member.
 # Added: the per-tag ledger output keys, water_process_record, the q_prc_*
-# records and the averaged pr. The model settings are unchanged.
+# records and the averaged pr. The offset is 2c = 333,528 J/kg.
+# The parent model settings are unchanged.
 
 job_id: "px22_d4_2c"
 
-energy_source_tag_offset: 220990.0
+energy_source_tag_offset: 333528.0
 energy_source_tag_repair: true
 energy_source_tag_transport: "enthalpy_increment"
 # E83's rerun: the exact gross source throughput (OD4, #115).
