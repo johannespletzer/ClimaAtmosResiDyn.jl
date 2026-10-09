@@ -610,7 +610,9 @@ def evaluate_candidate(design, case, candidate, reference):
     """Every check of the case. `meets` is True only when all pass.
 
     Named invariant checks stay separate, so a wrong-origin mutant can be
-    shown to keep its parent and closure and still fail.
+    shown to keep its parent and closure and still fail. An origin row that
+    the scorer's reading cannot assess never counts as passing. Without a
+    failed check, such a row makes `meets` None, which is NOT ASSESSABLE.
     """
     require(np.array_equal(candidate.time, reference.time) and np.array_equal(candidate.dz, reference.dz),
             "comparison needs the same times and native cells")
@@ -623,8 +625,9 @@ def evaluate_candidate(design, case, candidate, reference):
         checks["window_amounts"] = all(_match(design, a, b) for a, b in amounts)
         column = [float(np.sum(candidate.dz * candidate.values["prc_radiation"][j])) for j in range(len(reference.time))]
         boundary = reference.diagnostics.get("boundary_integral_J_m2")
-        checks["boundary_integral"] = (boundary is None or
-                                       all(abs(a - b) <= _allowance(design, np.array(boundary)) for a, b in zip(column, boundary)))
+        require(boundary is not None and len(boundary) == len(column), "reference lacks its boundary integral")
+        checks["boundary_integral"] = all(abs(a - b) <= _allowance(design, np.array(boundary))
+                                          for a, b in zip(column, boundary))
     elif kind == "admissibility":
         checks["inputs"] = _match(design, candidate.values["E_c"], reference.values["E_c"])
         checks["classification"] = all(np.array_equal(candidate.values[k], reference.values[k])
@@ -645,8 +648,12 @@ def evaluate_candidate(design, case, candidate, reference):
             checks["parent_bitwise_parity"] = all(np.array_equal(candidate.values[n + "@0"], candidate.values[n + "@1"])
                                                   for n in ("rho", "rho_e"))
         rows = origin_rows(candidate, reference, design, case)
-        checks["origins"] = all(row["meets"] is not False for row in rows)
-    return {"checks": checks, "origin_rows": rows, "meets": all(checks.values())}
+        assessed = [row for row in rows if row["meets"] is not None]
+        checks["origins"] = all(row["meets"] is True for row in assessed)
+    unassessed = [{"tag": row["tag"], "endpoint_seconds": row["endpoint_seconds"], "why": row["why"]}
+                  for row in rows if row["meets"] is None]
+    meets = False if not all(checks.values()) else (None if unassessed else True)
+    return {"checks": checks, "origin_rows": rows, "not_assessable_rows": unassessed, "meets": meets}
 
 
 def activity_report(design, case, state, start, end):

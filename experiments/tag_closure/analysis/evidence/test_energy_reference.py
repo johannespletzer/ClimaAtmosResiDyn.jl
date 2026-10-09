@@ -53,10 +53,10 @@ class ConstantTests(unittest.TestCase):
 class MutantTests(unittest.TestCase):
     """Every case: the exact candidate passes, the registered mutant is caught with its invariants kept."""
 
-    def check(self, case_id, failing):
+    def check(self, case_id, failing, exact=True):
         c = case(case_id)
         reference, candidate = reference_for(DESIGN, c), candidate_for(DESIGN, c)
-        self.assertTrue(evaluate_candidate(DESIGN, c, candidate, reference)["meets"])
+        self.assertIs(evaluate_candidate(DESIGN, c, candidate, reference)["meets"], exact)
         result = evaluate_candidate(DESIGN, c, mutant(DESIGN, c, candidate), reference)
         self.assertTrue(mutant_caught(c, result))
         self.assertFalse(result["checks"][failing])
@@ -74,7 +74,29 @@ class MutantTests(unittest.TestCase):
         self.check("boundary_offset_exchange", "origins")
 
     def test_opposing_processes_collapsed_first(self):
-        self.check("opposing_net_zero", "origins")
+        # Three small overlay rows have zero Theta_x, so the exact candidate is
+        # NOT ASSESSABLE there (finder 2.1). The mutant still fails an assessed row.
+        self.check("opposing_net_zero", "origins", exact=None)
+        c = case("opposing_net_zero")
+        result = evaluate_candidate(DESIGN, c, candidate_for(DESIGN, c), reference_for(DESIGN, c))
+        self.assertEqual([(r["tag"], r["endpoint_seconds"]) for r in result["not_assessable_rows"]],
+                         [("src_heat", 3600.0), ("src_cool", 3600.0), ("src_cool", 86400.0)])
+
+    def test_unassessable_rows_never_pass(self):
+        # Finder 2.1: a wrong cooling overlay sits only in unassessable rows.
+        c = case("opposing_net_zero")
+        reference, candidate = reference_for(DESIGN, c), candidate_for(DESIGN, c)
+        candidate.values["tag_src_cool"] = 0.05 * candidate.values["E_c"]
+        self.assertIsNone(evaluate_candidate(DESIGN, c, candidate, reference)["meets"])
+        # A one-ulp density change makes every origin row unassessable. The mutant must not pass.
+        for case_id in ("heating_labels", "donor_cooling", "labelled_exchange", "boundary_offset_exchange"):
+            c = case(case_id)
+            reference = reference_for(DESIGN, c)
+            wrong = mutant(DESIGN, c, candidate_for(DESIGN, c))
+            wrong.values["rho"] = np.nextafter(wrong.values["rho"], np.inf)
+            result = evaluate_candidate(DESIGN, c, wrong, reference)
+            self.assertIsNone(result["meets"], case_id)
+            self.assertFalse(mutant_caught(c, result))
 
     def test_offset_change_invariant_fractions(self):
         self.check("offset_change", "origins")
@@ -185,15 +207,21 @@ class FixtureTests(unittest.TestCase):
         self.assertEqual(suite_exit_code([{**row, "mutant_caught": False}]), 1)
         self.assertEqual(suite_exit_code([{**row, "candidate_verdict": "FAIL"}]), 1)
         self.assertEqual(suite_exit_code([{**row, "reference_eligible": False}]), 3)
+        self.assertEqual(suite_exit_code([{**row, "candidate_verdict": "NOT ASSESSABLE"}]), 3)
         with tempfile.TemporaryDirectory() as tmp:
             self.assertEqual(main([tmp, "--config", str(CONFIG)]), 4)
             bad = Path(tmp) / "bad.json"
             bad.write_text("{}")
             self.assertEqual(main([str(Path(tmp) / "new"), "--config", str(bad)]), 2)
 
-    def test_complete_suite_exits_zero(self):
+    def test_complete_suite_exits_three_with_one_unassessable_candidate(self):
         with tempfile.TemporaryDirectory() as tmp:
-            self.assertEqual(main([str(Path(tmp) / "suite"), "--config", str(CONFIG)]), 0)
+            self.assertEqual(main([str(Path(tmp) / "suite"), "--config", str(CONFIG)]), 3)
+            report = json.loads((Path(tmp) / "suite" / "suite_results.json").read_text())
+            verdicts = {row["case_id"]: row["candidate_verdict"] for row in report["cases"]}
+            self.assertEqual(verdicts.pop("opposing_net_zero"), "NOT ASSESSABLE")
+            self.assertEqual(set(verdicts.values()), {"PASS"})
+            self.assertTrue(all(row["mutant_caught"] and row["reference_eligible"] for row in report["cases"]))
 
 
 if __name__ == "__main__":

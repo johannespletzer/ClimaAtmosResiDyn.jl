@@ -9,7 +9,8 @@ are retained. Existing outputs are refused.
 Exit codes follow the scorer's. 0: every case's checks passed with an
 eligible reference and every mutant was caught. 1: a fixture check failed or
 a mutant was not caught. 2: evidence is missing, corrupt or inconsistent.
-3: a reference is ineligible, so its candidate is not assessable. 4: nothing
+3: a reference is ineligible, or a candidate has an origin row the scorer's
+reading cannot assess, so that candidate is NOT ASSESSABLE. 4: nothing
 was evaluated. The output exists, the command line is invalid, or the driver
 itself raised an error.
 """
@@ -81,7 +82,10 @@ def mutant_caught(case, evaluation):
     """The mutant fails, and every invariant it declares to keep still holds."""
     prefixes = tuple(p for name in case["mutant"]["preserves"] for p in INVARIANT_CHECKS.get(name, ()))
     kept = all(ok for name, ok in evaluation["checks"].items() if name.startswith(prefixes)) if prefixes else True
-    return bool(not evaluation["meets"] and kept)
+    return bool(evaluation["meets"] is False and kept)
+
+
+VERDICTS = {True: "PASS", False: "FAIL", None: "NOT ASSESSABLE"}
 
 
 def evaluate_fixture(root):
@@ -94,8 +98,8 @@ def evaluate_fixture(root):
     wrong_eval = evaluate_candidate(design, case, wrong, reference)
     return {"schema_version": 1, "scope": FIXTURE_SCOPE, "scientific_qualification": "NOT QUALIFIED",
             "case_id": case["id"], "convention": case["convention"], "measured_reference": measured,
-            "candidate_verdict": ("PASS" if measured["candidate"]["meets"] else "FAIL")
-            if measured["meets"] else "NOT ASSESSABLE",
+            "candidate_verdict": VERDICTS[measured["candidate"]["meets"]] if measured["meets"] else "NOT ASSESSABLE",
+            "not_assessable_rows": measured["candidate"]["not_assessable_rows"],
             "mutant": {"kind": case["mutant"]["kind"], "checks": wrong_eval["checks"],
                        "caught": mutant_caught(case, wrong_eval)}}
 
@@ -127,10 +131,11 @@ def run_suite(root, config):
 
 
 def suite_exit_code(results):
-    """1 for a failed check or an uncaught mutant, else 3 for an ineligible reference, else 0."""
+    """1 for a failed check or an uncaught mutant, else 3 for an ineligible reference or a
+    candidate with a row the scorer's reading cannot assess, else 0."""
     if any(row["candidate_verdict"] == "FAIL" or row["mutant_caught"] is False for row in results):
         return 1
-    return 3 if any(not row["reference_eligible"] for row in results) else 0
+    return 3 if any(not row["reference_eligible"] or row["candidate_verdict"] != "PASS" for row in results) else 0
 
 
 def main(argv=None):
