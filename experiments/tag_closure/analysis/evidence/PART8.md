@@ -396,16 +396,20 @@ OD3's 2x. It holds on all three nodes (8.998x to 9.379x), as E88's 9.098x did.
 So it is not falsified. The copies half says the copies do not build within
 4 h. It holds on p8_copies_b (4.48 h). It does not hold on p8_copies_a and
 p8_copies_c (3.02 h and 3.09 h). So the reading is split across the nodes.
-The design fixes no rule for a split build. Two readings are open. Read as
+The design fixes no rule for a split build. Two readings were open. Read as
 written, a build within 4 h falsifies the copies half, and two did. Read with
 section 8's "less favourable quoted", which the design states for the blocks
-of one job, the slowest build of 4.48 h is quoted and the half holds. This
-record states the three builds and leaves the half to the owner. Neither
-half is a verdict.
+of one job, the slowest build of 4.48 h is quoted and the half holds. The
+owner decided on 2026-10-09, after PRs #166 and #167, that the rule extends
+to the nodes of a cost set. The copies' build is quoted as 4.48 h
+(p8_copies_b). The builds of 3.02 h and 3.09 h (p8_copies_a and p8_copies_c)
+are recorded as the favourable case. The copies half is not falsified.
+Neither half is a criterion 10 verdict.
 Criterion 10 is scored in part 10.
 
-No cost cap is set. None is proposed. WA-COST's cap waits for the owner
-(section "Verdict").
+No cost cap is set from this cost set. The owner deferred WA-COST's cap on
+2026-10-09, after PRs #166 and #167, until the walk fix is measured (section
+"Verdict").
 
 ## Verdict
 
@@ -423,11 +427,13 @@ threshold, tolerance or default.
     residual (1.89e-12 of WATER_GROSS). In the copies it is the copies' repair
     (0.2526 of COMPARATOR_REPAIR_PER_DAY). The first three terms of each mode
     are the prior's. Part 9 takes the prior order.
-  - **H3, the cost: split.** The default half holds on all three nodes
-    (8.998x to 9.379x against OD3's 2x, E88 9.098x). It is not falsified.
-    The copies half is split. Two builds fall within 4 h (3.02 h and
-    3.09 h), and one does not (4.48 h). The design gives no rule for a split,
-    so the copies half waits for the owner. Neither half is a criterion 10
+  - **H3, the cost: not falsified.** The default half holds on all three
+    nodes (8.998x to 9.379x against OD3's 2x, E88 9.098x). It is not
+    falsified. The copies half is not falsified either. Two builds fall
+    within 4 h (3.02 h and 3.09 h), and one does not (4.48 h). The owner
+    decided on 2026-10-09 that the slowest build is quoted, as section 8's
+    rule says for the blocks of one job. So the copies' build is 4.48 h, and
+    the other two are the favourable case. Neither half is a criterion 10
     verdict.
 
 The stop rules of section 10, one by one:
@@ -445,16 +451,22 @@ The stop rules of section 10, one by one:
 
 Section 12's choices 4, 5 and 8 are decided (2026-10-09). So is choice 6's
 listing of NOT ASSESSABLE terms without a rank or a fraction. Choices 1, 2, 3,
-7 and 9 stay proposed. So do choice 6's ranking rule and fix candidates. This
-record decides none of them.
+7 and 9 are decided as proposed (2026-10-09, after PRs #166 and #167). So are
+choice 6's ranking rule and fix candidates. This record decides none of them.
 
-What waits for the owner:
+The owner decided the items that waited, on 2026-10-09 after PRs #166 and
+#167:
 
-  - The copies half of H3, with its three builds (3.02 h, 4.48 h, 3.09 h).
-  - WA-COST's cap. WA-COST asks for a cap based on the measured part 8 cost.
-    The entry in force says no cap for the pilot or for water alone, and
-    that caps gate level 4. This record sets no cap and proposes none.
-  - The proposed choices of section 12 listed above.
+  - The copies half of H3 is not falsified. The slowest build, 4.48 h, is
+    quoted. The builds of 3.02 h and 3.09 h are the favourable case.
+  - WA-COST's cap is deferred until the walk fix is measured. No cap is set
+    from this cost set. The entry in force stands: no cap for the pilot or
+    for water alone, and caps gate level 4. The cap is set from the post-fix
+    measurement that part 9's walk fix item pre-registers under WP9's spread
+    rule.
+  - The proposed choices of section 12 listed above are decided as proposed.
+
+Nothing waits for the owner in part 8.
 
 The follow-ups the owner decided on 2026-10-09 stay as decided. A scorer PR
 reads OD2 from the twin's cadence before part 10 scores rain on TRMM. A

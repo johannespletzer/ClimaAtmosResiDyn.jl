@@ -443,6 +443,39 @@ The challenge found that F, the `c` dependence of the energy scale and the
 region tags, is already recorded under OD9 to OD11 (2026-10-07), so it needs
 no new decision.
 
+The owner decided these on 2026-10-09 after PRs #166 and #167 merged.
+
+  - **`donor_cooling` keeps `c_p,d T_0` = 274,389 J/kg as the per-case
+    control.** **In force.** It is the one case that shows the adapter reads
+    `c` per case and refuses a mismatch. So a hard-coded `c` in a producer is
+    caught. The other seven cases use the fixed `c` = 166,764 J/kg. The number
+    is `c_p,d T_0` at ClimaParams 1.2.0 (`c_p,d` = 1004.5, `T_0` = 273.16).
+  - **The boundary case's halved mutant margin is accepted.** **In force.**
+    The wrong-origin mutant misses by 2.74 times the tolerance at the fixed
+    `c`. The margin vanishes as `c` approaches 300,000 J/kg. `c` is fixed, so
+    `e_fall` stays. If `c` ever rises, `e_fall` is lowered first.
+  - **H3's copies half: the slowest build is quoted, and the half holds.**
+    **In force.** Section 8's rule "less favourable quoted", stated for the
+    blocks of one job, extends to the nodes of a cost set. The copies' build
+    is quoted as 4.48 h (`p8_copies_b`). The builds of 3.02 h and 3.09 h
+    (`p8_copies_a` and `p8_copies_c`) are recorded as the favourable case.
+    The copies half of H3 is not falsified. Neither half is a criterion 10
+    verdict.
+  - **WA-COST's cap is deferred until the walk fix is measured.** **In
+    force.** No cap is set from part 8's cost set. The entry in force stands.
+    There is no cap for the pilot or for water alone, and caps gate level 4.
+    The cap is set from the post-fix measurement that part 9's walk fix item
+    pre-registers under WP9's spread rule.
+  - **Part 8's design choices 1, 2, 3, 7 and 9 are decided as proposed, with
+    choice 6's ranking rule and fix candidates.** **In force.** Choice 1: the
+    trio's configs differ from W58's only in `job_id` and comments. Choice 2:
+    the trio takes whole nodes, so its build and step are a one-sample cost
+    reading. Choice 3: the cost pairs run three jobs per mode, each with point
+    0 and 8 + 8 with ledgers. Choice 7: W57's D4-W Newton error is a prior,
+    unranked. Choice 9: the brief's "D4-W" for the cost pairs is read as WP9's
+    D4 column. Choice 6: terms rank by their value over the cited limit, and a
+    prior or a term without a limit is listed unranked.
+
 ## 2026-10-08
 
 The owner decided these on 2026-10-08, after PRs #150 and #151 merged into
