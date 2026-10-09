@@ -178,6 +178,37 @@ class TableRowTests(unittest.TestCase):
         self.assertEqual(rows[("R4", "gross residual at 24 h, of the water", "24 h")]["value"], 3e-4)
         self.assertEqual(sorted({r["window"] for r in self.rows()}), ["0-half-end", "24 h", "whole run"])
 
+    def test_scorer_fraction_by_tag_kind_and_the_exemption(self):
+        # pbl is a region tag: inventory 2, burden 4, parent scale 100. evap is
+        # a source tag: inventory 1, burden 0.01, parent scale 100, so its
+        # burden is 1e-4 of the scale, below SMALL, and the scorer exempts it.
+        closure = [{"time": t, "gross_relative": 0.0, "gross_residual": 0.0, "total": 1.0}
+                   for t in (0.0, 86400.0)]
+
+        def row(time, fix):
+            r = audit_row(time)
+            r.update({"led_fix_pbl_retained": fix, "led_fix_pbl_inventory_fraction": fix / 2,
+                      "led_fix_pbl_burden_fraction": fix / 4, "led_fix_pbl_parent_fraction": fix / 100,
+                      "led_fix_evap_retained": fix, "led_fix_evap_events": 1.0,
+                      "led_fix_evap_inventory_fraction": fix / 1, "led_fix_evap_burden_fraction": fix / 0.01,
+                      "led_fix_evap_parent_fraction": fix / 100})
+            return r
+
+        rows = table_rows(closure, [row(0.0, 0.0), row(86400.0, 1e-3)], "default", end=86400.0,
+                          tags=("pbl", "evap"))
+        by = {(r["metric"]): r for r in rows if r["metric"].startswith("led_fix")}
+        self.assertAlmostEqual(by["led_fix inventory fraction, pbl"]["value"], 5e-4)
+        pbl = by["led_fix scorer fraction, pbl"]
+        self.assertAlmostEqual(pbl["value"], 5e-4)
+        self.assertEqual((pbl["legacy_verdict"], pbl["note"]),
+                         (("pass" if 5e-4 <= LIMITS["LED_FIX_MAX"] else "fail"), "region tag over its signed inventory"))
+        self.assertEqual(pbl["contract"], "scored per OD2 window by the scorer, at accepted-step cadence")
+        evap = by["led_fix scorer fraction, evap"]
+        self.assertAlmostEqual(evap["value"], 0.1)
+        self.assertEqual((evap["contract"], evap["note"]),
+                         ("not applicable", "source tag over its absolute burden, small-burden exemption"))
+        self.assertAlmostEqual(by["led_fix inventory fraction, evap"]["value"], 1e-3)
+
 
 def write_run(directory, times, water_column, z=(50.0, 200.0, 500.0), z_max=700.0, period="10m"):
     """An untagged run with hus and rhoa at one period. rhoa is 1, so the column water is Σ q Δz."""
@@ -263,7 +294,7 @@ def score(rows):
 def tables(mode):
     rows = [{"rule": "R8", "metric": "partition repair retained gross per day", "value": 1e-3,
              "limit_id": "AGGREGATE_REPAIR_PER_DAY", "contract": "c", "note": ""},
-            {"rule": "R8", "metric": "led_fix inventory fraction, pbl", "value": 0.01,
+            {"rule": "R8", "metric": "led_fix scorer fraction, pbl", "value": 0.01,
              "limit_id": "LED_FIX_MAX", "contract": "c", "note": "events 3"},
             {"rule": "EV", "metric": "intervention events at the end", "value": 12.0, "limit_id": None,
              "contract": "reported", "note": ""}]
@@ -317,16 +348,20 @@ class RankTests(unittest.TestCase):
 
     def test_not_assessable_origins_are_readings(self):
         # Until PX12 the scorer marks the first-hour origins NOT ASSESSABLE. They
-        # keep their fraction and are listed after the ranked terms (design section 7).
+        # are listed after the ranked terms, without a fraction (design section 7).
         rows = rank_terms("default", self.default_score(), tables("default"), 4e-3, "W57")
         ranked = [(r["rank"], r["term"]) for r in rows if r["rank"] != ""]
         self.assertEqual(ranked, [(1, "closure_residual"), (2, "led_fix:pbl"), (3, "partition_repair")])
         by = {r["term"]: r for r in rows}
         self.assertEqual((by["origin_first_hour:pbl"]["rank"], by["origin_first_hour:pbl"]["status"]),
                          ("", "NOT ASSESSABLE"))
-        self.assertAlmostEqual(by["origin_first_hour:pbl"]["fraction_of_limit"], 0.8)
+        # A reading shows its value and its comparator and no fraction of a limit.
+        self.assertIsNone(by["origin_first_hour:pbl"]["fraction_of_limit"])
+        self.assertEqual(by["origin_first_hour:pbl"]["value"], 0.002)
+        self.assertTrue(by["origin_first_hour:pbl"]["note"].startswith("reading against the copies"))
         self.assertEqual(by["origin_first_hour:evap"]["observable"], "absolute L1 (small tag)")
-        self.assertAlmostEqual(by["origin_first_hour:evap"]["fraction_of_limit"], 0.25)
+        self.assertIsNone(by["origin_first_hour:evap"]["fraction_of_limit"])
+        self.assertEqual(by["origin_first_hour:evap"]["value"], 1e-4)
 
     def test_prior_and_unlimited_terms_are_listed_not_ranked(self):
         rows = rank_terms("default", self.default_score(), tables("default"), 4e-3, "W57")

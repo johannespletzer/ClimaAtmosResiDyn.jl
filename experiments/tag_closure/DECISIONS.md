@@ -335,6 +335,33 @@ The owner decided these on 2026-10-09, in the review of PR #159 (Part 7).
     pending the owner. Part 7's design hash shows integrity only, as decided
     for Part 6 on 2026-10-08.
 
+The owner decided these on 2026-10-09 in the review of PR #162 (Part 8), after
+an adversarial challenge of each recommendation.
+
+  - **OD2 on W58's twin is recorded at both cadences, the scorer unchanged.**
+    **In force.** The twin's 10 min output gives a boundary at 0 s, the
+    scorer's 30 min bundle gives no established window, and both score the
+    same interval on TRMM 0M. The record maps each `startup` row to the 10 min
+    established reading by name. A scorer PR that reads OD2 from the twin's
+    cadence comes before part 10 scores rain on TRMM, or before a case where
+    the two cadences give different windows.
+  - **W58's configuration stays, the per-tag `led_fix` rows are reported.**
+    **In force.** The 30 min ledgers against the 150 s accepted step make the
+    scorer's per-tag LED_FIX rows data failures on W58. Part 8 reports them
+    from the audit's `_retained` columns with the scorer's denominator by tag
+    kind and its small-burden exemption. A converter and scorer follow-up maps
+    the columns per G3_PLAN 6.1.2 before part 10 needs the scored rows.
+  - **The first-hour origin terms are unranked readings against the copies
+    until PX12.** **In force.** No reference of parts 6 and 7 is eligible on
+    TRMM 0M. The readings show the value and the comparator and no fraction
+    of a limit. If PX12 finds the copies ineligible, they stay unranked and
+    part 9 takes nothing from them.
+  - **The registered producer is part 9's queue item, exempt from the defect
+    template.** **In force.** WA-GATES (a) requires complete cancellation-safe
+    accounting before a qualified water claim, and no registered producer
+    exists. Part 9's template admits it as instrumentation. It gates parts 10
+    and 11d.
+
 ## 2026-10-08
 
 The owner decided these on 2026-10-08, after PRs #150 and #151 merged into

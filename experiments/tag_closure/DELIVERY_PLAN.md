@@ -153,8 +153,9 @@ qualification and raises no level.
   - Cost: build, step and peak memory on the current `main` for the pilot and for
     8 + 8 tags on D4-W, both modes, with the WP9 driver and the diagnostics the
     contract requires. E88 and E90 stay the prior measurement. The walk fix is
-    not measured here, since its post-fix measurement is pre-registered under
-    the WP9 spread rule in 12c.
+    not measured here. Its post-fix measurement is pre-registered under the
+    WP9 spread rule in part 9's queue, and part 8's 8 + 8 points are its
+    pre-fix reference.
 
 **Inputs with defaults.**
 
@@ -211,6 +212,10 @@ this fork.
   - WP4a-J and UP1 after PX12's result, by UP1's own rule.
   - The refusals of WP1, retained until supported.
   - WP2 shared helpers only where a fix needs them.
+  - The registered producer of accepted applications that WA-GATES (a)
+    requires before part 10's qualified claim. It is instrumentation, not a
+    mechanism defect, and is exempt from this template's one-defect rule
+    (owner, 2026-10-09).
   - The walk fix, as this queue's item and nowhere else: upstream in ClimaCore
     or ClimaAtmos by the owner's decision, with the post-fix measurement
     pre-registered under WP9's spread rule and the OD3 copies row re-measured.
@@ -448,6 +453,7 @@ after the owner's explicit run approval. **Budget.** 0.8M plus 0.3M.
 | The three-tag pilot to eight-tag claim path | 10            | The part 10 design proposes it.                     |
 | The unregistered `wp9_cost_namewalk` runs   | housekeeping  | Named as unregistered until the owner says.         |
 | PX3, PX5 and PX9 routing                    | 8, 9          | Not named by the 2026-10-08 decision. Unchanged.    |
+| Registered producer for WA-GATES (a)        | 10, 11d       | Part 9 queue item, exempt from the defect template. |
 
 ## 7. Records
 

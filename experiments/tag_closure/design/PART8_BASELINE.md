@@ -131,7 +131,7 @@ established window. The rule's peak rate falls in the rain after 3 h, so
 three early intervals are already below 10% of it at 10 min. The boundary
 marks the onset of rain more than a startup. It is reported as it falls.
 
-The reading is fixed now, before the rerun (proposed, 2026-10-09):
+The reading is fixed now, before the rerun (decided 2026-10-09):
 
   - The record states the 10 min reading as the OD2 window. The 10 min output
     exists for OD2 (the twin's config says so).
@@ -140,8 +140,12 @@ The reading is fixed now, before the rerun (proposed, 2026-10-09):
     edited by this part.
   - The from-one-hour sensitivity row is the scorer's `sensitivity_1h`
     window, 1 h to 6 h. It stays beside the physical window.
-  - Whether the scorer should take OD2 from the twin's dedicated cadence is an
-    owner item. Changing it is a scorer PR, not this one.
+  - The record maps each of the scorer's `startup` rows to the 10 min
+    established reading by name. On TRMM 0M both cadences score the same
+    interval, 0 to 6 h plus the sensitivity row, so no number or verdict
+    changes here. A scorer PR that reads OD2 from the twin's cadence comes
+    before part 10 scores rain on TRMM, or before a case where the two
+    cadences give different windows. The scorer is not edited by this part.
 
 ## 6. Converter, scorer and glue
 
@@ -162,9 +166,17 @@ pins them. It does four things.
     observable `H_L` at accepted-step cadence. The scorer's per-tag rows read
     the ledger fields instead, and those are written every 30 min against an
     accepted step of 150 s. So the scorer names them a data failure. The table
-    path reports them. Adding step-cadence ledger output would change W58's
-    configuration and needs the converter to read two periods. It is not done
-    here (proposed, 2026-10-09).
+    path reports two readings per tag: the audit's inventory fraction, as W58
+    recorded it, and the scorer's fraction, a region tag over its signed
+    inventory and a source tag over its absolute burden, with the small-burden
+    exemption. The ranked table reads the scorer's fraction (decided
+    2026-10-09). Adding step-cadence ledger output would change W58's
+    configuration, so it is not done here (decided 2026-10-09). The follow-up
+    before part 10 is converter and scorer together: the per-tag `_retained`
+    columns mapped as `repair_retained` is, read through the scorer's
+    cumulative-amount path per G3_PLAN 6.1.2. Its tests: W58's bundle gives
+    COMPLETE rows equal to the table's numbers, and a mutated non-zero value
+    fails above LED_FIX_MAX.
   - **`rank`** builds the ranked table of section 7 from the scorer's JSON and
     the table rows.
 
@@ -234,8 +246,8 @@ and metric, or a table column.
 | Copies' repair         | Audit `led_uprepair_retained` per day, PX5's filter share in the note            | WP4a-J and UP1 after PX12's result                               |
 | Copies' own residual   | Audit `copy_residual_relative`, maximum over outputs                             | WP4a-J and UP1 after PX12's result                               |
 | Origin at 1 h, per tag | `WATER.ORIGINS.<tag>.3600`, the binding norm or the small-tag rule               | WP4a-J and UP1 after PX12, WP4b stages 2 and 3 once rain starts  |
-| `led_fix`, per tag     | Audit `led_fix_<tag>_retained` over the inventory at the end                     | WP4c leak corrections, gated by PX7 and PX2                      |
-| Intervention counts    | Audit `*_events` at the end. Part 5 reader: COMMON.ACCEPTED_APPLICATION_ACTIVITY | Part 5 producer registration                                     |
+| `led_fix`, per tag     | Audit `led_fix_<tag>_retained` over the scorer's denominator by tag kind         | WP4c leak corrections, gated by PX7 and PX2                      |
+| Intervention counts    | Audit `*_events` at the end. Part 5 reader: COMMON.ACCEPTED_APPLICATION_ACTIVITY | None in the queue yet. Part 9's exempt producer item             |
 | Parent Newton error    | W57's E at 2 iterations, prior from D4-W. PX12's P1 probe for TRMM               | None known in the queue. The Newton count is OD1's configuration |
 | 0M precipitation sum   | WATER.PRECIP_INSTANTANEOUS `max_absolute_rate_defect`                            | WP4b stages 2 and 3 (criterion 7)                                |
 
@@ -245,13 +257,14 @@ origin row uses the larger of `L1/ORIGIN_L1_FIRST_HOUR` and
 `L∞/ORIGIN_LINF_FIRST_HOUR`, or the small-tag absolute rule where the scorer
 applies it. A prior from another case and a term without a limit are listed
 after the ranked rows, without a rank. So is a term the scorer marks NOT
-ASSESSABLE. It is a reading and keeps its fraction. Until PX12 attaches its
-eligibility file, the first-hour origin terms are such readings (section 9).
+ASSESSABLE. It shows its value and the comparator's name, with no fraction of
+a limit (decided 2026-10-09). Until PX12 attaches its eligibility file, the
+first-hour origin terms are such readings (section 9).
 Ties, such as several zeros, keep the order of the table above. A fraction is
 a reading against a cited limit. It is not a verdict, and a six-hour reading
 against a 24 h limit is not a transplant.
 
-**The origin comparator** (proposed, 2026-10-09). The brief asks for the
+**The origin comparator** (decided 2026-10-09). The brief asks for the
 first-hour L1 against the references that parts 6 and 7 made eligible. Those
 parts made references eligible on their own known-answer fixtures, not on
 TRMM 0M. Which comparator is eligible on this case is PX12's answer, and PX12
@@ -259,7 +272,9 @@ is part 7's run, not yet made. So the default bundle reads its origin terms
 against the rerun's copies, as W58 did. The scorer marks them NOT ASSESSABLE,
 so they are listed, not ranked. Once PX12's eligibility file gives them a
 verdict, the rule above ranks them. If PX12 names another comparator, the
-record says so and reads the origin terms against it.
+record says so and reads the origin terms against it. If PX12 finds the
+copies ineligible on this case, the terms stay unranked readings and part 9
+takes nothing from them.
 
 **The prior order**, from W58's data on 2026-10-09:
 
@@ -269,10 +284,10 @@ record says so and reads the origin terms against it.
 | copies  | Copies' repair, 0.253              | Closure at 6 h, 0.177 (reported) | Copies' own residual, 0.0116 | Newton prior 4.1, 15,317 events, D_p 3.4e-8  |
 
 The default's closure is 1.9e-12 of the limit, and its partition repair and
-`led_fix` are zero. Its only non-zero readings against a limit are the
-first-hour origins, listed without a rank: `evap` 0.448 of the small-tag
-limit, `pbl` 0.0103 and `free` 0.0051. They wait for PX12, and part 9 takes
-no fix from an origin reading that is not assessable. The copies bundle has no
+`led_fix` are zero. Its first-hour origins are listed without a rank, as
+values against the rerun's copies with no fraction of a limit (decided
+2026-10-09). They wait for PX12, and part 9 takes no fix from an origin
+reading that is not assessable. The copies bundle has no
 origin terms, since it has no reference. The listed parent Newton error is
 four times NEWTON_MAX on D4-W. It is not this case, and no fix in the queue
 addresses it.
@@ -343,7 +358,7 @@ bundles through `manifest.py --attach-acceptance`, with no rerun here.
   - PX5's growth clause, from its `dt` 150/75 s ladder. Until then PX5's
     reading on TRMM is the filter's share alone.
   - The rank of the origin terms. Until PX12, they are readings only, listed
-    without a rank (section 7).
+    without a rank or a fraction (section 7).
 
 ## 10. What stops the part, and what would change the plan
 
@@ -363,7 +378,7 @@ bundles through `manifest.py --attach-acceptance`, with no rerun here.
 The PR: 0.9M subagent tokens, of which the author 300 to 400k. The record
 PR after the runs: 0.3M. The runs: section 8.
 
-## 12. Choices made here, all proposed, 2026-10-09
+## 12. Choices made here, proposed 2026-10-09 unless marked decided
 
  1. The trio's configs differ from W58's only in `job_id` and comments.
  2. The trio takes whole nodes, so its build and step are a one-sample cost
@@ -371,15 +386,18 @@ PR after the runs: 0.3M. The runs: section 8.
  3. The cost pairs: three jobs per mode, each with point 0 and 8 + 8 with
     ledgers.
  4. The OD2 reading of section 5: the twin's 10 min cadence for the record,
-    the scorer's 30 min windows kept and the difference stated.
+    the scorer's 30 min windows kept and the difference stated. Decided
+    2026-10-09.
  5. The per-tag `led_fix` rows are reported from the audit's `_retained`
-    columns. No step-cadence output is added.
+    columns. No step-cadence output is added. Decided 2026-10-09, with the
+    converter and scorer follow-up of section 6 before part 10.
  6. The ranking rule and the fix candidates of section 7. NOT ASSESSABLE
-    terms, the first-hour origins until PX12, are listed without a rank.
+    terms, the first-hour origins until PX12, are listed without a rank or a
+    fraction (decided 2026-10-09). The rule itself stays proposed.
  7. W57's D4-W Newton error is listed as a prior, unranked.
  8. The default bundle has the copies as reference, since no reference of
     parts 6 and 7 is eligible on TRMM 0M before PX12 (section 7). The copies
-    bundle has no reference.
+    bundle has no reference. Decided 2026-10-09.
  9. The brief's "D4-W" for the cost pairs is read as WP9's D4 column,
     `wp9_energy_d4_edmf` (DYCOMS RF02, 1M, EDMF, 30 levels), where E88
     measured 8 + 8. The D4-W runs of W54 to W57 use another config.

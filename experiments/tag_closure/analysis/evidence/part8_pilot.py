@@ -42,7 +42,7 @@ import numpy as np
 from acceptance_data import DataError, od2_start, require
 from convert_output import ConversionError, Run, faces_and_thickness, read_field
 from score_acceptance import (AGGREGATE_REPAIR_PER_DAY, COMPARATOR_REPAIR_PER_DAY, COPIES_RESIDUAL_MAX,
-                              LED_FIX_MAX, NEWTON_MAX, origin_limits)
+                              LED_FIX_MAX, NEWTON_MAX, SMALL, origin_limits)
 from closure_verdict import WATER_GROSS
 
 DAY = 86400.0
@@ -54,7 +54,8 @@ TRMM_KINDS = {"pbl": "region", "free": "region", "evap": "source"}
 PRIOR = "prior"
 # A scorer verdict that makes a measured term a reading only. Until PX12's
 # eligibility file is attached, the first-hour origin rows carry it. Such a
-# term keeps its fraction and is listed, not ranked (proposed, 2026-10-09).
+# term shows its value and its comparator, with no fraction of a limit, and
+# is listed, not ranked (decided 2026-10-09).
 READING = "NOT ASSESSABLE"
 # Every limit used here, by the ID the design cites. Values come from the scorer.
 LIMITS = {
@@ -77,8 +78,10 @@ FIX_CANDIDATES = {
     "origin_first_hour": {"default": "WP4a-J and UP1 after PX12, WP4b stages 2 and 3 once rain starts"},
     "led_fix": {"default": "WP4c leak corrections, gated by PX7 and PX2",
                 "copies": "WP4c leak corrections, gated by PX7 and PX2"},
-    "intervention_events": {"default": "Part 5 producer registration (accepted application accounting)",
-                            "copies": "Part 5 producer registration (accepted application accounting)"},
+    "intervention_events": {"default": "none in the queue yet: the registered producer WA-GATES (a) requires is "
+                                       "part 9's exempt queue item (owner, 2026-10-09)",
+                            "copies": "none in the queue yet: the registered producer WA-GATES (a) requires is "
+                                      "part 9's exempt queue item (owner, 2026-10-09)"},
     "parent_newton": {"default": "none known in the queue: the Newton count is OD1's configuration",
                       "copies": "none known in the queue: the Newton count is OD1's configuration"},
     "precip_sum_defect": {"default": "WP4b stages 2 and 3 (criterion 7)",
@@ -108,7 +111,7 @@ def verdict(ok):
     return "pass" if ok else "fail"
 
 
-def table_rows(closure, audit, mode, end=TRMM_END, tags=TRMM_TAGS):
+def table_rows(closure, audit, mode, end=TRMM_END, tags=TRMM_TAGS, kinds=TRMM_KINDS):
     """W58's table-derived rows of one run, with the limit IDs they cite.
 
     The pilot has no established window (W58), so every window is the whole
@@ -156,6 +159,21 @@ def table_rows(closure, audit, mode, end=TRMM_END, tags=TRMM_TAGS):
         add("R8", f"led_fix inventory fraction, {tag}", window, value, "LED_FIX_MAX",
             verdict(value <= LED_FIX_MAX), "scored per OD2 window by the scorer, at accepted-step cadence",
             f"whole run {frac:.3e}; events {stop[f'led_fix_{tag}_events']:.0f}")
+        # The scorer's reading of the same activity (G3_PLAN 6.1.2): a region
+        # tag over its signed inventory, a source tag over its absolute burden,
+        # and the small-burden exemption below SMALL of the parent scale. The
+        # ranked table reads this row (decided 2026-10-09).
+        kind = kinds.get(tag, "region")
+        fkey = f"led_fix_{tag}_{'inventory' if kind == 'region' else 'burden'}_fraction"
+        require(fkey in stop, f"the audit has no {fkey} column")
+        denominator = retained / stop[fkey] if stop[fkey] > 0 else None
+        scored = (retained - start) / denominator if denominator else 0.0
+        parent, burden = stop.get(f"led_fix_{tag}_parent_fraction"), stop.get(f"led_fix_{tag}_burden_fraction")
+        exempt = bool(parent and burden and parent > 0 and burden > 0 and parent / burden < SMALL)
+        add("R8", f"led_fix scorer fraction, {tag}", window, scored, "LED_FIX_MAX", verdict(scored <= LED_FIX_MAX),
+            "not applicable" if exempt else "scored per OD2 window by the scorer, at accepted-step cadence",
+            f"{kind} tag over its {'signed inventory' if kind == 'region' else 'absolute burden'}"
+            + (", small-burden exemption" if exempt else ""))
         key = f"led_inc_{tag}_inventory_fraction"
         if key in stop:
             add("R8", f"led_inc inventory fraction, {tag}", "whole run", stop[key], None, "reported", "reported")
@@ -278,6 +296,7 @@ def rank_terms(mode, score, tables, newton=None, newton_source=""):
     first, largest fraction first. Prior terms from another case, terms the
     scorer marks NOT ASSESSABLE (the first-hour origins until PX12) and terms
     without a limit follow unranked, in the order of the design's section 7.
+    A NOT ASSESSABLE term shows its value and its comparator and no fraction.
     A fraction is a reading against the cited limit, not a verdict.
     """
     rows = {r["id"]: r for r in score["rows"]}
@@ -324,9 +343,14 @@ def rank_terms(mode, score, tables, newton=None, newton_source=""):
         t.update(limit_id="SMALL (small-tag absolute rule)" if small else
                  f"ORIGIN_L1_FIRST_HOUR and ORIGIN_LINF_FIRST_HOUR, {TRMM_KINDS[tag]}",
                  fraction_of_limit=fraction)
+        if t["status"] == READING:
+            # A reading against the rerun's copies, the comparator PX12 would
+            # qualify. No fraction, so that it is not read as evidence.
+            t.update(fraction_of_limit=None,
+                     note=("reading against the copies, not yet eligible (PX12). " + t["note"]).strip())
         out.append(t)
     for tag in TRMM_TAGS:
-        r = by_metric.get(("R8", f"led_fix inventory fraction, {tag}"))
+        r = by_metric.get(("R8", f"led_fix scorer fraction, {tag}"))
         if r:
             out.append(term(mode, f"led_fix:{tag}", r["metric"], r["value"], "1", r["limit_id"], r["contract"],
                             f"tables: water_tag_audit.csv led_fix_{tag}_retained", r["note"]))

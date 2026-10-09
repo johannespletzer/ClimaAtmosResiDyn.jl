@@ -19,8 +19,8 @@ window at 30 min, so the design fixes which reading the record states. The
 
 **Part 8 is not done.** The runs, the record and the ranked table wait for
 the owner's approval of each job and for W58's archive sync. The first-hour
-origin verdicts wait for PX12 (part 7). The choices of the design's section
-12 are proposed. No model, default, tolerance or scorer change is supplied.
+origin verdicts wait for PX12 (part 7). Four choices of the design's section
+12 are decided (2026-10-09), the rest are proposed. No model, default, tolerance or scorer change is supplied.
 
 ## Part 7 independent water-transfer software (2026-10-08)
 
