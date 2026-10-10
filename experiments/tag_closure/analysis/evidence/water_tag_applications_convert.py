@@ -257,7 +257,7 @@ def convert(run_dir, out, manifest=None, rho_file=None):
                "fields": fields, "precision": header["precision"], "accepted_step_seconds": cadence,
                "end_seconds": float(edges[-1]), "start_seconds": float(edges[0]),
                "model_commit": header["model_commit"], "model_diff_sha256": header["model_diff_sha256"],
-               "source_run": str(run_dir)}
+               "source_run": str(run_dir.resolve()), "run_manifest": str(Path(manifest).resolve()) if manifest else None}
     (out / OUT_SECTION).write_text(json.dumps(section, sort_keys=True, indent=1) + "\n")
     return section
 
@@ -272,6 +272,7 @@ def standalone_bundle(out, run_manifest=None, extra=None):
     """
     out = Path(out)
     section = json.loads((out / OUT_SECTION).read_text())
+    run_manifest = run_manifest or section.get("run_manifest")
     m = json.loads(Path(run_manifest).read_text()) if run_manifest else {}
     spec = {"schema_version": 1, "precision": section["precision"], "claim": {"family": "water"},
             "accepted_step_seconds": section["accepted_step_seconds"], "end_seconds": section["end_seconds"],

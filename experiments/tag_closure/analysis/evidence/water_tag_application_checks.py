@@ -93,8 +93,7 @@ class Run:
         self.arrays = wc.read_arrays(self.raw)
         self.section = json.loads((self.converted / wc.OUT_SECTION).read_text())
         if not (self.converted / "manifest.json").is_file():
-            manifest = self.raw / "manifest.json"
-            wc.standalone_bundle(self.converted, manifest if manifest.is_file() else None)
+            wc.standalone_bundle(self.converted)
         self.bundle = Bundle(self.converted / "manifest.json")
         self.roster = self.header[wc.ROSTER_KEY]
         self.edges = wc.edges_of(self.steps)

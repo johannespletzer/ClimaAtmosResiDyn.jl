@@ -212,6 +212,14 @@ class TestChecks(Fixture):
             self.assertEqual(out.splitlines()[0], f"CHECK {key}: PASS")
             self.assertEqual(wproof.check_result(out, key, wchecks.LOG_PATTERN), "PASS")
 
+    def test_converted_directory_argument(self):
+        # The cluster script converts first, with the run's manifest, then checks.
+        out, _ = self.convert()
+        (out / "manifest.json").unlink()
+        for argv in (("accepted_weights", out), ("trial_rollback", out), ("complete_active_roster", out)):
+            code, text = run_cli(*argv)
+            self.assertEqual(code, 0, text)
+
     def test_accepted_weights_mutant(self):
         # b_exp set to b_imp: the reader still passes, only implicit stages are weighted.
         edit_receipt(self.runs["on"], lambda l: l[0]["integrator_pin"].update(b_exp=l[0]["integrator_pin"]["b_imp"]))
