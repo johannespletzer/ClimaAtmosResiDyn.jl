@@ -44,6 +44,7 @@ config(FT, applications, extra = Dict{String, Any}()) = merge(
         "water_tracers" => [
             Dict{String, Any}("name" => "lower", "region" => altitude_region(false)),
             Dict{String, Any}("name" => "upper", "region" => altitude_region(true)),
+            Dict{String, Any}("name" => "evap", "source" => "surface_flux"),
         ],
         "water_tag_precipitation" => true,
         "water_tag_transport" => "increment",
@@ -165,7 +166,7 @@ function check_model_ledgers(sim)
     ids = Array(ds["record_id"][:])
     close(ds)
     rows = Dict(id => r for (r, id) in enumerate(ids))
-    for tag in ("lower", "upper"),
+    for tag in ("lower", "upper", "evap"),
         (ledger_name, mechs) in (
             ("q_tag_led_fix_", ("rescale", "empty", "repair", "close")),
             ("q_tag_led_inc_", ("inc", "negative")),

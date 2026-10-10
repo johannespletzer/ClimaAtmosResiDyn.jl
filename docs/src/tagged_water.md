@@ -518,8 +518,8 @@ these.
 tags' corrections. It is off by default and only reads the model. The model's
 fields are those of the same run without it, bit for bit. The tests show this
 after each of six steps for one configuration, in Float64 and in Float32: the
-1-moment column with rain and snow parts, two region tags, increment transport
-and per-tag ledgers.
+1-moment column with rain and snow parts, two region tags and a source tag,
+increment transport and per-tag ledgers.
 
 A channel is a mechanism, a tag and a compartment. The compartment is `total`
 without rain and snow parts, and `nonprecipitating`, `rain` or `snow` with them.
@@ -536,9 +536,10 @@ The roster holds these mechanisms:
 | `negative` | the follower's negative water and its crossing by mask | `water_tendency`, kg m^-3 s^-1 | `ρq_tot`                      |
 
 `close` and `follow` exist with `water_tag_precipitation: true`, and `inc` and
-`negative` with `water_tag_transport: increment`. These are every correction
-writer of the default mode, the leak correction excepted. The leak correction
-is not metered yet, as the copies are not, so the producer refuses
+`negative` with `water_tag_transport: increment`. `repair` and `close` exist
+for region tags alone, every other mechanism for every tag. These are every
+correction writer of the default mode, the leak correction excepted. The leak
+correction is not metered yet, as the copies are not, so the producer refuses
 `water_tag_leak_correction: true`.
 
 Each call of a writer is one application of each channel it changes. The meter

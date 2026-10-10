@@ -127,7 +127,10 @@ function water_tag_application_channels(model)
                 add!(:follow, name, c, "water_increment", "rho_q_tot")
             end
         end
-        if follows_water_increment(model) && partition
+        # The increment follower and the negative giver run for every tag,
+        # source tags included. Only the crossing by mask is partition-only,
+        # and it writes into the same `negative` channel.
+        if follows_water_increment(model)
             add!(:inc, name, N, "water_tendency", "rho_q_tot")
             add!(:negative, name, N, "water_tendency", "rho_q_tot")
         end

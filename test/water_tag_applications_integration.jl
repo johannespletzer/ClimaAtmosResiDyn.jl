@@ -152,13 +152,22 @@ include("water_tag_applications_common.jl")
         # under the key the header names.
         @test header["roster_key"] == "water_tag_application_roster"
         expected = String[]
-        for t in ("lower", "upper")
+        # Two region tags and one source tag. The repair and the close belong
+        # to the partition alone. The increment follower and the negative
+        # giver meter every tag.
+        for (t, partition) in (("lower", true), ("upper", true), ("evap", false))
             N = "nonprecipitating"
+            append!(expected, ["rescale.$t.$N", "empty.$t.$N"])
+            partition && append!(
+                expected,
+                [
+                    "repair.$t.$N", "repair.$t.rain", "repair.$t.snow",
+                    "close.$t.rain", "close.$t.snow",
+                ],
+            )
             append!(
                 expected,
                 [
-                    "rescale.$t.$N", "empty.$t.$N", "repair.$t.$N", "repair.$t.rain",
-                    "repair.$t.snow", "close.$t.rain", "close.$t.snow",
                     "follow.$t.$N", "follow.$t.rain", "follow.$t.snow",
                     "inc.$t.$N", "negative.$t.$N",
                 ],
