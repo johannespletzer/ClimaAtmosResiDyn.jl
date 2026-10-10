@@ -1,4 +1,6 @@
 date,decided_by,decision,doc,section,still_in_force,superseded_by
+2026-10-10,owner,"Part 9: the roster defect found by the first check wave (inc and negative for partition tags alone) is fixed in PR A at 59216edef with a source tag in the test. PR B is repinned, the five jobs rerun. A roster fix without a test and a refusal of source tags were declined.",DECISIONS.md,"2026-10-10, part 9 PR B",yes,
+2026-10-10,owner,"Part 9: a manual 1.10 bounds-checked CI run of the three applications groups precedes the merge of PR A, since the third tracer moves the 1.10 memory margin.",DECISIONS.md,"2026-10-10, part 9 PR B",yes,
 2026-10-10,owner,"Part 9: the producer checks' constants are decided as proposed. ROUNDING_ULPS 16, LEDGER_EXTRA_OPERATIONS 3 plus 2 for the division by rho, Z_MATCH_ULPS 4, nonzero final_map and implicit (on) and post_newton (Newton), cost factors 1.5 and 3.",DECISIONS.md,"2026-10-10, part 9 PR B",yes,
 2026-10-10,owner,"Part 9: a second bundle converted at 150 s serves COMMON.ACCEPTED_APPLICATION_ACTIVITY and COMMON.APPLICATION_ACTIVITY.<window>. The 30 min bundle stays for every other row.",DECISIONS.md,"2026-10-10, part 9 PR B",yes,
 2026-10-10,owner,"Part 9: the Float32 on and off pair is in. Parity runs on it too. Six jobs, under the cap of 12 jobs and 24 hours.",DECISIONS.md,"2026-10-10, part 9 PR B",yes,

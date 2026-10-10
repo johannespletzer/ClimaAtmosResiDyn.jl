@@ -16,12 +16,14 @@ to the fixed `c` on 2026-10-09 (PR #166).
 
 ## Part 9 water tag producer, PR B design (2026-10-10)
 
-PR A is PR #170 (`claude/part9-producer` at `648fad788`, against `main`, not
+PR A is PR #170 (`claude/part9-producer` at `59216edef`, against `main`, not
 merged): the key `water_tag_applications`. PR B (`claude/part9-producer-b` on
 `claude/plan-rev2`) adds the converter, the six check commands, the proof
 builder, the pending registry entry and four check jobs on the part 8 default
 case. The [design](design/PART9_PRODUCER.md) is pre-registered and the
-[record](analysis/evidence/PART9.md) is a skeleton. No job is submitted.
+[record](analysis/evidence/PART9.md) is a skeleton. The first job wave
+found a roster defect in the producer (PART9.md, section 1), fixed in PR A at
+`59216edef`. The jobs rerun at that head.
 The owner sets the proposed constants and approves each job. The producer
 is registered only after the six checks pass on the cluster.
 

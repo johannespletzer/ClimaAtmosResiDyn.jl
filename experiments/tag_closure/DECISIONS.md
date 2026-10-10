@@ -337,6 +337,18 @@ review of PR #171.
   - **The Newton job is submitted as planned.** **In force.** If the model
     refuses the stage cadence on this case, `newton_replacement` is recorded
     as unverified and the registration proceeds with that stated.
+  - **The roster defect found by the first check wave is fixed in PR A, with a
+    test.** **In force.** The on, Newton and on_f32 jobs of 2026-10-10 failed
+    at their first step with `KeyError: key (:inc, :evap, :total)`. The roster
+    gave `inc` and `negative` to partition tags alone, while the increment
+    follower runs for every tag. The fix (claude/part9-producer `59216edef`)
+    meters every tag, the test configuration gains a source tag, and the
+    model-ledger tie covers it. PR B is pinned to that head. The alternatives,
+    a roster fix without a test and a refusal of source tags, were declined.
+    The five jobs rerun at the new head.
+  - **A manual 1.10 bounds-checked run of the three applications groups
+    precedes the merge of PR A.** **In force.** The third tracer moves the
+    1.10 memory margin, which stood within 0.5 GiB of the runner's 16 GB.
 
 ## 2026-10-09
 
