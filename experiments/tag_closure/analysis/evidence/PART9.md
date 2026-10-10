@@ -2,7 +2,8 @@
 
 Skeleton, 2026-10-10. Nothing here is a result yet. The
 [design](../../design/PART9_PRODUCER.md) fixes the checks, the jobs and the
-stop rules. PR A is #170 (`claude/part9-producer`, `2c63c5c53`).
+stop rules. PR A is #170 (`claude/part9-producer`, `2c63c5c53`), merged into
+`main` as `6a8fc6fb7` on 2026-10-10.
 
 ## 1. Jobs
 
@@ -20,7 +21,7 @@ First wave, 2026-10-10 07:30, producer at `648fad788`: jobs 14185494 (on),
 The two off runs completed (13 and 12 min, 9.2 GB). The three on runs failed at
 their first step with `KeyError: key (:inc, :evap, :total)`: the roster gave
 `inc` and `negative` to partition tags alone, while the increment follower runs
-for every tag. Fixed in PR A at `2c63c5c53` with a source tag in the test. The
+for every tag. Fixed in PR A at `59216edef` with a source tag in the test. The
 wave's outputs are under `output/p9_wave1_failed_roster/`, its logs and
 manifests keep their job ids. Every job reruns at the new head.
 

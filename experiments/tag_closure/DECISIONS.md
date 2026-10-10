@@ -341,7 +341,7 @@ review of PR #171.
     test.** **In force.** The on, Newton and on_f32 jobs of 2026-10-10 failed
     at their first step with `KeyError: key (:inc, :evap, :total)`. The roster
     gave `inc` and `negative` to partition tags alone, while the increment
-    follower runs for every tag. The fix (claude/part9-producer `2c63c5c53`)
+    follower runs for every tag. The fix (claude/part9-producer `59216edef`)
     meters every tag, the test configuration gains a source tag, and the
     model-ledger tie covers it. PR B is pinned to that head. The alternatives,
     a roster fix without a test and a refusal of source tags, were declined.

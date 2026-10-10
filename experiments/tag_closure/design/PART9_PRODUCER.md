@@ -1,7 +1,8 @@
 # Part 9: the water tag producer's runtime checks (design, 2026-10-10)
 
 Pre-registered before any job. PR A (#170, `claude/part9-producer` at
-`2c63c5c53`, not on `main`) adds the key `water_tag_applications`. PR B (this
+`2c63c5c53`, merged into `main` as `6a8fc6fb7` on 2026-10-10) adds the key
+`water_tag_applications`. PR B (this
 design and its tools) converts the producer's output for the part 5 reader,
 checks it on the cluster in six named checks, and assembles the proof that
 the reader's production gate reads. The owner decided the constants of
