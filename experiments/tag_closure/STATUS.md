@@ -14,6 +14,20 @@ moves upward first. OD6's absolute term reads in OD4 units for energy. The
 rest of OD11 stays proposed. The part 11a design, hash pin and fixtures moved
 to the fixed `c` on 2026-10-09 (PR #166).
 
+## Part 9 water tag producer, PR B design (2026-10-10)
+
+PR A is PR #170 (`claude/part9-producer` at `2c63c5c53`, merged into `main`
+as `6a8fc6fb7` on 2026-10-10): the key `water_tag_applications`. PR B (`claude/part9-producer-b` on
+`claude/plan-rev2`) adds the converter, the six check commands, the proof
+builder, the pending registry entry and six check jobs on the part 8 default
+case. The [design](design/PART9_PRODUCER.md) is pre-registered and the
+[record](analysis/evidence/PART9.md) is a skeleton. Four job waves found a
+roster defect in the producer (fixed in PR A at `2c63c5c53`), the missing git
+module on the compute nodes, and a job manifest that did not record the model
+tree (PART9.md, section 1). The jobs rerun at that head with the new manifest.
+The owner sets the proposed constants and approves each job. The producer
+is registered only after the six checks pass on the cluster.
+
 ## Part 11a energy references, design (2026-10-09)
 
 The [pre-registered design](design/PART11A_ENERGY_REFERENCES.md) builds the

@@ -312,6 +312,65 @@ The list as it stood before this classification, kept as written:
 >     and the copies under first-order upwinding (W25). **Waiting.**
 >     [FINDINGS W25](FINDINGS.md)
 
+## 2026-10-10, part 9 PR B
+
+The owner decided these on 2026-10-10, on the four open inputs of the part 9
+producer design
+([PART9_PRODUCER.md](design/PART9_PRODUCER.md), sections 6 and 11) and the
+review of PR #171.
+
+  - **The design's constants are decided as proposed.** **In force.** The
+    ledger allowances reuse `ROUNDING_ULPS` 16 and `LEDGER_EXTRA_OPERATIONS`
+    3, plus 2 for the diagnostic's division by ρ in the model-ledger tie.
+    `Z_MATCH_ULPS` is 4. `final_map` and `implicit` need a nonzero record in
+    the on run and `post_newton` in the Newton run. The cost factors are 1.5
+    for the build and 3 for the steps.
+  - **A second bundle at 150 s serves the two accounting rows.** **In force.**
+    `COMMON.ACCEPTED_APPLICATION_ACTIVITY` and
+    `COMMON.APPLICATION_ACTIVITY.<window>` read a bundle converted at 150 s
+    from the on run, with the converted directory attached. The 30 min bundle
+    stays for every other row.
+  - **The Float32 pair is in.** **In force.** `p9_trmm0m_on_f32_6h` and
+    `p9_trmm0m_off_f32_6h` are the on and off configs with Float32. The parity
+    check runs on this pair too. The set has six jobs and stays under the cap
+    of 12 jobs and 24 hours.
+  - **The Newton job is submitted as planned.** **In force.** If the model
+    refuses the stage cadence on this case, `newton_replacement` is recorded
+    as unverified and the registration proceeds with that stated.
+  - **The roster defect found by the first check wave is fixed in PR A, with a
+    test.** **In force.** The on, Newton and on_f32 jobs of 2026-10-10 failed
+    at their first step with `KeyError: key (:inc, :evap, :total)`. The roster
+    gave `inc` and `negative` to partition tags alone, while the increment
+    follower runs for every tag. The fix (claude/part9-producer `59216edef`)
+    meters every tag, the test configuration gains a source tag, and the
+    model-ledger tie covers it. PR B is pinned to that head. The alternatives,
+    a roster fix without a test and a refusal of source tags, were declined.
+    The five jobs rerun at the new head.
+  - **A manual 1.10 bounds-checked run of the three applications groups
+    precedes the merge of PR A.** **In force.** The third tracer moves the
+    1.10 memory margin, which stood within 0.5 GiB of the runner's 16 GB.
+  - **The job manifest records the model tree, and the four runs rerun as a
+    fifth wave.** **In force.** The fourth wave's receipts carried the right
+    identity, but the converter compared them with the job manifest's
+    `head_sha`, the record tree that submits the job, not the run tree the
+    model runs from. `manifest.py` gains `--model-repo`, `submit_g3.sh`
+    passes the run tree, and the manifest records it under `model`. The
+    converter compares the receipt with that entry and writes the model
+    identity into the bundle, with the record commit beside it. The six jobs
+    rerun with the new manifest. Accepting the fourth wave through the node's
+    provenance file, or through an explicit commit on the converter's command
+    line, was declined.
+  - **The three applications test groups run on 1.11 only.** **In force.** A
+    manual bounds-checked 1.10 run of the groups at `59216edef` ended two of
+    them with the runner's shutdown signal after about 50 min, the 16 GB
+    memory pattern, once the test configuration carried a third tag. A
+    second memory round and dropping the source tag were declined. PR A at
+    `2c63c5c53` lists them beside the upstream-only groups.
+  - **The job script loads `git/2.49.0`.** **In force.** The second wave's
+    receipts carried the model identity as "unknown" because git is not on
+    the compute node's PATH, so the converter refused them. The producer stays
+    as designed. Passing the identity from the submitter was declined.
+
 ## 2026-10-09
 
 The owner decided these on 2026-10-09, on proposals 1 to 6 of the review of the

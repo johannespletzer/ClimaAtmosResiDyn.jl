@@ -549,6 +549,50 @@ last tests read W58's output where it is present, and skip with the reason
 otherwise. The scorer-level W58 test is `test_w58_pilot_first_hour` in
 `test_convert_output.py`.
 
+## The part 9 producer checks
+
+The water tag producer of PR #170 (`water_tag_applications: true`) is checked
+with three tools ([design](../../design/PART9_PRODUCER.md), [record](PART9.md)).
+They add no threshold to the scorer. The constants, decided 2026-10-10, are in
+the design.
+
+```sh
+python3 experiments/tag_closure/analysis/evidence/water_tag_applications_convert.py RUN/output_0000 \
+  --out CONVERTED --manifest MANIFEST.json
+python3 experiments/tag_closure/analysis/evidence/water_tag_application_checks.py accepted_weights CONVERTED
+python3 experiments/tag_closure/analysis/evidence/water_tag_application_checks.py parent_bitwise_parity ON OFF
+python3 experiments/tag_closure/analysis/evidence/water_tag_application_checks.py restart ON RESTARTED
+python3 experiments/tag_closure/analysis/evidence/water_tag_application_proof.py CONVERTED \
+  --source water_tag_applications.jl --logs LOGS --environment TEXT
+python3 -m unittest discover -s experiments/tag_closure/analysis/evidence -p test_water_tag_applications.py -v
+```
+
+The scorer reads two bundles of the on run (owner, 2026-10-10). The 30 min
+bundle serves every row but the two accounting rows. The 150 s bundle, with
+the converted directory attached, serves `COMMON.ACCEPTED_APPLICATION_ACTIVITY`
+and `COMMON.APPLICATION_ACTIVITY.<window>`.
+
+```sh
+for p in 30m 150s; do
+  python3 experiments/tag_closure/analysis/evidence/convert_output.py --family water \
+    --candidate ON/output_0000 --period "${p}" \
+    --planning-commit SHA --scorer-commit SHA --out "BUNDLE_${p}"
+done
+python3 -c 'import sys; sys.path.insert(0, "experiments/tag_closure/analysis/evidence")
+import water_tag_applications_convert as wc; wc.attach(sys.argv[1], sys.argv[2])' \
+  BUNDLE_150s/manifest.json CONVERTED
+```
+
+The converter writes the reader's receipt, native NPZ and ledgers from the
+producer's receipt and NetCDF, and refuses what does not match. The checks
+print `CHECK <key>: PASS` or `CHECK <key>: FAIL <reason>`. The proof builder
+writes `lifecycle_evidence.json`, adds it and the copied logs to the
+manifest's `artifacts` and names it in `correction_accounting.lifecycle_evidence`.
+The registry entry
+(`water_tag_application_registry.json`) is pending until the checks pass on
+the cluster. The tests run on a synthetic fixture in the producer's format
+(`make_water_tag_application_fixture.py`), never runtime evidence.
+
 ## Legacy G3 phase 1 evidence pipeline
 
 Four standalone tools (`compare_runs.py`, `test_compare_runs.py`,
