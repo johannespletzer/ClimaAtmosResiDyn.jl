@@ -38,7 +38,7 @@ CHECK_KEYS = {"accepted_weights": "accepted_weights", "trial_rollback": "trial_r
 # The registry's check_log_pattern (water_tag_application_registry.json) reads these lines.
 LOG_PATTERN = r"^CHECK (?P<check>[a-z_]+): (?P<result>PASS|FAIL)\b"
 # The model's own ledgers, per tag, and the mechanisms each one sums
-# (test/water_tag_applications_common.jl, check_model_ledgers, at 648fad788).
+# (test/water_tag_applications_common.jl, check_model_ledgers, at 59216edef).
 MODEL_LEDGERS = (("q_tag_led_fix_", ("rescale", "empty", "repair", "close")),
                  ("q_tag_led_inc_", ("inc", "negative")))
 # Proposed, 2026-10-10. A model ledger diagnostic is written as L/rho in the
@@ -139,7 +139,9 @@ def expected_roster(config_text):
             if partition:
                 roster += [f"close.{name}.rain", f"close.{name}.snow"]
             roster += [f"follow.{name}.{c}" for c in (n, "rain", "snow")]
-        if increment and partition:
+        # The increment follower and the negative giver meter every tag, source
+        # tags included.
+        if increment:
             roster += [f"inc.{name}.{n}", f"negative.{name}.{n}"]
     return roster, [t[0] for t in tags]
 

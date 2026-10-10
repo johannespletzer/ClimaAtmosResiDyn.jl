@@ -1,7 +1,7 @@
 # Part 9: the water tag producer's runtime checks (design, 2026-10-10)
 
 Pre-registered before any job. PR A (#170, `claude/part9-producer` at
-`648fad788`, not on `main`) adds the key `water_tag_applications`. PR B (this
+`59216edef`, not on `main`) adds the key `water_tag_applications`. PR B (this
 design and its tools) converts the producer's output for the part 5 reader,
 checks it on the cluster in six named checks, and assembles the proof that
 the reader's production gate reads. The owner decided the constants of
@@ -10,7 +10,7 @@ section 6 and the inputs of section 11 on 2026-10-10 (DECISIONS.md,
 
 ## 1. Question
 
-Does the producer at `648fad788`, in the part 8 default case (TRMM 0M, 6 h,
+Does the producer at `59216edef`, in the part 8 default case (TRMM 0M, 6 h,
 tags `pbl` and `free` by region and `evap` by source, increment transport,
 ARS222, dt 150 s), write every accepted application of the water tags'
 corrections with the reader's weights, leave the parent's fields bit for bit
@@ -53,7 +53,7 @@ The kept 60 s output (scratchpad `p9/keep_out/step`) came from an earlier
 commit of PR A. Its roster is an object, its step lines carry
 `unattributed_calls`, and its header lacks the channels, unsupported,
 `producer` and `native_arrays` keys. The tests use a synthetic fixture in the
-`648fad788` format instead (`make_water_tag_application_fixture.py`).
+`59216edef` format instead (`make_water_tag_application_fixture.py`).
 
 ## 3. The six checks
 
@@ -87,7 +87,7 @@ PASS. The tests run the check on a Float32 fixture.
   - Control for parity: `p9_trmm0m_off_6h`, the same config with the key
     `false`. Control for the restart: `p9_trmm0m_on_6h` itself, the continuous
     run.
-  - Fixed: model `648fad788` from a clean detached tree, the part 8 default
+  - Fixed: model `59216edef` from a clean detached tree, the part 8 default
     config otherwise unchanged (ARS222, dt 150 s, 6 h, column, 82 levels,
     Float64, Float32 in the pair of section 7), `reproducible_restart: true`
     and hourly checkpoints in all six runs, the 150 s diagnostics `rhoa`, `ta`, `hus`, `q_tag_led_fix_<tag>` and
@@ -97,7 +97,7 @@ PASS. The tests run the check on a Float32 fixture.
     iteration and step cadence, no repeated evaluation and no post-Newton map
     occurs, so the check would pass without testing anything.
   - The analysis code is this PR's commit. The manifest of each job records
-    `head_sha` `648fad788`.
+    `head_sha` `59216edef`.
 
 ## 5. Job set and cost
 
@@ -170,8 +170,8 @@ their SHA256 to the bundle manifest's `artifacts` and sets
 
 The registry entry is data in
 `analysis/evidence/water_tag_application_registry.json`, status `pending`:
-`source_sha256` `f2ded45bfa7ecb6b6ad248d7c1fc444d504e854e6e25534504446758ebb41fbb`
-(`water_tag_applications.jl` at `648fad788`), `roster_key`
+`source_sha256` `c45fef7fbc654155ed1189169716086cc8a82222df7518f148cb06f01b98af94`
+(`water_tag_applications.jl` at `59216edef`), `roster_key`
 `water_tag_application_roster`, `inactive_arrays`
 `{"values": "values", "mark": "inactive"}`, the check log pattern of section 3,
 and `cts_version` empty. `register_producer` is called only in the record

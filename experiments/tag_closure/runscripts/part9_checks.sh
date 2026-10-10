@@ -2,7 +2,7 @@
 #
 # Part 9, PR B (design/PART9_PRODUCER.md, section 5): the producer's runtime
 # checks on the part 8 default case, TRMM 0M for 6 h, run from
-# claude/part9-producer at 648fad788 (PR #170, not on main). Six jobs. Not
+# claude/part9-producer at 59216edef (PR #170, not on main). Six jobs. Not
 # submitted by the PR. The session submits each job after the owner approves it.
 #
 # Cost estimate, from part 8's default job 14170101 (PART8.md: wall 844 s,
@@ -30,17 +30,17 @@
 # About 1.6 node-hours in all, 6 node-hours at the limits. A 6 h run costs
 # about as much as a short one here: steps are 1% of part 8's wall.
 #
-#   RUN_TREE=<clean detached tree at 648fad788> \
+#   RUN_TREE=<clean detached tree at 59216edef> \
 #       experiments/tag_closure/runscripts/part9_checks.sh [--submit] [on|off|newton|restarted|on_f32|off_f32 ...]
 #
 # Without --submit it runs g3base_submit.sh with --dry-run, which writes the
-# manifest (head_sha 648fad788) and prints the sbatch line. `restarted` is
+# manifest (head_sha 59216edef) and prints the sbatch line. `restarted` is
 # refused until `on` has written its 3 h checkpoint.
 set -euo pipefail
 
 REC="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-: "${RUN_TREE:?set RUN_TREE to a clean detached tree at 648fad788}"
-export EXPECT_SHA=648fad788eeb5b37afaea594690e5ea9e15ffeec KIND=run RUN_TREE
+: "${RUN_TREE:?set RUN_TREE to a clean detached tree at 59216edef}"
+export EXPECT_SHA=59216edef02a07d672d6aa4d113d4c7cb3822925 KIND=run RUN_TREE
 LOGS="${SCRATCH:?}/tag_closure/logs/part9"
 CHECKPOINT="${SCRATCH}/tag_closure/output/p9_trmm0m_on_6h/output_active/day0.10800.hdf5"
 mkdir -p "${LOGS}"

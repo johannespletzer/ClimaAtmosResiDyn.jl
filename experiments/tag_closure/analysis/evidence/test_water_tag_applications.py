@@ -3,7 +3,7 @@
     python3 -m unittest discover -s experiments/tag_closure/analysis/evidence -p test_water_tag_applications.py -v
 
 The fixture (make_water_tag_application_fixture.py) is synthetic. It follows
-the producer's format at 648fad788 and is never runtime evidence.
+the producer's format at 59216edef and is never runtime evidence.
 """
 
 import contextlib
@@ -161,9 +161,9 @@ class TestConverter(Fixture):
         config = wproof.load_registry()
         self.assertEqual(config["status"], "pending")
         self.assertEqual(config["producer_id"], wc.PRODUCER)
-        self.assertEqual(config["source"]["commit"], "648fad788eeb5b37afaea594690e5ea9e15ffeec")
+        self.assertEqual(config["source"]["commit"], "59216edef02a07d672d6aa4d113d4c7cb3822925")
         self.assertEqual(config["entry"]["source_sha256"],
-                         "f2ded45bfa7ecb6b6ad248d7c1fc444d504e854e6e25534504446758ebb41fbb")
+                         "c45fef7fbc654155ed1189169716086cc8a82222df7518f148cb06f01b98af94")
         self.assertEqual(config["entry"]["roster_key"], wc.ROSTER_KEY)
         self.assertEqual(config["entry"]["check_log_pattern"], wchecks.LOG_PATTERN)
         self.assertIsNone(config["entry"]["cts_version"])
@@ -179,7 +179,7 @@ class TestConverterFloat32(Fixture):
         _, bundle = self.convert()
         self.assertEqual(bundle.spec["precision"], "Float32")
         result = ca.evaluate_accounting(bundle, 0, fx.STEPS * fx.DT)
-        self.assertEqual(len(result["metrics"]["channels"]), 12)
+        self.assertEqual(len(result["metrics"]["channels"]), 14)
 
     def test_float32_checks_pass(self):
         for argv in (("complete_active_roster", self.runs["on"]),
