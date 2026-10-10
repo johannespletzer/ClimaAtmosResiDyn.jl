@@ -21,7 +21,11 @@ E="${REC}/experiments/tag_closure/analysis/evidence"
 mkdir -p "${OUT}"
 runs="${SCRATCH:?}/tag_closure/output"
 dir() { echo "${runs}/p9_trmm0m_$1_6h/output_0000"; }
-manifest() { ls "${SCRATCH}/tag_closure/manifests/p9_trmm0m_$1_6h"*.json | tail -n 1; }
+# The Slurm job's manifest, `<job>.<job id>.json`. A dry run's
+# `<job>.<timestamp>.json` sorts after it and is never taken.
+manifest() {
+    ls "${SCRATCH}/tag_closure/manifests/p9_trmm0m_$1_6h".*.json | grep -E '\.[0-9]+\.json$' | sort -V | tail -n 1
+}
 
 for run in on newton; do
     python3 -I "${E}/water_tag_applications_convert.py" "$(dir ${run})" --out "${OUT}/converted_${run}" \

@@ -1,6 +1,6 @@
 # Part 9, PR B (design/PART9_PRODUCER.md, section 5): the part 8 default case
 # (`p8_trmm0m_default_6h.yml`, W58's TRMM 0M default for 6 h) run from
-# claude/part9-producer at 2140fceaf.
+# claude/part9-producer at 648fad788.
 # The twin without the key, for the parent's bitwise parity.
 # Only the job_id, these comment lines, the keys below, the checkpoints and the
 # 150 s diagnostics differ from the part 8 file.

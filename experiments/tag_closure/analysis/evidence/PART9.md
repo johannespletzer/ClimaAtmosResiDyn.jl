@@ -2,7 +2,7 @@
 
 Skeleton, 2026-10-10. Nothing here is a result yet. The
 [design](../../design/PART9_PRODUCER.md) fixes the checks, the jobs and the
-stop rules. PR A is #170 (`claude/part9-producer`, `2140fceaf`).
+stop rules. PR A is #170 (`claude/part9-producer`, `648fad788`).
 
 ## 1. Jobs
 

@@ -569,7 +569,9 @@ python3 -m unittest discover -s experiments/tag_closure/analysis/evidence -p tes
 The converter writes the reader's receipt, native NPZ and ledgers from the
 producer's receipt and NetCDF, and refuses what does not match. The checks
 print `CHECK <key>: PASS` or `CHECK <key>: FAIL <reason>`. The proof builder
-writes `lifecycle_evidence.json`. The registry entry
+writes `lifecycle_evidence.json`, adds it and the copied logs to the
+manifest's `artifacts` and names it in `correction_accounting.lifecycle_evidence`.
+The registry entry
 (`water_tag_application_registry.json`) is pending until the checks pass on
 the cluster. The tests run on a synthetic fixture in the producer's format
 (`make_water_tag_application_fixture.py`), never runtime evidence.

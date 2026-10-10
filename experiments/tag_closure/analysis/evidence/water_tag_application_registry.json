@@ -5,11 +5,11 @@
  "source": {
   "path": "src/parameterized_tendencies/tagged_tracers/water_tag_applications.jl",
   "branch": "claude/part9-producer",
-  "commit": "2140fceafed233e627676a35360a985e958ce6cc"
+  "commit": "648fad788eeb5b37afaea594690e5ea9e15ffeec"
  },
  "entry": {
   "cts_version": null,
-  "source_sha256": "50b9b268504e4c653fc638e833309b721bce2b583dc044f9c5426d630e9bd7a6",
+  "source_sha256": "f2ded45bfa7ecb6b6ad248d7c1fc444d504e854e6e25534504446758ebb41fbb",
   "roster_key": "water_tag_application_roster",
   "inactive_arrays": {"values": "values", "mark": "inactive"},
   "check_log_pattern": "^CHECK (?P<check>[a-z_]+): (?P<result>PASS|FAIL)\\b"

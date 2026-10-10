@@ -10,8 +10,9 @@ log with the registry's check_log_pattern and writes the proof:
 kind runtime_validation, the receipt's model identity and integrator pin,
 producer_id, producer_source and the six checks with result, command,
 environment and log. A check is PASS only when its log names it PASS and
-never FAIL. It prints the new artifact names and their SHA256 for the
-bundle's `artifacts`. It registers nothing: register_producer is called in the
+never FAIL. It adds the new artifacts and their SHA256 to the bundle's
+manifest and sets `correction_accounting.lifecycle_evidence` to the proof. It
+registers nothing: register_producer is called in the
 record follow-up, after the checks pass on the cluster.
 """
 
@@ -82,7 +83,23 @@ def build_proof(bundle_dir, receipt, source, logs, environment, out=PROOF, regis
              "integrator_pin": header["integrator_pin"], "producer_source": source_name, "checks": checks}
     (bundle_dir / out).write_text(json.dumps(proof, sort_keys=True, indent=1) + "\n")
     artifacts[out] = sha256_file(bundle_dir / out)
+    attach(bundle_dir, artifacts, out)
     return proof, artifacts
+
+
+def attach(bundle_dir, artifacts, out):
+    """Name the proof in the converted section and add the new artifacts to its manifest."""
+    manifest = Path(bundle_dir) / "manifest.json"
+    if not manifest.is_file():
+        raise ProofError(f"no manifest.json in {bundle_dir}")
+    data = json.loads(manifest.read_text())
+    try:
+        section = data["acceptance"]["correction_accounting"]
+        data["acceptance"]["artifacts"].update(artifacts)
+    except (KeyError, TypeError, AttributeError) as exc:
+        raise ProofError(f"{manifest} has no correction_accounting section or artifacts") from exc
+    section["lifecycle_evidence"] = out
+    manifest.write_text(json.dumps(data, sort_keys=True, indent=1) + "\n")
 
 
 def main(argv=None):

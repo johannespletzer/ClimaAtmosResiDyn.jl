@@ -2,7 +2,7 @@
 
     python3 make_water_tag_application_fixture.py NEW_DIRECTORY [--float32]
 
-The format follows the writer of claude/part9-producer at 2140fceaf
+The format follows the writer of claude/part9-producer at 648fad788
 (src/parameterized_tendencies/tagged_tracers/water_tag_applications.jl,
 `_start_water_tag_applications!` and `finalize_water_tag_applications!`):
 the receipt header keys, the step lines, the record ids, and the NetCDF
@@ -27,7 +27,7 @@ from pathlib import Path
 
 import numpy as np
 
-COMMIT = "2140fceafed233e627676a35360a985e958ce6cc"
+COMMIT = "648fad788eeb5b37afaea594690e5ea9e15ffeec"
 DIFF = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 CONFIG = """job_id: "fixture"
 water_tracers:
@@ -185,10 +185,13 @@ def write_run(root, sim, dtype, key_on=True, first_step=0, model_dirs=True):
             total = sim["ledger"][:, cols, :].sum(axis=1)
             diag[prefix + tag] = (total / sim["rho"], "kg kg^-1")
     for short, (values, units) in diag.items():
-        write_nc(root / f"{short}_150s_inst.nc", {
-            "time": (edges, ("time",), {"units": "s"}), "z": (sim["z"], ("z",), {"units": "m"}),
-            short: (values[first_step:].astype(dtype), ("time", "z"), {"units": units})},
-            {"time": None, "z": CELLS})
+        variables = {"time": (edges, ("time",), {"units": "s"}), "z": (sim["z"], ("z",), {"units": "m"}),
+                     short: (values[first_step:].astype(dtype), ("time", "z"), {"units": units})}
+        if short == "rhoa":
+            # The model writes column diagnostics with time last, as hus (z, time).
+            variables["rhoa_time_last"] = (np.ascontiguousarray(values[first_step:].astype(dtype).T),
+                                           ("z", "time"), {"units": units})
+        write_nc(root / f"{short}_150s_inst.nc", variables, {"time": None, "z": CELLS})
     for n in range(first_step, STEPS + 1):
         if n == 0 or n % 2:
             continue

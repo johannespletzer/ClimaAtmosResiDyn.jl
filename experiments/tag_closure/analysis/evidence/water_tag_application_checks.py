@@ -38,7 +38,7 @@ CHECK_KEYS = {"accepted_weights": "accepted_weights", "trial_rollback": "trial_r
 # The registry's check_log_pattern (water_tag_application_registry.json) reads these lines.
 LOG_PATTERN = r"^CHECK (?P<check>[a-z_]+): (?P<result>PASS|FAIL)\b"
 # The model's own ledgers, per tag, and the mechanisms each one sums
-# (test/water_tag_applications_common.jl, check_model_ledgers, at 2140fceaf).
+# (test/water_tag_applications_common.jl, check_model_ledgers, at 648fad788).
 MODEL_LEDGERS = (("q_tag_led_fix_", ("rescale", "empty", "repair", "close")),
                  ("q_tag_led_inc_", ("inc", "negative")))
 # Proposed, 2026-10-10. A model ledger diagnostic is written as L/rho in the
@@ -71,7 +71,8 @@ def ars222():
     return {"b_exp": [d, 1 - d, 0.0], "b_imp": [0.0, 1 - g, g], "implicit_diagonal": [0.0, g, g]}
 
 
-# ClimaTimeSteppers 0.10.7, solvers/imex_tableaus.jl, IMEXTableau(::ARS222):
+# ClimaTimeSteppers 1.0.1, the version the run tree pins (.buildkite/Manifest-v1.11.toml),
+# solvers/imex_tableaus.jl, IMEXTableau(::ARS222):
 # b = the last row of a, as IMEXTableau's defaults set it.
 REFERENCE_TABLEAUS = {"ARS222": ars222}
 
@@ -316,6 +317,14 @@ def read_nc(path):
         return {k: np.asarray(v[:]) for k, v in ds.variables.items()}
 
 
+def read_nc_dims(path):
+    """Each variable with its dimension names, so the time axis is found by name."""
+    from netCDF4 import Dataset
+    with Dataset(path) as ds:
+        ds.set_auto_mask(False)
+        return {k: (np.asarray(v[:]), tuple(v.dimensions)) for k, v in ds.variables.items()}
+
+
 def parent_bitwise_parity(on, off):
     need(not (off / wc.RECEIPT_FILE).exists(),
          f"{off} has a receipt, so the key was on")
@@ -364,17 +373,21 @@ def restart(continuous, restarted):
     for name in cps:
         fields += compare(read_checkpoint(continuous / name), read_checkpoint(restarted / name), name)
     dc, dr = diagnostics(continuous), diagnostics(restarted)
-    for name in sorted(set(dc) & set(dr)):
-        a, b = read_nc(dc[name]), read_nc(dr[name])
-        if "time" not in a:
-            continue
-        ta, tb = a["time"], b["time"]
+    need(dc and set(dc) == set(dr), "diagnostic file sets differ or are empty")
+    for name in dc:
+        a, b = read_nc_dims(dc[name]), read_nc_dims(dr[name])
+        need(set(a) == set(b), f"{name}: variable sets differ, {sorted(set(a) ^ set(b))[:5]}")
+        need("time" in a, f"{name}: no time coordinate")
+        ta, tb = a["time"][0], b["time"][0]
         common = np.intersect1d(ta[ta > t0], tb)
-        for k in a:
-            if k == "time" or k not in b or a[k].shape[:1] != ta.shape:
-                continue
-            ia, ib = np.searchsorted(ta, common), np.searchsorted(tb, common)
-            need(bitwise(np.ascontiguousarray(a[k][ia]), np.ascontiguousarray(b[k][ib])),
+        need(common.size, f"{name}: no common time after {t0} s")
+        ia, ib = np.searchsorted(ta, common), np.searchsorted(tb, common)
+        for k in sorted(a):
+            (va, da), (vb, db) = a[k], b[k]
+            need(da == db, f"{name}: {k} has dims {da} against {db}")
+            if "time" in da:
+                va, vb = np.take(va, ia, axis=da.index("time")), np.take(vb, ib, axis=db.index("time"))
+            need(bitwise(np.ascontiguousarray(va), np.ascontiguousarray(vb)),
                  f"{name}: {k} after the restart differs")
             fields += 1
     return f"{len(steps_r)} step lines, {len(B['record_id'])} records, {len(edges)} ledger edges, {fields} arrays bitwise"

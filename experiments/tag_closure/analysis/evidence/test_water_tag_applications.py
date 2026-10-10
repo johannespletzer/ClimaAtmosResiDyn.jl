@@ -3,7 +3,7 @@
     python3 -m unittest discover -s experiments/tag_closure/analysis/evidence -p test_water_tag_applications.py -v
 
 The fixture (make_water_tag_application_fixture.py) is synthetic. It follows
-the producer's format at 2140fceaf and is never runtime evidence.
+the producer's format at 648fad788 and is never runtime evidence.
 """
 
 import contextlib
@@ -161,9 +161,9 @@ class TestConverter(Fixture):
         config = wproof.load_registry()
         self.assertEqual(config["status"], "pending")
         self.assertEqual(config["producer_id"], wc.PRODUCER)
-        self.assertEqual(config["source"]["commit"], "2140fceafed233e627676a35360a985e958ce6cc")
+        self.assertEqual(config["source"]["commit"], "648fad788eeb5b37afaea594690e5ea9e15ffeec")
         self.assertEqual(config["entry"]["source_sha256"],
-                         "50b9b268504e4c653fc638e833309b721bce2b583dc044f9c5426d630e9bd7a6")
+                         "f2ded45bfa7ecb6b6ad248d7c1fc444d504e854e6e25534504446758ebb41fbb")
         self.assertEqual(config["entry"]["roster_key"], wc.ROSTER_KEY)
         self.assertEqual(config["entry"]["check_log_pattern"], wchecks.LOG_PATTERN)
         self.assertIsNone(config["entry"]["cts_version"])
@@ -275,6 +275,18 @@ class TestChecks(Fixture):
         self.setUp()
         edit_receipt(self.runs["restarted"], lambda l: l[0].update(ledger_start="zero_at_restart"))
         self.assert_fail("all_channel_checkpoint_restart", *self.commands()["all_channel_checkpoint_restart"])
+        self.tearDown()
+        self.setUp()
+        # A variable with time last, as the model writes hus (z, time), is compared at the last time.
+        edit_nc(self.runs["restarted"] / "rhoa_150s_inst.nc", "rhoa_time_last",
+                lambda v: v.__setitem__((0, -1), np.nextafter(v[0, -1], np.inf)))
+        self.assertIn("rhoa_time_last", self.assert_fail("all_channel_checkpoint_restart",
+                                                         *self.commands()["all_channel_checkpoint_restart"]))
+        self.tearDown()
+        self.setUp()
+        (self.runs["restarted"] / "rhoa_150s_inst.nc").unlink()
+        self.assertIn("file sets", self.assert_fail("all_channel_checkpoint_restart",
+                                                    *self.commands()["all_channel_checkpoint_restart"]))
 
 
 class TestProof(Fixture):
@@ -294,9 +306,8 @@ class TestProof(Fixture):
         self.assertEqual(set(proof["checks"]), set(wproof.GATE_CHECKS))
         manifest = out / "manifest.json"
         data = json.loads(manifest.read_text())
-        data["acceptance"]["artifacts"].update(artifacts)
-        data["acceptance"]["correction_accounting"]["lifecycle_evidence"] = wproof.PROOF
-        manifest.write_text(json.dumps(data))
+        self.assertEqual(data["acceptance"]["correction_accounting"]["lifecycle_evidence"], wproof.PROOF)
+        self.assertTrue(all(data["acceptance"]["artifacts"][k] == v for k, v in artifacts.items()))
         bundle = Bundle(manifest)
         pid, entry = wproof.registry_entry(proof["integrator_pin"], allow_pending=True)
         ca.producer_entry(pid, entry)
