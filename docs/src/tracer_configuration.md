@@ -254,7 +254,7 @@ processes to record. They work with no tags configured.
 
 ```yaml
 microphysics_model: "0M"
-energy_source_tag_offset: 110495.0
+energy_source_tag_offset: 166764.0
 energy_source_tags:
   - name: tropics
     region: tropics
