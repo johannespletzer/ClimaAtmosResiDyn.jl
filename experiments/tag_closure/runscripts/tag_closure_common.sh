@@ -198,6 +198,10 @@ case "${TAG_CLOSURE_MACHINE}" in
         set +u
         module load "${TERRABYTE_CPU_COMPILER_MODULE}"
         module load "${TERRABYTE_CPU_MPI_MODULE}"
+        # The compute nodes have no git. The water tag application producer
+        # (PR #170) runs `git` for the receipt's model identity, and writes
+        # "unknown" without it, which the part 9 converter refuses.
+        module load git/2.49.0
         set -u
         export JULIA_DEPOT_PATH="${TERRABYTE_DEPOT_ROOT:-${TERRABYTE_DEPOT_ROOT_ABSOLUTE}}/${TERRABYTE_CPU_DEPOT_NAME}"
         RUN_DIR="${RUN_DIR:-${SCRATCH:?SCRATCH is not set}/tag_closure}"

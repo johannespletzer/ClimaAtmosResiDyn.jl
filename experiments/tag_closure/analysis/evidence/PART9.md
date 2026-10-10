@@ -34,6 +34,14 @@ design. The job script now loads `git/2.49.0`. The outputs are under
 `output/p9_wave2_unknown_identity/`. Every job reruns at `2c63c5c53`, PR A's
 head after the merge of `main` and the 1.11-only CI list.
 
+Third wave, 2026-10-10 13:17, producer at `2c63c5c53`: the on job 14186477
+completed (14:20, 9.0 GB) with the identity still "unknown". The git module
+had been added to `g3base_check.sh`, which the part 9 jobs do not run. They
+run `phase_c.sh` through `tag_closure_common.sh`, whose terrabyte branch now
+loads `git/2.49.0`. Jobs 14186479 to 14186481 were cancelled, 14186478 (off)
+ran to completion. The outputs are under `output/p9_wave3_unknown_identity/`.
+Every job reruns at `2c63c5c53`.
+
 ## 2. Model identity
 
 `head_sha` of each manifest, `model_commit` and `model_diff_sha256` of each
