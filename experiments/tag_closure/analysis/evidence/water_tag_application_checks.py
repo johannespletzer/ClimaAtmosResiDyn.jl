@@ -38,7 +38,7 @@ CHECK_KEYS = {"accepted_weights": "accepted_weights", "trial_rollback": "trial_r
 # The registry's check_log_pattern (water_tag_application_registry.json) reads these lines.
 LOG_PATTERN = r"^CHECK (?P<check>[a-z_]+): (?P<result>PASS|FAIL)\b"
 # The model's own ledgers, per tag, and the mechanisms each one sums
-# (test/water_tag_applications_common.jl, check_model_ledgers, at 59216edef).
+# (test/water_tag_applications_common.jl, check_model_ledgers, at 2c63c5c53).
 MODEL_LEDGERS = (("q_tag_led_fix_", ("rescale", "empty", "repair", "close")),
                  ("q_tag_led_inc_", ("inc", "negative")))
 # Proposed, 2026-10-10. A model ledger diagnostic is written as L/rho in the

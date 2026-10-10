@@ -28,7 +28,7 @@ manifest() {
 }
 
 for run in on newton; do
-    python3 -I "${E}/water_tag_applications_convert.py" "$(dir ${run})" --out "${OUT}/converted_${run}" \
+    python3 "${E}/water_tag_applications_convert.py" "$(dir ${run})" --out "${OUT}/converted_${run}" \
         --manifest "$(manifest ${run})"
 done
 
@@ -36,8 +36,8 @@ status=0
 check() {
     local key=$1
     shift
-    echo "python3 -I ${E}/water_tag_application_checks.py $*" >"${OUT}/${key}.cmd"
-    python3 -I "${E}/water_tag_application_checks.py" "$@" >"${OUT}/${key}.log" || status=1
+    echo "python3 ${E}/water_tag_application_checks.py $*" >"${OUT}/${key}.cmd"
+    python3 "${E}/water_tag_application_checks.py" "$@" >"${OUT}/${key}.log" || status=1
     head -n 2 "${OUT}/${key}.log"
 }
 check accepted_weights accepted_weights "${OUT}/converted_on" --ode-algo ARS222 --roles final_map,implicit
@@ -47,9 +47,9 @@ check complete_active_roster complete_active_roster "${OUT}/converted_on"
 check parent_bitwise_parity parent_bitwise_parity "$(dir on)" "$(dir off)"
 # The Float32 pair (owner, 2026-10-10) adds its result to the same log. The
 # gate passes the check only when every named result is PASS.
-echo "python3 -I ${E}/water_tag_application_checks.py parent_bitwise_parity $(dir on_f32) $(dir off_f32)" \
+echo "python3 ${E}/water_tag_application_checks.py parent_bitwise_parity $(dir on_f32) $(dir off_f32)" \
     >>"${OUT}/parent_bitwise_parity.cmd"
-python3 -I "${E}/water_tag_application_checks.py" parent_bitwise_parity "$(dir on_f32)" "$(dir off_f32)" \
+python3 "${E}/water_tag_application_checks.py" parent_bitwise_parity "$(dir on_f32)" "$(dir off_f32)" \
     >>"${OUT}/parent_bitwise_parity.log" || status=1
 tail -n 2 "${OUT}/parent_bitwise_parity.log"
 check all_channel_checkpoint_restart restart "$(dir on)" "$(dir restarted)"

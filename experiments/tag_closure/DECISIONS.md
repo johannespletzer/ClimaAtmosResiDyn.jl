@@ -341,7 +341,7 @@ review of PR #171.
     test.** **In force.** The on, Newton and on_f32 jobs of 2026-10-10 failed
     at their first step with `KeyError: key (:inc, :evap, :total)`. The roster
     gave `inc` and `negative` to partition tags alone, while the increment
-    follower runs for every tag. The fix (claude/part9-producer `59216edef`)
+    follower runs for every tag. The fix (claude/part9-producer `2c63c5c53`)
     meters every tag, the test configuration gains a source tag, and the
     model-ledger tie covers it. PR B is pinned to that head. The alternatives,
     a roster fix without a test and a refusal of source tags, were declined.
@@ -349,6 +349,16 @@ review of PR #171.
   - **A manual 1.10 bounds-checked run of the three applications groups
     precedes the merge of PR A.** **In force.** The third tracer moves the
     1.10 memory margin, which stood within 0.5 GiB of the runner's 16 GB.
+  - **The three applications test groups run on 1.11 only.** **In force.** A
+    manual bounds-checked 1.10 run of the groups at `59216edef` ended two of
+    them with the runner's shutdown signal after about 50 min, the 16 GB
+    memory pattern, once the test configuration carried a third tag. A
+    second memory round and dropping the source tag were declined. PR A at
+    `2c63c5c53` lists them beside the upstream-only groups.
+  - **The job script loads `git/2.49.0`.** **In force.** The second wave's
+    receipts carried the model identity as "unknown" because git is not on
+    the compute node's PATH, so the converter refused them. The producer stays
+    as designed. Passing the identity from the submitter was declined.
 
 ## 2026-10-09
 

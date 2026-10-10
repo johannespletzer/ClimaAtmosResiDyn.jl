@@ -2,7 +2,7 @@
 
 Skeleton, 2026-10-10. Nothing here is a result yet. The
 [design](../../design/PART9_PRODUCER.md) fixes the checks, the jobs and the
-stop rules. PR A is #170 (`claude/part9-producer`, `59216edef`).
+stop rules. PR A is #170 (`claude/part9-producer`, `2c63c5c53`).
 
 ## 1. Jobs
 
@@ -20,9 +20,19 @@ First wave, 2026-10-10 07:30, producer at `648fad788`: jobs 14185494 (on),
 The two off runs completed (13 and 12 min, 9.2 GB). The three on runs failed at
 their first step with `KeyError: key (:inc, :evap, :total)`: the roster gave
 `inc` and `negative` to partition tags alone, while the increment follower runs
-for every tag. Fixed in PR A at `59216edef` with a source tag in the test. The
+for every tag. Fixed in PR A at `2c63c5c53` with a source tag in the test. The
 wave's outputs are under `output/p9_wave1_failed_roster/`, its logs and
 manifests keep their job ids. Every job reruns at the new head.
+
+Second wave, 2026-10-10 11:54, producer at `59216edef`: jobs 14186068 (on,
+14:03, 9.0 GB), 14186069 (off, 12:30, 7.8 GB), 14186070 (newton, 12:52,
+9.3 GB), 14186071 (on_f32, 13:00, 9.0 GB), 14186072 (off_f32, 12:38, 7.7 GB)
+and 14186200 (restarted, 12:30, 9.2 GB), all completed. Every receipt carries
+`model_commit` and `model_diff_sha256` as "unknown": git is not on the compute
+node's PATH, as the provenance states. The converter refuses such a receipt by
+design. The job script now loads `git/2.49.0`. The outputs are under
+`output/p9_wave2_unknown_identity/`. Every job reruns at `2c63c5c53`, PR A's
+head after the merge of `main` and the 1.11-only CI list.
 
 ## 2. Model identity
 

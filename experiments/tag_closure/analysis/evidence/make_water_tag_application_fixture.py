@@ -2,7 +2,7 @@
 
     python3 make_water_tag_application_fixture.py NEW_DIRECTORY [--float32]
 
-The format follows the writer of claude/part9-producer at 59216edef
+The format follows the writer of claude/part9-producer at 2c63c5c53
 (src/parameterized_tendencies/tagged_tracers/water_tag_applications.jl,
 `_start_water_tag_applications!` and `finalize_water_tag_applications!`):
 the receipt header keys, the step lines, the record ids, and the NetCDF
@@ -27,7 +27,7 @@ from pathlib import Path
 
 import numpy as np
 
-COMMIT = "59216edef02a07d672d6aa4d113d4c7cb3822925"
+COMMIT = "2c63c5c53b6c1e70ae7ab3c63367fca672c6dc15"
 DIFF = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 CONFIG = """job_id: "fixture"
 water_tracers:

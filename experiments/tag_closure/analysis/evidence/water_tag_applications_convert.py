@@ -4,7 +4,7 @@
 
 RUN_DIR is one run's output directory. It holds the producer's two files,
 `water_tag_application_receipt.jsonl` and `water_tag_applications.nc`, written
-by `water_tag_applications: true` (PR #170, claude/part9-producer at 59216edef),
+by `water_tag_applications: true` (PR #170, claude/part9-producer at 2c63c5c53),
 and the model's diagnostics. NEW_DIR receives:
 
   - `application_receipt.json`: the receipt header as written, with `steps`
