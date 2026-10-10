@@ -50,7 +50,7 @@ The producer's state. Each call of a metered writer takes the next slot of its
 channel and writes the change it applies there, before the writer applies it.
 So two opposite changes inside one step stay two applications. A slot also
 holds the writer's event scale and its flags, `fallback + 2 bound + 4 clamp + 8 zero_normalization`, per cell. After each accepted step,
-[`finalize_water_tag_applications!`](@ref) gives each slot its role and weight,
+`finalize_water_tag_applications!` gives each slot its role and weight,
 adds it to the channel's cumulative ledger, writes it out and frees the slots.
 
 The meter writes only its own fields. The slots and the ledgers are allocated
