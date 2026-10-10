@@ -8,7 +8,7 @@
 
 job_id: "p9_trmm0m_restarted_6h"
 water_tag_applications: true
-restart_file: "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/p9_trmm0m_on_6h/output_active/day0.10800.hdf5"
+restart_file: "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/p9_trmm0m_on_6h/output_0000/day0.10800.hdf5"
 
 # Part 9: hourly checkpoints, read by the parity and restart checks, and a
 # reproducible restart in every run of the set, so the runs differ only in the
