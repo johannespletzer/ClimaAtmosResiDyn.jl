@@ -316,10 +316,10 @@ entry point for simulations written as scripts; configuration-driven runs go thr
     residuals against, a mapping from `:mass`, `:water` or `:energy` to a
     `BudgetTolerance`. Without one the parent budget takes the tolerances from the
     committed calibration table for this backend, float type and rank count.
+    With no table row every numeric verdict is `blocked`, naming the tolerance.
   - `water_tag_applications = false`: Whether the run writes the water tags'
     accepted applications, `water_tag_applications` in the configuration. See
     `docs/src/tagged_water.md`.
-    With no table row every numeric verdict is `blocked`, naming the tolerance.
 
 # Returns
 

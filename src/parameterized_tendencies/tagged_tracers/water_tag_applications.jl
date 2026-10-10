@@ -9,9 +9,14 @@ import LinearAlgebra: diag
     WATER_TAG_APPLICATION_ROSTER_KEY
 
 The receipt key under which the producer writes the roster of the channels it
-instruments, and the ones it marks unsupported.
+instruments, a list of their ids.
 """
 const WATER_TAG_APPLICATION_ROSTER_KEY = "water_tag_application_roster"
+
+# The receipt keys of each channel's description and of the mechanisms the
+# producer does not meter, with the reason.
+const WATER_TAG_APPLICATION_CHANNELS_KEY = "water_tag_application_channels"
+const WATER_TAG_APPLICATION_UNSUPPORTED_KEY = "water_tag_application_unsupported"
 
 # The output files, in the run's output directory.
 const WATER_TAG_APPLICATION_RECEIPT = "water_tag_application_receipt.jsonl"
@@ -65,6 +70,7 @@ mutable struct WaterApplicationMeter{F, L}
     counts::Dict{Symbol, Int}
     active::Int
     unattributed::Int
+    unattributed_site::String
     stepping::Bool
     precipitation::Bool
     unsupported::Vector{Tuple{String, String}}
@@ -161,6 +167,11 @@ function _build_water_tag_application_meter(
         "`water_tag_applications: true` needs `water_tracers`. It meters the \
         corrections of the water tags, and there are none.",
     )
+    has_water_tag_leak_correction(tags) && error(
+        "`water_tag_applications: true` does not support \
+        `water_tag_leak_correction: true`. The leak correction is not metered \
+        yet, as the copies are not, so the roster would be incomplete.",
+    )
     has_water_tag_updraft_copies(tags) && error(
         "`water_tag_applications: true` does not support \
         `water_tag_updraft_copy: true`. The copies' repair and filter are not \
@@ -193,6 +204,7 @@ function _build_water_tag_application_meter(
         Dict(hook => 0 for hook in WATER_TAG_APPLICATION_HOOKS),
         0,
         0,
+        "",
         false,
         has_water_tag_precipitation(tags),
         unsupported,
@@ -233,11 +245,19 @@ a property of the cache's type, so the off path folds away at compile time.
     hasfield(typeof(ledger), :meter) ? ledger.meter : nothing
 
 # The next slot of a channel, for one call of a writer. Outside a counted hook
-# the call is not part of an accepted step's application inventory. It writes
-# into a scratch slot and is counted, and the receipt reports the count.
+# the call has no role in the accepted step. It writes into a scratch slot and
+# is counted, with the channel and the last firing before it. The step's
+# finalization then refuses the step.
 function next_water_slot!(meter::WaterApplicationMeter, mechanism, tag, part)
     if meter.active == 0
         meter.unattributed += 1
+        site = if isempty(meter.firings)
+            "before any counted firing"
+        else
+            (hook, ordinal) = meter.firings[end]
+            "after firing $ordinal of $hook"
+        end
+        meter.unattributed_site = "$mechanism of $(_tag_type_name(typeof(tag))), $site"
         return meter.scratch
     end
     key = (
@@ -529,15 +549,26 @@ function _json(io, x::Union{AbstractDict, NamedTuple})
 end
 water_application_json(x) = sprint(_json, x)
 
-function _git_commit()
-    dir = pkgdir(@__MODULE__)
-    try
-        commit = readchomp(`git -C $dir rev-parse HEAD`)
-        dirty = !isempty(readchomp(`git -C $dir status --porcelain`))
-        return commit, dirty
+# The model's identity as the evidence manifest records it: the commit, whether
+# the tree is dirty, and the sha256 of `git diff HEAD --binary`, which is the
+# hash of the empty string for a clean tree. Off a git checkout, or without
+# `sha256sum`, the names are "unknown".
+function _git_identity(dir = pkgdir(@__MODULE__))
+    quiet(cmd) = pipeline(cmd; stderr = devnull)
+    commit, dirty = try
+        commit = readchomp(quiet(`git -C $dir rev-parse HEAD`))
+        commit, !isempty(readchomp(quiet(`git -C $dir status --porcelain`)))
     catch
-        return "unknown", true
+        return "unknown", true, "unknown"
     end
+    diff = `git -C $dir diff HEAD --binary --no-ext-diff --no-textconv`
+    diff_sha256 = try
+        first(split(readchomp(pipeline(quiet(diff), quiet(`sha256sum`)))))
+    catch
+        "unknown"
+    end
+    occursin(r"^[0-9a-f]{64}$", diff_sha256) || (diff_sha256 = "unknown")
+    return commit, dirty, diff_sha256
 end
 
 # The native cells: the volume weight and the coordinates of each node, in the
@@ -568,22 +599,20 @@ function _start_water_tag_applications!(meter, integrator)
     meter.pin = water_tag_application_pin(integrator)
     ᶜρ = integrator.u.c.ρ
     FT = eltype(ᶜρ)
-    commit, dirty = _git_commit()
-    roster = (;
-        channels = [
-            (;
-                id = c.id,
-                mechanism = c.mechanism,
-                tag = c.tag,
-                compartment = c.compartment,
-                quantity = c.quantity,
-                units = c.units,
-                event_scale = c.event_scale,
-                status = "observed",
-            ) for c in meter.channels
-        ],
-        unsupported = [(; mechanism = m, reason = r) for (m, r) in meter.unsupported],
-    )
+    commit, dirty, diff_sha256 = _git_identity()
+    channels = [
+        (;
+            id = c.id,
+            mechanism = c.mechanism,
+            tag = c.tag,
+            compartment = c.compartment,
+            quantity = c.quantity,
+            units = c.units,
+            event_scale = c.event_scale,
+            status = "observed",
+        ) for c in meter.channels
+    ]
+    unsupported = [(; mechanism = m, reason = r) for (m, r) in meter.unsupported]
     header = Dict{String, Any}(
         "schema_version" => 1,
         "semantics" => "weighted_final_additive_updates",
@@ -591,15 +620,20 @@ function _start_water_tag_applications!(meter, integrator)
         "producer" => "climaatmos.water_tag_applications",
         "model_commit" => commit,
         "model_dirty" => dirty,
+        "model_diff_sha256" => diff_sha256,
         "integrator_pin" => meter.pin,
         "precision" => string(FT),
         "segment_start_seconds" => meter.t_last,
         "ledger_start" => meter.ledger_start,
         "native_arrays" => WATER_TAG_APPLICATION_ARRAYS,
         "roster_key" => WATER_TAG_APPLICATION_ROSTER_KEY,
-        WATER_TAG_APPLICATION_ROSTER_KEY => roster,
+        WATER_TAG_APPLICATION_ROSTER_KEY => [c.id for c in meter.channels],
+        WATER_TAG_APPLICATION_CHANNELS_KEY => channels,
+        WATER_TAG_APPLICATION_UNSUPPORTED_KEY => unsupported,
     )
-    open(joinpath(meter.output_dir, WATER_TAG_APPLICATION_RECEIPT), "a") do io
+    # Each run segment starts both files afresh, so they always hold the same
+    # steps. A segment started where a pair exists replaces it.
+    open(joinpath(meter.output_dir, WATER_TAG_APPLICATION_RECEIPT), "w") do io
         println(io, water_application_json(header))
     end
     weights, geometry, names, units = _water_application_geometry(ᶜρ)
@@ -675,6 +709,12 @@ function finalize_water_tag_applications!(integrator)
     meter = water_meter(integrator.p)
     meter.started || _start_water_tag_applications!(meter, integrator)
     (; template, pin) = meter
+    meter.unattributed == 0 || error(
+        "The water tag producer saw $(meter.unattributed) writer calls outside \
+        the counted hooks $(WATER_TAG_APPLICATION_HOOKS) in the step ending at \
+        $(float(integrator.t)) s, the last one the $(meter.unattributed_site). \
+        Their changes have no role in the step, so the receipt would miss them.",
+    )
     for hook in WATER_TAG_APPLICATION_HOOKS
         expected = length(template.per_hook[hook])
         meter.counts[hook] == expected || error(
@@ -760,7 +800,6 @@ function finalize_water_tag_applications!(integrator)
         "applications" => applications,
         "stage_observations" => observations,
         "dropped_zero_applications" => dropped,
-        "unattributed_calls" => meter.unattributed,
     )
     open(joinpath(meter.output_dir, WATER_TAG_APPLICATION_RECEIPT), "a") do io
         println(io, water_application_json(step))
@@ -783,7 +822,6 @@ function finalize_water_tag_applications!(integrator)
     for hook in WATER_TAG_APPLICATION_HOOKS
         meter.counts[hook] = 0
     end
-    meter.unattributed = 0
     meter.t_last = stop
     return nothing
 end

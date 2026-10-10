@@ -39,6 +39,9 @@ const KNOWN_TEST_GROUPS = (
     "tagging_water_leak",
     "tagging_water_precipitation",
     "tagging_water_applications",
+    "tagging_water_applications_stage",
+    "tagging_water_applications_parity",
+    "tagging_water_applications_float32",
     "tagging_water_precipitation_sphere",
     "tagging_water_rainout_jacobian",
     "parameterizations",
@@ -345,11 +348,38 @@ if TEST_GROUP in ("tagging_water_precipitation", "all")
 end
 
 # The water tags' application producer on the column of the rain and snow
-# parts. The file builds the column five times: with the producer in Float64
-# and Float32, without it in both, and once from a checkpoint.
+# parts, in Float64. The file builds the column three times: with the
+# producer, and twice from a checkpoint of the first. With the three groups
+# below in one process, it took about 98 minutes and 23.5 GB on Julia 1.10,
+# past a GitHub runner's 90 minutes and 16 GB. With the stage cadence it still
+# peaked at 15.5 GiB. So the stage cadence and each float type's parity have a
+# process of their own.
 if TEST_GROUP in ("tagging_water_applications", "all")
     @safetestset "Water tag application producer" begin
         @time include("water_tag_applications_integration.jl")
+    end
+end
+
+# The producer with the constraints at every stage, built once.
+if TEST_GROUP in ("tagging_water_applications_stage", "all")
+    @safetestset "Water tag application producer at stage cadence" begin
+        @time include("water_tag_applications_stage_integration.jl")
+    end
+end
+
+# The model's fields with the producer and without it, after each of six
+# steps, bit for bit. Each group builds the column twice in one float type.
+if TEST_GROUP in ("tagging_water_applications_parity", "all")
+    @safetestset "Water tag application producer: parity in Float64" begin
+        include("water_tag_applications_parity_integration.jl")
+        # Called in the latest world, since the include above defines it.
+        @time Base.invokelatest(check_parity, "Float64")
+    end
+end
+if TEST_GROUP in ("tagging_water_applications_float32", "all")
+    @safetestset "Water tag application producer: parity in Float32" begin
+        include("water_tag_applications_parity_integration.jl")
+        @time Base.invokelatest(check_parity, "Float32")
     end
 end
 

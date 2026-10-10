@@ -1,142 +1,33 @@
 #=
 Integration test for the water tags' application producer,
-`water_tag_applications: true`, on the 1-moment column of
-`tagged_water_precipitation_integration.jl`: two altitude region tags with
-rain and snow parts, under `water_tag_transport: increment` and with the tags'
-per-tag ledgers. That column runs the rescale, the emptying, the partition
-repair, the closing step, the follow of rain and snow, and the follower with
-its negative water. It checks:
- 1. the weights of each role against the ARS343 and ARS222 tableaus;
- 2. the receipt: one accepted trial per step, contiguous steps, an applied
-    record of every channel at every step, and each weight as the reader
-    computes it from the pin and the step's edges;
+`water_tag_applications: true`, on the column of
+`water_tag_applications_common.jl`. That column runs the rescale, the emptying,
+the partition repair, the closing step, the follow of rain and snow, and the
+follower with its negative water. It checks:
+ 1. the weights of each role and the integrator pin against the ARS343 and
+    ARS222 tableaus.
+ 2. the receipt: its names, the roster under its key, one accepted trial per
+    step, contiguous steps, an applied record of every channel at every step,
+    and each weight as the reader computes it from the pin and the step's edges.
  3. a move of the follow between a tag's parts is two legs, and opposite
-    applications to one channel in one step stay two records;
+    applications to one channel in one step stay two records.
  4. the cumulative ledger of each channel is the running sum of its applied
-    records, bit for bit;
+    records, bit for bit.
  5. the applied records of each tag add up to the step changes of the model's
-    own ledgers `q_tag_led_fix_<name>` and `q_tag_led_inc_<name>`, to rounding;
- 6. the model's fields with the producer are those without it, bit for bit,
-    in Float64 and Float32;
- 7. a run restarted from a checkpoint gives the continuous run's records and
-    ledgers;
- 8. the refusals: without water tags and with the tags' updraft copies;
- 9. the counter code of an empty donor and of a negative compartment.
+    own ledgers `q_tag_led_fix_<name>` and `q_tag_led_inc_<name>`, to rounding,
+    over one step at the default cadence.
+ 6. a run restarted from a checkpoint gives the continuous run's records and
+    ledgers, a new segment in the same directory replaces both files, and a
+    checkpoint with none or part of the producer's ledgers.
+ 7. the refusals: without water tags, with the leak correction and with the
+    tags' updraft copies.
+ 8. the counter codes, and the model identity the receipt writes.
+The stage cadence is in `water_tag_applications_stage_integration.jl`. The
+model's fields with and without the producer are compared in
+`water_tag_applications_parity_integration.jl`. Each runs in a group of its
+own.
 =#
-using Test
-import ClimaComms
-ClimaComms.@import_required_backends
-import ClimaAtmos as CA
-import ClimaTimeSteppers as CTS
-import NCDatasets
-import LinearAlgebra: diag
-
-altitude_region(above) = Dict{String, Any}(
-    "type" => "tanh_altitude",
-    "z_center" => 3000.0,
-    "width" => 300.0,
-    "above" => above,
-)
-
-config(FT, applications, extra = Dict{String, Any}()) = merge(
-    Dict{String, Any}(
-        "config" => "column",
-        "initial_condition" => "PrecipitatingColumn",
-        "surface_setup" => "DefaultMoninObukhov",
-        "z_elem" => 20,
-        "z_max" => 6000.0,
-        "z_stretch" => false,
-        "dt" => "10secs",
-        "t_end" => "60secs",
-        "cloud_model" => "grid_scale",
-        "microphysics_model" => "1M",
-        "vert_diff" => "DecayWithHeightDiffusion",
-        "implicit_diffusion" => true,
-        "approximate_linear_solve_iters" => 2,
-        "tracer_upwinding" => "first_order",
-        "toml" => [
-            joinpath(pkgdir(CA), "toml", "single_column_precipitation_test.toml"),
-        ],
-        "FLOAT_TYPE" => FT,
-        "output_default_diagnostics" => false,
-        "output_dir" => mktempdir(pwd()),
-        "water_tracers" => [
-            Dict{String, Any}("name" => "lower", "region" => altitude_region(false)),
-            Dict{String, Any}("name" => "upper", "region" => altitude_region(true)),
-        ],
-        "water_tag_precipitation" => true,
-        "water_tag_transport" => "increment",
-        "water_tag_ledger_per_tag" => true,
-        "water_tag_applications" => applications,
-        "dt_save_state_to_disk" => "30secs",
-    ),
-    extra,
-)
-
-build(c, job_id) = CA.get_simulation(CA.AtmosConfig(c; job_id))
-function run!(simulation)
-    @test CA.solve_atmos!(simulation).ret_code == :success
-    return simulation
-end
-
-# A small JSON reader for the receipt's lines: objects, arrays, strings,
-# numbers, booleans and null.
-function read_json(s)
-    i = Ref(1)
-    skip() =
-        while i[] <= ncodeunits(s) && isspace(s[i[]])
-            i[] += 1
-        end
-    function value()
-        skip()
-        c = s[i[]]
-        if c == '{'
-            d = Dict{String, Any}()
-            i[] += 1
-            skip()
-            s[i[]] == '}' && (i[] += 1; return d)
-            while true
-                k = value()
-                skip()
-                i[] += 1  # :
-                d[k] = value()
-                skip()
-                s[i[]] == ',' ? (i[] += 1) : (i[] += 1; return d)
-            end
-        elseif c == '['
-            a = Any[]
-            i[] += 1
-            skip()
-            s[i[]] == ']' && (i[] += 1; return a)
-            while true
-                push!(a, value())
-                skip()
-                s[i[]] == ',' ? (i[] += 1) : (i[] += 1; return a)
-            end
-        elseif c == '"'
-            j = i[] + 1
-            buf = IOBuffer()
-            while s[j] != '"'
-                s[j] == '\\' && (j += 1)
-                print(buf, s[j])
-                j += 1
-            end
-            i[] = j + 1
-            return String(take!(buf))
-        else
-            m = match(r"^(true|false|null|-?[0-9.eE+-]+)", SubString(s, i[]))
-            i[] += ncodeunits(m.match)
-            m.match == "true" && return true
-            m.match == "false" && return false
-            m.match == "null" && return nothing
-            return occursin(r"[.eE]", m.match) ? parse(Float64, m.match) :
-                   parse(Int, m.match)
-        end
-    end
-    return value()
-end
-read_receipt(dir) =
-    map(read_json, readlines(joinpath(dir, CA.WATER_TAG_APPLICATION_RECEIPT)))
+include("water_tag_applications_common.jl")
 
 @testset "Water tag application producer" begin
     @testset "Weights of each role against ARS343 and ARS222" begin
@@ -157,6 +48,20 @@ read_receipt(dir) =
                       b_imp[i] / γ[i]
             end
         end
+        # The pin is read from the stepper's cache, as the stepper applies it.
+        # ARS222's two tableaus differ, so a pin that swaps them fails here.
+        for name in (CTS.ARS343(), CTS.ARS222())
+            tableau = CTS.IMEXTableau(name)
+            alg = CTS.IMEXAlgorithm(name, CTS.NewtonsMethod())
+            pin = CA.water_tag_application_pin((; alg, cache = (; tableau)))
+            @test pin.algorithm == "unconstrained_imex_ark"
+            @test pin.tableau == string(nameof(typeof(name)))
+            @test pin.b_exp == Float64.(tableau.b_exp.coeffs)
+            @test pin.b_imp == Float64.(tableau.b_imp.coeffs)
+            @test pin.implicit_diagonal == Float64.(diag(tableau.a_imp.coeffs))
+        end
+        ars222 = CTS.IMEXTableau(CTS.ARS222())
+        @test ars222.b_exp.coeffs != ars222.b_imp.coeffs
         # ARS222: γ = 1 - 1/√2, b_imp = (0, 1 - γ, γ). The last stage's
         # post-Newton map enters with weight one.
         tableau = CTS.IMEXTableau(CTS.ARS222())
@@ -191,7 +96,33 @@ read_receipt(dir) =
         @test CA.water_tag_closing_flags(0.0, 1.0, 0.0, 0.0, 0.0) == 8
     end
 
-    simulation = run!(build(config("Float64", true), "water_tag_applications"))
+    @testset "The model identity: commit, dirty tree and the diff's sha256" begin
+        repo = mktempdir()
+        git(args...) = run(pipeline(`git -C $repo $args`; stdout = devnull))
+        @test CA._git_identity(repo) == ("unknown", true, "unknown")
+        git("init", "-q")
+        write(joinpath(repo, "a.txt"), "a\n")
+        git("add", "a.txt")
+        git("-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false",
+            "commit", "-qm", "a")
+        commit, dirty, diff_sha256 = CA._git_identity(repo)
+        @test occursin(r"^[0-9a-f]{40}$", commit)
+        @test !dirty
+        # The sha256 of the empty string, for a clean tree.
+        @test diff_sha256 ==
+              "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        write(joinpath(repo, "a.txt"), "b\n")
+        commit_dirty, dirty, diff_sha256 = CA._git_identity(repo)
+        @test commit_dirty == commit
+        @test dirty
+        @test occursin(r"^[0-9a-f]{64}$", diff_sha256)
+        @test diff_sha256 !=
+              "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    end
+
+    simulation = run!(
+        compile_metered_writers(build(config("Float64", true), "water_tag_applications")),
+    )
     Y = simulation.integrator.u
     p = simulation.integrator.p
     meter = CA.water_meter(p)
@@ -199,25 +130,72 @@ read_receipt(dir) =
     lines = read_receipt(dir)
     header, steps = first(lines), lines[2:end]
     pin = header["integrator_pin"]
-    channels = [c["id"] for c in header[CA.WATER_TAG_APPLICATION_ROSTER_KEY]["channels"]]
-    ds = NCDatasets.NCDataset(joinpath(dir, CA.WATER_TAG_APPLICATION_ARRAYS))
-    values = Array(ds["record_values"][:, :])
-    record_ids = Array(ds["record_id"][:])
-    record_channel = Array(ds["record_channel"][:])
-    ledger = Array(ds["ledger"][:, :, :])
-    ledger_time = Array(ds["ledger_time"][:])
-    close(ds)
+    channels = header["water_tag_application_roster"]
+    arrays = read_arrays(dir)
+    (; values, ledger, ledger_time) = arrays
+    record_ids = arrays.ids
     row = Dict(id => r for (r, id) in enumerate(record_ids))
 
     @testset "The receipt" begin
         @test header["schema_version"] == 1
         @test header["semantics"] == "weighted_final_additive_updates"
         @test header["kind"] == "runtime_capture"
+        @test header["producer"] == "climaatmos.water_tag_applications"
+        @test header["precision"] == "Float64"
+        @test header["ledger_start"] == "zero"
+        @test header["segment_start_seconds"] == 0.0
+        @test CA.WATER_TAG_APPLICATION_RECEIPT == "water_tag_application_receipt.jsonl"
+        @test header["native_arrays"] == CA.WATER_TAG_APPLICATION_ARRAYS ==
+              "water_tag_applications.nc"
+        @test header["model_diff_sha256"] == "unknown" ||
+              occursin(r"^[0-9a-f]{64}$", header["model_diff_sha256"])
+        # The roster, as the reader's gate reads it: a list of channel ids
+        # under the key the header names.
+        @test header["roster_key"] == "water_tag_application_roster"
+        expected = String[]
+        for t in ("lower", "upper")
+            N = "nonprecipitating"
+            append!(
+                expected,
+                [
+                    "rescale.$t.$N", "empty.$t.$N", "repair.$t.$N", "repair.$t.rain",
+                    "repair.$t.snow", "close.$t.rain", "close.$t.snow",
+                    "follow.$t.$N", "follow.$t.rain", "follow.$t.snow",
+                    "inc.$t.$N", "negative.$t.$N",
+                ],
+            )
+        end
+        @test channels == expected
+        @test header["water_tag_application_unsupported"] == []
+        described = header["water_tag_application_channels"]
+        @test [c["id"] for c in described] == channels
+        scale = Dict(
+            "rescale" => "rho_q_tot_before",
+            "empty" => "rho_q_tot_before",
+            "repair" => "partition_positive_part",
+        )
+        for c in described
+            (m, t, part) = split(c["id"], ".")
+            @test (c["mechanism"], c["tag"], c["compartment"]) == (m, t, part)
+            tendency = m in ("inc", "negative")
+            @test c["quantity"] == (tendency ? "water_tendency" : "water_increment")
+            @test c["units"] == (tendency ? "kg m^-3 s^-1" : "kg m^-3")
+            @test c["event_scale"] == get(scale, m, "rho_q_tot")
+            @test c["status"] == "observed"
+        end
+        @test arrays.attrib["weight_units"] == "m"
+        @test arrays.attrib["precision"] == "Float64"
+        @test arrays.attrib["flags"] ==
+              "fallback + 2 bound + 4 clamp + 8 zero_normalization"
+        # The pin is the configured stepper's, ARS343.
+        @test simulation.integrator.alg.name isa CTS.ARS343
+        tableau = CTS.IMEXTableau(CTS.ARS343())
         @test pin["algorithm"] == "unconstrained_imex_ark"
         @test pin["package"] == "ClimaTimeSteppers"
         @test pin["tableau"] == "ARS343"
-        @test length(pin["b_exp"]) == length(pin["b_imp"]) ==
-              length(pin["implicit_diagonal"]) == 4
+        @test pin["b_exp"] == Float64.(tableau.b_exp.coeffs)
+        @test pin["b_imp"] == Float64.(tableau.b_imp.coeffs)
+        @test pin["implicit_diagonal"] == Float64.(diag(tableau.a_imp.coeffs))
         @test length(steps) == 6
         @test ledger_time == vcat(0.0, [s["end_seconds"] for s in steps])
         mechanisms = Set(split(c, ".")[1] for c in channels)
@@ -229,7 +207,6 @@ read_receipt(dir) =
             @test length(step["trials"]) == 1
             @test step["trials"][1]["decision"] == "accepted"
             @test step["accepted_trial"] == step["trials"][1]["id"]
-            @test step["unattributed_calls"] == 0
             seen = Set(a["channel"] for a in step["applications"])
             @test seen == Set(channels)
             a, b = step["start_seconds"], step["end_seconds"]
@@ -240,11 +217,13 @@ read_receipt(dir) =
                 role = app["role"]
                 if role == "final_map"
                     @test app["coefficient"] === 1.0
+                    @test app["coefficient_units"] == "1"
                 elseif role == "implicit"
                     @test app["coefficient"] === (b - a) * pin["b_imp"][app["stage"]]
                     @test app["coefficient_units"] == "s"
                 else
                     @test role == "post_newton"
+                    @test app["coefficient_units"] == "1"
                     @test app["coefficient"] ===
                           pin["b_imp"][app["stage"]] /
                           pin["implicit_diagonal"][app["stage"]]
@@ -305,114 +284,8 @@ read_receipt(dir) =
         end
     end
 
-    # One step, run again from the end of a run, so the model's ledgers are
-    # read at both ends of the same step. The applied records of each tag
-    # add up to the step changes of its own ledgers, to rounding.
-    function check_model_ledgers(sim)
-        Y_sim = sim.integrator.u
-        Y_before = copy(Y_sim)
-        CTS.step!(sim.integrator)
-        step = read_receipt(sim.output_dir)[end]
-        ds = NCDatasets.NCDataset(joinpath(sim.output_dir, CA.WATER_TAG_APPLICATION_ARRAYS))
-        vals = Array(ds["record_values"][:, :])
-        ids = Array(ds["record_id"][:])
-        close(ds)
-        rows = Dict(id => r for (r, id) in enumerate(ids))
-        for tag in ("lower", "upper"),
-            (ledger_name, mechs) in (
-                ("q_tag_led_fix_", ("rescale", "empty", "repair", "close")),
-                ("q_tag_led_inc_", ("inc", "negative")),
-            )
-
-            change =
-                parent(getproperty(Y_sim.c, Symbol(ledger_name, tag))) .-
-                parent(getproperty(Y_before.c, Symbol(ledger_name, tag)))
-            total = zeros(length(change))
-            activity = zeros(length(change))
-            for app in step["applications"]
-                (m, t) = split(app["channel"], ".")[1:2]
-                (m in mechs && t == tag) || continue
-                w = app["coefficient"] .* vals[:, rows[app["record_id"]]]
-                total .+= w
-                activity .+= abs.(w)
-            end
-            err = maximum(abs.(vec(change) .- total) ./ max.(activity, eps()))
-            @info "Records against $ledger_name$tag" err maximum(activity)
-            @test err < 1e-8
-        end
-        return step
-    end
-
     @testset "The records against the model's own per-tag ledgers" begin
         check_model_ledgers(simulation)
-        # With the constraints at every stage, their maps after each Newton
-        # solve enter with the weight b_imp/γ.
-        staged = run!(
-            build(
-                config(
-                    "Float64",
-                    true,
-                    Dict{String, Any}(
-                        "update_constrain_state_every" => "stage",
-                        "t_end" => "20secs",
-                    ),
-                ),
-                "water_tag_applications_stage",
-            ),
-        )
-        step = check_model_ledgers(staged)
-        template = CA.water_meter(staged.integrator.p).template
-        @test any(c -> c.role === :post_newton, template.calls)
-        post_newton = count(
-            a -> a["role"] == "post_newton",
-            reduce(
-                vcat,
-                [s["applications"] for s in read_receipt(staged.output_dir)[2:end]],
-            ),
-        )
-        @info "Applied post-Newton records at stage cadence" post_newton
-    end
-
-    @testset "The model's fields do not depend on the producer" begin
-        for FT in ("Float64", "Float32")
-            on =
-                FT == "Float64" ? simulation :
-                run!(build(config(FT, true), "water_tag_applications_on32"))
-            off = run!(build(config(FT, false), "water_tag_applications_off_$FT"))
-            Y_on = on.integrator.u
-            Y_off = off.integrator.u
-            FT == "Float64" && CTS.step!(off.integrator)
-            for name in propertynames(Y_off.c)
-                @test isequal(
-                    parent(getproperty(Y_on.c, name)),
-                    parent(getproperty(Y_off.c, name)),
-                )
-            end
-            @test isequal(parent(Y_on.f), parent(Y_off.f))
-            @test isnothing(CA.water_meter(off.integrator.p))
-            # The Float64 ledgers, read from their two Float32 slots, are the
-            # sums of their channels' applied records.
-            FT == "Float32" || continue
-            out = on.output_dir
-            lines32 = read_receipt(out)
-            ds = NCDatasets.NCDataset(joinpath(out, CA.WATER_TAG_APPLICATION_ARRAYS))
-            v32 = Array(ds["record_values"][:, :])
-            rows32 = Dict(id => r for (r, id) in enumerate(Array(ds["record_id"][:])))
-            l32 = Array(ds["ledger"][:, :, :])
-            close(ds)
-            ids32 = [
-                c["id"] for
-                c in lines32[1][CA.WATER_TAG_APPLICATION_ROSTER_KEY]["channels"]
-            ]
-            for (c, id) in enumerate(ids32)
-                total = zeros(size(l32, 1))
-                for s in lines32[2:end], a in s["applications"]
-                    a["channel"] == id || continue
-                    total .+= a["coefficient"] .* Float64.(v32[:, rows32[a["record_id"]]])
-                end
-                @test l32[:, c, end] ≈ total rtol = 1e-12 atol = 1e-30
-            end
-        end
     end
 
     @testset "A restarted run gives the continuous run's records" begin
@@ -420,11 +293,7 @@ read_receipt(dir) =
         @test isfile(restart_file)
         restarted = run!(
             build(
-                config(
-                    "Float64",
-                    true,
-                    Dict{String, Any}("restart_file" => restart_file),
-                ),
+                config("Float64", true, Dict{String, Any}("restart_file" => restart_file)),
                 "water_tag_applications_restart",
             ),
         )
@@ -432,21 +301,59 @@ read_receipt(dir) =
         rlines = read_receipt(rdir)
         @test rlines[1]["ledger_start"] == "checkpoint"
         @test rlines[1]["segment_start_seconds"] == 30.0
-        ds = NCDatasets.NCDataset(joinpath(rdir, CA.WATER_TAG_APPLICATION_ARRAYS))
-        rvals = Array(ds["record_values"][:, :])
-        rids = Array(ds["record_id"][:])
-        rledger = Array(ds["ledger"][:, :, :])
-        close(ds)
+        rarrays = read_arrays(rdir)
         rsteps = rlines[2:end]
         @test length(rsteps) == 3
         @test [s["id"] for s in rsteps] == [s["id"] for s in steps[4:6]]
         for (rs, s) in zip(rsteps, steps[4:6])
             @test rs == s
         end
-        for (r, id) in enumerate(rids)
-            @test isequal(rvals[:, r], values[:, row[id]])
+        for (r, id) in enumerate(rarrays.ids)
+            @test isequal(rarrays.values[:, r], values[:, row[id]])
+            @test isequal(rarrays.scales[:, r], arrays.scales[:, row[id]])
+            @test isequal(rarrays.flags[:, r], arrays.flags[:, row[id]])
+            @test rarrays.channel[r] == arrays.channel[row[id]]
         end
-        @test isequal(rledger, ledger[:, :, 4:7])
+        @test isequal(rarrays.ledger, ledger[:, :, 4:7])
+        @test rarrays.ledger_time == ledger_time[4:7]
+        # A new segment started in the same directory replaces both files, so
+        # the receipt and the native arrays hold the same steps.
+        CA.water_meter(restarted.integrator.p).started = false
+        CTS.step!(restarted.integrator)
+        again = read_receipt(rdir)
+        @test length(again) == 2
+        @test again[1]["segment_start_seconds"] == 60.0
+        segment = read_arrays(rdir)
+        @test segment.ids == [a["record_id"] for a in again[2]["applications"]]
+        @test segment.ledger_time == [60.0, again[2]["end_seconds"]]
+        @test isequal(segment.ledger[:, :, 1], ledger[:, :, 7])
+    end
+
+    @testset "Checkpoints with none or part of the producer's ledgers" begin
+        restart_file = joinpath(dir, "day0.30.hdf5")
+        reader = CA.InputOutput.HDF5Reader(restart_file, ClimaComms.context(Y.c))
+        fields = CA.water_application_checkpoint_fields(meter)
+        @test length(fields) == length(channels)
+        before = [copy(parent(L)) for L in meter.ledgers]
+        # None of them, as a checkpoint written without the producer: a
+        # warning, and the ledgers start at zero.
+        absent = ["$(name).absent" => L for (name, L) in fields]
+        @test_logs (:warn, r"carries none of the water tag producer's ledgers") CA.restore_water_application_ledgers!(
+            meter,
+            reader,
+            absent,
+            restart_file,
+        )
+        @test meter.ledger_start == "zero_at_restart"
+        @test all(map((a, L) -> isequal(a, parent(L)), before, meter.ledgers))
+        # Part of them, as one written with another roster: refused.
+        @test_throws r"carries only part of the water tag producer's ledgers" CA.restore_water_application_ledgers!(
+            meter,
+            reader,
+            [first(fields), last(absent)],
+            restart_file,
+        )
+        Base.close(reader)
     end
 
     @testset "Refusals" begin
@@ -459,15 +366,25 @@ read_receipt(dir) =
             no_tags,
             "water_tag_applications_no_tags",
         )
-        tags = CA.WaterTaggingModel(p.atmos.water_tagging_model.tags; updraft_copies = true)
-        @test_throws r"does not support" CA.build_water_tag_application_meter(
+        refused(kwargs) = CA.build_water_tag_application_meter(
             true,
-            (; water_tagging_model = tags),
+            (;
+                water_tagging_model = CA.WaterTaggingModel(
+                    p.atmos.water_tagging_model.tags;
+                    kwargs...,
+                )
+            ),
             Y,
             ClimaComms.context(Y.c);
             cadence = "step",
-            output_dir = dir,
+            output_dir = mktempdir(pwd()),
             t_start = 0.0,
+        )
+        @test_throws r"`water_tag_updraft_copy: true`. The copies' repair and filter are not metered" refused(
+            (; updraft_copies = true),
+        )
+        @test_throws r"`water_tag_leak_correction: true`. The leak correction is not metered yet" refused(
+            (; leak_correction = true),
         )
     end
 end
