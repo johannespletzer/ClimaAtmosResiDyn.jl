@@ -39,7 +39,6 @@ const KNOWN_TEST_GROUPS = (
     "tagging_water_leak",
     "tagging_water_precipitation",
     "tagging_water_applications",
-    "tagging_water_applications_stage",
     "tagging_water_applications_parity",
     "tagging_water_applications_float32",
     "tagging_water_precipitation_sphere",
@@ -348,22 +347,14 @@ if TEST_GROUP in ("tagging_water_precipitation", "all")
 end
 
 # The water tags' application producer on the column of the rain and snow
-# parts, in Float64. The file builds the column three times: with the
-# producer, and twice from a checkpoint of the first. With the three groups
-# below in one process, it took about 98 minutes and 23.5 GB on Julia 1.10,
-# past a GitHub runner's 90 minutes and 16 GB. With the stage cadence it still
-# peaked at 15.5 GiB. So the stage cadence and each float type's parity have a
-# process of their own.
+# parts, in Float64. The file builds the column four times: with the
+# producer, with the constraints at every stage, and twice from a checkpoint of
+# the first. With the two groups below in one process, it took about 98
+# minutes and 23.5 GB on Julia 1.10, past a GitHub runner's 90 minutes and
+# 16 GB. So each float type's parity has a process of its own.
 if TEST_GROUP in ("tagging_water_applications", "all")
     @safetestset "Water tag application producer" begin
         @time include("water_tag_applications_integration.jl")
-    end
-end
-
-# The producer with the constraints at every stage, built once.
-if TEST_GROUP in ("tagging_water_applications_stage", "all")
-    @safetestset "Water tag application producer at stage cadence" begin
-        @time include("water_tag_applications_stage_integration.jl")
     end
 end
 

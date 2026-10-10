@@ -589,7 +589,8 @@ only part of them is refused.
 
 The producer supports the default mode only. It refuses
 `water_tag_updraft_copy: true` and `water_tag_leak_correction: true`, runs on
-one process, and needs an unconstrained IMEX-ARK stepper. The energy source
+one process on a CPU, and needs an unconstrained IMEX-ARK stepper. It has not
+been tried on a GPU, so a GPU device is refused. The energy source
 tags are not metered. The cumulative ledger checks the receipt's
 bookkeeping. The model's own ledgers `q_tag_led_fix_<name>` and
 `q_tag_led_inc_<name>` check its completeness. The output grows with the

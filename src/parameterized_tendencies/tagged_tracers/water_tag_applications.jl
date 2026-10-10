@@ -149,7 +149,8 @@ end
     build_water_tag_application_meter(on, model, Y, context; cadence, output_dir, t_start)
 
 The producer's meter for `water_tag_applications: true`, or `nothing`. Refused
-without water tags, with the tags' updraft copies, and on more than one process.
+without water tags, with the leak correction or the tags' updraft copies, on
+more than one process, and on a GPU, where it has not been tried.
 """
 build_water_tag_application_meter(on::Bool, model, Y, context; kwargs...) =
     on ? _build_water_tag_application_meter(model, Y, context; kwargs...) :
@@ -180,6 +181,10 @@ function _build_water_tag_application_meter(
     ClimaComms.nprocs(context) == 1 || error(
         "`water_tag_applications: true` runs on one process only. Its native \
         arrays are written from the root's cells.",
+    )
+    ClimaComms.device(context) isa ClimaComms.AbstractCPUDevice || error(
+        "`water_tag_applications: true` has not been tried on a GPU. It runs \
+        on a CPU device only for now.",
     )
     channels, unsupported = water_tag_application_channels(tags)
     ᶜρ = Y.c.ρ

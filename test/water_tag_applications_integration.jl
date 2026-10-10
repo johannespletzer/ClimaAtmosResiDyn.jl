@@ -15,17 +15,16 @@ follower with its negative water. It checks:
     records, bit for bit.
  5. the applied records of each tag add up to the step changes of the model's
     own ledgers `q_tag_led_fix_<name>` and `q_tag_led_inc_<name>`, to rounding,
-    over one step at the default cadence.
+    at the default cadence and with the constraints at every stage, where a
+    writer call outside the counted hooks is refused.
  6. a run restarted from a checkpoint gives the continuous run's records and
     ledgers, a new segment in the same directory replaces both files, and a
     checkpoint with none or part of the producer's ledgers.
- 7. the refusals: without water tags, with the leak correction and with the
-    tags' updraft copies.
+ 7. the refusals: without water tags, with the leak correction, with the
+    tags' updraft copies and on a GPU device.
  8. the counter codes, and the model identity the receipt writes.
-The stage cadence is in `water_tag_applications_stage_integration.jl`. The
-model's fields with and without the producer are compared in
-`water_tag_applications_parity_integration.jl`. Each runs in a group of its
-own.
+The model's fields with and without the producer are compared in
+`water_tag_applications_parity_integration.jl`, in groups of their own.
 =#
 include("water_tag_applications_common.jl")
 
@@ -286,6 +285,46 @@ include("water_tag_applications_common.jl")
 
     @testset "The records against the model's own per-tag ledgers" begin
         check_model_ledgers(simulation)
+        # With the constraints at every stage, their maps after each Newton
+        # solve enter with the weight b_imp/γ.
+        # Each step's finalization refuses writer calls outside the counted
+        # hooks, so this run also shows there are none at this cadence.
+        staged = run!(
+            compile_metered_writers(
+                build(
+                    config(
+                        "Float64",
+                        true,
+                        Dict{String, Any}(
+                            "update_constrain_state_every" => "stage",
+                            "t_end" => "20secs",
+                        ),
+                    ),
+                    "water_tag_applications_stage",
+                ),
+            ),
+        )
+        step = check_model_ledgers(staged)
+        template = CA.water_meter(staged.integrator.p).template
+        @test any(c -> c.role === :post_newton, template.calls)
+        post_newton = count(
+            a -> a["role"] == "post_newton",
+            reduce(
+                vcat,
+                [s["applications"] for s in read_receipt(staged.output_dir)[2:end]],
+            ),
+        )
+        @info "Applied post-Newton records at stage cadence" post_newton
+        @test post_newton > 0
+        # A writer called outside the counted hooks has no role in the step.
+        # The step's finalization refuses it, with the count and the call.
+        staged_meter = CA.water_meter(staged.integrator.p)
+        tag = first(staged.integrator.p.atmos.water_tagging_model.tags)
+        CA.meter_water_leg!(staged_meter, :rescale, tag, CA.NonPrecipitatingPart(), 0, 0, 0)
+        @test staged_meter.unattributed == 1
+        @test_throws r"saw 1 writer calls outside the counted hooks.*the rescale of lower, before any counted firing" CTS.step!(
+            staged.integrator,
+        )
     end
 
     @testset "A restarted run gives the continuous run's records" begin
@@ -366,25 +405,32 @@ include("water_tag_applications_common.jl")
             no_tags,
             "water_tag_applications_no_tags",
         )
-        refused(kwargs) = CA.build_water_tag_application_meter(
-            true,
-            (;
-                water_tagging_model = CA.WaterTaggingModel(
-                    p.atmos.water_tagging_model.tags;
-                    kwargs...,
-                )
-            ),
-            Y,
-            ClimaComms.context(Y.c);
-            cadence = "step",
-            output_dir = mktempdir(pwd()),
-            t_start = 0.0,
-        )
+        refused(kwargs, context = ClimaComms.context(Y.c)) =
+            CA.build_water_tag_application_meter(
+                true,
+                (;
+                    water_tagging_model = CA.WaterTaggingModel(
+                        p.atmos.water_tagging_model.tags;
+                        kwargs...,
+                    )
+                ),
+                Y,
+                context;
+                cadence = "step",
+                output_dir = mktempdir(pwd()),
+                t_start = 0.0,
+            )
         @test_throws r"`water_tag_updraft_copy: true`. The copies' repair and filter are not metered" refused(
             (; updraft_copies = true),
         )
         @test_throws r"`water_tag_leak_correction: true`. The leak correction is not metered yet" refused(
             (; leak_correction = true),
+        )
+        # A CUDA device in the context is enough. The check needs no GPU.
+        gpu = ClimaComms.SingletonCommsContext(ClimaComms.CUDADevice())
+        @test_throws r"`water_tag_applications: true` has not been tried on a GPU" refused(
+            (;),
+            gpu,
         )
     end
 end
