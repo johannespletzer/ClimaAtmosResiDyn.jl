@@ -9,7 +9,7 @@
 #
 # Each run's manifest is $SCRATCH/tag_closure/manifests/<job>*.json, the one
 # g3base_submit.sh wrote. The converter checks the receipt's model identity
-# against it.
+# against the manifest's `model` entry, the run tree.
 set -euo pipefail
 source "${MODULESHOME}/init/bash"
 module load python/3.12

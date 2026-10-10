@@ -34,8 +34,9 @@
 #       experiments/tag_closure/runscripts/part9_checks.sh [--submit] [on|off|newton|restarted|on_f32|off_f32 ...]
 #
 # Without --submit it runs g3base_submit.sh with --dry-run, which writes the
-# manifest (head_sha 2c63c5c53) and prints the sbatch line. `restarted` is
-# refused until `on` has written its 3 h checkpoint.
+# manifest (head_sha this record's commit, model head_sha 2c63c5c53) and
+# prints the sbatch line. `restarted` is refused until `on` has written its
+# 3 h checkpoint.
 set -euo pipefail
 
 REC="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"

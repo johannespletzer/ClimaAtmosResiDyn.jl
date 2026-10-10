@@ -43,10 +43,28 @@ loads `git/2.49.0`. Jobs 14186479 to 14186481 were cancelled, 14186478 (off)
 ran to completion. The outputs are under `output/p9_wave3_unknown_identity/`.
 Every job reruns at `2c63c5c53`.
 
+Fourth wave, 2026-10-10 14:52, producer at `2c63c5c53`: jobs 14187046 (on,
+13:23, 16:37 start), 14187047 (off, 12:33), 14187048 (newton, 12:51), 14187049
+(on_f32, 12:36), 14187050 (off_f32, 12:25) and 14188441 (restarted, 13:24,
+19:44 start), all completed. Every receipt carries `model_commit`
+`2c63c5c53`, `model_dirty` false and the empty diff's hash. The converter
+refused the on run all the same: it compared the receipt with the job
+manifest's `head_sha`, and that is the record tree that submitted the job
+(`6f2e2f5b2`, the restart `c3e248217`), not the run tree. The design had
+assumed one tree for model and record. Since the decision of 2026-10-08 the
+model runs from a second worktree at `main`, and `manifest.py` did not record
+it. The tool now takes `--model-repo`, which `submit_g3.sh` passes from
+`g3base_submit.sh`'s run tree, and records that tree under `model`. The
+converter compares the receipt with `model` when it is present and writes the
+model identity into the bundle, with the record tree's commit beside it. The
+outputs are under `output/p9_wave4_record_manifest/`. Every job reruns at
+`2c63c5c53` with the new manifest (owner, 2026-10-10).
+
 ## 2. Model identity
 
-`head_sha` of each manifest, `model_commit` and `model_diff_sha256` of each
-receipt, the producer source hash against the registry config. Pending.
+`model.head_sha` of each manifest (the run tree, with the record tree under
+`head_sha`), `model_commit` and `model_diff_sha256` of each receipt, the
+producer source hash against the registry config. Pending.
 
 ## 3. The six checks
 

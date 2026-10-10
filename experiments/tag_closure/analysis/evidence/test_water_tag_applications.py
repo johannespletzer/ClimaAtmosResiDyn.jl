@@ -107,6 +107,27 @@ class TestConverter(Fixture):
         with self.assertRaisesRegex(wc.ConversionError, "diff_sha256"):
             wc.convert(self.runs["on"], self.root / "conv2", self.runs["on"] / "manifest.json")
 
+    def test_two_tree_manifest(self):
+        # The job manifest's head_sha is the record tree. The receipt is compared with its model entry,
+        # and the bundle carries the model identity, with the record tree beside it.
+        out, bundle = self.convert()
+        self.assertEqual((bundle.manifest["head_sha"], bundle.manifest["record_head_sha"]),
+                         (fx.COMMIT, fx.RECORD_COMMIT))
+        manifest = self.runs["on"] / "manifest.json"
+        data = json.loads(manifest.read_text())
+        data["model"]["head_sha"] = fx.RECORD_COMMIT
+        manifest.write_text(json.dumps(data))
+        with self.assertRaisesRegex(wc.ConversionError, "model head_sha"):
+            wc.convert(self.runs["on"], self.root / "x", manifest)
+        # A single-tree manifest is its own model identity.
+        del data["model"]
+        data["head_sha"] = fx.COMMIT
+        manifest.write_text(json.dumps(data))
+        wc.convert(self.runs["on"], self.root / "y", manifest)
+        one = json.loads(wc.standalone_bundle(self.root / "y", manifest).read_text())
+        self.assertEqual(one["head_sha"], fx.COMMIT)
+        self.assertNotIn("record_head_sha", one)
+
     def test_refusals(self):
         cases = {
             "roster object": (lambda l: l[0].update(water_tag_application_roster={"channels": []}), "list of unique"),

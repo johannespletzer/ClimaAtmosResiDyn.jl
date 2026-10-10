@@ -29,6 +29,10 @@ import numpy as np
 
 COMMIT = "2c63c5c53b6c1e70ae7ab3c63367fca672c6dc15"
 DIFF = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+# The job manifest names the record tree under head_sha and the model tree
+# under model, as g3base_submit.sh records a two-tree job. This stand-in
+# record commit is no real commit.
+RECORD_COMMIT = "f1a7" * 10
 CONFIG = """job_id: "fixture"
 water_tracers:
   - name: pbl
@@ -143,8 +147,9 @@ def write_run(root, sim, dtype, key_on=True, first_step=0, model_dirs=True):
     precision = "Float32" if dtype == np.float32 else "Float64"
     (root / "fixture.yml").write_text(CONFIG.replace("true\node_algo", ("true" if key_on else "false") + "\node_algo")
                                       + f'FLOAT_TYPE: "{precision}"\n')
-    (root / "manifest.json").write_text(json.dumps({"head_sha": COMMIT, "diff_sha256": DIFF,
-                                                    "julia_version": "synthetic fixture", "fixture": True}) + "\n")
+    (root / "manifest.json").write_text(json.dumps({
+        "head_sha": RECORD_COMMIT, "diff_sha256": DIFF, "julia_version": "synthetic fixture", "fixture": True,
+        "model": {"repo": "fixture run tree", "head_sha": COMMIT, "diff_sha256": DIFF}}) + "\n")
     edges = np.arange(first_step, STEPS + 1) * DT
     steps = sim["steps"][first_step:]
     if key_on:

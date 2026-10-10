@@ -182,11 +182,12 @@ def convert(run_dir, out, manifest=None, rho_file=None):
     run_dir, out = Path(run_dir), Path(out)
     header, steps = read_receipt_lines(run_dir)
     if manifest is not None:
-        m = json.loads(Path(manifest).read_text())
-        refuse(header["model_commit"] == m.get("head_sha"),
-               f"receipt model_commit {header['model_commit']} is not the manifest's head_sha {m.get('head_sha')}")
-        refuse(header["model_diff_sha256"] == m.get("diff_sha256"),
-               "receipt model_diff_sha256 is not the manifest's diff_sha256")
+        ident = model_identity(json.loads(Path(manifest).read_text()))
+        refuse(header["model_commit"] == ident.get("head_sha"),
+               f"receipt model_commit {header['model_commit']} is not the manifest's model head_sha "
+               f"{ident.get('head_sha')}")
+        refuse(header["model_diff_sha256"] == ident.get("diff_sha256"),
+               "receipt model_diff_sha256 is not the manifest's model diff_sha256")
     arrays = read_arrays(run_dir)
     roster = header[ROSTER_KEY]
     refuse(arrays["channel_id"] == roster, "the NetCDF's channel ids differ from the receipt roster")
@@ -262,27 +263,39 @@ def convert(run_dir, out, manifest=None, rho_file=None):
     return section
 
 
+def model_identity(run_manifest):
+    """The tree the model ran from. A job submitted from a record tree with the
+    model in a second worktree (g3base_submit.sh) records that worktree under
+    `model`. A single-tree manifest is its own model identity."""
+    return run_manifest.get("model") or run_manifest
+
+
 def standalone_bundle(out, run_manifest=None, extra=None):
     """A manifest around a converted directory that the reader's Bundle opens.
 
-    It carries the run's identity (head_sha, diff_sha256, julia_version) and
-    the acceptance keys the reader's accounting functions read. It is not a
-    scorer bundle: Bundle.validate and score_acceptance.py need
-    convert_output.py's full record.
+    It carries the model's identity (head_sha, diff_sha256, the pair the
+    reader compares with the receipt), julia_version, the record tree's
+    `record_head_sha` and `record_diff_sha256` when the job manifest names a
+    separate model tree, and the acceptance keys the reader's accounting
+    functions read. It is not a scorer bundle: Bundle.validate and
+    score_acceptance.py need convert_output.py's full record.
     """
     out = Path(out)
     section = json.loads((out / OUT_SECTION).read_text())
     run_manifest = run_manifest or section.get("run_manifest")
     m = json.loads(Path(run_manifest).read_text()) if run_manifest else {}
+    ident = model_identity(m)
     spec = {"schema_version": 1, "precision": section["precision"], "claim": {"family": "water"},
             "accepted_step_seconds": section["accepted_step_seconds"], "end_seconds": section["end_seconds"],
             "runs": {"candidate": {"fields": section["fields"]}},
             "correction_accounting": section["correction_accounting"],
             "artifacts": {name: sha256_file(out / name) for name in (OUT_RECEIPT, OUT_APPLICATIONS, OUT_LEDGERS)}}
     spec.update(extra or {})
-    data = {"head_sha": m.get("head_sha", section["model_commit"]),
-            "diff_sha256": m.get("diff_sha256", section["model_diff_sha256"]),
+    data = {"head_sha": ident.get("head_sha", section["model_commit"]),
+            "diff_sha256": ident.get("diff_sha256", section["model_diff_sha256"]),
             "julia_version": m.get("julia_version", "unknown"), "acceptance": spec}
+    if "model" in m:
+        data["record_head_sha"], data["record_diff_sha256"] = m.get("head_sha"), m.get("diff_sha256")
     path = out / "manifest.json"
     path.write_text(json.dumps(data, sort_keys=True, indent=1) + "\n")
     return path

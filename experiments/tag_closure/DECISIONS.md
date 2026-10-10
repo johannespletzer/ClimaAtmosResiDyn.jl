@@ -349,6 +349,17 @@ review of PR #171.
   - **A manual 1.10 bounds-checked run of the three applications groups
     precedes the merge of PR A.** **In force.** The third tracer moves the
     1.10 memory margin, which stood within 0.5 GiB of the runner's 16 GB.
+  - **The job manifest records the model tree, and the four runs rerun as a
+    fifth wave.** **In force.** The fourth wave's receipts carried the right
+    identity, but the converter compared them with the job manifest's
+    `head_sha`, the record tree that submits the job, not the run tree the
+    model runs from. `manifest.py` gains `--model-repo`, `submit_g3.sh`
+    passes the run tree, and the manifest records it under `model`. The
+    converter compares the receipt with that entry and writes the model
+    identity into the bundle, with the record commit beside it. The six jobs
+    rerun with the new manifest. Accepting the fourth wave through the node's
+    provenance file, or through an explicit commit on the converter's command
+    line, was declined.
   - **The three applications test groups run on 1.11 only.** **In force.** A
     manual bounds-checked 1.10 run of the groups at `59216edef` ended two of
     them with the runner's shutdown signal after about 50 min, the 16 GB

@@ -44,7 +44,8 @@ each channel's description under `water_tag_application_channels`, and
 | `rho` at every edge                                        | the run's `rhoa` diagnostic at 150 s, with the producer's weights and geometry                     |
 
 It refuses, with the reason, a roster that is not an id list, a non-empty
-unsupported list, a model identity that differs from the run's manifest,
+unsupported list, a model identity that differs from the run tree the job's
+manifest records under `model`,
 steps that are not contiguous, ledger times other than the receipt edges,
 record ids that differ between the two files, and a `rhoa` whose `z` is not
 the producer's cell centres to 4 eps of its dtype. Nothing is zero-filled
@@ -98,7 +99,8 @@ PASS. The tests run the check on a Float32 fixture.
     iteration and step cadence, no repeated evaluation and no post-Newton map
     occurs, so the check would pass without testing anything.
   - The analysis code is this PR's commit. The manifest of each job records
-    `head_sha` `2c63c5c53`.
+    this record's commit under `head_sha` and the run tree under `model`,
+    with `head_sha` `2c63c5c53`.
 
 ## 5. Job set and cost
 
