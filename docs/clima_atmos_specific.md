@@ -158,6 +158,9 @@ tiers, and the `plan` job picks one per event with `.github/ci_plan.sh`.
 The groups that test upstream code (`dynamics`, `dynamics_tracers`,
 `dynamics_edmfx`, `restarts`) run on 1.11 only, except in a manual run. A
 difference between Julia versions inside upstream code is upstream's to find.
+The three `tagging_water_applications` groups also run on 1.11 only. Their
+compile peak passes the 16 GB runner on 1.10. A manual run that names them runs
+them on the requested version.
 
 Every tier runs the tests with `julia-runtest`'s `check_bounds: auto`, except
 the weekly run and tags, which keep `yes`. With `yes`, Julia checks bounds

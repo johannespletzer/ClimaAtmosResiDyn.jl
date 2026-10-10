@@ -40,6 +40,11 @@ readonly WEEKLY_CRON='0 1 * * 0'
 # run on both versions, because a difference between Julia versions inside
 # upstream code is upstream's to find.
 readonly UPSTREAM_ONLY='["dynamics","dynamics_tracers","dynamics_edmfx","restarts"]'
+# The fork groups too large for the 16 GB runner on 1.10. They run on 1.11 only,
+# except in a manual run that names them. The applications groups build six
+# simulations with three tags each, and 1.10's compile peak passed the limit on
+# 2026-10-10.
+readonly HEAVY_ON_1_10='["tagging_water_applications","tagging_water_applications_parity","tagging_water_applications_float32"]'
 # The groups of the quick tier.
 readonly QUICK='["infrastructure"]'
 
@@ -52,7 +57,8 @@ if [ -z "${GROUPS_JSON:-}" ]; then
     GROUPS_JSON=$(julia --startup-file=no .github/read_test_groups.jl | sed -n 's/^groups=//p')
 fi
 jq -e 'type == "array" and length > 0' <<<"$GROUPS_JSON" >/dev/null
-fork_groups=$(jq -c --argjson up "$UPSTREAM_ONLY" '[.[] | select(. as $g | $up | index($g) | not)]' <<<"$GROUPS_JSON")
+fork_groups=$(jq -c --argjson up "$UPSTREAM_ONLY" --argjson heavy "$HEAVY_ON_1_10" \
+    '[.[] | select(. as $g | ($up + $heavy) | index($g) | not)]' <<<"$GROUPS_JSON")
 
 # `on_version v` turns a JSON list of groups on stdin into matrix entries.
 on_version() { jq -c --arg v "$1" '[.[] | {version: $v, test_group: .}]'; }
