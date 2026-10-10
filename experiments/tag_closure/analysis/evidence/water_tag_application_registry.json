@@ -1,0 +1,17 @@
+{
+ "status": "pending",
+ "note": "Proposed, 2026-10-10. Data for register_producer, not a registration. The record follow-up calls register_producer with this entry only after the six checks pass on the cluster (design/PART9_PRODUCER.md). cts_version is filled from the cluster receipt's integrator_pin version then.",
+ "producer_id": "climaatmos.water_tag_applications",
+ "source": {
+  "path": "src/parameterized_tendencies/tagged_tracers/water_tag_applications.jl",
+  "branch": "claude/part9-producer",
+  "commit": "2140fceafed233e627676a35360a985e958ce6cc"
+ },
+ "entry": {
+  "cts_version": null,
+  "source_sha256": "50b9b268504e4c653fc638e833309b721bce2b583dc044f9c5426d630e9bd7a6",
+  "roster_key": "water_tag_application_roster",
+  "inactive_arrays": {"values": "values", "mark": "inactive"},
+  "check_log_pattern": "^CHECK (?P<check>[a-z_]+): (?P<result>PASS|FAIL)\\b"
+ }
+}
