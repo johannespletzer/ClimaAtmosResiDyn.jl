@@ -1225,6 +1225,7 @@ function tag_ledger_checkpoint_fields(tagging)
         push!(fields, "tag_ledger.attempted.$name" => ᶜattempted)
     end
     append!(fields, negative_water_checkpoint_fields(steps.negative_water))
+    append!(fields, water_application_checkpoint_fields(_water_meter(tagging)))
     return fields
 end
 
@@ -1277,11 +1278,24 @@ The other accumulators are read as above.
 function restore_tag_ledger_checkpoint!(tagging, restart_file, context)
     all_fields = tag_ledger_checkpoint_fields(tagging)
     isempty(all_fields) && return nothing
-    fields = filter(f -> !is_negative_water_checkpoint_field(first(f)), all_fields)
+    applications =
+        filter(f -> is_water_application_checkpoint_field(first(f)), all_fields)
+    fields = filter(
+        f ->
+            !is_negative_water_checkpoint_field(first(f)) &&
+            !is_water_application_checkpoint_field(first(f)),
+        all_fields,
+    )
     later = filter(f -> is_negative_water_checkpoint_field(first(f)), all_fields)
     reader = InputOutput.HDF5Reader(restart_file, context)
     try
         restore_negative_water_accumulator!(reader, later, restart_file)
+        restore_water_application_ledgers!(
+            _water_meter(tagging),
+            reader,
+            applications,
+            restart_file,
+        )
         isempty(fields) && return nothing
         present = map(fields) do (name, _)
             haskey(reader.file, "fields/$name")
@@ -1313,6 +1327,35 @@ function restore_tag_ledger_checkpoint!(tagging, restart_file, context)
     finally
         Base.close(reader)
     end
+    return nothing
+end
+
+# Read the water tag producer's cumulative ledgers. Where the checkpoint has none
+# of them, warn and keep the zeros: the receipt's header then says the ledgers
+# start at zero in this segment. Some but not all is refused.
+restore_water_application_ledgers!(::Nothing, reader, fields, restart_file) =
+    nothing
+function restore_water_application_ledgers!(meter, reader, fields, restart_file)
+    present = map(((name, _),) -> haskey(reader.file, "fields/$name"), fields)
+    if !any(present)
+        @warn(
+            "The restart file $restart_file carries none of the water tag \
+            producer's ledgers. They start at zero, and the receipt marks this \
+            segment's start.",
+        )
+        meter.ledger_start = "zero_at_restart"
+        return nothing
+    end
+    all(present) || error(
+        "The restart file $restart_file carries only part of the water tag \
+        producer's ledgers. It was written with another roster. Restart with \
+        the same configuration, or start a new run.",
+    )
+    for (name, field) in fields
+        restored = InputOutput.read_field(reader, name)
+        parent(field) .= parent(restored)
+    end
+    meter.ledger_start = "checkpoint"
     return nothing
 end
 

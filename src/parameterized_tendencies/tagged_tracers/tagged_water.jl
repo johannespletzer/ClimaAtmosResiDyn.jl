@@ -1279,11 +1279,14 @@ function _rescale_water_tags!(Y, p, ᶜρq_tot_before, model::WaterTaggingModel)
         _accumulate_partition_pos!(ᶜwater_pos, Y.c, model.tags)
         _apply_water_tag_rescale!(
             Y.c,
-            tag_ledger(
-                ᶜwater_fix,
-                ᶜwater_fix_gross,
-                ᶜwater_fix_count,
-                water_tag_fix_ledger_view(Y, model),
+            with_water_meter(
+                tag_ledger(
+                    ᶜwater_fix,
+                    ᶜwater_fix_gross,
+                    ᶜwater_fix_count,
+                    water_tag_fix_ledger_view(Y, model),
+                ),
+                water_meter(p),
             ),
             ᶜwater_pos,
             ᶜρq_tot_before,
@@ -1351,7 +1354,67 @@ function _apply_water_tag_rescale!(
     # tag. The shift is recomputed on the spot. A few comparisons and a divide
     # cost less than a scratch field per tag, and this stays allocation free.
     # The gross and the count take the same shift.
+    meter = ledger_water_meter(ledger)
     if _is_partition_tag(tag)
+        # The producer's applications, read before the tag changes.
+        if !isnothing(meter)
+            meter_water_leg!(
+                meter,
+                :rescale,
+                tag,
+                NonPrecipitatingPart(),
+                (@. lazy(
+                    _gated(
+                        ᶜgate,
+                        ifelse(
+                            ᶜρq_tot_before > 0,
+                            water_tag_rescale_shift(
+                                ᶜρq_tag,
+                                ᶜafter,
+                                ᶜρq_tot_before,
+                                ᶜpos,
+                            ),
+                            zero(ᶜρq_tot_before),
+                        ),
+                    ),
+                )),
+                ᶜρq_tot_before,
+                (@. lazy(
+                    _gated(
+                        ᶜgate,
+                        water_tag_rescale_flags(
+                            ᶜρq_tag,
+                            ᶜafter,
+                            ᶜρq_tot_before,
+                            ᶜpos,
+                        ),
+                    ),
+                )),
+            )
+            meter_water_leg!(
+                meter,
+                :empty,
+                tag,
+                NonPrecipitatingPart(),
+                (@. lazy(
+                    _gated(
+                        ᶜgate,
+                        ifelse(
+                            ᶜρq_tot_before > 0,
+                            zero(ᶜρq_tot_before),
+                            water_tag_rescale_shift(
+                                ᶜρq_tag,
+                                ᶜafter,
+                                ᶜρq_tot_before,
+                                ᶜpos,
+                            ),
+                        ),
+                    ),
+                )),
+                ᶜρq_tot_before,
+                (@. lazy(zero(ᶜρq_tot_before))),
+            )
+        end
         # The state ledgers per mechanism take the partition's shift: the
         # rescale where the parent held water, the emptying where it did not.
         @. ᶜY.q_tag_led_rescale += _gated(
@@ -1401,6 +1464,61 @@ function _apply_water_tag_rescale!(
             water_tag_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before, ᶜpos),
         )
     else
+        if !isnothing(meter)
+            meter_water_leg!(
+                meter,
+                :rescale,
+                tag,
+                NonPrecipitatingPart(),
+                (@. lazy(
+                    _gated(
+                        ᶜgate,
+                        ifelse(
+                            ᶜρq_tot_before > 0,
+                            water_tag_source_rescale_shift(
+                                ᶜρq_tag,
+                                ᶜafter,
+                                ᶜρq_tot_before,
+                            ),
+                            zero(ᶜρq_tot_before),
+                        ),
+                    ),
+                )),
+                ᶜρq_tot_before,
+                (@. lazy(
+                    _gated(
+                        ᶜgate,
+                        water_tag_source_rescale_flags(
+                            ᶜρq_tag,
+                            ᶜafter,
+                            ᶜρq_tot_before,
+                        ),
+                    ),
+                )),
+            )
+            meter_water_leg!(
+                meter,
+                :empty,
+                tag,
+                NonPrecipitatingPart(),
+                (@. lazy(
+                    _gated(
+                        ᶜgate,
+                        ifelse(
+                            ᶜρq_tot_before > 0,
+                            zero(ᶜρq_tot_before),
+                            water_tag_source_rescale_shift(
+                                ᶜρq_tag,
+                                ᶜafter,
+                                ᶜρq_tot_before,
+                            ),
+                        ),
+                    ),
+                )),
+                ᶜρq_tot_before,
+                (@. lazy(zero(ᶜρq_tot_before))),
+            )
+        end
         @. ᶜgross += _gated(
             ᶜgate,
             abs(water_tag_source_rescale_shift(ᶜρq_tag, ᶜafter, ᶜρq_tot_before)),
@@ -1524,11 +1642,14 @@ function _repair_water_tag_partition!(Y, p, model::WaterTaggingModel)
     _accumulate_partition_neg!(ᶜwater_neg, Y.c, model.tags)
     mechanisms = Val((:q_tag_led_repair, :q_tag_led_repairnet))
     before_tag_ledgers!(p, Y, mechanisms)
-    ledger = tag_ledger(
-        ᶜwater_fix,
-        ᶜwater_fix_gross,
-        ᶜwater_fix_count,
-        water_tag_fix_ledger_view(Y, model),
+    ledger = with_water_meter(
+        tag_ledger(
+            ᶜwater_fix,
+            ᶜwater_fix_gross,
+            ᶜwater_fix_count,
+            water_tag_fix_ledger_view(Y, model),
+        ),
+        water_meter(p),
     )
     _apply_partition_repair!(
         Y.c,
@@ -1570,6 +1691,18 @@ function _apply_partition_repair!(ᶜY, ledger, ᶜpos, ᶜneg, tags::Tuple, par
     if _is_partition_tag(tag)
         ᶜρq_tag = water_tag_part_field(ᶜY, tag, part)
         (ᶜfix, ᶜgross, ᶜcount) = tag_ledger_fields(ledger, tag)
+        meter = ledger_water_meter(ledger)
+        isnothing(meter) || meter_water_leg!(
+            meter,
+            :repair,
+            tag,
+            part,
+            (@. lazy(
+                max(ᶜρq_tag, 0) * water_tag_repair_factor(ᶜpos, ᶜneg) - ᶜρq_tag,
+            )),
+            ᶜpos,
+            (@. lazy(water_tag_repair_flags(ᶜρq_tag, ᶜpos, ᶜneg))),
+        )
         # Fix ledger first, so it records the correction itself and not its
         # effect on an already-corrected tag. This matches
         # `rescale_water_tags!`. The repair moves water between the tags, so the

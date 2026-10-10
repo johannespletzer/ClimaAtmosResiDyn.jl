@@ -512,6 +512,91 @@ these.
     Newton solve does not see it, and each iteration evaluates it again at that
     iteration's state. With one iteration it is taken at the stage's first guess.
 
+## Accepted applications
+
+`water_tag_applications: true` writes every accepted application of the water
+tags' corrections. It is off by default and only reads the model. The model's
+fields are those of the same run without it, bit for bit. The tests show this
+after each of six steps for one configuration, in Float64 and in Float32: the
+1-moment column with rain and snow parts, two region tags and a source tag,
+increment transport and per-tag ledgers.
+
+A channel is a mechanism, a tag and a compartment. The compartment is `total`
+without rain and snow parts, and `nonprecipitating`, `rain` or `snow` with them.
+The roster holds these mechanisms:
+
+| Mechanism  | Writer                                                 | Quantity, units                | Event scale                   |
+|:---------- |:------------------------------------------------------ |:------------------------------ |:----------------------------- |
+| `rescale`  | the rescale where the parent held water                | `water_increment`, kg m^-3     | `ρq_tot` before               |
+| `empty`    | the rescale where the parent held none                 | `water_increment`, kg m^-3     | `ρq_tot` before               |
+| `repair`   | the partition repair, per part                         | `water_increment`, kg m^-3     | the partition's positive part |
+| `close`    | the closing step of rain and snow                      | `water_increment`, kg m^-3     | `ρq_tot`                      |
+| `follow`   | the follow of rain and snow, both legs of each move    | `water_increment`, kg m^-3     | `ρq_tot`                      |
+| `inc`      | the follower's flux under increment transport          | `water_tendency`, kg m^-3 s^-1 | `ρq_tot`                      |
+| `negative` | the follower's negative water and its crossing by mask | `water_tendency`, kg m^-3 s^-1 | `ρq_tot`                      |
+
+`close` and `follow` exist with `water_tag_precipitation: true`, and `inc` and
+`negative` with `water_tag_transport: increment`. `repair` and `close` exist
+for region tags alone, every other mechanism for every tag. These are every
+correction writer of the default mode, the leak correction excepted. The leak
+correction is not metered yet, as the copies are not, so the producer refuses
+`water_tag_leak_correction: true`.
+
+Each call of a writer is one application of each channel it changes. The meter
+records the change before the writer applies it, so `+x` and then `-x` in one
+step are two applications, and a move between a tag's parts is two legs. The
+counted stepper hooks, `lim!`, `constrain_state!` and the post-solve
+correction, give each application its role. A map of the accepted state at the
+end of the step has weight 1 (`final_map`). A map after a Newton solve has
+`b_imp/γ` (`post_newton`). The follower's tendency has `dt b_imp` in seconds
+(`implicit`). A change to a stage value that the accepted state does not take
+additively is a stage observation. It is counted, not recorded. A writer call
+outside the counted hooks has no role in the step. The step's finalization then
+stops the run with an error that gives the count and the last such call. The
+stepper never rejects a step, so each step has one trial, accepted.
+
+The run writes two files into its output directory:
+
+  - `water_tag_application_receipt.jsonl`. The first line is the header: the
+    schema, the integrator pin (`unconstrained_imex_ark`, the
+    `ClimaTimeSteppers` version, `b_exp`, `b_imp` and the implicit diagonal),
+    and the model identity. The roster is the list of channel ids under
+    `water_tag_application_roster`. Each channel's description is under
+    `water_tag_application_channels`, and the mechanisms the producer does not
+    meter, with their reasons, are under `water_tag_application_unsupported`.
+    The identity is `model_commit`, `model_dirty` and `model_diff_sha256`, the
+    sha256 of `git diff HEAD --binary` of the source tree, as the evidence
+    manifest computes it. It is the hash of the empty string for a clean tree,
+    and `unknown` off a git checkout or without `sha256sum`. A converter must
+    not overwrite it. Each further line is one accepted step with its
+    applications, their roles, weights and stages. A channel with no applied application in a step gets
+    an explicit zero. An application that is zero in every cell, with no
+    counter set, is left out and counted.
+  - `water_tag_applications.nc`. Per record and native cell: `record_values`,
+    `record_event_scale` and `record_flags`, the counter code
+    `fallback + 2 bound + 4 clamp + 8 zero_normalization`. Per channel and
+    accepted step edge: `ledger`, the channel's cumulative ledger, the running
+    sum of its applied records times their weights, in Float64. Also the cells'
+    `weights` (m for a column, m^3 otherwise) and `geometry`.
+
+Each run segment, a first run or a restart, writes both files afresh. A
+segment started in a directory that already holds them replaces both, so the
+two files always hold the same steps. With the default
+`output_dir_style: ActiveLink` each run has a directory of its own.
+
+The checkpoint carries the ledgers. A restart from a checkpoint without them
+starts them at zero with a warning, and the header says so. A checkpoint with
+only part of them is refused.
+
+The producer supports the default mode only. It refuses
+`water_tag_updraft_copy: true` and `water_tag_leak_correction: true`, runs on
+one process on a CPU, and needs an unconstrained IMEX-ARK stepper. It has not
+been tried on a GPU, so a GPU device is refused. The energy source
+tags are not metered. The cumulative ledger checks the receipt's
+bookkeeping. The model's own ledgers `q_tag_led_fix_<name>` and
+`q_tag_led_inc_<name>` check its completeness. The output grows with the
+records times the cells, so it suits a column.
+
 ## Scope
 
 Water tagging supports `microphysics_model: "0M"` and `"1M"`.
