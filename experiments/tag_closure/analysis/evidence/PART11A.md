@@ -3,7 +3,11 @@
 Proposed 2026-10-09. The design is
 [PART11A_ENERGY_REFERENCES](../../design/PART11A_ENERGY_REFERENCES.md).
 Every case freezes the fixed `c` = 166,764 J/kg (DECISIONS, 2026-10-09),
-except `donor_cooling` at `c_p,d T_0` = 274,389 J/kg. The design, its hash
+except `donor_cooling` at `c_p,d T_0` = 274,389 J/kg. That case is the
+per-case control (decided 2026-10-09, after PRs #166 and #167). It shows that
+the adapter reads `c` per case and refuses a mismatch, so a hard-coded `c` in
+a producer is caught. It is `c_p,d T_0` at the default parameters (`c_p,d` =
+1004.5, `T_0` = 273.16 in ClimaParams 1.2.0 and 1.3.0). The design, its hash
 `24290e41…` and the fixtures moved to the fixed `c` on 2026-10-09.
 
 ## Software
@@ -25,6 +29,13 @@ unassessable row. The case keeps its NOT ASSESSABLE verdict in the results.
 `src_cool` has no gain path, so the check `no_gain_path_zero` requires it to
 read exactly zero. That check stands beside the scorer's rows and never
 replaces them. The scorer is unchanged.
+
+## Boundary case margin
+
+The boundary case's wrong-origin mutant misses by 2.74 times the tolerance at
+the fixed `c`. The margin vanishes as `c` approaches 300,000 J/kg. The owner
+accepted the halved margin on 2026-10-09, after PRs #166 and #167. `c` is
+fixed, so `e_fall` stays. If `c` ever rises, `e_fall` is lowered first.
 
 ## Not delivered
 

@@ -37,13 +37,19 @@ cases use the fixed `c` of 166,764 J/kg, dry internal energy counted from
 110,495 J/kg as historical results. E71 showed that doubling `c` moved the
 region tags' integrals by 152% and 177%, so every energy verdict names its
 `c`. `donor_cooling` uses `c_p,d T_0` = 274,389 J/kg, the sweep alternative of
-G4.10, to show that the tools read `c` per case. Two inputs follow `c`.
+G4.10, as the per-case control (decided 2026-10-09). It shows that the adapter
+reads `c` per case and refuses a mismatch, so a hard-coded `c` in a producer
+is caught. Two inputs follow `c`.
 `offset_change` sets its energy source to −1.5 `c` times its mass source, so
 the source changes sign in `E_c` between `c` and `2c`. `inventory_edge_cases`
 sets `ρe` so that its cells hold `E_c` = 130,495, 0 and −9,505 J/m³. One
 condition depends on `c`. In `boundary_offset_exchange`, `F_c` points upward
-while `e_fall + c < 0`, which holds for `c` below 3e5 J/kg. `cΔρ` enters only
-`boundary_offset_exchange` and `offset_change`, the cases with a mass change.
+while `e_fall + c < 0`, which holds for `c` below 3e5 J/kg. The wrong-origin
+mutant misses by 2.74 times the tolerance at the fixed `c`, and the margin
+vanishes as `c` approaches 3e5 J/kg. The owner accepted this on 2026-10-09.
+`c` is fixed, so `e_fall` stays, and if `c` ever rises `e_fall` is lowered
+first. `cΔρ` enters only `boundary_offset_exchange` and `offset_change`, the
+cases with a mass change.
 Θx is defined for `heating_labels`, `donor_cooling`, `opposing_net_zero` and
 `offset_change`. Θi is computed where records exist.
 The other cases have no source, so a percentage of Θx is not assessable there.
@@ -96,7 +102,9 @@ must read zero arrays in the candidate.
 ## 5. Proposed choices, 2026-10-09
 
 The owner decided four choices on 2026-10-09
-([DECISIONS.md](../DECISIONS.md), 2026-10-09). They are in force.
+([DECISIONS.md](../DECISIONS.md), 2026-10-09). They are in force. Two more
+followed after PRs #166 and #167, `donor_cooling`'s basis and the boundary
+case's mutant margin (below).
 
   - Decided 2026-10-09: the fixed `c` is 166,764 J/kg (OD11). The cases
     freeze it, and `offset_change` adds `2c` = 333,528 J/kg. `donor_cooling`
@@ -112,6 +120,13 @@ The owner decided four choices on 2026-10-09
     set the offset to `c` and `2c`.
   - Decided 2026-10-09: the stored cases keep the constructed 128 eps floor as
     their gate. The stepped rung is a cross-check only.
+  - Decided 2026-10-09, after PRs #166 and #167: `donor_cooling` keeps
+    `c_p,d T_0` = 274,389 J/kg, the sweep alternative that is in force, as
+    the per-case control. It is `c_p,d T_0` at the default parameters
+    (`c_p,d` = 1004.5, `T_0` = 273.16 in ClimaParams 1.2.0 and 1.3.0). The other
+    seven cases use the fixed `c`.
+  - Decided 2026-10-09, after PRs #166 and #167: the boundary case's halved
+    mutant margin is accepted (2.74 times the tolerance at the fixed `c`).
 
 The choices below stay proposed.
 
@@ -122,8 +137,6 @@ The choices below stay proposed.
     code reads it, and the adapter refuses a fixture whose window is missing
     or differs.
   - The surface donor of the boundary case is the bottom cell.
-  - `donor_cooling` uses `c_p,d T_0` = 274,389 J/kg, the sweep alternative
-    that is in force, instead of the fixed `c`.
   - The record floor is reported relative to the record, never scored.
   - Rule names per case in `energy_reference_adapter.RULES`.
   - The roundoff allowance of 128 eps, the use of `SECOND_HALF_TIE` as the

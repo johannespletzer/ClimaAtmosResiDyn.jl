@@ -1,7 +1,8 @@
 # Part 8: water baseline and cost pilot, pre-registered
 
-Proposed 2026-10-09, waiting for the owner. Written before any job of this
-part. Record branch `claude/part8-baseline` from `claude/plan-rev2` at
+Proposed 2026-10-09. The owner decided the open choices on 2026-10-09, after
+PRs #166 and #167 (section 12). Written before any job of this part. Record
+branch `claude/part8-baseline` from `claude/plan-rev2` at
 `aa3e80ea9`. The runs use `main` at `bb2bedf23`. The brief is
 [DELIVERY_PLAN section 5, part 8](../DELIVERY_PLAN.md#part-8-water-baseline-and-cost-pilot).
 The contract is [G3_PLAN 6.1.1](../G3_PLAN.md#611-water-observables-and-accounting-conventions-part-2)
@@ -10,7 +11,8 @@ Where this note and a source differ, the source wins.
 
 A baseline is not a qualification. It raises no level, sets no threshold,
 default or tolerance, and changes no model code. Every choice this note makes
-is marked "proposed, 2026-10-09" and listed in section 12.
+was marked "proposed, 2026-10-09" and is listed in section 12, which marks
+each decided choice.
 
 ## 1. The question
 
@@ -251,8 +253,9 @@ and metric, or a table column.
 | Parent Newton error    | W57's E at 2 iterations, prior from D4-W. PX12's P1 probe for TRMM               | None known in the queue. The Newton count is OD1's configuration |
 | 0M precipitation sum   | WATER.PRECIP_INSTANTANEOUS `max_absolute_rate_defect`                            | WP4b stages 2 and 3 (criterion 7)                                |
 
-**The ranking rule** (proposed, 2026-10-09). A term measured on the pilot
-with a cited limit is ranked by its value over that limit, largest first. An
+**The ranking rule** (decided 2026-10-09, after PRs #166 and #167). A term
+measured on the pilot with a cited limit is ranked by its value over that limit,
+largest first. An
 origin row uses the larger of `L1/ORIGIN_L1_FIRST_HOUR` and
 `L∞/ORIGIN_LINF_FIRST_HOUR`, or the small-tag absolute rule where the scorer
 applies it. A prior from another case and a term without a limit are listed
@@ -323,9 +326,9 @@ pilot's own cost is read from these jobs: the build is the sum of
 the cache, tendency and integrator phases in the `.err` log, the step is the wall
 time of the progress log's last line over the steps it counts, and the peak
 memory is Slurm's MaxRSS. W58's last line counts 137 of the 144 steps. The step includes output and the closure audit. It is one sample on
-one node, reported, not the WP9 measure (proposed, 2026-10-09).
+one node, reported, not the WP9 measure (decided 2026-10-09).
 
-**The cost pairs** (proposed, 2026-10-09). Each job runs the untagged point 0
+**The cost pairs** (decided 2026-10-09). Each job runs the untagged point 0
 and then 8 water and 8 energy tags with both families' per-tag ledgers, on D4,
 in one mode. The ledgers are the diagnostics the owner put on every
 validation run (2026-09-24). The driver allows no closure check, so the check's
@@ -335,15 +338,21 @@ spread of the untagged build, so the node spread is read here. The driver,
 the warm-up of 50 steps and the six blocks are WP9 section 10's.
 
 **How the cost is read.** WP9 section 11's rule: blocks 2 to 6, the minimum
-and the median, the less favourable quoted. Each point's block spread and its
-ratio's block spread are at most 10%, or the job is reported with its spreads
+and the median, the less favourable quoted. The rule extends from the blocks
+of one job to the nodes of a cost set (decided 2026-10-09, after PRs #166
+and #167). The less favourable node is quoted, for the copies' build the
+slowest, and the other nodes are recorded as the favourable case. Each
+point's block spread and its ratio's block spread are at most 10%, or the job is
+reported with its spreads
 and not quoted. Nothing is rerun. For each mode: the step ratio to its own
 point 0, the build ratio and seconds, allocation per step and peak memory, and
 the spread across the three nodes. If two replicates land on one node, that is
 reported. E88 (9.098x with ledgers, build 2.14x) and the addendum (copies
 build 15,377 s without ledgers) are quoted as prior. OD3's cost row, 2x at
 the intended count, and its copies row, a build within 4 h, are cited beside
-the readings. No cost cap is proposed, and none is set.
+the readings. No cost cap is proposed, and none is set. WA-COST's cap is
+deferred until the walk fix is measured (decided 2026-10-09). It is set from
+the post-fix measurement that part 9's walk fix item pre-registers.
 
 ## 9. What waits for PX12
 
@@ -381,10 +390,11 @@ PR after the runs: 0.3M. The runs: section 8.
 ## 12. Choices made here, proposed 2026-10-09 unless marked decided
 
  1. The trio's configs differ from W58's only in `job_id` and comments.
+    Decided 2026-10-09.
  2. The trio takes whole nodes, so its build and step are a one-sample cost
-    reading of the pilot.
+    reading of the pilot. Decided 2026-10-09.
  3. The cost pairs: three jobs per mode, each with point 0 and 8 + 8 with
-    ledgers.
+    ledgers. Decided 2026-10-09.
  4. The OD2 reading of section 5: the twin's 10 min cadence for the record,
     the scorer's 30 min windows kept and the difference stated. Decided
     2026-10-09.
@@ -393,11 +403,14 @@ PR after the runs: 0.3M. The runs: section 8.
     converter and scorer follow-up of section 6 before part 10.
  6. The ranking rule and the fix candidates of section 7. NOT ASSESSABLE
     terms, the first-hour origins until PX12, are listed without a rank or a
-    fraction (decided 2026-10-09). The rule itself stays proposed.
- 7. W57's D4-W Newton error is listed as a prior, unranked.
+    fraction (decided 2026-10-09). The rule itself and the fix candidates are
+    decided 2026-10-09, after PRs #166 and #167.
+ 7. W57's D4-W Newton error is listed as a prior, unranked. Decided
+    2026-10-09.
  8. The default bundle has the copies as reference, since no reference of
     parts 6 and 7 is eligible on TRMM 0M before PX12 (section 7). The copies
     bundle has no reference. Decided 2026-10-09.
  9. The brief's "D4-W" for the cost pairs is read as WP9's D4 column,
     `wp9_energy_d4_edmf` (DYCOMS RF02, 1M, EDMF, 30 levels), where E88
-    measured 8 + 8. The D4-W runs of W54 to W57 use another config.
+    measured 8 + 8. The D4-W runs of W54 to W57 use another config. Decided
+    2026-10-09.

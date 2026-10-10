@@ -19,8 +19,9 @@ to the fixed `c` on 2026-10-09 (PR #166).
 The [pre-registered design](design/PART11A_ENERGY_REFERENCES.md) builds the
 eight cases of G4_CLAIM_CONTRACTS section 6 as offline known answers. Each
 case freezes the fixed `c` except `donor_cooling`, which uses `cp_d·T0` as the
-sweep alternative. Stored-energy cases and the radiation record
-are separate references. The tools and tests are in `analysis/evidence/`
+sweep alternative and the per-case control. Stored-energy cases and the
+radiation record are separate references. The tools and tests are in
+`analysis/evidence/`
 (`energy_reference*.py`). Every case's wrong-origin mutant is caught in a
 test. The owner decided three choices on 2026-10-09:
 
@@ -29,6 +30,13 @@ test. The owner decided three choices on 2026-10-09:
   - The [PX22 draft](configs/part11a_px22_draft/README.md) uses three new
     configs at `c`, `2c` and untagged. It waits for the owner's approval.
   - The stored cases keep the constructed 128 eps floor as their gate.
+
+After PRs #166 and #167 the owner decided two more on 2026-10-09.
+`donor_cooling` keeps `cp_d·T0` = 274,389 J/kg as the per-case control. It
+shows that the adapter reads `c` per case and refuses a mismatch. The
+boundary case's halved mutant margin is accepted. The mutant misses by 2.74
+times the tolerance at the fixed `c`. `c` is fixed, so `e_fall` stays, and if
+`c` ever rises `e_fall` is lowered first.
 
 **Part 11a is not done.** No run, scorer, default or tolerance change
 is supplied.
@@ -45,13 +53,17 @@ W58, the contract rows, the ranked table of each mode and the cost. Its
 verdict: H1 and H2 were not falsified. No recorded pass of W58 failed, and
 each mode's first term is the prior's (the default's closure, the copies'
 repair). H3's default half was not falsified, with an 8 + 8 step of 8.998x to
-9.379x against OD3's 2x. Its copies half is split, with builds of 3.02 h,
-4.48 h and 3.09 h against 4 h.
+9.379x against OD3's 2x. Its copies half was not falsified. The slowest build of
+4.48 h is quoted, and the builds of 3.02 h and 3.09 h are the favourable case
+(owner decision of 2026-10-09, after PRs #166 and #167).
 No stop rule of the design's section 10 applied.
 
-**Part 8 is done except the owner's items.** They are the copies half of H3,
-WA-COST's cap (none set or proposed) and the proposed choices of the design's
-section 12. The first-hour origin verdicts and
+**Part 8 is done except PX12's readings.** The owner decided its items on
+2026-10-09, after PRs #166 and #167. WA-COST's cap is deferred until the walk
+fix is measured, and no cap
+is set from this cost set. Choices 1, 2, 3, 7 and 9 of the design's section
+12 and choice 6's ranking rule and fix candidates are decided as proposed.
+The first-hour origin verdicts and
 the copies' eligibility wait for PX12 (part 7). No model, default, tolerance
 or scorer change is supplied.
 

@@ -1,4 +1,9 @@
 date,decided_by,decision,doc,section,still_in_force,superseded_by
+2026-10-09,owner,"Part 11a: donor_cooling keeps c_p,d T_0 = 274,389 J/kg as the per-case control that shows the adapter reads c per case and refuses a mismatch. The other seven cases use the fixed c = 166,764 J/kg.",DECISIONS.md,2026-10-09,yes,
+2026-10-09,owner,"Part 11a: the boundary case's halved mutant margin (2.74 times the tolerance at the fixed c) is accepted. e_fall stays. If c ever rises, e_fall is lowered first.",DECISIONS.md,2026-10-09,yes,
+2026-10-09,owner,"Part 8: H3's copies half quotes the slowest build (4.48 h). Section 8's less-favourable rule extends to the nodes of a cost set. The half is not falsified. Neither half is a criterion 10 verdict.",DECISIONS.md,2026-10-09,yes,
+2026-10-09,owner,"Part 8: WA-COST's cap is deferred until the walk fix is measured. No cap is set from part 8's cost set. Caps gate level 4.",DECISIONS.md,2026-10-09,yes,
+2026-10-09,owner,"Part 8's design choices 1, 2, 3, 7 and 9 and choice 6's ranking rule and fix candidates are decided as proposed.",DECISIONS.md,2026-10-09,yes,
 2026-10-09,owner,"OD2 on W58's twin is recorded at both cadences, the scorer unchanged. The record maps each startup row to the 10 min established reading by name. A scorer PR that reads OD2 from the twin's cadence comes before part 10 scores rain on TRMM.",DECISIONS.md,2026-10-09,yes,
 2026-10-09,owner,"W58's configuration stays for part 8. The per-tag led_fix rows are reported from the audit's _retained columns with the scorer's denominator by tag kind and its small-burden exemption. A converter and scorer follow-up per G3_PLAN 6.1.2 comes before part 10.",DECISIONS.md,2026-10-09,yes,
 2026-10-09,owner,"The first-hour origin terms are unranked readings against the copies until PX12, showing the value and the comparator and no fraction of a limit. If PX12 finds the copies ineligible they stay unranked and part 9 takes nothing from them.",DECISIONS.md,2026-10-09,yes,
