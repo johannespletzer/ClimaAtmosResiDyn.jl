@@ -1,4 +1,8 @@
 date,decided_by,decision,doc,section,still_in_force,superseded_by
+2026-10-10,owner,"Part 9: the producer checks' constants are decided as proposed. ROUNDING_ULPS 16, LEDGER_EXTRA_OPERATIONS 3 plus 2 for the division by rho, Z_MATCH_ULPS 4, nonzero final_map and implicit (on) and post_newton (Newton), cost factors 1.5 and 3.",DECISIONS.md,"2026-10-10, part 9 PR B",yes,
+2026-10-10,owner,"Part 9: a second bundle converted at 150 s serves COMMON.ACCEPTED_APPLICATION_ACTIVITY and COMMON.APPLICATION_ACTIVITY.<window>. The 30 min bundle stays for every other row.",DECISIONS.md,"2026-10-10, part 9 PR B",yes,
+2026-10-10,owner,"Part 9: the Float32 on and off pair is in. Parity runs on it too. Six jobs, under the cap of 12 jobs and 24 hours.",DECISIONS.md,"2026-10-10, part 9 PR B",yes,
+2026-10-10,owner,"Part 9: the Newton job is submitted as planned. If the model refuses the stage cadence, newton_replacement is recorded as unverified and the registration proceeds with that stated.",DECISIONS.md,"2026-10-10, part 9 PR B",yes,
 2026-10-09,owner,"Part 11a: donor_cooling keeps c_p,d T_0 = 274,389 J/kg as the per-case control that shows the adapter reads c per case and refuses a mismatch. The other seven cases use the fixed c = 166,764 J/kg.",DECISIONS.md,2026-10-09,yes,
 2026-10-09,owner,"Part 11a: the boundary case's halved mutant margin (2.74 times the tolerance at the fixed c) is accepted. e_fall stays. If c ever rises, e_fall is lowered first.",DECISIONS.md,2026-10-09,yes,
 2026-10-09,owner,"Part 8: H3's copies half quotes the slowest build (4.48 h). Section 8's less-favourable rule extends to the nodes of a cost set. The half is not falsified. Neither half is a criterion 10 verdict.",DECISIONS.md,2026-10-09,yes,

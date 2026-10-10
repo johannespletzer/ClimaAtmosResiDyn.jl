@@ -312,6 +312,32 @@ The list as it stood before this classification, kept as written:
 >     and the copies under first-order upwinding (W25). **Waiting.**
 >     [FINDINGS W25](FINDINGS.md)
 
+## 2026-10-10, part 9 PR B
+
+The owner decided these on 2026-10-10, on the four open inputs of the part 9
+producer design
+([PART9_PRODUCER.md](design/PART9_PRODUCER.md), sections 6 and 11) and the
+review of PR #171.
+
+  - **The design's constants are decided as proposed.** **In force.** The
+    ledger allowances reuse `ROUNDING_ULPS` 16 and `LEDGER_EXTRA_OPERATIONS`
+    3, plus 2 for the diagnostic's division by ρ in the model-ledger tie.
+    `Z_MATCH_ULPS` is 4. `final_map` and `implicit` need a nonzero record in
+    the on run and `post_newton` in the Newton run. The cost factors are 1.5
+    for the build and 3 for the steps.
+  - **A second bundle at 150 s serves the two accounting rows.** **In force.**
+    `COMMON.ACCEPTED_APPLICATION_ACTIVITY` and
+    `COMMON.APPLICATION_ACTIVITY.<window>` read a bundle converted at 150 s
+    from the on run, with the converted directory attached. The 30 min bundle
+    stays for every other row.
+  - **The Float32 pair is in.** **In force.** `p9_trmm0m_on_f32_6h` and
+    `p9_trmm0m_off_f32_6h` are the on and off configs with Float32. The parity
+    check runs on this pair too. The set has six jobs and stays under the cap
+    of 12 jobs and 24 hours.
+  - **The Newton job is submitted as planned.** **In force.** If the model
+    refuses the stage cadence on this case, `newton_replacement` is recorded
+    as unverified and the registration proceeds with that stated.
+
 ## 2026-10-09
 
 The owner decided these on 2026-10-09, on proposals 1 to 6 of the review of the

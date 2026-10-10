@@ -45,5 +45,12 @@ check trial_rollback trial_rollback "${OUT}/converted_on" --dt 150
 check newton_replacement newton_replacement "${OUT}/converted_newton" --expect-post-newton
 check complete_active_roster complete_active_roster "${OUT}/converted_on"
 check parent_bitwise_parity parent_bitwise_parity "$(dir on)" "$(dir off)"
+# The Float32 pair (owner, 2026-10-10) adds its result to the same log. The
+# gate passes the check only when every named result is PASS.
+echo "python3 -I ${E}/water_tag_application_checks.py parent_bitwise_parity $(dir on_f32) $(dir off_f32)" \
+    >>"${OUT}/parent_bitwise_parity.cmd"
+python3 -I "${E}/water_tag_application_checks.py" parent_bitwise_parity "$(dir on_f32)" "$(dir off_f32)" \
+    >>"${OUT}/parent_bitwise_parity.log" || status=1
+tail -n 2 "${OUT}/parent_bitwise_parity.log"
 check all_channel_checkpoint_restart restart "$(dir on)" "$(dir restarted)"
 exit "${status}"

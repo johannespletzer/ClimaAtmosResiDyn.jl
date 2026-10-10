@@ -553,7 +553,8 @@ otherwise. The scorer-level W58 test is `test_w58_pilot_first_hour` in
 
 The water tag producer of PR #170 (`water_tag_applications: true`) is checked
 with three tools ([design](../../design/PART9_PRODUCER.md), [record](PART9.md)).
-They add no threshold to the scorer. The proposed constants are in the design.
+They add no threshold to the scorer. The constants, decided 2026-10-10, are in
+the design.
 
 ```sh
 python3 experiments/tag_closure/analysis/evidence/water_tag_applications_convert.py RUN/output_0000 \
@@ -564,6 +565,22 @@ python3 experiments/tag_closure/analysis/evidence/water_tag_application_checks.p
 python3 experiments/tag_closure/analysis/evidence/water_tag_application_proof.py CONVERTED \
   --source water_tag_applications.jl --logs LOGS --environment TEXT
 python3 -m unittest discover -s experiments/tag_closure/analysis/evidence -p test_water_tag_applications.py -v
+```
+
+The scorer reads two bundles of the on run (owner, 2026-10-10). The 30 min
+bundle serves every row but the two accounting rows. The 150 s bundle, with
+the converted directory attached, serves `COMMON.ACCEPTED_APPLICATION_ACTIVITY`
+and `COMMON.APPLICATION_ACTIVITY.<window>`.
+
+```sh
+for p in 30m 150s; do
+  python3 experiments/tag_closure/analysis/evidence/convert_output.py --family water \
+    --candidate ON/output_0000 --period "${p}" \
+    --planning-commit SHA --scorer-commit SHA --out "BUNDLE_${p}"
+done
+python3 -c 'import sys; sys.path.insert(0, "experiments/tag_closure/analysis/evidence")
+import water_tag_applications_convert as wc; wc.attach(sys.argv[1], sys.argv[2])' \
+  BUNDLE_150s/manifest.json CONVERTED
 ```
 
 The converter writes the reader's receipt, native NPZ and ledgers from the

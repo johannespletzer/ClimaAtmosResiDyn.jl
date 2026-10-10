@@ -4,8 +4,9 @@ Pre-registered before any job. PR A (#170, `claude/part9-producer` at
 `648fad788`, not on `main`) adds the key `water_tag_applications`. PR B (this
 design and its tools) converts the producer's output for the part 5 reader,
 checks it on the cluster in six named checks, and assembles the proof that
-the reader's production gate reads. Every threshold here is proposed for the
-owner to set before a job runs. Proposals carry "proposed, 2026-10-10".
+the reader's production gate reads. The owner decided the constants of
+section 6 and the inputs of section 11 on 2026-10-10 (DECISIONS.md,
+"2026-10-10, part 9 PR B").
 
 ## 1. Question
 
@@ -68,17 +69,18 @@ at `:488-499`): each check needs
 record the check by name, with every named result PASS
 (`require(all(r == "PASS" for r in results), ...)`).
 
-| Check (gate key)                 | Run           | Pass rule                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-|:-------------------------------- |:------------- |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `accepted_weights`               | on            | `read_receipt` passes (`correction_accounting.py:165-271`). Its weight rule (`:255-262`): final maps weigh 1, tendencies `(b - a) * b_imp[stage-1]` in s, post-Newton maps `b_imp[stage-1] / implicit_diagonal[stage-1]`, compared with `==`. The pin's `b_exp`, `b_imp`, `implicit_diagonal` equal ClimaTimeSteppers' ARS222 exactly, and `b_exp != b_imp`. Every role matches its channel's quantity. A nonzero record exists for `final_map` and `implicit`                                                                                                                                                                                               |
-| `trial_rollback`                 | on            | Each step has one trial, accepted, and every record is applied in it. Steps are contiguous at 150 s. The producer's ledger starts at zero, and each edge equals the last plus the step's weighted records, to the allowance of section 6                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `newton_replacement`             | newton        | `read_receipt` passes (`correction_accounting.py:165-271`, one applied record per channel, trial and application). At most one record per step, channel, role and stage for the roles `implicit` and `post_newton`, so one of each at a stage passes. Each is at a stage with an implicit solve. At least one `post_newton` record. The `inc` and `negative` records tie to the model's `q_tag_led_inc_<tag>`                                                                                                                                                                                                                                                |
-| `complete_active_roster`         | on            | The receipt roster equals the roster that `water_tag_application_channels` builds for the run's merged config, in order. Unsupported is empty. `channel_metrics` (`correction_accounting.py:385`) passes for every channel over the whole run (the ledger tie and \|signed\| <= retained <= accepted activity). For each tag the records tie to the model's `q_tag_led_fix_<tag>` (rescale, empty, repair, close) and `q_tag_led_inc_<tag>` (inc, negative) at every step                                                                                                                                                                                    |
-| `parent_bitwise_parity`          | on, off       | The same checkpoints exist, at least one. Every array of each checkpoint is bitwise equal (dtype, shape and bytes, so signed zeros and NaN payloads count), except the producer's `fields/tag_ledger.applications.*`, which the on run must have. The same diagnostic files exist, and every variable is bitwise equal                                                                                                                                                                                                                                                                                                                                       |
-| `all_channel_checkpoint_restart` | on, restarted | The restarted header says `ledger_start: checkpoint` and equals the continuous one but for the segment start. Its step lines equal the continuous run's after 3 h (`==` on the parsed JSON). Record values, event scales, flags and channels are bitwise equal by record id. Ledgers at every edge from 3 h are bitwise equal. Every common checkpoint after 3 h is bitwise equal, the producer's ledgers included. The same diagnostic files exist, at least one. In each, every variable is bitwise equal. A variable with a `time` dimension, found by name in any position, is compared at the common times after 3 h, and each file needs one such time |
+| Check (gate key)                 | Run                          | Pass rule                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+|:-------------------------------- |:---------------------------- |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `accepted_weights`               | on                           | `read_receipt` passes (`correction_accounting.py:165-271`). Its weight rule (`:255-262`): final maps weigh 1, tendencies `(b - a) * b_imp[stage-1]` in s, post-Newton maps `b_imp[stage-1] / implicit_diagonal[stage-1]`, compared with `==`. The pin's `b_exp`, `b_imp`, `implicit_diagonal` equal ClimaTimeSteppers' ARS222 exactly, and `b_exp != b_imp`. Every role matches its channel's quantity. A nonzero record exists for `final_map` and `implicit`                                                                                                                                                                                               |
+| `trial_rollback`                 | on                           | Each step has one trial, accepted, and every record is applied in it. Steps are contiguous at 150 s. The producer's ledger starts at zero, and each edge equals the last plus the step's weighted records, to the allowance of section 6                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `newton_replacement`             | newton                       | `read_receipt` passes (`correction_accounting.py:165-271`, one applied record per channel, trial and application). At most one record per step, channel, role and stage for the roles `implicit` and `post_newton`, so one of each at a stage passes. Each is at a stage with an implicit solve. At least one `post_newton` record. The `inc` and `negative` records tie to the model's `q_tag_led_inc_<tag>`                                                                                                                                                                                                                                                |
+| `complete_active_roster`         | on                           | The receipt roster equals the roster that `water_tag_application_channels` builds for the run's merged config, in order. Unsupported is empty. `channel_metrics` (`correction_accounting.py:385`) passes for every channel over the whole run (the ledger tie and \|signed\| <= retained <= accepted activity). For each tag the records tie to the model's `q_tag_led_fix_<tag>` (rescale, empty, repair, close) and `q_tag_led_inc_<tag>` (inc, negative) at every step                                                                                                                                                                                    |
+| `parent_bitwise_parity`          | on, off, and on_f32, off_f32 | The same checkpoints exist, at least one. Every array of each checkpoint is bitwise equal (dtype, shape and bytes, so signed zeros and NaN payloads count), except the producer's `fields/tag_ledger.applications.*`, which the on run must have. The same diagnostic files exist, and every variable is bitwise equal                                                                                                                                                                                                                                                                                                                                       |
+| `all_channel_checkpoint_restart` | on, restarted                | The restarted header says `ledger_start: checkpoint` and equals the continuous one but for the segment start. Its step lines equal the continuous run's after 3 h (`==` on the parsed JSON). Record values, event scales, flags and channels are bitwise equal by record id. Ledgers at every edge from 3 h are bitwise equal. Every common checkpoint after 3 h is bitwise equal, the producer's ledgers included. The same diagnostic files exist, at least one. In each, every variable is bitwise equal. A variable with a `time` dimension, found by name in any position, is compared at the common times after 3 h, and each file needs one such time |
 
-Parity covers Float64 only (section 7). The check reads either precision
-bit for bit, and the tests run it on a Float32 fixture.
+Parity runs on the Float64 pair and on the Float32 pair of section 7. Both
+results go to one log, and the gate passes the check only when both are
+PASS. The tests run the check on a Float32 fixture.
 
 ## 4. Controls and fixed settings
 
@@ -87,8 +89,8 @@ bit for bit, and the tests run it on a Float32 fixture.
     run.
   - Fixed: model `648fad788` from a clean detached tree, the part 8 default
     config otherwise unchanged (ARS222, dt 150 s, 6 h, column, 82 levels,
-    Float64), `reproducible_restart: true` and hourly checkpoints in all four
-    runs, the 150 s diagnostics `rhoa`, `ta`, `hus`, `q_tag_led_fix_<tag>` and
+    Float64, Float32 in the pair of section 7), `reproducible_restart: true`
+    and hourly checkpoints in all six runs, the 150 s diagnostics `rhoa`, `ta`, `hus`, `q_tag_led_fix_<tag>` and
     `q_tag_led_inc_<tag>`, one process, CPU, an exclusive node.
   - The Newton run adds `max_newton_iters_ode: 2` and
     `update_constrain_state_every: "stage"`. With the default single Newton
@@ -100,13 +102,14 @@ bit for bit, and the tests run it on a Float32 fixture.
 ## 5. Job set and cost
 
 `runscripts/part9_checks.sh` (dry run unless `--submit`), configs
-`configs/p9_trmm0m_{on,off,newton,restarted}_6h.yml`. Then
+`configs/p9_trmm0m_{on,off,newton,restarted,on_f32,off_f32}_6h.yml`. Then
 `runscripts/part9_check_logs.sh` on a login node writes the six logs.
 
 Basis: part 8's default job 14170101 (PART8.md): wall 844 s, build 209.9 s,
 79.8 ms per step, MaxRSS 7.48 GiB. The 623 s of startup is kept. The build is
 taken as 1.5 times and the steps as 3 times part 8's for the meter, its writes
-and the 150 s output (proposed, 2026-10-10, not measured).
+and the 150 s output (decided 2026-10-10, not measured). The Float32 pair
+is estimated as its Float64 twins.
 
 | Job                      | Checks it feeds                            | Estimate | Limit | Memory | Node-hours (limit) |
 |:------------------------ |:------------------------------------------ |:-------- |:----- |:------ |:------------------ |
@@ -114,14 +117,18 @@ and the 150 s output (proposed, 2026-10-10, not measured).
 | `p9_trmm0m_off_6h`       | parity                                     | 15 min   | 1 h   | 48G    | 0.25 (1)           |
 | `p9_trmm0m_newton_6h`    | Newton replacement                         | 17 min   | 1 h   | 48G    | 0.28 (1)           |
 | `p9_trmm0m_restarted_6h` | restart, after `on`                        | 16 min   | 1 h   | 48G    | 0.27 (1)           |
+| `p9_trmm0m_on_f32_6h`    | parity in Float32                          | 16 min   | 1 h   | 48G    | 0.27 (1)           |
+| `p9_trmm0m_off_f32_6h`   | parity in Float32                          | 15 min   | 1 h   | 48G    | 0.25 (1)           |
 
-About 1.1 node-hours, 4 at the limits. Four jobs stay under the size at
+About 1.6 node-hours, 6 at the limits. Six jobs stay under the size at
 which a set goes to the owner first: "Any set over 12 jobs or 24 hours goes
 to the owner first" (`DELIVERY_PLAN.md:58-59`). The runs keep the full 6 h.
 Steps are about 1% of part 8's wall, so a shorter run saves little. The
 per-job arithmetic is in `runscripts/part9_checks.sh`.
 
-## 6. Proposed constants (proposed, 2026-10-10)
+## 6. Constants (decided 2026-10-10)
+
+The owner decided these four as proposed on 2026-10-10.
 
   - Ledger allowances reuse the reader's `ROUNDING_ULPS` (16) and
     `LEDGER_EXTRA_OPERATIONS` (3). The producer ledger check allows
@@ -140,11 +147,11 @@ per-job arithmetic is in `runscripts/part9_checks.sh`.
   - Default mode only. The leak correction is not metered and the key refuses
     it. The updraft copies are refused. Energy tags are out of scope.
   - One parity configuration in CI (the 1M column). This set adds one, TRMM 0M.
-  - Float32: no Float32 config of the part 8 case exists, so this set has no
-    Float32 pair. PR A's Float32 parity group covers the 1M column only.
-    Proposed, 2026-10-10: an `on` and `off` pair with `FLOAT_TYPE: "Float32"`,
-    two more jobs, about 0.5 node-hours, only if the owner wants it before
-    registration.
+  - Float32: PR A's Float32 parity group covers the 1M column only. Decided
+    2026-10-10: the set adds `p9_trmm0m_on_f32_6h` and `p9_trmm0m_off_f32_6h`,
+    the on and off configs with `FLOAT_TYPE: "Float32"` and their own job ids,
+    nothing else changed. `parent_bitwise_parity` runs on this pair too. Two
+    more jobs, about 0.5 node-hours. The other checks stay on Float64.
   - CPU and one process. A GPU device and distributed runs are refused.
   - The output grows with records times cells. A column is small.
   - The producer's ledger is the running sum of its own records. The
@@ -184,11 +191,13 @@ proof, and the `validity` and `roster` rows PASS:
   - Paired precipitation stays as it is (PART5.md). The 0M case has none.
 
 `channel_metrics` aligns each ledger with the candidate's `rho`. The scorer's
-30 min bundle has `rho` every 30 min, so `attach` refuses it. Proposed,
-2026-10-10: the record follow-up scores the two rows on a second bundle,
-converted at the 150 s period from the same run. The other choice is a
-reader change that names the density field per channel. That is a scorer
-change for the owner.
+30 min bundle has `rho` every 30 min, so `attach` refuses it. Decided
+2026-10-10: a second bundle, converted by `convert_output.py --period 150s`
+from the same on run, with the converted directory attached, serves the two
+accounting rows `COMMON.ACCEPTED_APPLICATION_ACTIVITY` and
+`COMMON.APPLICATION_ACTIVITY.<window>`. The 30 min bundle serves every other
+row. The commands are in the evidence README, section "The part 9 producer
+checks".
 
 ## 10. Stop rules
 
@@ -196,14 +205,17 @@ change for the owner.
     owner. One rerun per job for an infrastructure failure, with approval.
   - A check prints FAIL: no registration. Record the log. A parity or restart
     FAIL is reported to PR #170 as blocking.
-  - The Newton run refuses stage cadence or does not finish: record it,
-    `newton_replacement` stays unverified, and no registration.
-  - More than 4 jobs or 4 node-hours at the limits: stop and ask.
+  - The Newton job is submitted as planned. If the model refuses the stage
+    cadence on this case, `newton_replacement` is recorded as unverified and
+    the registration proceeds with that stated (decided 2026-10-10). A Newton
+    job that fails for another reason follows the first rule.
+  - More than 6 jobs or 6 node-hours at the limits: stop and ask.
   - The producer source hash differs from section 8: stop, redo the entry.
 
-## 11. Open inputs for the owner
+## 11. Owner inputs (decided 2026-10-10)
 
- 1. The constants of section 6.
- 2. The Float32 pair of section 7: in or out.
- 3. The second bundle at 150 s for the two scorer rows (section 9).
- 4. Submission of the four jobs, each with approval, `restarted` after `on`.
+ 1. The constants of section 6: as proposed.
+ 2. The Float32 pair of section 7: in.
+ 3. The second bundle at 150 s for the two scorer rows (section 9): yes.
+ 4. Submission of the six jobs, each with approval, `restarted` after `on`.
+    The Newton job as planned, with the stop rule of section 10.
