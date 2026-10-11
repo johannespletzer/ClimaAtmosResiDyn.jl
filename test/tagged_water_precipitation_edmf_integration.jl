@@ -14,9 +14,11 @@ It checks:
  2. after the hour, the closing ledger `q_tag_led_close` over the column
     against the hour's rain, and the compartments' closure. Rain closes to
     rounding. The non-precipitating parts' column total departs from the
-    parent's by the increment follower's left part, `q_tag_inc_left`. The
-    ledger and the non-precipitating closure stay above 1e-8 and are marked
-    broken.
+    parent's by the increment follower's left part, `q_tag_inc_left`. Under
+    van Leer the ledger's signed column integral is bounded and its gross is
+    printed, and the non-precipitating closure per cell is marked broken. The
+    first-order case, where the ledger is at rounding, is in
+    `tagged_water_precipitation_edmf_tracer_integration.jl`.
  3. the note's section 5 twin test: a tag that holds all of each compartment
     takes each operator's tendency of that compartment, for the SGS mass flux,
     the vertical diffusive flux and the microphysics.
@@ -31,7 +33,7 @@ It checks:
  9. a checkpoint restores the parts bit for bit, and one continued step keeps
     the parts closed.
 10. the new kernels' allocations on a second call, bounded by what they
-    allocated, and broken where they allocate per cell.
+    allocated.
 
 The refusals (`edonly_edmfx`, updraft copies, the unsplit solver) are in the
 unit tests, `tagged_water_precipitation_tests.jl`. The parts under the default
@@ -99,12 +101,11 @@ end
         N_gross = sum(abs.(ᶜN_gap))
         left = sum(Y.c.q_tag_inc_left)
         @info "The closing ledger and the closure under EDMF" led_close led_close_gross rain_scale result N_gap N_gross left
-        # The closing ledger is not at rounding. It takes the cells where
-        # the partition holds none of the rain the parent holds, whose shares
-        # are zero, and under van Leer the parts' own limited advection, which
-        # sums to zero over the column. It was 1.6e-7 of the rain scale, and
-        # 3.9e-8 with first-order upwinding, from one step.
-        @test_broken led_close <= 1e-8 * rain_scale
+        # Under van Leer the parts' own limited advection moves the parts'
+        # sum apart from the species' by water that sums to zero over the
+        # column, which the closing step books with both signs. So the gross
+        # is printed, and the signed integral is held to the design's bound.
+        @test led_close <= 1e-8 * rain_scale
         @test result.rain < 1e-8
         # The non-precipitating parts' column total is the parent's less the
         # follower's left part, as without the key
@@ -313,11 +314,10 @@ end
     # 10. Allocations of the new kernels on a second call, Julia 1.11, the
     # 30-level column. The flows' 32 bytes and the SGS flux's 120 come from
     # the parent's helpers, as without the key (`tagged_water_edmf_integration.jl`
-    # bounds the latter's one call by 64). The microphysics hook allocated 43536
-    # bytes, 16800 of them, 560 per cell, in `water_tag_microphysics_inputs!`.
-    # Per cell is a defect, so it stays broken. The Jacobian update allocated
-    # at most 3552 bytes. The bounds on these two hold on Julia 1.11, where
-    # they were measured.
+    # bounds the latter's one call by 64). `water_tag_microphysics_inputs!`
+    # allocates nothing. The rest of the microphysics hook allocates at most
+    # 26736 bytes and the Jacobian update at most 3552. The bounds on these two
+    # hold on Julia 1.11, where they were measured.
     @testset "The new kernels' allocations" begin
         Yₜ = similar(Y)
         fill!(parent(Yₜ), 0)
@@ -353,9 +353,9 @@ end
         @info "Allocations of the new kernels" flows hook inputs sgs jacobian
         @test flows <= 64
         @test sgs <= 4 * 64
-        @test_broken inputs == 0
+        @test inputs == 0
         if VERSION >= v"1.11"
-            @test hook <= 43536
+            @test hook <= 26736
             @test jacobian <= 3552
         end
     end

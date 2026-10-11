@@ -284,12 +284,16 @@ end
 # Each tag's rain or snow part takes its share of its compartment's face flux,
 # in the cell the flux leaves, as `_sgs_water_tag_fluxes!` does for the
 # non-precipitating parts. Where the compartment is not positive the share is
-# zero, as the sedimentation share is.
+# zero, as the sedimentation share is. Where the parent holds the compartment
+# and the partition holds none of it, a region tag takes its share of the
+# non-precipitating water, as the closing step gives new rain its
+# composition, so that the partition still takes the whole flux
+# ([`water_tag_part_flux_share`](@ref)).
 _sgs_water_tag_part_fluxes!(ᶜYₜ, ᶜY, scratch, ᶠflux, ::Tuple{}, part) = nothing
 function _sgs_water_tag_part_fluxes!(ᶜYₜ, ᶜY, scratch, ᶠflux, tags::Tuple, part)
     tag = first(tags)
     ᶜpartₜ = water_tag_part_field(ᶜYₜ, tag, part)
-    ᶜshare = water_tag_part_share(ᶜY, scratch, tag, part)
+    ᶜshare = water_tag_part_flux_share(ᶜY, scratch, tag, part)
     @. ᶜpartₜ -= ᶜadvdivᵥ(
         ᶠflux * ifelse(
             _is_upward(ᶠflux),
@@ -385,7 +389,7 @@ the water that is neither rain nor snow. Their exchange weights
 rescaled to `q_tot_effʲ` ([`water_tag_exchange_water`](@ref)). The rain and
 snow parts are exchanged too, each with its species' weight, `q_raiᵏ` or
 `q_snoᵏ`, its own bound and blend factor, and the updraft's shares from the
-rain or snow plume ([`water_tag_precip_plume!`](@ref)).
+rain or snow plume ([`water_tag_precip_plumes!`](@ref)).
 
 It needs one updraft and region tags that partition the domain, which
 `check_water_tracers_transport_supported` and
@@ -396,21 +400,13 @@ function sgs_exchange_of_water_tags!(Yₜ, Y, p, turbconv_model, model)
     # Under the key the rain and snow plumes read the non-precipitating
     # parts' plume, so they are marched before its exchange overwrites it.
     if has_water_tag_precipitation(model)
-        water_tag_precip_plume!(
+        water_tag_precip_plumes!(
             p.scratch.ᶜq_rtag_plume,
-            inputs.ᶜεʲ,
-            Y,
-            p,
-            model,
-            RainPart(),
-        )
-        water_tag_precip_plume!(
             p.scratch.ᶜq_stag_plume,
             inputs.ᶜεʲ,
             Y,
             p,
             model,
-            SnowPart(),
         )
     end
     _exchange_of_water_tag_part!(Yₜ, p, inputs, model, NonPrecipitatingPart())
@@ -873,7 +869,7 @@ _part_formation_flow(F, ::SnowPart) = F.NS
 The inputs of the exchange of the rain or snow parts (`part`), as
 [`water_exchange_inputs!`](@ref) returns them for the non-precipitating parts:
 the grid mean's specific part values into `ᶜq_tag_mean`, the updraft's from
-the part's plume ([`water_tag_precip_plume!`](@ref)), and the bound's room and
+the part's plume ([`water_tag_precip_plumes!`](@ref)), and the bound's room and
 ratio from the part's own species in each subdomain, `q_raiʲ` and `q_rai⁰` or
 `q_snoʲ` and `q_sno⁰`. Where the environment holds none of the species or a
 negative amount, the room is not positive and nothing is exchanged. Reuses the
@@ -1018,19 +1014,22 @@ function set_nonnegative_part_specific!(ᶜε̄, ᶜY, tags, part)
 end
 
 """
-    water_tag_precip_plume!(ᶜεʲ, ᶜεᴺʲ, Y, p, model, part)
+    water_tag_precip_plumes!(ᶜεᴿʲ, ᶜεˢʲ, ᶜεᴺʲ, Y, p, model)
 
-Write the rain plume (`part = RainPart()`) or the snow plume into `ᶜεʲ`: the
-updraft's specific values of each tag's part, for the exchange of the parts.
-The updraft's rain takes the non-precipitating composition where it forms and
-the environment's where it flows in laterally (`updraft_sedimentation!`). So
-the plume is marched downward, as the rain falls, and at each level the
-updraft's rain is the mix of three sources, each with its composition:
+Write the rain plume into `ᶜεᴿʲ` and the snow plume into `ᶜεˢʲ`: the
+updraft's specific values of each tag's rain and snow parts, for the exchange
+of the parts. The updraft's rain takes the non-precipitating composition where
+it forms and the environment's where it flows in laterally
+(`updraft_sedimentation!`). So the plumes are marched downward, as the rain
+falls, and at each level the updraft's rain is the mix of four sources, each
+with its composition:
 
   - the rain that falls into the level from the level above within the
-    updraft, `min(aʲ, aʲ₊) ρʲ₊ wʲ₊ q_raiʲ₊`, with the plume's shares above.
+    updraft, `min(aʲ, aʲ₊) ρʲ₊ wʲ₊ q_raiʲ₊`, with the rain plume's shares above.
   - the rain formed there, `ρaʲ Fʲ_NR Δz`, with the shares of the
     non-precipitating parts' plume `ᶜεᴺʲ` at the level.
+  - the rain formed from snow there, `ρaʲ Fʲ_SR Δz`, with the snow plume's
+    shares above.
   - the lateral inflow where the updraft widens downward,
     `(aʲ - aʲ₊) ρ⁰w⁰q_rai⁰`, the environment's flux as
     `updraft_sedimentation!` forms it, with the environment's rain shares
@@ -1041,11 +1040,61 @@ clipped at zero. The shares are rescaled at each level so that the
 partition's sum is one, as `WaterPlumeStep` rescales the `N` plume, and the
 values are the shares times `q_raiʲ`. Where the updraft holds no rain, or no
 source brings any, the plume takes the grid mean's rain shares. Where the
-environment holds none, the inflow is dropped. Snow alike, with the flow
-`Fʲ_NS` and the snow fields. The amounts weight compositions only, so they
-need not repeat the model's face densities. Starts anew each evaluation.
+environment holds none, the inflow is dropped, and where the snow plume above
+holds none, the rain formed from snow is dropped. Snow alike, with the flows
+`Fʲ_NS` and `Fʲ_RS`, the rain plume's shares above and the snow fields. The two
+plumes are marched together, so that each takes the other's shares from the
+level above, and the march runs twice, once for each output. The amounts weight
+compositions only, so they need not repeat the model's face densities. Starts
+anew each evaluation.
 """
-function water_tag_precip_plume!(ᶜεʲ, ᶜεᴺʲ, Y, p, model, part)
+function water_tag_precip_plumes!(ᶜεᴿʲ, ᶜεˢʲ, ᶜεᴺʲ, Y, p, model)
+    FT = eltype(Y.c.ρ)
+    ᶜsgsʲ = Y.c.sgsʲs.:(1)
+    ᶜρʲ = p.precomputed.ᶜρʲs.:(1)
+    ᶜΔz = Fields.Δz_field(Y.c)
+    ᶜaʲ = @. lazy(draft_area(ᶜsgsʲ.ρa, ᶜρʲ))
+    ᶜFʲ = p.scratch.ᶜtagging_mp_flowsʲ
+    ᶜcross_SR = @. lazy(max(ᶜsgsʲ.ρa * ᶜFʲ.SR, 0) * ᶜΔz)
+    ᶜcross_RS = @. lazy(max(ᶜsgsʲ.ρa * ᶜFʲ.RS, 0) * ᶜΔz)
+    ᶜinput = Base.Broadcast.broadcasted(
+        _precip_plumes_level,
+        _precip_plume_part_level(Y, p, model, RainPart()),
+        _precip_plume_part_level(Y, p, model, SnowPart()),
+        ᶜεᴺʲ,
+        ᶜaʲ,
+        ᶜsgsʲ.ρa,
+        Y.c.ρ,
+        ᶜcross_SR,
+        ᶜcross_RS,
+    )
+    none = ntuple(_ -> zero(FT), Val(length(model.tags)))
+    plume_init = (none, none, zero(FT), zero(FT), zero(FT))
+    step = PrecipPlumeStep(_water_partition_flags(model.tags))
+    init = (plume_init, plume_init, zero(FT))
+    Operators.column_accumulate!(
+        step,
+        ᶜεᴿʲ,
+        ᶜinput;
+        init,
+        transform = _rain_plume_values,
+        reverse = true,
+    )
+    Operators.column_accumulate!(
+        step,
+        ᶜεˢʲ,
+        ᶜinput;
+        init,
+        transform = _snow_plume_values,
+        reverse = true,
+    )
+    return nothing
+end
+
+# The lazy inputs of one plume at each level, as a tuple per cell:
+# `(grid mean's specific part values, formation, environment's flux,
+# updraft's flux, updraft's species, grid mean's species)`.
+function _precip_plume_part_level(Y, p, model, part)
     FT = eltype(Y.c.ρ)
     ᶜsgsʲ = Y.c.sgsʲs.:(1)
     ᶜρʲ = p.precomputed.ᶜρʲs.:(1)
@@ -1067,65 +1116,95 @@ function water_tag_precip_plume!(ᶜεʲ, ᶜεᴺʲ, Y, p, model, part)
         ),
     )
     ᶜupdraft_flux = @. lazy(max(ᶜρʲ * ᶜwʲ * ᶜqʲ, 0))
-    ᶜinput = Base.Broadcast.broadcasted(
-        _precip_plume_level,
+    return Base.Broadcast.broadcasted(
+        tuple,
         ᶜε̄,
-        ᶜεᴺʲ,
         ᶜformation,
         ᶜenvironment_flux,
-        ᶜaʲ,
         ᶜupdraft_flux,
         ᶜqʲ,
         ᶜρq,
-        ᶜsgsʲ.ρa,
-        Y.c.ρ,
     )
-    none = ntuple(_ -> zero(FT), Val(length(model.tags)))
-    Operators.column_accumulate!(
-        PrecipPlumeStep(_water_partition_flags(model.tags)),
-        ᶜεʲ,
-        ᶜinput;
-        init = (none, none, zero(FT), zero(FT), zero(FT), zero(FT)),
-        transform = _precip_plume_values,
-        reverse = true,
-    )
-    return nothing
 end
 
-@inline _precip_plume_level(
-    ε̄,
-    εᴺ,
-    formation,
-    environment_flux,
-    aʲ,
-    updraft_flux,
-    qʲ,
-    ρq,
-    ρaʲ,
-    ρ,
-) =
-    (ε̄, εᴺ, formation, environment_flux, aʲ, updraft_flux, qʲ, ρq, ρaʲ, ρ)
+@inline _precip_plumes_level(rain, snow, εᴺ, aʲ, ρaʲ, ρ, cross_SR, cross_RS) =
+    (rain, snow, εᴺ, aʲ, ρaʲ, ρ, cross_SR, cross_RS)
 
-# The plume's values from its state: the shares times the updraft's species.
-@inline _precip_plume_values(state) =
-    ntuple(i -> state[1][i] * state[6], Val(length(state[1])))
+# A plume's values from its state: the shares times the updraft's species.
+@inline _plume_values(state) =
+    ntuple(i -> state[1][i] * state[5], Val(length(state[1])))
+@inline _rain_plume_values(state) = _plume_values(state[1])
+@inline _snow_plume_values(state) = _plume_values(state[2])
 
-# One level of the rain or snow plume, from the state of the level above:
-# `(shares, environment's shares, whether the environment has a composition,
-# updraft flux, area, updraft species)`. Each tuple of tag values is built
-# with `ntuple` over the partition's length, so the state is a plain tuple of
-# one type at every level. `WaterPlumeStep` maps instead, over one tuple. Here
-# a `map` over several tuples, one of them ClimaCore's `AutoBroadcaster`
-# inside the column march, returned a `Vector`, which the output field cannot
-# hold. One plume's march allocated 16 bytes per call on Julia 1.11, and
-# nothing per cell. A callable type, so that the partition travels in the
-# type, as in `WaterPlumeStep`.
+# One level of the rain and snow plumes, from the state of the level above:
+# `(rain plume, snow plume, updraft area)`, each plume as `(shares,
+# environment's shares, whether the environment has a composition, updraft
+# flux, updraft species)`. Each tuple of tag values is built with `ntuple`
+# over the partition's length, so the state is a plain tuple of one type at
+# every level. `WaterPlumeStep` maps instead, over one tuple. Here a `map`
+# over several tuples, one of them ClimaCore's `AutoBroadcaster` inside the
+# column march, returned a `Vector`, which the output field cannot hold. A
+# callable type, so that the partition travels in the type, as in
+# `WaterPlumeStep`.
 struct PrecipPlumeStep{partition} end
 PrecipPlumeStep(::Val{partition}) where {partition} = PrecipPlumeStep{partition}()
 @inline function (::PrecipPlumeStep{partition})(above, level) where {partition}
-    (shares₊, environment₊, has_environment₊, updraft_flux₊, a₊, _) = above
-    (ε̄, εᴺ, formation, environment_flux, aʲ, updraft_flux, qʲ, ρq, ρaʲ, ρ) =
-        level
+    (rain₊, snow₊, a₊) = above
+    (rain, snow, εᴺ, aʲ, ρaʲ, ρ, cross_SR, cross_RS) = level
+    FT = typeof(ρ)
+    N = Val(length(partition))
+    total_N = _partition_total(εᴺ, partition)
+    shares_N =
+        ntuple(i -> total_N > zero(FT) ? εᴺ[i] / total_N : zero(FT), N)
+    has_N = total_N > zero(FT)
+    rain_state = _precip_plume_mix(
+        rain₊,
+        rain,
+        shares_N,
+        has_N,
+        snow₊[1],
+        cross_SR,
+        aʲ,
+        a₊,
+        ρaʲ,
+        ρ,
+        Val(partition),
+    )
+    snow_state = _precip_plume_mix(
+        snow₊,
+        snow,
+        shares_N,
+        has_N,
+        rain₊[1],
+        cross_RS,
+        aʲ,
+        a₊,
+        ρaʲ,
+        ρ,
+        Val(partition),
+    )
+    return (rain_state, snow_state, aʲ)
+end
+
+# One plume at one level: the mix of its four sources, rescaled so that the
+# partition's sum is one, and the environment's shares for the level below.
+# `other₊` are the other plume's shares above, the composition of the water
+# that converts into this plume's species (`cross`).
+@inline function _precip_plume_mix(
+    above,
+    level,
+    shares_N,
+    has_N,
+    other₊,
+    cross,
+    aʲ,
+    a₊,
+    ρaʲ,
+    ρ,
+    ::Val{partition},
+) where {partition}
+    (shares₊, environment₊, has_environment₊, updraft_flux₊, _) = above
+    (ε̄, formation, environment_flux, updraft_flux, qʲ, ρq) = level
     FT = typeof(ρ)
     N = Val(length(partition))
     total_mean = _partition_total(ε̄, partition)
@@ -1133,19 +1212,20 @@ PrecipPlumeStep(::Val{partition}) where {partition} = PrecipPlumeStep{partition}
         i -> total_mean > zero(FT) ? ε̄[i] / total_mean : zero(FT),
         N,
     )
-    total_N = _partition_total(εᴺ, partition)
     from_above = min(aʲ, a₊) * updraft_flux₊
     lateral =
         has_environment₊ > zero(FT) ? max(aʲ - a₊, zero(FT)) * environment_flux :
         zero(FT)
-    formed = total_N > zero(FT) ? formation : zero(FT)
-    supply = from_above + lateral + formed
+    formed = has_N ? formation : zero(FT)
+    converted = _partition_total(other₊, partition) > zero(FT) ? cross : zero(FT)
+    supply = from_above + lateral + formed + converted
     mixed = ntuple(
         i ->
             (
                 from_above * shares₊[i] +
                 lateral * environment₊[i] +
-                (total_N > zero(FT) ? formed * (εᴺ[i] / total_N) : zero(FT))
+                formed * shares_N[i] +
+                converted * other₊[i]
             ) / max(supply, floatmin(FT)),
         N,
     )
@@ -1173,7 +1253,6 @@ PrecipPlumeStep(::Val{partition}) where {partition} = PrecipPlumeStep{partition}
         environment_shares,
         has_environment ? one(FT) : zero(FT),
         updraft_flux,
-        aʲ,
         qʲ,
     )
 end

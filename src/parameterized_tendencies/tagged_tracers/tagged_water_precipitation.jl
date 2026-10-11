@@ -469,6 +469,34 @@ function water_tag_part_share(ᶜY, scratch, tag, part)
     end
 end
 
+"""
+    water_tag_part_flux_share(ᶜY, scratch, tag, part)
+
+Lazy field of `tag`'s share of the rain or snow compartment `part` for the SGS
+mass flux and its Jacobian cross blocks. It is
+[`water_tag_part_share`](@ref), except where the parent holds a positive
+amount of the compartment and the partition holds none of it. There a region
+tag takes its share of the non-precipitating water instead, as the closing
+step gives new rain or snow the non-precipitating composition. The
+partition's shares then sum to one wherever the parent holds the compartment
+and the partition holds non-precipitating water. Where the compartment is not
+positive the share stays zero. A source tag keeps its own share. Needs
+[`water_tag_share_norm!`](@ref) for the current state.
+"""
+function water_tag_part_flux_share(ᶜY, scratch, tag, part)
+    ᶜshare = water_tag_part_share(ᶜY, scratch, tag, part)
+    _is_partition_tag(tag) || return ᶜshare
+    ᶜshare_nonprecip =
+        water_tag_part_share(ᶜY, scratch, tag, NonPrecipitatingPart())
+    ᶜparent = water_tag_part_parent(ᶜY, part)
+    ᶜnorm = water_tag_part_norm(scratch, part)
+    return @. lazy(
+        _part_flux_share(ᶜshare, ᶜshare_nonprecip, ᶜparent, ᶜnorm),
+    )
+end
+@inline _part_flux_share(share, share_nonprecip, parent, norm) =
+    ifelse((parent > zero(parent)) & !(norm > zero(norm)), share_nonprecip, share)
+
 # The share denominators of the rain and snow parts, beside the one
 # `water_tag_share_norm!` fills for `ρq_tag_<name>`.
 _water_tag_precipitation_share_norms!(p, Y, model) =
@@ -573,7 +601,10 @@ Set each rain and snow part's row of the Jacobian to its species' row,
 with the SGS mass flux and the split solver
 (`water_tag_cross_flag`) the species' blocks to the updraft's species,
 `sgsʲs.1.q_rai` or `sgsʲs.1.q_sno`, and to `f.u₃`, each scaled by the part's
-share of its compartment ([`water_tag_part_share`](@ref)). Each part moves by
+share of its compartment ([`water_tag_part_flux_share`](@ref)). Where the
+parent holds the compartment and the partition holds none of it, that is a
+region tag's share of the non-precipitating water, so that the partition's
+cross blocks still sum to the species'. Each part moves by
 its share of its species' operators: the sedimentation, the `K_e` diffusion
 and the SGS mass flux. So where the shares sum to one the parts' Newton
 increments sum to the species' to rounding. Per tag the cross blocks are an
@@ -617,7 +648,7 @@ function _update_part_cross_blocks!(matrix, Y, scratch, tags::Tuple, part)
     row = _part_state_name(tag, part)
     species = _species_state_name(part)
     updraft_species = _updraft_species_state_name(part)
-    ᶜshare = water_tag_part_share(Y.c, scratch, tag, part)
+    ᶜshare = water_tag_part_flux_share(Y.c, scratch, tag, part)
     ∂ᶜpart_err_∂ᶜχʲ = matrix[row, updraft_species]
     @. ∂ᶜpart_err_∂ᶜχʲ =
         DiagonalMatrixRow(ᶜshare) * matrix[species, updraft_species]
@@ -1112,9 +1143,19 @@ pair's net and leaves non-negative flows as they are, bit for bit, and the
 pool's shares then stay non-negative.
 """
 @inline function water_tag_weighted_flows(F⁰, Fʲ, ρa⁰, ρaʲ, ρ)
-    F = map((f⁰, fʲ) -> (ρa⁰ * f⁰ + ρaʲ * fʲ) / ρ, F⁰, Fʲ)
+    # Written out field by field. A `map` with a closure over the two
+    # `NamedTuple`s allocates in every cell of the broadcast.
+    F = (;
+        NR = _weighted_flow(F⁰.NR, Fʲ.NR, ρa⁰, ρaʲ, ρ),
+        NS = _weighted_flow(F⁰.NS, Fʲ.NS, ρa⁰, ρaʲ, ρ),
+        RN = _weighted_flow(F⁰.RN, Fʲ.RN, ρa⁰, ρaʲ, ρ),
+        RS = _weighted_flow(F⁰.RS, Fʲ.RS, ρa⁰, ρaʲ, ρ),
+        SR = _weighted_flow(F⁰.SR, Fʲ.SR, ρa⁰, ρaʲ, ρ),
+        SN = _weighted_flow(F⁰.SN, Fʲ.SN, ρa⁰, ρaʲ, ρ),
+    )
     return water_tag_oriented_flows(F, true, true, true)
 end
+@inline _weighted_flow(f⁰, fʲ, ρa⁰, ρaʲ, ρ) = (ρa⁰ * f⁰ + ρaʲ * fʲ) / ρ
 
 # The flows and the nets of rain and snow the parts read, per unit mass. Without
 # EDMF the grid mean's. Under prognostic EDMF the subdomains' flows and nets,

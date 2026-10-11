@@ -232,15 +232,22 @@ mean's.
     by difference-form fluxes. Each rain part takes its share of the `ρq_rai`
     flux, each snow part its share of the `ρq_sno` flux, and each
     non-precipitating part its share of the rest of the `ρq_tot` flux. The
-    three sum to the parent's `ρq_tot` flux at every face.
+    three sum to the parent's `ρq_tot` flux at every face. Where the parent
+    holds rain or snow in a cell and the partition holds none of it, the
+    region tags take the flux that leaves the cell, and the Jacobian's cross
+    blocks there, by their shares of the non-precipitating water
+    ([`ClimaAtmos.water_tag_part_flux_share`](@ref)), as the closing step
+    gives new rain its composition.
   - **The exchange.** The non-precipitating parts exchange composition at the
     updraft's mass flux as without the key, with the plume rescaled to the
     updraft's non-precipitating water `q_tot_effʲ`. The rain and snow parts
     get an exchange of their own, with their own bound, from a rain plume and
-    a snow plume ([`ClimaAtmos.water_tag_precip_plume!`](@ref)). The updraft's
-    rain takes the non-precipitating plume's composition where it forms and
-    the environment's where it falls in laterally, and the plume is marched
-    downward, as the rain falls.
+    a snow plume ([`ClimaAtmos.water_tag_precip_plumes!`](@ref)). The
+    updraft's rain takes the non-precipitating plume's composition where it
+    forms, the snow plume's where it forms from snow, and the environment's
+    where it falls in laterally. Snow alike. The two plumes are marched
+    downward together, as the rain falls, each taking the other's composition
+    from the level above.
   - **The diffusive flux.** The rain and snow parts diffuse as their species,
     at `K_e` only, and take no horizontal EDMF flux. The non-precipitating
     parts diffuse at `K_h + K_e`. The parts' sum moves as the parent's
@@ -258,10 +265,9 @@ EDMF. The closing step after each follow sets the parts to their compartments,
 and books what it moves in `q_tag_led_close`, so that ledger measures what the
 operators above miss. It is not at rounding:
 
-  - Where a cell holds rain but the partition holds none of it, every part's
-    share is zero. The parts then take neither the flux that leaves the cell
-    nor the cross blocks' part of the Newton increment there, and the implicit
-    sedimentation carries the difference down the rain column.
+  - Where a cell holds rain but the partition holds none of it, no part
+    sediments any of it, and the closing step gives the partition that rain
+    by the non-precipitating composition.
   - Under the default `tracer_upwinding: vanleer_limiter` each rain and snow
     part's explicit advection is limited on its own, so the parts' sum moves
     apart from the species' by water that sums to zero over the column. The
@@ -308,7 +314,8 @@ ClimaAtmos.water_precip_part_cross_names
 ClimaAtmos.water_tag_weighted_flows
 ClimaAtmos.water_tag_exchange_water
 ClimaAtmos.water_part_exchange_inputs!
-ClimaAtmos.water_tag_precip_plume!
+ClimaAtmos.water_tag_precip_plumes!
+ClimaAtmos.water_tag_part_flux_share
 ClimaAtmos.water_tag_updraft_formation_audit!
 ClimaAtmos.WATER_TAG_FLOW_NAMES
 ClimaAtmos.WaterTagFlows1M

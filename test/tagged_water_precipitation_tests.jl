@@ -1905,46 +1905,123 @@ end
     @test sum(ψ -> ψ[2], oriented) ≈ 1 rtol = 1e-14
 end
 
-# One level of the rain plume, on plain tuples: two region tags and a source
-# tag. The mix keeps a composition all sources share, weights the sources by
-# their amounts, and falls back to the grid mean's shares where the updraft
-# holds no rain.
-@testset "One level of the rain plume" begin
+# One level of the rain and snow plumes, on plain tuples: two region tags and
+# a source tag. The mix keeps a composition all sources share, weights the
+# sources by their amounts, takes the other plume's shares from the level
+# above for the water that converts between rain and snow, and falls back to
+# the grid mean's shares where the updraft holds no rain.
+@testset "One level of the rain and snow plumes" begin
     FT = Float64
     step = CA.PrecipPlumeStep(Val((true, true, false)))
     composition = (FT(0.3), FT(0.7), FT(0.2))
-    (ρ, ρaʲ, qʲ, aʲ) = (FT(1.1), FT(0.088), FT(2e-6), FT(0.08))
+    none = (FT(0), FT(0), FT(0))
+    (ρ, ρaʲ, qʲ, aʲ, a₊) = (FT(1.1), FT(0.088), FT(2e-6), FT(0.08), FT(0.06))
     ρq = FT(1e-6) * ρ
     ε̄ = map(c -> c * ρq / ρ, composition)
     εᴺ = map(c -> c * FT(5e-3), composition)
-    above = (composition, composition, one(FT), FT(3e-6), FT(0.06), FT(1e-6))
-    level(ε̄, εᴺ, formation, qʲ) =
-        (ε̄, εᴺ, formation, FT(4e-6), aʲ, FT(5e-6), qʲ, ρq, ρaʲ, ρ)
+    # `(ε̄, formation, environment's flux, updraft's flux, qʲ, ρq)`
+    plume_level(ε̄, formation, qʲ) =
+        (ε̄, formation, FT(4e-6), FT(5e-6), qʲ, ρq)
+    # `(shares, environment's shares, has environment, updraft flux, qʲ)`
+    plume_above(shares, has_environment) =
+        (shares, shares, has_environment, FT(3e-6), FT(1e-6))
+    level(rain, snow, εᴺ, cross_SR, cross_RS) =
+        (rain, snow, εᴺ, aʲ, ρaʲ, ρ, cross_SR, cross_RS)
+    no_snow = plume_level(none, FT(0), FT(0))
+    empty_above = (none, none, FT(0), FT(0), FT(0))
+    close(a, b) = all(map((x, y) -> isapprox(x, y; rtol = 1e-14), a, b))
+
     # One composition in every source: the level keeps it.
-    state = step(above, level(ε̄, εᴺ, FT(2e-6), qʲ))
-    @test all(map((x, c) -> isapprox(x, c; rtol = 1e-14), state[1], composition))
-    @test state[1][1] + state[1][2] ≈ 1 rtol = 1e-14
-    @test all(
-        map(
-            (x, c) -> isapprox(x, c * qʲ; rtol = 1e-14),
-            CA._precip_plume_values(state),
-            composition,
-        ),
-    )
+    above = (plume_above(composition, one(FT)), empty_above, a₊)
+    state = step(above, level(plume_level(ε̄, FT(2e-6), qʲ), no_snow, εᴺ, 0, 0))
+    @test close(state[1][1], composition)
+    @test state[1][1][1] + state[1][1][2] ≈ 1 rtol = 1e-14
+    @test close(CA._rain_plume_values(state), map(c -> c * qʲ, composition))
+    @test state[3] == aʲ
+
     # The rain from above all of tag 1, the rain formed all of tag 2, with no
     # lateral inflow: the shares are the two amounts' weights.
-    from_above = (one(FT), zero(FT), zero(FT))
-    formed_by = (zero(FT), FT(5e-3), zero(FT))
-    above_1 = (from_above, from_above, zero(FT), FT(3e-6), FT(0.06), FT(1e-6))
-    state = step(above_1, level(ε̄, formed_by, FT(2e-6), qʲ))
-    weight_above = FT(0.06) * FT(3e-6)
-    @test state[1][1] ≈ weight_above / (weight_above + FT(2e-6)) rtol = 1e-14
-    @test state[1][2] ≈ FT(2e-6) / (weight_above + FT(2e-6)) rtol = 1e-14
-    @test state[1][3] == 0
-    # No rain in the updraft: the grid mean's shares.
-    state = step(above_1, level(ε̄, formed_by, FT(2e-6), zero(FT)))
-    @test all(map((x, c) -> isapprox(x, c / FT(1.0); rtol = 1e-14), state[1], composition))
-    @test all(iszero, CA._precip_plume_values(state))
+    tag_1 = (one(FT), zero(FT), zero(FT))
+    tag_2 = (zero(FT), one(FT), zero(FT))
+    above = (plume_above(tag_1, zero(FT)), empty_above, a₊)
+    εᴺ_2 = (zero(FT), FT(5e-3), zero(FT))
+    state = step(above, level(plume_level(ε̄, FT(2e-6), qʲ), no_snow, εᴺ_2, 0, 0))
+    weight_above = a₊ * FT(3e-6)
+    @test state[1][1][1] ≈ weight_above / (weight_above + FT(2e-6)) rtol = 1e-14
+    @test state[1][1][2] ≈ FT(2e-6) / (weight_above + FT(2e-6)) rtol = 1e-14
+    @test state[1][1][3] == 0
+
+    # Rain formed from snow carries the snow plume's shares from above, and
+    # snow formed from rain the rain plume's. Here the rain from above is all
+    # tag 1, the snow above all tag 2, and each converts into the other.
+    snow_level = plume_level(map(c -> c * ρq / ρ, composition), FT(0), qʲ)
+    above = (plume_above(tag_1, zero(FT)), plume_above(tag_2, zero(FT)), a₊)
+    (cross_SR, cross_RS) = (FT(1e-6), FT(4e-7))
+    state = step(
+        above,
+        level(plume_level(ε̄, FT(0), qʲ), snow_level, εᴺ, cross_SR, cross_RS),
+    )
+    @test state[1][1][1] ≈ weight_above / (weight_above + cross_SR) rtol = 1e-14
+    @test state[1][1][2] ≈ cross_SR / (weight_above + cross_SR) rtol = 1e-14
+    @test state[2][1][1] ≈ cross_RS / (weight_above + cross_RS) rtol = 1e-14
+    @test state[2][1][2] ≈ weight_above / (weight_above + cross_RS) rtol = 1e-14
+    # Without a snow plume above, the rain formed from snow is dropped.
+    above = (plume_above(tag_1, zero(FT)), empty_above, a₊)
+    state = step(
+        above,
+        level(plume_level(ε̄, FT(0), qʲ), snow_level, εᴺ, cross_SR, 0),
+    )
+    @test close(state[1][1], tag_1)
+
+    # No rain in the updraft: the grid mean's shares, and no values.
+    above = (plume_above(tag_1, zero(FT)), empty_above, a₊)
+    state = step(above, level(plume_level(ε̄, FT(2e-6), FT(0)), no_snow, εᴺ_2, 0, 0))
+    @test close(state[1][1], composition)
+    @test all(iszero, CA._rain_plume_values(state))
+end
+
+# The share of a rain or snow part in the SGS flux and the cross blocks. Where
+# the parent holds rain and the partition holds none of it, the region tags
+# take their shares of the non-precipitating water. Where the parent holds no
+# rain, nothing. A source tag keeps its own share.
+@testset "The flux share where the partition holds no rain" begin
+    FT = Float64
+    function flux_shares(compartments, N, R, S, part)
+        (; Y, p, model) = one_cell_setup(FT, compartments, N, R, S)
+        scratch = (;
+            ᶜtagging_q_share_norm = zeros(FT, 1),
+            ᶜtagging_q_share_norm_rai = zeros(FT, 1),
+            ᶜtagging_q_share_norm_sno = zeros(FT, 1),
+        )
+        CA.water_tag_share_norm!((; p..., scratch), Y)
+        return map(
+            tag -> only(
+                Base.Broadcast.materialize(
+                    CA.water_tag_part_flux_share(Y.c, scratch, tag, part),
+                ),
+            ),
+            model.tags,
+        )
+    end
+    N = (FT(2.5e-3), FT(7.5e-3), FT(1e-3))
+    # Rain the partition holds none of: the shares of `N`.
+    compartments = (FT(1e-2) + FT(1.2e-6), FT(1e-6), FT(2e-7))
+    shares = flux_shares(compartments, N, (0, 0, 0), (1e-7, 1e-7, 0), CA.RainPart())
+    @test shares[1] ≈ 0.25 rtol = 1e-14
+    @test shares[2] ≈ 0.75 rtol = 1e-14
+    @test shares[3] == 0
+    # Snow the partition holds: its own shares.
+    shares = flux_shares(compartments, N, (0, 0, 0), (1e-7, 1e-7, 0), CA.SnowPart())
+    @test shares[1] ≈ 0.5 rtol = 1e-14
+    @test shares[2] ≈ 0.5 rtol = 1e-14
+    # Rain the partition holds: its own shares.
+    shares = flux_shares(compartments, N, (2e-7, 8e-7, 0), (1e-7, 1e-7, 0), CA.RainPart())
+    @test shares[1] ≈ 0.2 rtol = 1e-12
+    @test shares[2] ≈ 0.8 rtol = 1e-12
+    # No rain in the parent: no share.
+    compartments = (FT(1e-2) + FT(2e-7), FT(0), FT(2e-7))
+    shares = flux_shares(compartments, N, (0, 0, 0), (1e-7, 1e-7, 0), CA.RainPart())
+    @test all(iszero, shares)
 end
 
 # The audit's own key: off, the microphysics leaves the audit's fields out of
