@@ -8,8 +8,10 @@
 #####   - `ρq_rtag_<name>` (`R`): rain, a share of `ρq_rai`;
 #####   - `ρq_stag_<name>` (`S`): snow, a share of `ρq_sno`.
 ##### The tag's total water is the sum of its parts and is derived for output.
-##### The key needs 1-moment microphysics and is refused under EDMF and with
-##### updraft copies. How the parts move: docs/src/tagged_water_precipitation.md.
+##### The key needs 1-moment microphysics. Under EDMF it needs
+##### `prognostic_edmfx` with one updraft and the split solver, and it is
+##### refused with updraft copies. How the parts move:
+##### docs/src/tagged_water_precipitation.md.
 
 # ============================================================================
 # The three parts
@@ -577,7 +579,11 @@ and the SGS mass flux. So where the shares sum to one the parts' Newton
 increments sum to the species' to rounding. Per tag the cross blocks are an
 approximation, since a part's own mass flux derivative is not the species'.
 No other row names a part, so the split solver solves each apart, after the
-coupled fields. Called after the last update of the species' rows. The parts
+coupled fields. Called after the last update of the species' rows. A cache
+built with `jacobian_cache(...; split_uncoupled_fields = false)`, a keyword
+and not a configuration key, has no cross blocks, and the parts keep their
+diagonal only. The configuration path refuses the key under prognostic EDMF
+with the automatic or dense Jacobian. The parts
 are found in the state. A no-op without the key, which the model's type
 decides at compile time.
 """
@@ -597,7 +603,7 @@ function update_water_precip_part_jacobian!(matrix, Y, p, water_tag_cross_flag)
             @. ∂ᶜpart_err_∂ᶜpart = ∂ᶜρq_sno_err_∂ᶜρq_sno
         end
     end
-    isempty(water_precip_part_cross_names(Y, p.atmos)) && return nothing
+    _has_part_cross_blocks(Y, p.atmos) || return nothing
     use_derivative(water_tag_cross_flag) || return nothing
     water_tag_share_norm!(p, Y)
     _update_part_cross_blocks!(matrix, Y, p.scratch, model.tags, RainPart())
@@ -641,6 +647,15 @@ water_precip_part_cross_names(Y, atmos) =
     atmos.turbconv_model isa PrognosticEDMFX && atmos.edmfx_model.sgs_mass_flux &&
     has_water_tag_precipitation(atmos.water_tagging_model) ?
     water_precip_part_names(Y) : ()
+
+# Whether the parts' rows take their species' cross blocks, as a `Bool`. The
+# names above are a tuple or `()` by a flag the type does not carry, so the
+# Jacobian update tests this instead of their emptiness.
+_has_part_cross_blocks(Y, atmos) =
+    atmos.turbconv_model isa PrognosticEDMFX &&
+    atmos.edmfx_model.sgs_mass_flux &&
+    has_water_tag_precipitation(atmos.water_tagging_model) &&
+    !isempty(water_precip_part_names(Y))
 
 # The cross blocks of the rain and snow parts, under the split solver
 # (`water_tag_cross_flag`): to the updraft's species and to `f.u₃`, as the

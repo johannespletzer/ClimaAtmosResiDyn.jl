@@ -35,8 +35,9 @@ water_tracers:
 The key needs 1-moment microphysics. Under `turbconv: prognostic_edmfx` it
 needs one updraft and the manual Jacobian's split solver, so it is refused with
 `use_auto_jacobian: true` or `use_dense_jacobian: true`. It is refused under
-`edonly_edmfx` and with `water_tag_updraft_copy: true`. A checkpoint written with the key restarts only
-with it, and one written without it only without it.
+`edonly_edmfx` and with `water_tag_updraft_copy: true`. A checkpoint written
+with the key restarts only with it, and one written without it only without
+it.
 
 ## How the parts move
 
@@ -255,7 +256,21 @@ mean's.
 The parts have no follower under `water_tag_transport: increment`, as without
 EDMF. The closing step after each follow sets the parts to their compartments,
 and books what it moves in `q_tag_led_close`, so that ledger measures what the
-operators above miss.
+operators above miss. It is not at rounding:
+
+  - Where a cell holds rain but the partition holds none of it, every part's
+    share is zero. The parts then take neither the flux that leaves the cell
+    nor the cross blocks' part of the Newton increment there, and the implicit
+    sedimentation carries the difference down the rain column.
+  - Under the default `tracer_upwinding: vanleer_limiter` each rain and snow
+    part's explicit advection is limited on its own, so the parts' sum moves
+    apart from the species' by water that sums to zero over the column. The
+    closing step takes it out of the rain and snow parts. The
+    non-precipitating parts hand the parts' advection back, so they keep it.
+
+Under `water_tag_transport: increment` the non-precipitating parts' column
+total departs from the parent's by the follower's left part,
+`q_tag_inc_left`, as the tags' total does without the key.
 
 ## Limits and cost
 

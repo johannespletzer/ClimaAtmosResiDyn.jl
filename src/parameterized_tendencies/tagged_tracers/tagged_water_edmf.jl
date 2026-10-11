@@ -379,6 +379,14 @@ and a plume without the rescale would weight the water it entrained low down too
 heavily. The plume starts in the lowest cell with the updraft's surface water,
 and anew from the grid mean's where the updraft does not rise.
 
+Under `water_tag_precipitation: true` the tags' `ρq_tag_<name>` fields hold
+the water that is neither rain nor snow. Their exchange weights
+`q_tot_effᵏ = q_totᵏ - q_raiᵏ - q_snoᵏ` in place of `q_totᵏ`, and the plume is
+rescaled to `q_tot_effʲ` ([`water_tag_exchange_water`](@ref)). The rain and
+snow parts are exchanged too, each with its species' weight, `q_raiᵏ` or
+`q_snoᵏ`, its own bound and blend factor, and the updraft's shares from the
+rain or snow plume ([`water_tag_precip_plume!`](@ref)).
+
 It needs one updraft and region tags that partition the domain, which
 `check_water_tracers_transport_supported` and
 [`check_water_tag_exchange_partition`](@ref) enforce.
@@ -1020,9 +1028,9 @@ the plume is marched downward, as the rain falls, and at each level the
 updraft's rain is the mix of three sources, each with its composition:
 
   - the rain that falls into the level from the level above within the
-    updraft, `min(aʲ, aʲ₊) ρʲ₊ wʲ₊ q_raiʲ₊`, with the plume's shares above;
+    updraft, `min(aʲ, aʲ₊) ρʲ₊ wʲ₊ q_raiʲ₊`, with the plume's shares above.
   - the rain formed there, `ρaʲ Fʲ_NR Δz`, with the shares of the
-    non-precipitating parts' plume `ᶜεᴺʲ` at the level;
+    non-precipitating parts' plume `ᶜεᴺʲ` at the level.
   - the lateral inflow where the updraft widens downward,
     `(aʲ - aʲ₊) ρ⁰w⁰q_rai⁰`, the environment's flux as
     `updraft_sedimentation!` forms it, with the environment's rain shares
@@ -1106,12 +1114,12 @@ end
 # `(shares, environment's shares, whether the environment has a composition,
 # updraft flux, area, updraft species)`. Each tuple of tag values is built
 # with `ntuple` over the partition's length, so the state is a plain tuple of
-# one type at every level. A `map` over several tuples, one of them ClimaCore's
-# `AutoBroadcaster` inside the column march, returned a `Vector`, which the
-# output field cannot hold. A callable type, so that the
-# partition travels in the type, as in `WaterPlumeStep`. Tuples are mapped,
-# never built with `ntuple`, since inside the column march they are
-# ClimaCore's `AutoBroadcaster`.
+# one type at every level. `WaterPlumeStep` maps instead, over one tuple. Here
+# a `map` over several tuples, one of them ClimaCore's `AutoBroadcaster`
+# inside the column march, returned a `Vector`, which the output field cannot
+# hold. One plume's march allocated 16 bytes per call on Julia 1.11, and
+# nothing per cell. A callable type, so that the partition travels in the
+# type, as in `WaterPlumeStep`.
 struct PrecipPlumeStep{partition} end
 PrecipPlumeStep(::Val{partition}) where {partition} = PrecipPlumeStep{partition}()
 @inline function (::PrecipPlumeStep{partition})(above, level) where {partition}

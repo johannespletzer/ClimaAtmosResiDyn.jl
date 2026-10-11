@@ -1850,9 +1850,6 @@ end
     end
 end
 
-# The audit's own key: off, the microphysics leaves the audit's fields out of
-# the state and does not compute them. Every part moves as with the audit on,
-# bit for bit.
 @testset "The flows weighted by subdomain under EDMF" begin
     FT = Float64
     flows(v) = NamedTuple{CA.WATER_TAG_FLOW_NAMES}(v)
@@ -1908,6 +1905,51 @@ end
     @test sum(ψ -> ψ[2], oriented) ≈ 1 rtol = 1e-14
 end
 
+# One level of the rain plume, on plain tuples: two region tags and a source
+# tag. The mix keeps a composition all sources share, weights the sources by
+# their amounts, and falls back to the grid mean's shares where the updraft
+# holds no rain.
+@testset "One level of the rain plume" begin
+    FT = Float64
+    step = CA.PrecipPlumeStep(Val((true, true, false)))
+    composition = (FT(0.3), FT(0.7), FT(0.2))
+    (ρ, ρaʲ, qʲ, aʲ) = (FT(1.1), FT(0.088), FT(2e-6), FT(0.08))
+    ρq = FT(1e-6) * ρ
+    ε̄ = map(c -> c * ρq / ρ, composition)
+    εᴺ = map(c -> c * FT(5e-3), composition)
+    above = (composition, composition, one(FT), FT(3e-6), FT(0.06), FT(1e-6))
+    level(ε̄, εᴺ, formation, qʲ) =
+        (ε̄, εᴺ, formation, FT(4e-6), aʲ, FT(5e-6), qʲ, ρq, ρaʲ, ρ)
+    # One composition in every source: the level keeps it.
+    state = step(above, level(ε̄, εᴺ, FT(2e-6), qʲ))
+    @test all(map((x, c) -> isapprox(x, c; rtol = 1e-14), state[1], composition))
+    @test state[1][1] + state[1][2] ≈ 1 rtol = 1e-14
+    @test all(
+        map(
+            (x, c) -> isapprox(x, c * qʲ; rtol = 1e-14),
+            CA._precip_plume_values(state),
+            composition,
+        ),
+    )
+    # The rain from above all of tag 1, the rain formed all of tag 2, with no
+    # lateral inflow: the shares are the two amounts' weights.
+    from_above = (one(FT), zero(FT), zero(FT))
+    formed_by = (zero(FT), FT(5e-3), zero(FT))
+    above_1 = (from_above, from_above, zero(FT), FT(3e-6), FT(0.06), FT(1e-6))
+    state = step(above_1, level(ε̄, formed_by, FT(2e-6), qʲ))
+    weight_above = FT(0.06) * FT(3e-6)
+    @test state[1][1] ≈ weight_above / (weight_above + FT(2e-6)) rtol = 1e-14
+    @test state[1][2] ≈ FT(2e-6) / (weight_above + FT(2e-6)) rtol = 1e-14
+    @test state[1][3] == 0
+    # No rain in the updraft: the grid mean's shares.
+    state = step(above_1, level(ε̄, formed_by, FT(2e-6), zero(FT)))
+    @test all(map((x, c) -> isapprox(x, c / FT(1.0); rtol = 1e-14), state[1], composition))
+    @test all(iszero, CA._precip_plume_values(state))
+end
+
+# The audit's own key: off, the microphysics leaves the audit's fields out of
+# the state and does not compute them. Every part moves as with the audit on,
+# bit for bit.
 @testset "The microphysics without the audit" begin
     for FT in (Float32, Float64)
         rng = Random.MersenneTwister(23)
