@@ -158,40 +158,111 @@ at the field times in the bundle converter, and reruns on, off and the two
 restarts. The wave 5 directories of the four are kept under
 `output/p9_wave5_trmm_30min_tables/`.
 
+Section 16 reruns, 2026-10-11 13:55, producer at `2c63c5c53`, PR B at
+`e6c4cae96`: jobs 14191712 (on, 13:22, 14:37 start) and 14191713 (off,
+12:29) completed, the on receipt at `2c63c5c53` clean with 14 channels, the
+tags at 150 s and 146 closure rows. The restarts 14191867 (restarted) and
+14191868 (off_restarted) were submitted at 15:36. Both bundles were rebuilt
+from the new on run at 15:40 (record commit `e6c4cae96`), the converted
+directory attached to the 150 s bundle. Before the proof, `COMMON.ROSTER`
+and `COMMON.NEGATIVE_WATER` PASS on both bundles, and the two accounting
+rows wait for the lifecycle proof alone ("missing verified producer
+acceptance/rollback, parent parity and restart evidence").
+
 ## 2. Model identity
 
-`model.head_sha` of each manifest (the run tree, with the record tree under
-`head_sha`), `model_commit` and `model_diff_sha256` of each receipt, the
-producer source hash against the registry config. Pending.
+Every job manifest of the final set records the record tree under
+`head_sha` and the run tree under `model`: `model.head_sha`
+`2c63c5c53b6c1e70ae7ab3c63367fca672c6dc15`, `model.diff_sha256` the empty
+diff's hash `e3b0c442...b855`, no status lines. Every receipt of the key-on
+runs carries the same `model_commit` and `model_diff_sha256` with
+`model_dirty` false, and the pin `ClimaTimeSteppers 1.0.1`, `ARS222`. The
+producer source `water_tag_applications.jl` of the run tree hashes to
+`c45fef7fbc654155ed1189169716086cc8a82222df7518f148cb06f01b98af94`, the
+registry's `source_sha256`. The lifecycle proof in the 150 s bundle repeats
+the commit, the diff hash and the pin.
 
 ## 3. The six checks
 
-| Check                          | Command | Result  | Log |
-|:------------------------------ |:------- |:------- |:--- |
-| accepted_weights               |         | pending |     |
-| trial_rollback                 |         | pending |     |
-| newton_replacement             |         | pending |     |
-| complete_active_roster         |         | pending |     |
-| parent_bitwise_parity          |         | pending |     |
-| all_channel_checkpoint_restart |         | pending |     |
+`runscripts/part9_check_logs.sh` on 2026-10-11 17:2x on the login node, PR B
+at `e6c4cae96`, over the final set of section 6. Logs and commands under the
+check directory, copied into the 150 s bundle's `lifecycle_logs/`.
+
+| Check                          | Runs                                 | Result | Detail                                                                             |
+|:------------------------------ |:------------------------------------ |:------ |:---------------------------------------------------------------------------------- |
+| accepted_weights               | column on, TRMM on (implicit)        | PASS   | 13274 records with final_map and implicit, 2448 with implicit, pin ARS222          |
+| trial_rollback                 | TRMM on                              | PASS   | 144 steps of 150 s, one accepted trial each, ledgers equal the applied records     |
+| newton_replacement             | column Newton                        | PASS   | 4716 stage keys within the writer's count, 1500 post_newton, 3 ledgers tie         |
+| complete_active_roster         | TRMM on                              | PASS   | 14 channels as the config builds them, a record every step, 6 model ledgers tie    |
+| parent_bitwise_parity          | TRMM Float64 pair, TRMM Float32 pair | PASS   | 6 checkpoints and 65 diagnostic files, every array bitwise, in each pair           |
+| all_channel_checkpoint_restart | column on, column restarted          | PASS   | 180 step lines, records, ledgers, checkpoints and diagnostics bitwise after 30 min |
+
+Recorded beside the gate, not in it: the TRMM restart pair fails the
+producer's restart check on the record values and the model-only comparison
+on `Y/c`, the off pair fails the model-only comparison the same way, and the
+column's model-only restart passes (FINDINGS E54, design section 13).
 
 ## 4. Verdict on H9
 
-Pending. H9 is falsified by any FAIL above. `parent_bitwise_parity` is PASS
-only when the Float64 pair and the Float32 pair both pass. If the model
-refuses the stage cadence in the Newton job, `newton_replacement` is
-recorded here as unverified and the registration proceeds with that stated
-(owner, 2026-10-10).
+Not falsified. The six checks print PASS on the final set, under the design
+as amended in sections 12 to 16 after the data of waves 5 and 6: the
+precipitating column for the roles the TRMM case does not fire and for the
+restart the model does not reproduce there, the Newton count by the
+writer's moves, the ledger tie by the column's scale, and the 150 s outputs
+the scorer's prerequisites read. Each amendment is dated and says what the
+data showed first. The producer leaves the parent bit for bit unchanged in
+both precisions, records every accepted application of the water tags'
+corrections with the reader's weights on both cases, and restarts exactly
+where the model does.
 
 ## 5. Registration and the scorer rows
 
-Pending: `register_producer` with the entry of
-`water_tag_application_registry.json`, `cts_version` from the receipt pin,
-then `COMMON.ACCEPTED_APPLICATION_ACTIVITY` and
-`COMMON.APPLICATION_ACTIVITY.<window>` on the second bundle, converted at
-150 s with the converted directory attached (design section 9). Every other
-row reads the 30 min bundle.
+`water_tag_application_registry.json` is `registered` since 2026-10-11 with
+`cts_version` `1.0.1`, the receipt pin's version. `score_acceptance.py`
+registers the producer from it at start. The two bundles of the on run
+(record commit `e6c4cae96`, `$SCRATCH/tag_closure/part9/on_30m` and
+`on_150s`), the converted directory attached to the 150 s bundle and the
+lifecycle proof built in it (six PASS). Scored on 2026-10-11:
 
-## 6. Cost
+| Row                                  | 150 s bundle  | 30 min bundle  |
+|:------------------------------------ |:------------- |:-------------- |
+| COMMON.ROSTER                        | PASS          | PASS           |
+| COMMON.NEGATIVE_WATER                | PASS          | PASS           |
+| COMMON.ACCEPTED_APPLICATION_ACTIVITY | PASS          | NOT ASSESSABLE |
+| COMMON.APPLICATION_ACTIVITY.startup  | REPORTED ONLY | NOT ASSESSABLE |
 
-Estimate against measured wall per job. Pending.
+The two rows flip as section 9 states. On the 150 s bundle the accounting
+is complete over 14 channels with no inactive or unavailable channel. Three
+channels have accepted activity, `inc.pbl.total` 0.470, `inc.free.total`
+0.559 and `inc.evap.total` 0.037 (the scorer's units), the eleven others
+zero. The 30 min bundle has no application accounting at its cadence, as
+designed. Both bundles stay `NOT QUALIFIED`: part 9 ran no untagged twin,
+so every row that needs one reports a data failure, and the persistent
+blocked rows wait for their parts.
+
+## 6. Jobs and cost
+
+The final set, fourteen jobs, all on `hpda2_compute`, one process, an
+exclusive node, model `2c63c5c53`:
+
+| Job                          | Id       | Wall  | MaxRSS  | Estimate | Record commit |
+|:---------------------------- |:-------- |:----- |:------- |:-------- |:------------- |
+| `p9_trmm0m_on_6h`            | 14191712 | 13:22 | 8.8 GB  | 16 min   | `e6c4cae96`   |
+| `p9_trmm0m_off_6h`           | 14191713 | 12:29 | 7.3 GB  | 15 min   | `e6c4cae96`   |
+| `p9_trmm0m_newton_6h`        | 14189473 | 13:13 | 8.5 GB  | 17 min   | `4812f5522`   |
+| `p9_trmm0m_restarted_6h`     | 14191867 | 13:09 | 8.7 GB  | 16 min   | `e6c4cae96`   |
+| `p9_trmm0m_off_restarted_6h` | 14191868 | 12:24 | 7.4 GB  | 15 min   | `e6c4cae96`   |
+| `p9_trmm0m_on_f32_6h`        | 14189474 | 12:22 | 8.6 GB  | 16 min   | `4812f5522`   |
+| `p9_trmm0m_off_f32_6h`       | 14189475 | 12:04 | 7.4 GB  | 15 min   | `4812f5522`   |
+| `p9_col1m_on_1h`             | 14191396 | 17:45 | 14.5 GB | 10 min   | `14edd4ffd`   |
+| `p9_col1m_newton_1h`         | 14191544 | 18:14 | 14.8 GB | 10 min   | `d37527b6a`   |
+| `p9_col1m_restarted_1h`      | 14191518 | 17:46 | 14.1 GB | 10 min   | `1dcd4dba3`   |
+
+The TRMM estimates of section 5 (1.5 times the build, 3 times the steps)
+were about 15 percent high. The column estimate, the build and the startup
+alone, was 8 min low: the 1M column with the precipitation tags builds
+longer and takes 14 to 15 GB, twice the TRMM case. The final set is 2.4
+node-hours. With the five superseded waves (the roster defect, two unknown
+identities, the record-tree manifest, the 30 min tables) the part ran 35
+jobs and about 7 node-hours. Their outputs are kept under
+`output/p9_wave{1,2,3,4,5}_*/`, their logs and manifests under the job ids.
