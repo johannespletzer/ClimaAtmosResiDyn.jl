@@ -312,6 +312,123 @@ The list as it stood before this classification, kept as written:
 >     and the copies under first-order upwinding (W25). **Waiting.**
 >     [FINDINGS W25](FINDINGS.md)
 
+## 2026-10-10, part 9 PR B
+
+The owner decided these on 2026-10-10, on the four open inputs of the part 9
+producer design
+([PART9_PRODUCER.md](design/PART9_PRODUCER.md), sections 6 and 11) and the
+review of PR #171.
+
+  - **The design's constants are decided as proposed.** **In force.** The
+    ledger allowances reuse `ROUNDING_ULPS` 16 and `LEDGER_EXTRA_OPERATIONS`
+    3, plus 2 for the diagnostic's division by ρ in the model-ledger tie.
+    `Z_MATCH_ULPS` is 4. `final_map` and `implicit` need a nonzero record in
+    the on run and `post_newton` in the Newton run. The cost factors are 1.5
+    for the build and 3 for the steps.
+  - **A second bundle at 150 s serves the two accounting rows.** **In force.**
+    `COMMON.ACCEPTED_APPLICATION_ACTIVITY` and
+    `COMMON.APPLICATION_ACTIVITY.<window>` read a bundle converted at 150 s
+    from the on run, with the converted directory attached. The 30 min bundle
+    stays for every other row.
+  - **The Float32 pair is in.** **In force.** `p9_trmm0m_on_f32_6h` and
+    `p9_trmm0m_off_f32_6h` are the on and off configs with Float32. The parity
+    check runs on this pair too. The set has six jobs and stays under the cap
+    of 12 jobs and 24 hours.
+  - **The Newton job is submitted as planned.** **In force.** If the model
+    refuses the stage cadence on this case, `newton_replacement` is recorded
+    as unverified and the registration proceeds with that stated.
+  - **The roster defect found by the first check wave is fixed in PR A, with a
+    test.** **In force.** The on, Newton and on_f32 jobs of 2026-10-10 failed
+    at their first step with `KeyError: key (:inc, :evap, :total)`. The roster
+    gave `inc` and `negative` to partition tags alone, while the increment
+    follower runs for every tag. The fix (claude/part9-producer `59216edef`)
+    meters every tag, the test configuration gains a source tag, and the
+    model-ledger tie covers it. PR B is pinned to that head. The alternatives,
+    a roster fix without a test and a refusal of source tags, were declined.
+    The five jobs rerun at the new head.
+  - **A manual 1.10 bounds-checked run of the three applications groups
+    precedes the merge of PR A.** **In force.** The third tracer moves the
+    1.10 memory margin, which stood within 0.5 GiB of the runner's 16 GB.
+  - **The 150 s bundle gets its prerequisites from the run.** **In force,
+    2026-10-11.** With the producer registered, the scorer left the two
+    accounting rows NOT ASSESSABLE on the 150 s bundle: `COMMON.ROSTER`
+    reads the tags at the bundle's cadence and `COMMON.NEGATIVE_WATER` the
+    closure table at its times, and the on run wrote both at 30 min alone.
+    Design section 16: the four Float64 TRMM configs write `q_tag_res` and
+    the three tags at 150 s and run the closure check at 150 s, the bundle
+    converter samples tables at the candidate's field times, and on, off and
+    their two restarts rerun. The job cap rises to 14 jobs and 14
+    node-hours. A registration with the two rows left for part 10, and a
+    rerun of on and off alone, were declined.
+  - **The model-ledger tie scales by the step's column maximum.** **In
+    force, 2026-10-11.** The column's Newton rerun failed the tie for the
+    source tag in 145 cells holding specks between 1e-49 and 4e-19 of the
+    column's largest ledger value, the follower's cancellation of the
+    parent's water change. Design section 15: the allowance of section 6
+    keeps its 16 eps (k + 5), with the maxima of the ledger before, the
+    ledger after and the activity taken over the step's column. The
+    producer's own ledger check stays per cell. A dust floor below the
+    column maximum, and a registration refused on the specks, were declined.
+  - **The Newton check bounds the post-Newton records by the writer's
+    moves.** **In force, 2026-10-11.** The column's Newton run failed
+    `newton_replacement` on a second post-Newton record of a follow channel
+    at one stage. The follow moves each precipitating part twice in one
+    firing, where it falls and where it rises, each move with a leg into the
+    part and one out of the non-precipitating part. The rule of design
+    section 3 described the single-application mechanisms alone. Section 14:
+    one implicit record per step, channel and stage, post-Newton records up
+    to the writer's count for one firing (two for the follow's rain and snow
+    channels, four for its non-precipitating channel, one otherwise). A rule
+    for the implicit role alone, and a producer change that names the move,
+    were declined.
+  - **The restart check runs on the column, the TRMM restart is recorded
+    under E54, the off run's restart is the control.** **In force,
+    2026-10-11.** The TRMM restart pair fails the producer's restart check
+    because the model's own restart of this case is inexact from the first
+    step, as FINDINGS E54 found on 2026-09-18 (BACKLOG E58, upstream). The
+    parity of on and off is exact. The design gains section 13: the off run
+    restarted from its own checkpoint at 3 h shows the divergence without
+    the producer, the column's on run gets checkpoints every 30 min and a
+    restarted run from 30 min feeds `all_channel_checkpoint_restart`, and
+    the TRMM pair's results go to the record, not the gate. The two column
+    jobs were cancelled and resubmitted with the checkpoint keys. The job
+    cap rises to 10 jobs and 10 node-hours. A registration with the restart
+    unverified, and a blocking report to PR #170, were declined.
+  - **The precipitating column feeds the weights and the Newton checks.**
+    **In force, 2026-10-11.** The fifth wave showed that the TRMM 0M case
+    corrects no partition in 6 h, so no final map and no post-Newton map is
+    ever nonzero there, and `accepted_weights` and `newton_replacement`
+    fail on the design's nonzero-record constant alone. Part 8 had recorded
+    `led_fix` 0 for this case. The design gains section 12: two jobs on the
+    integration test's precipitating column (1M, 20 levels, dt 10 s, 1 h,
+    ARS222) feed `accepted_weights` for `final_map` and `implicit` and
+    `newton_replacement`. The TRMM on run feeds `accepted_weights` for
+    `implicit` alone, into the same log. The four other checks and the
+    scorer rows stay on the TRMM runs. The job cap rises to 8 jobs and
+    8 node-hours. A registration with the two roles unverified on the
+    cluster, and a 48 h TRMM run, were declined.
+  - **The job manifest records the model tree, and the four runs rerun as a
+    fifth wave.** **In force.** The fourth wave's receipts carried the right
+    identity, but the converter compared them with the job manifest's
+    `head_sha`, the record tree that submits the job, not the run tree the
+    model runs from. `manifest.py` gains `--model-repo`, `submit_g3.sh`
+    passes the run tree, and the manifest records it under `model`. The
+    converter compares the receipt with that entry and writes the model
+    identity into the bundle, with the record commit beside it. The six jobs
+    rerun with the new manifest. Accepting the fourth wave through the node's
+    provenance file, or through an explicit commit on the converter's command
+    line, was declined.
+  - **The three applications test groups run on 1.11 only.** **In force.** A
+    manual bounds-checked 1.10 run of the groups at `59216edef` ended two of
+    them with the runner's shutdown signal after about 50 min, the 16 GB
+    memory pattern, once the test configuration carried a third tag. A
+    second memory round and dropping the source tag were declined. PR A at
+    `2c63c5c53` lists them beside the upstream-only groups.
+  - **The job script loads `git/2.49.0`.** **In force.** The second wave's
+    receipts carried the model identity as "unknown" because git is not on
+    the compute node's PATH, so the converter refused them. The producer stays
+    as designed. Passing the identity from the submitter was declined.
+
 ## 2026-10-09
 
 The owner decided these on 2026-10-09, on proposals 1 to 6 of the review of the

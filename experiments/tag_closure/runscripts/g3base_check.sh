@@ -20,7 +20,7 @@ mkdir -p "${CHECK_OUT}"
 
 unset JULIA_LOAD_PATH JULIA_PROJECT
 type module >/dev/null 2>&1 || source "${MODULESHOME}/init/bash"
-module load gcc/13.2.0 openmpi/4.1.8-gcc13
+module load gcc/13.2.0 openmpi/4.1.8-gcc13 git/2.49.0
 export JULIA_DEPOT_PATH="${SCRATCH}/julia-depots/terrabyte-cpu"
 export JULIA_NUM_THREADS=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
 export CLIMACOMMS_DEVICE=CPU CLIMACOMMS_CONTEXT=SINGLETON

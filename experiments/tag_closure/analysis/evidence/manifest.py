@@ -1,7 +1,8 @@
 """G3 1.1: a manifest of the worktree, config and environment at job submission.
 
     python3 manifest.py --repo WORKTREE --config YML [--driver FILE]
-                         [--extra FILE ...] [--julia BIN] [--julia-channel +1.11]
+                         [--extra FILE ...] [--model-repo WORKTREE]
+                         [--julia BIN] [--julia-channel +1.11]
                          [--command "..."] --out PATH.json
     python3 manifest.py --verify PATH.json
     python3 manifest.py --attach-acceptance ORIGINAL.json --acceptance SPEC.json
@@ -23,6 +24,14 @@ config, driver and any extra file, the paths a config itself names
 environment: the Julia binary and channel the job will actually use, the
 loaded modules, `JULIA_DEPOT_PATH`, the relevant Julia/CliMA env vars,
 hostname, UTC time, and the submit command string.
+
+A job whose model comes from a second worktree (g3base_submit.sh's RUN_TREE,
+with the config, driver and runscripts from `--repo`) names it with
+`--model-repo`. The manifest then records that tree under `model`: its HEAD,
+branch, status lines and diff hash. A producer that writes the model's own
+identity into its output (the part 9 water tag application receipt) is
+checked against `model` when it is present, and against `head_sha` and
+`diff_sha256` otherwise.
 
 Every git call goes through `git --no-optional-locks`, so running this tool
 never itself touches the worktree it is inspecting (no index lock, no
@@ -294,12 +303,28 @@ def resolve_config_paths(config_path, repo):
     return entries
 
 
-def build_manifest(repo, config_raw, driver_raw, extra_raw, command, julia_arg=None, julia_channel_arg=None):
+def tree_identity(repo):
+    """HEAD, branch, status lines and diff hash of one worktree."""
+    status_entries = parse_porcelain_z(repo)
+    diff_bytes = git_bytes(repo, ["diff", "HEAD", "--binary", "--no-ext-diff", "--no-textconv"]).stdout
+    return {
+        "repo": str(Path(repo).resolve()),
+        "head_sha": git_text(repo, ["rev-parse", "HEAD"]).strip(),
+        "branch": get_branch(repo),
+        "status_lines": status_lines_from_entries(status_entries),
+        "diff_sha256": hashlib.sha256(diff_bytes).hexdigest(),
+    }
+
+
+def build_manifest(repo, config_raw, driver_raw, extra_raw, command, julia_arg=None, julia_channel_arg=None,
+                   model_repo=None):
     """Everything the manifest records, computed fresh. Used both to build a
     new manifest and, from --verify, to recompute one for comparison."""
     repo_path = Path(repo)
     if not (repo_path / ".git").exists():
         die(f"--repo does not look like a git worktree (no .git): {repo}")
+    if model_repo is not None and not (Path(model_repo) / ".git").exists():
+        die(f"--model-repo does not look like a git worktree (no .git): {model_repo}")
 
     config = resolve_named_file(config_raw, "config")
     if config is None:
@@ -311,7 +336,7 @@ def build_manifest(repo, config_raw, driver_raw, extra_raw, command, julia_arg=N
     julia_binary, julia_channel = resolve_julia(julia_arg, julia_channel_arg)
     diff_bytes = git_bytes(repo, ["diff", "HEAD", "--binary", "--no-ext-diff", "--no-textconv"]).stdout
 
-    return {
+    manifest = {
         "repo": str(repo_path.resolve()),
         "head_sha": git_text(repo, ["rev-parse", "HEAD"]).strip(),
         "branch": get_branch(repo),
@@ -336,6 +361,9 @@ def build_manifest(repo, config_raw, driver_raw, extra_raw, command, julia_arg=N
         "command": command,
         "manifest_tool_sha256": sha256_file(Path(__file__).resolve()),
     }
+    if model_repo is not None:
+        manifest["model"] = tree_identity(model_repo)
+    return manifest
 
 
 def compare_field(name, old, new, lines):
@@ -388,6 +416,7 @@ def verify(json_path):
         recorded.get("command"),
         julia_arg=recorded.get("julia_binary"),
         julia_channel_arg=recorded.get("julia_channel"),
+        model_repo=recorded["model"]["repo"] if recorded.get("model") else None,
     )
     print(f"verify: {json_path}")
     print(f"repo:   {recorded['repo']}")
@@ -405,6 +434,10 @@ def verify(json_path):
     compare_optional("head_on_remote (informational)", recorded, fresh, "head_on_remote", lines)
     track("status_lines", "status_lines")
     track("diff_sha256", "diff_sha256")
+    if recorded.get("model"):
+        for key in ("head_sha", "branch", "status_lines", "diff_sha256"):
+            compare_field(f"model.{key}", recorded["model"].get(key), fresh["model"].get(key), lines)
+            changed.append(recorded["model"].get(key) != fresh["model"].get(key))
     changed.append(compare_dict_subset("untracked", recorded.get("untracked", {}), fresh["untracked"], lines))
     changed.append(compare_dict_subset("buildkite_files", recorded.get("buildkite_files", {}), fresh["buildkite_files"], lines))
     compare_field("config.sha256", recorded["config"]["sha256"], fresh["config"]["sha256"], lines)
@@ -456,6 +489,8 @@ def parse_args():
     parser.add_argument("--config", help="the run's config YAML")
     parser.add_argument("--driver", default=None, help="the driver script, if any")
     parser.add_argument("--extra", action="append", default=[], help="an extra file to hash; may repeat")
+    parser.add_argument("--model-repo", default=None,
+                        help="the worktree the model runs from, when it is not --repo (recorded under `model`)")
     parser.add_argument("--julia", default=None, help="the julia binary the job will use (default: $JULIA or PATH)")
     parser.add_argument("--julia-channel", default=None, help="the juliaup channel, e.g. +1.11 (default: $JULIA_CHANNEL or +1.11)")
     parser.add_argument("--command", default=None, help="the submit command string, recorded verbatim")
@@ -482,11 +517,14 @@ def main():
 
     manifest = build_manifest(
         args.repo, args.config, args.driver, args.extra, args.command,
-        julia_arg=args.julia, julia_channel_arg=args.julia_channel,
+        julia_arg=args.julia, julia_channel_arg=args.julia_channel, model_repo=args.model_repo,
     )
     Path(args.out).write_text(json.dumps(manifest, indent=2, sort_keys=True))
     print(f"manifest written: {Path(args.out).resolve()}")
     print(f"  head_sha={manifest['head_sha']} branch={manifest['branch']}")
+    if "model" in manifest:
+        print(f"  model head_sha={manifest['model']['head_sha']} branch={manifest['model']['branch']} "
+              f"status lines: {len(manifest['model']['status_lines'])}")
     print(f"  status lines: {len(manifest['status_lines'])}; untracked files: {manifest['untracked']['count']}")
 
 

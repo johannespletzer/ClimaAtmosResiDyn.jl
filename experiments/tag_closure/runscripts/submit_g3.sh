@@ -110,6 +110,7 @@ SUBMIT_LINE="env CONFIG=${CONFIG}${DRIVER:+ DRIVER=${DRIVER}} MANIFEST_PATH=${MA
 python3 "${ROOT}/experiments/tag_closure/analysis/evidence/manifest.py" \
     --repo "${ROOT}" --config "${CONFIG}" \
     ${DRIVER:+--driver "${DRIVER}"} \
+    ${MODEL_TREE:+--model-repo "${MODEL_TREE}"} \
     --command "${SUBMIT_LINE}" \
     --out "${MANIFEST_PATH}"
 

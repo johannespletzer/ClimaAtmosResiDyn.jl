@@ -1,0 +1,63 @@
+# Part 9, PR B (design/PART9_PRODUCER.md, section 12, the amendment of
+# 2026-10-11): the integration test's precipitating column
+# (test/water_tag_applications_common.jl at 2c63c5c53), 1M microphysics with
+# the precipitation tags, for 1 h. The TRMM 0M case corrects no partition in
+# 6 h, so every final map and post-Newton map there is zero and dropped. This
+# case fires them. Two Newton iterations and `constrain_state!` at every
+# stage give the post-Newton maps the Newton check needs. Only job_id, the two
+# Newton keys, t_end, ode_algo (ARS222 as the TRMM case, the test runs the
+# default ARS343), the output keys and the diagnostics (the increment
+# ledgers at 10 s among them) differ from the test's config.
+
+job_id: "p9_col1m_newton_1h"
+max_newton_iters_ode: 2
+update_constrain_state_every: "stage"
+water_tag_applications: true
+
+# Checkpoints every 30 min and a reproducible restart in both column runs, as
+# in the TRMM set. The on run's checkpoint at 30 min starts the restart pair
+# (design section 13, 2026-10-11).
+dt_save_state_to_disk: "30mins"
+reproducible_restart: true
+
+water_tracers:
+  - name: lower
+    region: {type: tanh_altitude, z_center: 3000.0, width: 300.0, above: false}
+  - name: upper
+    region: {type: tanh_altitude, z_center: 3000.0, width: 300.0}
+  - name: evap
+    source: surface_flux
+
+water_tag_precipitation: true
+water_tag_transport: "increment"
+water_tag_ledger_per_tag: true
+
+config: column
+initial_condition: PrecipitatingColumn
+surface_setup: DefaultMoninObukhov
+z_elem: 20
+z_max: 6000.0
+z_stretch: false
+cloud_model: "grid_scale"
+microphysics_model: "1M"
+vert_diff: "DecayWithHeightDiffusion"
+implicit_diffusion: true
+approximate_linear_solve_iters: 2
+tracer_upwinding: "first_order"
+dt: 10secs
+t_end: 1hours
+toml: [toml/single_column_precipitation_test.toml]
+ode_algo: "ARS222"
+FLOAT_TYPE: "Float64"
+
+output_default_diagnostics: false
+diagnostics:
+  # Part 9's checks: every accepted step (dt = 10 s). rhoa aligns the
+  # producer's ledgers for the reader.
+  - short_name: [rhoa, ta, hus]
+    period: "10secs"
+  # The Newton check ties the inc and negative records to the model's own
+  # increment ledgers at every accepted step (section 14, 2026-10-11, after
+  # the first Newton run lacked them).
+  - short_name: [q_tag_led_inc_lower, q_tag_led_inc_upper, q_tag_led_inc_evap]
+    period: "10secs"

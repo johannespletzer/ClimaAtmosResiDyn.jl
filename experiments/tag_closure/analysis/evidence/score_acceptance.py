@@ -28,8 +28,9 @@ from acceptance_data import (Bundle, DataError, NotAssessable, aligned, at,
                              cumulative_amount, density, finite, integrate,
                              od2_start, require, retained, same_bits, window)
 from closure_verdict import ENERGY_GROSS, WATER_GROSS
-from correction_accounting import application_activity, evaluate_accounting, paired_precipitation
+from correction_accounting import application_activity, evaluate_accounting, model_identity, paired_precipitation
 from manifest import sha256_file
+from water_tag_application_proof import register_from_registry
 
 
 DAY = 86400.0
@@ -1064,7 +1065,8 @@ class Scorer:
         if failed:
             evidence["metrics"]["row_data_failures"] = failed
             evidence["data_status"], evidence["verdict"] = "DATA FAILURE", "FAIL"
-        result = {"schema_version": 1, "claim": self.s.get("claim", {}), "model_commit": self.b.manifest.get("head_sha"),
+        result = {"schema_version": 1, "claim": self.s.get("claim", {}),
+                  "model_commit": model_identity(self.b.manifest).get("head_sha"),
                   "experiment_commit": self.s.get("experiment_commit"), "scorer_commit": self.s.get("scorer_commit"),
                   "planning_commit": self.s.get("planning_commit"), **identities,
                   "artifacts": dict(sorted(self.b.used.items())), "rows": self.rows,
@@ -1095,6 +1097,9 @@ def main(argv=None):
     parser.add_argument("--json", required=True, help="new deterministic result artifact. Existing paths are refused")
     try:
         args = parser.parse_args(argv)
+        # The water tag producer of part 9 is registered from its registry config once the
+        # record says so (water_tag_application_registry.json). Pending registers nothing.
+        register_from_registry()
     except SystemExit as exc:
         return 0 if exc.code == 0 else 4
     output = Path(args.json)

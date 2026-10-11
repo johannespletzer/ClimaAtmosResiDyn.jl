@@ -410,6 +410,25 @@ class ConverterTests(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("non-positive cell thickness at levels [1]", err)
 
+    def test_table_at_a_finer_cadence_is_sampled_at_the_field_times(self):
+        # A closure table written every accepted step serves a bundle at the fields' coarser cadence
+        # (PART9_PRODUCER.md section 16). Rows at the field times are copied, no value between rows.
+        d = self.s.water_run("cand")
+        fine = np.arange(0, TIMES[-1] + 1, 150.0)
+        write_table(d / "water_tag_closure.csv", {"time": fine, "negative_water_void": (fine > TIMES[-2]).astype(float)})
+        code, err = convert(self.root / "bundle", candidate=d)
+        self.assertEqual(code, 2, err)
+        a = npz(self.root / "bundle" / "candidate.npz")
+        self.assertTrue(np.array_equal(a["negative_water_void__time"], TIMES))
+        self.assertTrue(np.array_equal(a["negative_water_void"][:, 0], [0, 0, 0, 0, 1]))
+        self.assertTrue(json.loads((self.root / "bundle" / "conversion.json").read_text())["tables_sampled_at_field_times"])
+        # A table that lacks a field time is copied whole, so the scorer sees the gap.
+        short = fine[fine != TIMES[2]]
+        write_table(d / "water_tag_closure.csv", {"time": short, "negative_water_void": np.zeros(len(short))})
+        code, err = convert(self.root / "bundle2", candidate=d)
+        self.assertEqual(code, 2, err)
+        self.assertEqual(len(npz(self.root / "bundle2" / "candidate.npz")["negative_water_void__time"]), len(short))
+
     def test_period_must_be_unique_or_chosen(self):
         d = self.s.water_run("cand")
         write_field(d / "hus_10m_inst.nc", "hus", native(0.01, 1e-4), "kg kg^-1")
