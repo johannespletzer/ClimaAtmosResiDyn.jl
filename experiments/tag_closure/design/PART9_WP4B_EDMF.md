@@ -186,6 +186,15 @@ own and starts anew each exchange evaluation, as the `N` plume does.
 `water_tag_edmf_audit` reports where the `R` and `S` bounds bind, as it does
 for `N`.
 
+**Cross flows (added 2026-10-11, as built).** The updraft's rain also forms
+from snow, and its snow from rain. At each level the rain plume takes the
+updraft's snow-to-rain flow `ρaʲ Fʲ_SR Δz` as a fourth source, with the snow
+plume's shares, and the snow plume takes `ρaʲ Fʲ_RS Δz` with the rain
+plume's shares. Both plumes are marched downward together in one state, and
+each cross source uses the other plume's shares from the level above, so no
+level needs a solve. Where the other plume holds nothing above, its cross
+source is dropped.
+
 The exchange needs region tags that partition the domain
 (`check_water_tag_exchange_partition`), as today. It is implicit with the
 mass flux (`implicit_tendency.jl:155`) and has no Jacobian block, as the `N`
@@ -232,6 +241,19 @@ mass flux the `ρq_rai` row holds its diagonal, `(·, sgsʲs.1.q_rai)` and
   - Without the split (`split_uncoupled_fields: false`) the parts keep only
     their diagonal and the lag goes to the closing ledger. The key under EDMF
     is refused without the split, with a message that says why.
+
+**The share where the partition holds none (added 2026-10-11, section 13).**
+Where the parent holds a positive amount of rain or snow in a cell and the
+partition holds none of it, every part's share there would be zero. The
+parts would then miss the SGS flux leaving the cell and the cross blocks'
+part of the Newton increment, and the implicit sedimentation would carry the
+difference down the rain column into the closing ledger. So there a region
+tag takes its share of the non-precipitating water, for both the SGS donor
+share and the cross blocks (`water_tag_part_flux_share`), as the closing
+step gives new rain its composition. The partition's shares then sum to one
+wherever the parent holds the compartment and the partition holds
+non-precipitating water. Where the compartment is not positive the share
+stays zero, and a source tag keeps its own share.
 
 With this no follower is needed for `R` and `S`, as stage 1 decided (P2).
 
