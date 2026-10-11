@@ -349,6 +349,15 @@ review of PR #171.
   - **A manual 1.10 bounds-checked run of the three applications groups
     precedes the merge of PR A.** **In force.** The third tracer moves the
     1.10 memory margin, which stood within 0.5 GiB of the runner's 16 GB.
+  - **The model-ledger tie scales by the step's column maximum.** **In
+    force, 2026-10-11.** The column's Newton rerun failed the tie for the
+    source tag in 145 cells holding specks between 1e-49 and 4e-19 of the
+    column's largest ledger value, the follower's cancellation of the
+    parent's water change. Design section 15: the allowance of section 6
+    keeps its 16 eps (k + 5), with the maxima of the ledger before, the
+    ledger after and the activity taken over the step's column. The
+    producer's own ledger check stays per cell. A dust floor below the
+    column maximum, and a registration refused on the specks, were declined.
   - **The Newton check bounds the post-Newton records by the writer's
     moves.** **In force, 2026-10-11.** The column's Newton run failed
     `newton_replacement` on a second post-Newton record of a follow channel

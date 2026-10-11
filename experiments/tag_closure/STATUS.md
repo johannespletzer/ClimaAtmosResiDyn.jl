@@ -32,7 +32,8 @@ restart diverges from the first step, the model's own inexact restart of
 FINDINGS E54, so section 13 runs the restart check on the column's restart
 pair and the off run's restart as the control. The control confirmed it.
 Section 14 bounds the Newton check's post-Newton count by the follow's two
-moves per part.
+moves per part, section 15 scales the model-ledger tie by the step's column
+maximum. The check script of 2026-10-11 passes the six checks with them.
 The owner sets the proposed constants and approves each job. The producer
 is registered only after the six checks pass on the cluster.
 

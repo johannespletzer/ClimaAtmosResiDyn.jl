@@ -279,7 +279,12 @@ def model_ledger_tie(run, mechanisms=None):
                     activity[n] += np.abs(w)
                     count[n] += 1
             ops = (count + LEDGER_EXTRA_OPERATIONS + DIAGNOSTIC_OPERATIONS)[:, None]
-            bound = allowance(q.dtype, ops, density[:-1], density[1:], activity)
+            # The scale is the step's column maximum of the ledger and the activity (design
+            # section 15, 2026-10-11). The follower cancels terms of the parent's water change,
+            # so a cell holding a speck of 1e-49 of the column carries an error that scales with
+            # the column's changes, not with the speck.
+            scales = [np.max(np.abs(x), axis=1, keepdims=True) for x in (density[:-1], density[1:], activity)]
+            bound = allowance(q.dtype, ops, *scales)
             bad = np.abs(np.diff(density, axis=0) - delta) > bound
             need(not bad.any(), lambda: f"records of {'+'.join(mechs)} for tag {tag} differ from the model's "
                  f"{name}{tag} at step {first_bad(run, bad)}")

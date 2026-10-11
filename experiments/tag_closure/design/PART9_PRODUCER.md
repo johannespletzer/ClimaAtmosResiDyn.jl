@@ -139,7 +139,8 @@ The owner decided these four as proposed on 2026-10-10.
     per cell and step, k the step's records of the channel. The model-ledger
     tie allows 16 eps(dtype) (k + 3 + 2) times the same maxima in density
     units. The 2 counts the diagnostic's division by ρ and the
-    multiplication by `rhoa` (`DIAGNOSTIC_OPERATIONS`).
+    multiplication by `rhoa` (`DIAGNOSTIC_OPERATIONS`). Section 15 takes
+    the tie's maxima over the step's column (owner, 2026-10-11).
   - `Z_MATCH_ULPS` = 4: `rhoa`'s `z` against the producer's centres.
   - Roles that must appear with a nonzero record: `final_map` and `implicit`
     in the on run, `post_newton` in the Newton run. Amended in section 12:
@@ -349,3 +350,24 @@ that the column's Newton config had no `q_tag_led_inc_<tag>` diagnostics at
 reruns once, under section 10's first rule, with approval. The on and the
 restarted column configs stay as they are, so the restart pair's diagnostic
 file sets stay equal.
+
+## 15. Amendment, 2026-10-11: the model-ledger tie's scale is the column's
+
+Written after the column's Newton rerun (section 14), with its data read.
+`newton_replacement` reached its ledger tie and printed FAIL for the tag
+`evap` at the first step. The tie of section 6 allows 16 eps (k + 5) times
+each cell's own maximum of the ledger before, the ledger after and the
+activity. In the run, 145 cells over 77 steps fail, every one holding
+between 1e-49 and 4e-19 of the column's largest ledger value (the column
+maximum is 1.8e-9 kg m^-3 over the run), with relative discrepancies from
+3e-14 to 2e-11. The follower's kernel cancels terms of the parent's water
+change to leave these specks, so their error scales with the column's
+changes, not with the speck. The region tags, and every tag of the TRMM
+case, pass per cell. The rule becomes: the same allowance, with the maxima
+taken over the step's column for each of the three quantities. With it
+every tie of both cases passes, and the largest discrepancy is 2 percent of
+its allowance (the fix ledgers of the TRMM case tie exactly). The producer
+ledger check of section 6 keeps its per-cell rule: the producer's own
+ledger is a plain sum of its records. The owner chose this over a dust
+floor below the column maximum and over a registration refused on the
+specks (DECISIONS.md, "2026-10-10, part 9 PR B"). No new job.

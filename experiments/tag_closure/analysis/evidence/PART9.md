@@ -123,6 +123,24 @@ and tag, nothing accumulating. The check then reached its ledger tie and
 refused the run, whose config had no `q_tag_led_inc_<tag>` diagnostics at
 10 s. The Newton config gains them and the job reruns once.
 
+The column's restart 14191518 (17:46, 11:38 start) and the Newton rerun
+14191544 (18:14, 11:43 start, `output_0001`) completed. The check script
+ran on 2026-10-11 13:15 over the ten runs: `accepted_weights` PASS on the
+column's on run (final_map, implicit, 13274 records) and on the TRMM on run
+(implicit), `trial_rollback` PASS, `complete_active_roster` PASS,
+`parent_bitwise_parity` PASS in both precisions,
+`all_channel_checkpoint_restart` PASS on the column's pair. The record
+logs: the TRMM pair fails the producer's restart check and the model-only
+comparison, the off pair fails the model-only comparison the same way, the
+column's model-only restart passes. `newton_replacement` printed FAIL in
+its ledger tie for `evap` at the first step: 145 cells over 77 steps hold
+specks between 1e-49 and 4e-19 of the column's largest ledger value and
+miss the per-cell allowance by relative 3e-14 to 2e-11, the follower's
+cancellation of the parent's water change. Section 15 (owner, 2026-10-11)
+takes the tie's maxima over the step's column. With it every tie of both
+cases passes, the largest discrepancy at 2 percent of its allowance, and
+the check script ran again.
+
 ## 2. Model identity
 
 `model.head_sha` of each manifest (the run tree, with the record tree under
