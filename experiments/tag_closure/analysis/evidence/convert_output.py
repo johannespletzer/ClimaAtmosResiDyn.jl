@@ -50,6 +50,7 @@ from pathlib import Path
 import numpy as np
 
 from compare_runs import PARITY_ONLY_EXCLUDED_PREFIXES, parse_tag_block, yaml_flat_scalar, yaml_top_level_blocks
+from correction_accounting import model_identity
 from manifest import sha256_file
 from score_acceptance import local_identities
 
@@ -510,7 +511,8 @@ def convert(args):
                                            "z_max_m": float(run.config("z_max")) if run.config("z_max") else None,
                                            "density_field": "rho (rhoa), multiplied in by the scorer"}}
             if role != "candidate":
-                spec_runs[role].update(manifest=copied["manifest.json"], model_commit=run.manifest.get("head_sha"),
+                spec_runs[role].update(manifest=copied["manifest.json"],
+                                       model_commit=model_identity(run.manifest).get("head_sha"),
                                        config_sha256=run.manifest.get("config", {}).get("sha256"))
             artifacts.update({rel: None for rel in copied.values()})
             artifacts[role + ".npz"] = None

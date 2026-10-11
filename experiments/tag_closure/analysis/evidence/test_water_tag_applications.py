@@ -348,6 +348,21 @@ class TestChecks(Fixture):
 
 
 class TestProof(Fixture):
+    def test_register_from_registry(self):
+        # Pending registers nothing. A registered config with the cluster's cts_version registers the entry.
+        with mock.patch.dict(ca.VERIFIED_PRODUCERS, {}, clear=True):
+            self.assertIsNone(wproof.register_from_registry())
+            self.assertEqual(ca.VERIFIED_PRODUCERS, {})
+            config = wproof.load_registry()
+            path = self.root / "registry.json"
+            path.write_text(json.dumps({**config, "status": "registered"}))
+            with self.assertRaisesRegex(wproof.ProofError, "cts_version"):
+                wproof.register_from_registry(path)
+            config["entry"]["cts_version"] = "1.0.1"
+            path.write_text(json.dumps({**config, "status": "registered"}))
+            self.assertEqual(wproof.register_from_registry(path), config["producer_id"])
+            self.assertEqual(ca.VERIFIED_PRODUCERS[config["producer_id"]]["cts_version"], "1.0.1")
+
     def test_proof_opens_the_gate_dry(self):
         out, _ = self.convert()
         logs = self.root / "logs"

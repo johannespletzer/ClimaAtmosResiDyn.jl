@@ -44,7 +44,7 @@ from pathlib import Path
 
 import numpy as np
 
-from correction_accounting import COUNTERS, QUANTITIES
+from correction_accounting import COUNTERS, QUANTITIES, model_identity
 from manifest import sha256_file
 
 RECEIPT_FILE = "water_tag_application_receipt.jsonl"
@@ -263,13 +263,6 @@ def convert(run_dir, out, manifest=None, rho_file=None):
     return section
 
 
-def model_identity(run_manifest):
-    """The tree the model ran from. A job submitted from a record tree with the
-    model in a second worktree (g3base_submit.sh) records that worktree under
-    `model`. A single-tree manifest is its own model identity."""
-    return run_manifest.get("model") or run_manifest
-
-
 def standalone_bundle(out, run_manifest=None, extra=None):
     """A manifest around a converted directory that the reader's Bundle opens.
 
@@ -308,7 +301,9 @@ def attach(bundle_manifest, out):
     data = json.loads(bundle_manifest.read_text())
     spec = data["acceptance"]
     section = json.loads((out / OUT_SECTION).read_text())
-    refuse(data.get("head_sha") == section["model_commit"] and data.get("diff_sha256") == section["model_diff_sha256"],
+    identity = model_identity(data)
+    refuse(identity.get("head_sha") == section["model_commit"] and
+           identity.get("diff_sha256") == section["model_diff_sha256"],
            "the bundle's model identity differs from the receipt's")
     rho = spec["runs"]["candidate"]["fields"].get("rho", {})
     times = rho.get("expected_times")

@@ -590,8 +590,15 @@ writes `lifecycle_evidence.json`, adds it and the copied logs to the
 manifest's `artifacts` and names it in `correction_accounting.lifecycle_evidence`.
 The registry entry
 (`water_tag_application_registry.json`) is pending until the checks pass on
-the cluster. The tests run on a synthetic fixture in the producer's format
-(`make_water_tag_application_fixture.py`), never runtime evidence.
+the cluster. Once the record turns its status to `registered`, with the
+cluster receipt's `cts_version`, `score_acceptance.py` registers the
+producer from it at start (`water_tag_application_proof.register_from_registry`).
+A job whose model runs from a second worktree records that tree under
+`model` in its manifest (`manifest.py --model-repo`), and the reader, the
+scorer and both converters compare the receipt with that entry
+(`correction_accounting.model_identity`). The tests run on a synthetic
+fixture in the producer's format (`make_water_tag_application_fixture.py`),
+never runtime evidence.
 
 ## Legacy G3 phase 1 evidence pipeline
 

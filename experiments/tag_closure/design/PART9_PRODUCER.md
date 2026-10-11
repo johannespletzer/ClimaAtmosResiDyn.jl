@@ -183,6 +183,11 @@ and `cts_version` empty. `register_producer` is called only in the record
 follow-up, after the six checks pass on the cluster. `cts_version` is then
 the cluster receipt's pin version. A source hash other than the one above
 means PR A changed, and the entry is redone before registration.
+The call is the scorer's, at start, from the registry config once its
+status is `registered` (`register_from_registry`, 2026-10-11). The reader
+compares the receipt and the proof with the bundle manifest's `model` entry
+where the job ran the model from a second worktree (section 13), through
+`correction_accounting.model_identity`.
 
 ## 9. What flips in the scorer
 

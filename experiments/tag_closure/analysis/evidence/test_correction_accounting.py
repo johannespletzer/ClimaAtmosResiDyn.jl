@@ -480,6 +480,25 @@ class CorrectionTests(unittest.TestCase):
         self.assertEqual(Scorer(Bundle(self.manifest)).exact_scale(0, 7200), 20)
         self.assertIsNone(self.result()["metrics"]["scientific_activity_tolerance"])
 
+    def test_two_tree_manifest_keeps_the_model_identity(self):
+        # A job submitted from a record tree records the model tree under `model`. The receipt is
+        # compared with that entry, not with the record tree's head_sha.
+        before = self.result()
+        data = json.loads(self.manifest.read_text())
+        model = {"head_sha": data["head_sha"], "diff_sha256": data["diff_sha256"], "repo": "run tree"}
+        data.update(head_sha="f1a7" * 10, model=model)
+        self.manifest.write_text(json.dumps(data))
+        self.assertEqual(correction_accounting.model_identity(data), model)
+        after = self.result()
+        self.assertEqual((before["verdict"], before["metrics"]["channels"]), (after["verdict"], after["metrics"]["channels"]))
+        data["model"]["head_sha"] = "0" * 40
+        self.manifest.write_text(json.dumps(data))
+        try:
+            wrong = str(self.result())
+        except DataError as exc:
+            wrong = str(exc)
+        self.assertIn("identity", wrong)
+
     def test_synthetic_receipt_cannot_clear_production_gate(self):
         self.file("application_receipt.json", lambda r: r.update(kind="runtime_capture"))
         # Relabelling the receipt does not remove the submission's synthetic identity.

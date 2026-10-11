@@ -23,6 +23,7 @@ import shutil
 import sys
 from pathlib import Path
 
+import correction_accounting as ca
 from manifest import sha256_file
 
 REGISTRY_CONFIG = Path(__file__).with_name("water_tag_application_registry.json")
@@ -50,6 +51,22 @@ def registry_entry(receipt_pin, path=REGISTRY_CONFIG, allow_pending=False):
     entry = dict(config["entry"])
     entry["cts_version"] = receipt_pin["version"]
     return config["producer_id"], entry
+
+
+def register_from_registry(path=REGISTRY_CONFIG):
+    """Register the producer with the reader when the registry config says `registered`.
+
+    The scorer calls this at start. A pending config registers nothing, so the gate stays closed
+    until the record follow-up turns the status after the six checks pass on the cluster.
+    """
+    config = load_registry(path)
+    if config["status"] != "registered":
+        return None
+    entry = dict(config["entry"])
+    if not entry.get("cts_version"):
+        raise ProofError("a registered entry needs the cluster receipt's cts_version")
+    ca.register_producer(config["producer_id"], entry)
+    return config["producer_id"]
 
 
 def check_result(log_text, key, pattern):

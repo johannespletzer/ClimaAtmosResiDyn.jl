@@ -65,6 +65,13 @@ def producer_entry(producer_id, entry):
     return {**entry, "check_log_pattern": pattern}
 
 
+def model_identity(manifest):
+    """The tree the model ran from. A job submitted from a record tree with the model in a second
+    worktree records that worktree under `model` (manifest.py --model-repo, design/PART9_PRODUCER.md
+    section 13 of the tag-closure plan). A single-tree manifest is its own model identity."""
+    return manifest.get("model") or manifest
+
+
 def register_producer(producer_id, entry):
     """Add a verified producer after its runtime validation. Refuses an incomplete entry."""
     require(text(producer_id), "a verified producer needs an ID")
@@ -167,8 +174,9 @@ def read_receipt(bundle, path, channel_ids):
     r = read_json(bundle, path)
     require(r.get("schema_version") == 1 and r.get("semantics") == "weighted_final_additive_updates",
             "missing final additive acceptance semantics")
-    require(r.get("model_commit") == bundle.manifest.get("head_sha") and
-            r.get("model_diff_sha256") == bundle.manifest.get("diff_sha256"),
+    identity = model_identity(bundle.manifest)
+    require(r.get("model_commit") == identity.get("head_sha") and
+            r.get("model_diff_sha256") == identity.get("diff_sha256"),
             "application receipt model identity differs")
     require(r.get("kind") in ("synthetic", "runtime_capture"), "unknown receipt kind")
     pin = r.get("integrator_pin", {})
@@ -465,9 +473,10 @@ def production_gate(bundle, receipt, section, roster):
     proof = read_json(bundle, lifecycle)
     require(text(proof.get("producer_id")) and isinstance(proof.get("checks", {}), dict),
             "runtime lifecycle validation lacks a producer ID or checks table")
+    identity = model_identity(bundle.manifest)
     require(proof.get("kind") == "runtime_validation" and
-            proof.get("model_commit") == bundle.manifest["head_sha"] and
-            proof.get("model_diff_sha256") == bundle.manifest["diff_sha256"],
+            proof.get("model_commit") == identity.get("head_sha") and
+            proof.get("model_diff_sha256") == identity.get("diff_sha256"),
             "runtime lifecycle validation identity differs")
     supported = VERIFIED_PRODUCERS.get(proof.get("producer_id"))
     if supported is None:
