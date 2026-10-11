@@ -2,8 +2,11 @@
 #
 # Part 9, PR B (design/PART9_PRODUCER.md, section 5): the producer's runtime
 # checks on the part 8 default case, TRMM 0M for 6 h, run from
-# claude/part9-producer at 2c63c5c53 (PR #170, not on main). Six jobs. Not
-# submitted by the PR. The session submits each job after the owner approves it.
+# claude/part9-producer at 2c63c5c53 (PR #170, merged into main). Six jobs,
+# plus two on the integration test's precipitating column since the amendment
+# of 2026-10-11 (design section 12): the TRMM case corrects no partition, so
+# its final maps and post-Newton maps are all zero. Not submitted by the PR.
+# The session submits each job after the owner approves it.
 #
 # Cost estimate, from part 8's default job 14170101 (PART8.md: wall 844 s,
 # build 209.9 s, 79.8 ms per step, MaxRSS 7.48 GiB on an exclusive node).
@@ -26,12 +29,17 @@
 #   p9_trmm0m_restarted_6h p9_trmm0m_restarted_6h.yml  16 min    1 h    48G     0.27 (1)
 #   p9_trmm0m_on_f32_6h    p9_trmm0m_on_f32_6h.yml     16 min    1 h    48G     0.27 (1)
 #   p9_trmm0m_off_f32_6h   p9_trmm0m_off_f32_6h.yml    15 min    1 h    48G     0.25 (1)
+#   p9_col1m_on_1h         p9_col1m_on_1h.yml          10 min    1 h    48G     0.17 (1)
+#   p9_col1m_newton_1h     p9_col1m_newton_1h.yml      10 min    1 h    48G     0.17 (1)
 #
-# About 1.6 node-hours in all, 6 node-hours at the limits. A 6 h run costs
-# about as much as a short one here: steps are 1% of part 8's wall.
+# About 1.9 node-hours in all, 8 node-hours at the limits. A 6 h run costs
+# about as much as a short one here: steps are 1% of part 8's wall. The two
+# column jobs (20 levels, 360 steps of 10 s) are taken as the build and the
+# startup alone, 10 min, not measured.
 #
 #   RUN_TREE=<clean detached tree at 2c63c5c53> \
-#       experiments/tag_closure/runscripts/part9_checks.sh [--submit] [on|off|newton|restarted|on_f32|off_f32 ...]
+#       experiments/tag_closure/runscripts/part9_checks.sh [--submit] \
+#           [on|off|newton|restarted|on_f32|off_f32|col1m_on|col1m_newton ...]
 #
 # Without --submit it runs g3base_submit.sh with --dry-run, which writes the
 # manifest (head_sha this record's commit, model head_sha 2c63c5c53) and
@@ -51,14 +59,14 @@ RUNS=()
 for a in "$@"; do
     case "${a}" in
         --submit) SUBMIT=1 ;;
-        on | off | newton | restarted | on_f32 | off_f32) RUNS+=("${a}") ;;
+        on | off | newton | restarted | on_f32 | off_f32 | col1m_on | col1m_newton) RUNS+=("${a}") ;;
         *)
             echo "ERROR: unknown argument ${a}." >&2
             exit 1
             ;;
     esac
 done
-((${#RUNS[@]})) || RUNS=(on off newton on_f32 off_f32)
+((${#RUNS[@]})) || RUNS=(on off newton on_f32 off_f32 col1m_on col1m_newton)
 DRY=(--dry-run)
 ((SUBMIT)) && DRY=()
 
@@ -67,7 +75,10 @@ for run in "${RUNS[@]}"; do
         echo "ERROR: ${CHECKPOINT} is missing. Submit restarted after on has finished." >&2
         exit 1
     fi
-    name="p9_trmm0m_${run}_6h"
+    case "${run}" in
+        col1m_*) name="p9_col1m_${run#col1m_}_1h" ;;
+        *) name="p9_trmm0m_${run}_6h" ;;
+    esac
     CONFIG="experiments/tag_closure/configs/${name}.yml" \
         "${REC}/experiments/tag_closure/runscripts/g3base_submit.sh" ${DRY[@]+"${DRY[@]}"} \
         --account=pn49go-c --partition=hpda2_compute --time=01:00:00 --nodes=1 --ntasks=1 \

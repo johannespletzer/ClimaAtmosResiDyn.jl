@@ -24,7 +24,10 @@ case. The [design](design/PART9_PRODUCER.md) is pre-registered and the
 [record](analysis/evidence/PART9.md) is a skeleton. Four job waves found a
 roster defect in the producer (fixed in PR A at `2c63c5c53`), the missing git
 module on the compute nodes, and a job manifest that did not record the model
-tree (PART9.md, section 1). The jobs rerun at that head with the new manifest.
+tree (PART9.md, section 1). The fifth wave passed two checks and showed that
+the TRMM case fires no final map and no post-Newton map. The design's
+section 12 (2026-10-11) adds two jobs on the integration test's precipitating
+column for those two checks.
 The owner sets the proposed constants and approves each job. The producer
 is registered only after the six checks pass on the cluster.
 

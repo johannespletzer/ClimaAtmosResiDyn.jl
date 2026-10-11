@@ -193,6 +193,25 @@ class TestConverter(Fixture):
         self.assertEqual(wchecks.ars222()["b_exp"][0], 1 - 1 / (2 * g))
 
 
+class TestRosterMirror(unittest.TestCase):
+    def test_precipitating_column_roster(self):
+        # The amendment's case (configs/p9_col1m_on_1h.yml): two region tags and a source tag with the
+        # precipitation tags on. The order is water_tag_application_channels' at 2c63c5c53.
+        text = (Path(__file__).resolve().parents[2] / "configs" / "p9_col1m_on_1h.yml").read_text()
+        n = "nonprecipitating"
+        expected = []
+        for tag, partition in (("lower", True), ("upper", True), ("evap", False)):
+            expected += [f"rescale.{tag}.{n}", f"empty.{tag}.{n}"]
+            if partition:
+                expected += [f"repair.{tag}.{c}" for c in (n, "rain", "snow")]
+                expected += [f"close.{tag}.rain", f"close.{tag}.snow"]
+            expected += [f"follow.{tag}.{c}" for c in (n, "rain", "snow")]
+            expected += [f"inc.{tag}.{n}", f"negative.{tag}.{n}"]
+        self.assertEqual(len(expected), 31)
+        roster, names = wchecks.expected_roster(text)
+        self.assertEqual((roster, names), (expected, ["lower", "upper", "evap"]))
+
+
 class TestConverterFloat32(Fixture):
     dtype = np.float32
 

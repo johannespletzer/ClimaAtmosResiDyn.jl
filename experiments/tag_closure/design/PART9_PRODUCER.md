@@ -123,7 +123,7 @@ is estimated as its Float64 twins.
 | `p9_trmm0m_on_f32_6h`    | parity in Float32                          | 16 min   | 1 h   | 48G    | 0.27 (1)           |
 | `p9_trmm0m_off_f32_6h`   | parity in Float32                          | 15 min   | 1 h   | 48G    | 0.25 (1)           |
 
-About 1.6 node-hours, 6 at the limits. Six jobs stay under the size at
+Section 12 adds two jobs on a second case. About 1.6 node-hours, 6 at the limits. Six jobs stay under the size at
 which a set goes to the owner first: "Any set over 12 jobs or 24 hours goes
 to the owner first" (`DELIVERY_PLAN.md:58-59`). The runs keep the full 6 h.
 Steps are about 1% of part 8's wall, so a shorter run saves little. The
@@ -142,7 +142,8 @@ The owner decided these four as proposed on 2026-10-10.
     multiplication by `rhoa` (`DIAGNOSTIC_OPERATIONS`).
   - `Z_MATCH_ULPS` = 4: `rhoa`'s `z` against the producer's centres.
   - Roles that must appear with a nonzero record: `final_map` and `implicit`
-    in the on run, `post_newton` in the Newton run.
+    in the on run, `post_newton` in the Newton run. Amended in section 12:
+    the TRMM case fires `implicit` alone, the column case the three.
   - The cost factors 1.5 (build) and 3 (steps) of section 5.
 
 ## 7. Limits carried from PR A
@@ -212,7 +213,8 @@ checks".
     cadence on this case, `newton_replacement` is recorded as unverified and
     the registration proceeds with that stated (decided 2026-10-10). A Newton
     job that fails for another reason follows the first rule.
-  - More than 6 jobs or 6 node-hours at the limits: stop and ask.
+  - More than 6 jobs or 6 node-hours at the limits: stop and ask. Section 12
+    raises this to 8 and 8 (owner, 2026-10-11).
   - The producer source hash differs from section 8: stop, redo the entry.
 
 ## 11. Owner inputs (decided 2026-10-10)
@@ -222,3 +224,57 @@ checks".
  3. The second bundle at 150 s for the two scorer rows (section 9): yes.
  4. Submission of the six jobs, each with approval, `restarted` after `on`.
     The Newton job as planned, with the stop rule of section 10.
+
+## 12. Amendment, 2026-10-11: the precipitating column for the final maps and the post-Newton maps
+
+Written after the fifth job wave, with its data read. The TRMM 0M case
+corrects no partition in 6 h: in every step and for every tag the rescale,
+the empty, the repair and the negative giver write zero, the producer drops
+the zero applications, and only the increment follower writes nonzero
+records, all with the role `implicit`. Part 8 had recorded this for the same
+case (PART8.md: `led_fix` 0 for the three tags, partition repair 0 per day).
+So the constant of section 6, a nonzero `final_map` record in the on run and
+a `post_newton` record in the Newton run, could not be met on this case, and
+`accepted_weights` and `newton_replacement` print FAIL for that reason alone.
+Every coefficient the records do carry matches the reader's rule. The design
+missed this against PART8.md. The owner chose this amendment over a
+registration with the two roles unverified on the cluster, and over a longer
+TRMM run, on 2026-10-11 (DECISIONS.md, "2026-10-10, part 9 PR B").
+
+### 12.1 The question, restated
+
+Does the producer at `2c63c5c53` write the final maps and the post-Newton
+maps with the reader's weights in a case that fires them? The case is the
+integration test's precipitating column
+(`test/water_tag_applications_common.jl` at `2c63c5c53`): `PrecipitatingColumn`,
+1M microphysics, 20 levels to 6 km, dt 10 s, tags `lower` and `upper` by
+region at 3 km and `evap` by source, the precipitation tags on, increment
+transport, ARS222 as the TRMM case (the test runs the default ARS343). Run
+for 1 h, 360 accepted steps. The roster has 31 channels, as the test expects.
+H9 keeps its six checks. Any FAIL still falsifies it.
+
+### 12.2 The jobs
+
+`configs/p9_col1m_on_1h.yml` and `configs/p9_col1m_newton_1h.yml`, through
+`runscripts/part9_checks.sh col1m_on col1m_newton`. The Newton config adds
+`max_newton_iters_ode: 2` and `update_constrain_state_every: "stage"`, as
+the TRMM Newton job does. Estimate 10 min each, the build and the startup
+alone (not measured), 1 h limit, 48G, an exclusive node. The set is eight
+jobs and 1.9 node-hours, 8 at the limits. Section 10's cap rises to 8 and 8.
+
+### 12.3 What each check reads
+
+  - `accepted_weights`: the column's on run for `final_map` and `implicit`,
+    and the TRMM on run for `implicit` alone. Both results go into one log,
+    and the gate passes the check only when every result is PASS.
+  - `newton_replacement`: the column's Newton run, with `--expect-post-newton`.
+  - `trial_rollback`, `complete_active_roster`, `parent_bitwise_parity` and
+    `all_channel_checkpoint_restart`: the TRMM runs, unchanged.
+  - The TRMM Newton run is recorded in PART9.md as the run that showed the
+    gap. It is not checked. The scorer rows of section 9 keep the TRMM
+    bundles.
+
+### 12.4 Stop rules
+
+Section 10 applies. The column case is a check job for two roles, not a
+scorer case, so it has no bundle and no parity pair.

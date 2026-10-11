@@ -349,6 +349,19 @@ review of PR #171.
   - **A manual 1.10 bounds-checked run of the three applications groups
     precedes the merge of PR A.** **In force.** The third tracer moves the
     1.10 memory margin, which stood within 0.5 GiB of the runner's 16 GB.
+  - **The precipitating column feeds the weights and the Newton checks.**
+    **In force, 2026-10-11.** The fifth wave showed that the TRMM 0M case
+    corrects no partition in 6 h, so no final map and no post-Newton map is
+    ever nonzero there, and `accepted_weights` and `newton_replacement`
+    fail on the design's nonzero-record constant alone. Part 8 had recorded
+    `led_fix` 0 for this case. The design gains section 12: two jobs on the
+    integration test's precipitating column (1M, 20 levels, dt 10 s, 1 h,
+    ARS222) feed `accepted_weights` for `final_map` and `implicit` and
+    `newton_replacement`. The TRMM on run feeds `accepted_weights` for
+    `implicit` alone, into the same log. The four other checks and the
+    scorer rows stay on the TRMM runs. The job cap rises to 8 jobs and
+    8 node-hours. A registration with the two roles unverified on the
+    cluster, and a 48 h TRMM run, were declined.
   - **The job manifest records the model tree, and the four runs rerun as a
     fifth wave.** **In force.** The fourth wave's receipts carried the right
     identity, but the converter compared them with the job manifest's

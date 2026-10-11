@@ -60,6 +60,28 @@ model identity into the bundle, with the record tree's commit beside it. The
 outputs are under `output/p9_wave4_record_manifest/`. Every job reruns at
 `2c63c5c53` with the new manifest (owner, 2026-10-10).
 
+Fifth wave, 2026-10-10 20:58, producer at `2c63c5c53`, PR B at `4812f5522`:
+jobs 14189471 (on, 13:36, 21:32 start), 14189472 (off, 12:37), 14189473
+(newton, 13:13), 14189474 (on_f32, 12:22), 14189475 (off_f32, 12:04) and
+14191223 (restarted, submitted 2026-10-11 08:40), the first five completed.
+The converter accepts the on and the Newton receipts against the manifests'
+`model` entries. Before the restart, four checks ran on 2026-10-11:
+`trial_rollback` PASS (144 steps of 150 s, one accepted trial each),
+`complete_active_roster` PASS (14 channels, 6 model ledgers tie),
+`accepted_weights` FAIL "no nonzero applied record with role final_map" and
+`newton_replacement` FAIL "no post_newton record, though the run updates at
+stage cadence". The case corrects no partition in 6 h: rescale, empty, repair
+and negative write zero in every step for every tag (12 zero applications
+dropped per step, 14 in the Newton run), and only `inc` writes nonzero
+records, 19700 to 23616 nonzero cells per channel, all with the role
+`implicit`. Every coefficient the records carry matches the reader's rule.
+Part 8 had recorded `led_fix` 0 and partition repair 0 for this case. The
+design's constant could not be met on it. The owner amended the design on
+2026-10-11 (section 12): two jobs on the integration test's precipitating
+column feed the weights check (final_map, implicit) and the Newton check,
+the TRMM on run feeds the weights check for `implicit` alone, the four other
+checks stay on the TRMM runs.
+
 ## 2. Model identity
 
 `model.head_sha` of each manifest (the run tree, with the record tree under
