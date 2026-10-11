@@ -376,3 +376,34 @@ ledger check of section 6 keeps its per-cell rule: the producer's own
 ledger is a plain sum of its records. The owner chose this over a dust
 floor below the column maximum and over a registration refused on the
 specks (DECISIONS.md, "2026-10-10, part 9 PR B"). No new job.
+
+## 16. Amendment, 2026-10-11: the 150 s bundle's prerequisites
+
+Written after the registration dry run, with its data read. Section 9's
+second bundle, converted at 150 s from the on run with the converted
+directory attached, was to serve `COMMON.ACCEPTED_APPLICATION_ACTIVITY` and
+`COMMON.APPLICATION_ACTIVITY.<window>`. Both rows have `COMMON.ROSTER` and
+`COMMON.NEGATIVE_WATER` as prerequisites. The roster row reads every
+`tag_<tag>` at the bundle's cadence, and the on config writes `q_tag_<tag>`
+at 30 min alone. The negative-water row wants the closure table's rows at
+the bundle's field times, and the closure check runs at 30 min. So with the
+producer registered the two rows stayed NOT ASSESSABLE, "failed/unavailable
+prerequisite: COMMON.NEGATIVE_WATER, COMMON.ROSTER". Section 9 did not
+check the rows' prerequisites against the config's cadences. The owner chose
+this amendment over a registration with the two rows left for part 10 and
+over a rerun of the on and off runs alone (DECISIONS.md, "2026-10-10, part 9
+PR B").
+
+  - The on, off, restarted and off_restarted configs write `q_tag_res` and
+    the three `q_tag_<tag>` at 150 s as well, and run the closure check at
+    150 s. The Float32 pair keeps the 30 min cadence: its parity is within
+    the pair, and it feeds no bundle.
+  - `convert_output.py` samples a closure or audit table at the candidate's
+    field times when it has them, so the 30 min bundle keeps its latch
+    coverage with the table at 150 s. It copies rows, never values between
+    rows, and says so in `conversion.json`.
+  - The four runs rerun: on and off, then their restarts from the new
+    checkpoints. Fourteen jobs, 3.2 node-hours, 14 at the limits. Section
+    10's cap rises to 14 and 14. The parity, the restart record logs and the
+    bundles are rebuilt from the new runs. The wave 5 directories are kept
+    under `output/p9_wave5_trmm_30min_tables/`.

@@ -25,8 +25,10 @@ water_tracers:
 water_tag_transport: "increment"
 water_tag_ledger_per_tag: true
 
+# Every accepted step since design section 16 (2026-10-11): the scorer's
+# negative-water row wants the closure table at the 150 s bundle's times.
 water_closure_check:
-  period: "30mins"
+  period: "150secs"
   audit: true
 
 initial_condition: TRMM_LBA
@@ -95,6 +97,10 @@ diagnostics:
   # producer's ledgers for the reader. The model's own ledgers tie the records
   # per tag. ta and hus add parent fields to the parity at step cadence.
   - short_name: [rhoa, ta, hus]
+    period: "150secs"
+  # The tags at every accepted step since design section 16 (2026-10-11):
+  # the scorer's roster row reads them at the 150 s bundle's cadence.
+  - short_name: [q_tag_res, q_tag_pbl, q_tag_free, q_tag_evap]
     period: "150secs"
   - short_name: [q_tag_led_fix_pbl, q_tag_led_fix_free, q_tag_led_fix_evap]
     period: "150secs"

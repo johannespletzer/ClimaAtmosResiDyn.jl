@@ -139,7 +139,24 @@ miss the per-cell allowance by relative 3e-14 to 2e-11, the follower's
 cancellation of the parent's water change. Section 15 (owner, 2026-10-11)
 takes the tie's maxima over the step's column. With it every tie of both
 cases passes, the largest discrepancy at 2 percent of its allowance, and
-the check script ran again.
+the check script ran again: the six checks PASS on 2026-10-11 13:4x (logs
+under the check directory, copied into the proof).
+
+Registration dry run, 2026-10-11: the two scorer bundles were built from
+the on run (`convert_output.py`, 30 min and 150 s, record commit
+`885364263`), the converted directory attached to the 150 s bundle, the
+proof built in it (six PASS, `model_commit` `2c63c5c53`, pin version
+`1.0.1`), the producer source hash equal to the registry's, and the registry
+entry turned to `registered` with `cts_version` `1.0.1`. The scorer then
+left `COMMON.ACCEPTED_APPLICATION_ACTIVITY` NOT ASSESSABLE on the 150 s
+bundle: its prerequisites `COMMON.ROSTER` (no `tag_pbl` at 150 s) and
+`COMMON.NEGATIVE_WATER` (closure table rows at 30 min) fail there. The
+30 min bundle passes both but fails every row that needs the untagged twin,
+which part 9 did not run. Section 16 (owner, 2026-10-11) adds the tags and
+the closure check at 150 s to the four Float64 TRMM configs, samples tables
+at the field times in the bundle converter, and reruns on, off and the two
+restarts. The wave 5 directories of the four are kept under
+`output/p9_wave5_trmm_30min_tables/`.
 
 ## 2. Model identity
 

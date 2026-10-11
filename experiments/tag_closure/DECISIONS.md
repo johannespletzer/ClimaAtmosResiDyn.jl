@@ -349,6 +349,17 @@ review of PR #171.
   - **A manual 1.10 bounds-checked run of the three applications groups
     precedes the merge of PR A.** **In force.** The third tracer moves the
     1.10 memory margin, which stood within 0.5 GiB of the runner's 16 GB.
+  - **The 150 s bundle gets its prerequisites from the run.** **In force,
+    2026-10-11.** With the producer registered, the scorer left the two
+    accounting rows NOT ASSESSABLE on the 150 s bundle: `COMMON.ROSTER`
+    reads the tags at the bundle's cadence and `COMMON.NEGATIVE_WATER` the
+    closure table at its times, and the on run wrote both at 30 min alone.
+    Design section 16: the four Float64 TRMM configs write `q_tag_res` and
+    the three tags at 150 s and run the closure check at 150 s, the bundle
+    converter samples tables at the candidate's field times, and on, off and
+    their two restarts rerun. The job cap rises to 14 jobs and 14
+    node-hours. A registration with the two rows left for part 10, and a
+    rerun of on and off alone, were declined.
   - **The model-ledger tie scales by the step's column maximum.** **In
     force, 2026-10-11.** The column's Newton rerun failed the tie for the
     source tag in 145 cells holding specks between 1e-49 and 4e-19 of the

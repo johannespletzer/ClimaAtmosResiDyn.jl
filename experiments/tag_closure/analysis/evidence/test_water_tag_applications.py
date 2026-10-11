@@ -181,14 +181,15 @@ class TestConverter(Fixture):
         # model_restart is the control's comparison (design section 13), not a gate check.
         self.assertEqual(set(wchecks.CHECK_KEYS.values()) - {"model_restart"}, set(wproof.GATE_CHECKS))
         config = wproof.load_registry()
-        self.assertEqual(config["status"], "pending")
+        # Registered on 2026-10-11 after the six checks passed on the cluster (PART9.md).
+        self.assertEqual(config["status"], "registered")
         self.assertEqual(config["producer_id"], wc.PRODUCER)
         self.assertEqual(config["source"]["commit"], "2c63c5c53b6c1e70ae7ab3c63367fca672c6dc15")
         self.assertEqual(config["entry"]["source_sha256"],
                          "c45fef7fbc654155ed1189169716086cc8a82222df7518f148cb06f01b98af94")
         self.assertEqual(config["entry"]["roster_key"], wc.ROSTER_KEY)
         self.assertEqual(config["entry"]["check_log_pattern"], wchecks.LOG_PATTERN)
-        self.assertIsNone(config["entry"]["cts_version"])
+        self.assertEqual(config["entry"]["cts_version"], "1.0.1")
         g = 1 - np.sqrt(2) / 2
         self.assertEqual(wchecks.ars222()["b_imp"], [0.0, 1 - g, g])
         self.assertEqual(wchecks.ars222()["b_exp"][0], 1 - 1 / (2 * g))
@@ -351,10 +352,12 @@ class TestProof(Fixture):
     def test_register_from_registry(self):
         # Pending registers nothing. A registered config with the cluster's cts_version registers the entry.
         with mock.patch.dict(ca.VERIFIED_PRODUCERS, {}, clear=True):
-            self.assertIsNone(wproof.register_from_registry())
-            self.assertEqual(ca.VERIFIED_PRODUCERS, {})
             config = wproof.load_registry()
             path = self.root / "registry.json"
+            path.write_text(json.dumps({**config, "status": "pending"}))
+            self.assertIsNone(wproof.register_from_registry(path))
+            self.assertEqual(ca.VERIFIED_PRODUCERS, {})
+            config["entry"]["cts_version"] = None
             path.write_text(json.dumps({**config, "status": "registered"}))
             with self.assertRaisesRegex(wproof.ProofError, "cts_version"):
                 wproof.register_from_registry(path)
@@ -362,6 +365,8 @@ class TestProof(Fixture):
             path.write_text(json.dumps({**config, "status": "registered"}))
             self.assertEqual(wproof.register_from_registry(path), config["producer_id"])
             self.assertEqual(ca.VERIFIED_PRODUCERS[config["producer_id"]]["cts_version"], "1.0.1")
+            # The committed config is registered, so the scorer registers the producer at start.
+            self.assertEqual(wproof.register_from_registry(), config["producer_id"])
 
     def test_proof_opens_the_gate_dry(self):
         out, _ = self.convert()
@@ -397,8 +402,13 @@ class TestProof(Fixture):
             manifest.write_text(json.dumps(data))
             result = ca.evaluate_accounting(Bundle(manifest), 0, fx.STEPS * fx.DT)
             self.assertIn("all_channel_checkpoint_restart", result["limitation"])
+        # The committed config is registered. A pending one is refused without allow_pending.
+        pid, entry = wproof.registry_entry(proof["integrator_pin"])
+        self.assertEqual(entry["cts_version"], proof["integrator_pin"]["version"])
+        pending = self.root / "pending.json"
+        pending.write_text(json.dumps({**wproof.load_registry(), "status": "pending"}))
         with self.assertRaisesRegex(wproof.ProofError, "pending"):
-            wproof.registry_entry(proof["integrator_pin"])
+            wproof.registry_entry(proof["integrator_pin"], path=pending)
 
 
 if __name__ == "__main__":

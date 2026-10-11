@@ -348,8 +348,14 @@ def read_field(run, short, units):
             "file": path.name}, None
 
 
-def read_column(run, table, column, requires=""):
-    """A column of the run's closure or audit table, a domain integral at each row."""
+def read_column(run, table, column, requires="", field_times=None):
+    """A column of the run's closure or audit table, a domain integral at each row.
+
+    With `field_times`, the rows at those times are taken when the table has every one of them
+    (design/PART9_PRODUCER.md section 16 of the tag-closure plan: a table written every accepted
+    step serves a bundle at a coarser cadence). Rows are copied, never values between rows. A
+    table that lacks a field time is copied whole, and the scorer refuses its coverage.
+    """
     path = run.dir / TABLES[table]
     if not path.is_file():
         return None, f"no {path.name} in the output"
@@ -366,6 +372,9 @@ def read_column(run, table, column, requires=""):
         values = np.array([[float(r[column])] for r in rows])
     except (KeyError, TypeError, ValueError) as exc:
         return None, f"{path.name}: column {column} or time is not numeric at every row ({exc})"
+    if field_times is not None and np.isin(field_times, time).all() and len(time) > len(field_times):
+        keep = np.isin(time, field_times)
+        time, values = time[keep], values[keep]
     return {"time": time, "values": values, "dims": (), "coords": {}, "file": path.name}, None
 
 
@@ -458,6 +467,7 @@ def convert(args):
                 fields[logical] = d
                 record.append({**entry, "status": "resolved", "file": data["file"]})
 
+            field_times = None
             for name in NAME_TABLE:
                 if not applies(name, family, role, run, compartments):
                     continue
@@ -474,10 +484,12 @@ def convert(args):
                             expected = "the model's levels" if name.source == "field" else "a surface field"
                             data, reason = None, f"{model} has dimensions {data['dims']}, expected {expected}"
                     else:
-                        data, reason = read_column(run, name.source, model, name.requires)
+                        data, reason = read_column(run, name.source, model, name.requires, field_times)
                     if data is None:
                         record.append({**entry, "status": "missing", "reason": reason})
                         continue
+                    if field_times is None and name.source == "field":
+                        field_times = np.asarray(data["time"])
                     add(logical, data, units, name.representation, name.sampling, name.accumulator, entry)
             # Every other exported field is compared bit for bit with the untagged twin.
             mapped = {n.model for n in NAME_TABLE}
@@ -540,7 +552,8 @@ def convert(args):
             "runs": spec_runs, "required_parent_fields": parent_fields(spec_runs),
             "parent_capture_scope": "exported", "same_parent_comparisons": bool(args.same_parent),
             "conversion": {"converter_sha256": sha256_file(Path(__file__)), "name_table_sha256": name_table_sha256(),
-                           "period": period, "variables": record, "missing_submission_files": missing_files},
+                           "period": period, "variables": record, "missing_submission_files": missing_files,
+                           "tables_sampled_at_field_times": True},
         }
         if ntasks is not None and ntasks.isdigit():
             spec["process_count"] = int(ntasks)

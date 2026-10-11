@@ -34,6 +34,9 @@ pair and the off run's restart as the control. The control confirmed it.
 Section 14 bounds the Newton check's post-Newton count by the follow's two
 moves per part, section 15 scales the model-ledger tie by the step's column
 maximum. The check script of 2026-10-11 passes the six checks with them.
+The registry entry is registered (`cts_version` 1.0.1). Section 16 reruns
+the four Float64 TRMM runs with the tags and the closure check at 150 s, so
+the 150 s bundle clears the accounting rows' prerequisites.
 The owner sets the proposed constants and approves each job. The producer
 is registered only after the six checks pass on the cluster.
 
