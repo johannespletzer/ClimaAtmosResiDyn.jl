@@ -1,5 +1,18 @@
 # Status
 
+## Part 9 WP4b stages 2 and 3, design (2026-10-11)
+
+The rain and snow tags under EDMF are part 9's first queue item. The
+[design](design/PART9_WP4B_EDMF.md) makes the WP4b-D note's section 7 rule
+concrete against `main` at `6a8fc6fb7`: five code sites that would move the
+parts off their compartments if the refusal were lifted alone, the rule per
+site, two test groups on the DYCOMS RF02 EDMF column, four jobs on D4-W and
+D5, and a build measurement that gates stage 3 (the copies). The numerics
+reviewer's challenge moved the falsifier from the closure, which the closing
+step restores every follow, to the closing ledger `q_tag_led_close`, and
+replaced the gate's proxy. The owner decided D1 to D4 and the budget on
+2026-10-11 (DECISIONS.md). Stage 2's code PR against `main` is next.
+
 ## The energy offset `c`, decided (2026-10-09)
 
 The owner decided proposals 1 to 6 of the
@@ -38,7 +51,7 @@ The registry entry is registered (`cts_version` 1.0.1). After section 16's
 reruns the six checks pass on the final set of ten runs (2026-10-11 17:2x),
 and on the 150 s bundle `COMMON.ACCEPTED_APPLICATION_ACTIVITY` is PASS and
 `COMMON.APPLICATION_ACTIVITY.startup` REPORTED ONLY, as section 9 states.
-H9 is not falsified (PART9.md, section 4). PR B waits for the merge.
+H9 is not falsified (PART9.md, section 4). PR B (#171) was merged into `plan-rev2` on 2026-10-11 (`237df7536`).
 The owner sets the proposed constants and approves each job. The producer
 is registered only after the six checks pass on the cluster.
 

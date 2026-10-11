@@ -1136,9 +1136,13 @@ scope (the split, `pr_tag` and the restatement), by the owner's review of
     *The owner, 2026-09-28:* they go to `main` as a PR from a fresh branch
     off `main`, and the backup stays as it is.
 
-  - [ ] Stage 2: EDMF, default mode.
+  - [ ] Stage 2: EDMF, default mode. *Pre-registered 2026-10-11:*
+    [design/PART9_WP4B_EDMF.md](design/PART9_WP4B_EDMF.md), sections 2
+    to 8. One code PR against `main` under part 9's template, six jobs on
+    D4-W and D5 after it.
 
-  - [ ] Stage 3: copies of the rain and snow parts.
+  - [ ] Stage 3: copies of the rain and snow parts. *Gated 2026-10-11:*
+    the build measurement of PART9_WP4B_EDMF.md section 9 comes first.
 
   - [~] ~~The audit script: gross 1M process rates recomputed offline for a
     column, compared with the net-flow attribution.~~ Superseded by the

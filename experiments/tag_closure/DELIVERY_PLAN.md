@@ -206,6 +206,8 @@ this fork.
 **Queue, seeded from the inventory, in part 8's order once known.**
 
   - WP4b EDMF precipitation stages 2 and 3, required for criterion 7's claim.
+    Design: [design/PART9_WP4B_EDMF.md](design/PART9_WP4B_EDMF.md)
+    (2026-10-11). Stage 3 waits behind its section 9 build measurement, challenged 2026-10-11.
   - WP4c leak corrections for runs without rain or snow tags, gated by PX7 and
     PX2.
   - WP5b-C cross blocks for copies, WP5b-P precipitation-weighted errors.

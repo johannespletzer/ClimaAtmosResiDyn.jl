@@ -312,6 +312,34 @@ The list as it stood before this classification, kept as written:
 >     and the copies under first-order upwinding (W25). **Waiting.**
 >     [FINDINGS W25](FINDINGS.md)
 
+## 2026-10-11, part 9 WP4b stages 2 and 3
+
+The owner decided these on 2026-10-11, on the four open inputs of the WP4b
+EDMF design ([PART9_WP4B_EDMF.md](design/PART9_WP4B_EDMF.md), section 11),
+after the numerics reviewer's challenge (its section 12).
+
+  - **D1: the updraft's microphysics flows carry the grid pool rule's
+    composition, with an audit record.** **In force.** Every flow carries its
+    donor compartment's grid composition over the step, as stage 1 does. The
+    diagnostic `q_tag_aud_up_<name>` accumulates the updraft composition
+    error the rule leaves out. The plume's composition for the updraft's
+    flows was declined.
+  - **D2: the stage 3 gate is measured.** **In force.** Copies mode with 5 and
+    15 water tags on the D4-W column, exclusive node, two repeats, with the
+    prediction (a ratio of 3.7 from E44c's fit) on record and the factor two.
+    A build that hits the time limit fails the gate. Skipping the measurement
+    was declined.
+  - **D3: four jobs after the stage 2 PR, and the budget as proposed.** **In
+    force.** The D4-W twin and on run and the D5 twin and on run, each
+    approved when submitted. No restart pair, since the model's own restart
+    on an EDMF column is inexact (E54). Budget 1.2M for the PR, 0.3M for the
+    record, 0.2M for the gate measurement.
+  - **D4: the R and S exchange takes the updraft's rain composition by the
+    note's section 7 rule as written.** **In force.** The updraft's rain takes
+    `N`'s composition where it forms and the environment's where it flows in
+    laterally, by a rain plume marched downward (design section 3.2). The
+    recommendation, the local `N` plume's share, was declined.
+
 ## 2026-10-10, part 9 PR B
 
 The owner decided these on 2026-10-10, on the four open inputs of the part 9
