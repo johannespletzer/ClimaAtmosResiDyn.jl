@@ -6,10 +6,16 @@
 # case fires them. The on run feeds the weights check for final_map and
 # implicit. Only job_id, t_end, ode_algo (ARS222 as the TRMM case, the test
 # runs the default ARS343), the output keys and the diagnostics differ from
-# the test's config. The run has no restart.
+# the test's config.
 
 job_id: "p9_col1m_on_1h"
 water_tag_applications: true
+
+# Checkpoints every 30 min and a reproducible restart in both column runs, as
+# in the TRMM set. The on run's checkpoint at 30 min starts the restart pair
+# (design section 13, 2026-10-11).
+dt_save_state_to_disk: "30mins"
+reproducible_restart: true
 
 water_tracers:
   - name: lower

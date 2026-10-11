@@ -27,7 +27,10 @@ module on the compute nodes, and a job manifest that did not record the model
 tree (PART9.md, section 1). The fifth wave passed two checks and showed that
 the TRMM case fires no final map and no post-Newton map. The design's
 section 12 (2026-10-11) adds two jobs on the integration test's precipitating
-column for those two checks.
+column for those two checks. The parity passed in both precisions. The TRMM
+restart diverges from the first step, the model's own inexact restart of
+FINDINGS E54, so section 13 runs the restart check on the column's restart
+pair and the off run's restart as the control.
 The owner sets the proposed constants and approves each job. The producer
 is registered only after the six checks pass on the cluster.
 

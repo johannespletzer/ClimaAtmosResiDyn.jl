@@ -6,6 +6,11 @@
     python3 water_tag_application_checks.py complete_active_roster RUN
     python3 water_tag_application_checks.py parent_bitwise_parity ON_RUN OFF_RUN
     python3 water_tag_application_checks.py restart CONTINUOUS_RUN RESTARTED_RUN
+    python3 water_tag_application_checks.py model_restart CONTINUOUS_RUN RESTARTED_RUN --t0 SECONDS
+
+`model_restart` is not one of the six. It is the restart check's comparison
+of the checkpoints and the diagnostics alone, from `--t0`, for a run without
+the producer (the control of design section 13) or for the record.
 
 RUN is a run's output directory with the producer's receipt and NetCDF, its
 merged config `*.yml`, its diagnostics and its checkpoints, or a directory
@@ -34,7 +39,8 @@ import water_tag_applications_convert as wc
 
 CHECK_KEYS = {"accepted_weights": "accepted_weights", "trial_rollback": "trial_rollback",
               "newton_replacement": "newton_replacement", "complete_active_roster": "complete_active_roster",
-              "parent_bitwise_parity": "parent_bitwise_parity", "restart": "all_channel_checkpoint_restart"}
+              "parent_bitwise_parity": "parent_bitwise_parity", "restart": "all_channel_checkpoint_restart",
+              "model_restart": "model_restart"}
 # The registry's check_log_pattern (water_tag_application_registry.json) reads these lines.
 LOG_PATTERN = r"^CHECK (?P<check>[a-z_]+): (?P<result>PASS|FAIL)\b"
 # The model's own ledgers, per tag, and the mechanisms each one sums
@@ -368,6 +374,13 @@ def restart(continuous, restarted):
     need(np.array_equal(A["ledger_time"][edges], B["ledger_time"]), "ledger times differ")
     need(bitwise(np.ascontiguousarray(A["ledger"][edges]), np.ascontiguousarray(B["ledger"])),
          "the ledgers after the restart differ")
+    fields = model_restart(continuous, restarted, t0)
+    return f"{len(steps_r)} step lines, {len(B['record_id'])} records, {len(edges)} ledger edges, {fields} arrays bitwise"
+
+
+def model_restart(continuous, restarted, t0):
+    """Every common checkpoint after t0 and every diagnostic at the common times after t0, bitwise."""
+    continuous, restarted = Path(continuous), Path(restarted)
     cps = [p.name for p in sorted(restarted.glob("day*.hdf5"))
            if (continuous / p.name).exists() and read_checkpoint(p)["@time"] > t0]
     need(cps, "no common checkpoint after the restart")
@@ -392,7 +405,7 @@ def restart(continuous, restarted):
             need(bitwise(np.ascontiguousarray(va), np.ascontiguousarray(vb)),
                  f"{name}: {k} after the restart differs")
             fields += 1
-    return f"{len(steps_r)} step lines, {len(B['record_id'])} records, {len(edges)} ledger edges, {fields} arrays bitwise"
+    return fields
 
 
 def run_check(command, paths, options):
@@ -403,6 +416,9 @@ def run_check(command, paths, options):
                 info = parent_bitwise_parity(Path(paths[0]), Path(paths[1]))
             elif command == "restart":
                 info = restart(Path(paths[0]), Path(paths[1]))
+            elif command == "model_restart":
+                fields = model_restart(Path(paths[0]), Path(paths[1]), options.t0)
+                info = f"{fields} arrays bitwise after {options.t0:g} s"
             else:
                 run = Run(paths[0], work)
                 if command == "accepted_weights":
@@ -429,7 +445,9 @@ def main(argv=None):
     sub = parser.add_subparsers(dest="command", required=True)
     for name in CHECK_KEYS:
         p = sub.add_parser(name)
-        p.add_argument("paths", nargs=2 if name in ("parent_bitwise_parity", "restart") else 1)
+        p.add_argument("paths", nargs=2 if name in ("parent_bitwise_parity", "restart", "model_restart") else 1)
+        if name == "model_restart":
+            p.add_argument("--t0", type=float, required=True)
         if name == "accepted_weights":
             p.add_argument("--ode-algo", default="ARS222")
             p.add_argument("--roles", default="final_map,implicit")

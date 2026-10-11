@@ -82,6 +82,23 @@ column feed the weights check (final_map, implicit) and the Newton check,
 the TRMM on run feeds the weights check for `implicit` alone, the four other
 checks stay on the TRMM runs.
 
+The restart job 14191223 completed (12:51, 08:39 start on 2026-10-11). Before
+the check script, two checks ran by hand: `parent_bitwise_parity` PASS in
+Float64 and in Float32 (6 checkpoints, 61 diagnostic files, 835 arrays
+bitwise each), `all_channel_checkpoint_restart` FAIL "record_values differs".
+The state at 3 h is bitwise the checkpoint's (every 150 s diagnostic at
+10800 s equal). From the first restarted step the parent differs: `hus` by
+5.4e-4 of itself at 10950 s and 1.1e-3 at 6 h, `ta` by 6.6e-5 and 6.1e-5,
+`rhoa` by 6.2e-5 and 5.5e-5. The increment follower's 432 records of the
+segment differ with it (the three `inc` channels, median 3% of the value),
+their ledgers and the model's `inc` ledgers too, and the checkpoints at 4 h
+and 6 h in `Y/c` and `Y/f`. Nothing else differs. The second wave's restart
+(14186200) gave the same digits. FINDINGS E54 had found this inexact restart
+of the model on 2026-09-18, BACKLOG E58 holds it as upstream's. The owner
+amended the design on 2026-10-11 (section 13): the off run's restart is the
+control, the restart check runs on the column's restart pair, the column
+jobs were resubmitted with checkpoints before they started.
+
 ## 2. Model identity
 
 `model.head_sha` of each manifest (the run tree, with the record tree under

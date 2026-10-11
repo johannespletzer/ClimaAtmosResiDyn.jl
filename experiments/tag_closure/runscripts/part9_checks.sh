@@ -5,8 +5,11 @@
 # claude/part9-producer at 2c63c5c53 (PR #170, merged into main). Six jobs,
 # plus two on the integration test's precipitating column since the amendment
 # of 2026-10-11 (design section 12): the TRMM case corrects no partition, so
-# its final maps and post-Newton maps are all zero. Not submitted by the PR.
-# The session submits each job after the owner approves it.
+# its final maps and post-Newton maps are all zero. Plus, since section 13 of
+# the same day, the column's restarted run (the model restarts the TRMM case
+# inexactly, FINDINGS E54) and the TRMM off run's restart as the control. Not
+# submitted by the PR. The session submits each job after the owner approves
+# it.
 #
 # Cost estimate, from part 8's default job 14170101 (PART8.md: wall 844 s,
 # build 209.9 s, 79.8 ms per step, MaxRSS 7.48 GiB on an exclusive node).
@@ -31,15 +34,17 @@
 #   p9_trmm0m_off_f32_6h   p9_trmm0m_off_f32_6h.yml    15 min    1 h    48G     0.25 (1)
 #   p9_col1m_on_1h         p9_col1m_on_1h.yml          10 min    1 h    48G     0.17 (1)
 #   p9_col1m_newton_1h     p9_col1m_newton_1h.yml      10 min    1 h    48G     0.17 (1)
+#   p9_col1m_restarted_1h  p9_col1m_restarted_1h.yml   10 min    1 h    48G     0.17 (1)
+#   p9_trmm0m_off_restarted_6h  p9_trmm0m_off_restarted_6h.yml  15 min  1 h  48G  0.25 (1)
 #
-# About 1.9 node-hours in all, 8 node-hours at the limits. A 6 h run costs
+# About 2.3 node-hours in all, 10 node-hours at the limits. A 6 h run costs
 # about as much as a short one here: steps are 1% of part 8's wall. The two
 # column jobs (20 levels, 360 steps of 10 s) are taken as the build and the
 # startup alone, 10 min, not measured.
 #
 #   RUN_TREE=<clean detached tree at 2c63c5c53> \
 #       experiments/tag_closure/runscripts/part9_checks.sh [--submit] \
-#           [on|off|newton|restarted|on_f32|off_f32|col1m_on|col1m_newton ...]
+#           [on|off|newton|restarted|off_restarted|on_f32|off_f32|col1m_on|col1m_newton|col1m_restarted ...]
 #
 # Without --submit it runs g3base_submit.sh with --dry-run, which writes the
 # manifest (head_sha this record's commit, model head_sha 2c63c5c53) and
@@ -52,6 +57,8 @@ REC="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 export EXPECT_SHA=2c63c5c53b6c1e70ae7ab3c63367fca672c6dc15 KIND=run RUN_TREE
 LOGS="${SCRATCH:?}/tag_closure/logs/part9"
 CHECKPOINT="${SCRATCH}/tag_closure/output/p9_trmm0m_on_6h/output_active/day0.10800.hdf5"
+OFF_CHECKPOINT="${SCRATCH}/tag_closure/output/p9_trmm0m_off_6h/output_active/day0.10800.hdf5"
+COL1M_CHECKPOINT="${SCRATCH}/tag_closure/output/p9_col1m_on_1h/output_active/day0.1800.hdf5"
 mkdir -p "${LOGS}"
 
 SUBMIT=0
@@ -59,7 +66,9 @@ RUNS=()
 for a in "$@"; do
     case "${a}" in
         --submit) SUBMIT=1 ;;
-        on | off | newton | restarted | on_f32 | off_f32 | col1m_on | col1m_newton) RUNS+=("${a}") ;;
+        on | off | newton | restarted | off_restarted | on_f32 | off_f32 | col1m_on | col1m_newton | col1m_restarted)
+            RUNS+=("${a}")
+            ;;
         *)
             echo "ERROR: unknown argument ${a}." >&2
             exit 1
@@ -73,6 +82,14 @@ DRY=(--dry-run)
 for run in "${RUNS[@]}"; do
     if [[ "${run}" == restarted && ! -f "${CHECKPOINT}" ]]; then
         echo "ERROR: ${CHECKPOINT} is missing. Submit restarted after on has finished." >&2
+        exit 1
+    fi
+    if [[ "${run}" == off_restarted && ! -f "${OFF_CHECKPOINT}" ]]; then
+        echo "ERROR: ${OFF_CHECKPOINT} is missing. Submit off_restarted after off has finished." >&2
+        exit 1
+    fi
+    if [[ "${run}" == col1m_restarted && ! -f "${COL1M_CHECKPOINT}" ]]; then
+        echo "ERROR: ${COL1M_CHECKPOINT} is missing. Submit col1m_restarted after col1m_on has finished." >&2
         exit 1
     fi
     case "${run}" in

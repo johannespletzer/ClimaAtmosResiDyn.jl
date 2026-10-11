@@ -349,6 +349,19 @@ review of PR #171.
   - **A manual 1.10 bounds-checked run of the three applications groups
     precedes the merge of PR A.** **In force.** The third tracer moves the
     1.10 memory margin, which stood within 0.5 GiB of the runner's 16 GB.
+  - **The restart check runs on the column, the TRMM restart is recorded
+    under E54, the off run's restart is the control.** **In force,
+    2026-10-11.** The TRMM restart pair fails the producer's restart check
+    because the model's own restart of this case is inexact from the first
+    step, as FINDINGS E54 found on 2026-09-18 (BACKLOG E58, upstream). The
+    parity of on and off is exact. The design gains section 13: the off run
+    restarted from its own checkpoint at 3 h shows the divergence without
+    the producer, the column's on run gets checkpoints every 30 min and a
+    restarted run from 30 min feeds `all_channel_checkpoint_restart`, and
+    the TRMM pair's results go to the record, not the gate. The two column
+    jobs were cancelled and resubmitted with the checkpoint keys. The job
+    cap rises to 10 jobs and 10 node-hours. A registration with the restart
+    unverified, and a blocking report to PR #170, were declined.
   - **The precipitating column feeds the weights and the Newton checks.**
     **In force, 2026-10-11.** The fifth wave showed that the TRMM 0M case
     corrects no partition in 6 h, so no final map and no post-Newton map is

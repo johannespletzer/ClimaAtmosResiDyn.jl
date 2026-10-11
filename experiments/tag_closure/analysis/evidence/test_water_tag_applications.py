@@ -178,7 +178,8 @@ class TestConverter(Fixture):
         self.assertEqual(wchecks.PRODUCER_CHECKPOINT_PREFIX, "tag_ledger.applications.")
         self.assertEqual(wchecks.MODEL_LEDGERS, (("q_tag_led_fix_", ("rescale", "empty", "repair", "close")),
                                                  ("q_tag_led_inc_", ("inc", "negative"))))
-        self.assertEqual(set(wchecks.CHECK_KEYS.values()), set(wproof.GATE_CHECKS))
+        # model_restart is the control's comparison (design section 13), not a gate check.
+        self.assertEqual(set(wchecks.CHECK_KEYS.values()) - {"model_restart"}, set(wproof.GATE_CHECKS))
         config = wproof.load_registry()
         self.assertEqual(config["status"], "pending")
         self.assertEqual(config["producer_id"], wc.PRODUCER)
@@ -305,6 +306,16 @@ class TestChecks(Fixture):
         self.setUp()
         (self.runs["off"] / "rhoa_150s_inst.nc").unlink()
         self.assert_fail("parent_bitwise_parity", *self.commands()["parent_bitwise_parity"])
+
+    def test_model_restart(self):
+        # The restart check's checkpoint and diagnostic comparison alone, for a run without the producer.
+        t0 = fx.DT * 2
+        code, out = run_cli("model_restart", self.runs["on"], self.runs["restarted"], "--t0", str(t0))
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out.splitlines()[0], "CHECK model_restart: PASS")
+        edit_nc(self.runs["restarted"] / "rhoa_150s_inst.nc", "rhoa", lambda v: v.__setitem__((1, 0), v[1, 0] + 1e-9))
+        self.assertIn("rhoa", self.assert_fail("model_restart", "model_restart", self.runs["on"], self.runs["restarted"],
+                                               "--t0", str(t0)))
 
     def test_restart_mutants(self):
         edit_nc(self.runs["restarted"] / wc.ARRAYS_FILE, "record_values",

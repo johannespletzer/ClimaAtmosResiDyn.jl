@@ -9,7 +9,10 @@
 # runs on the precipitating column's on run for final_map and implicit, and
 # on the TRMM on run for implicit alone, both into one log. The Newton check
 # runs on the column's Newton run. The TRMM Newton run is recorded, not
-# checked: it has no post-Newton map to check.
+# checked: it has no post-Newton map to check. Since section 13 the restart
+# check runs on the column's restart pair. The model restarts the TRMM case
+# inexactly (FINDINGS E54), so the TRMM pair and the off run's restart, the
+# control, go to `record_*.log` for PART9.md and not into the gate.
 #
 #   OUT=<new dir> experiments/tag_closure/runscripts/part9_check_logs.sh
 #
@@ -36,7 +39,7 @@ manifest() {
 
 python3 "${E}/water_tag_applications_convert.py" "$(dir on)" --out "${OUT}/converted_on" \
     --manifest "$(manifest p9_trmm0m_on_6h)"
-for run in on newton; do
+for run in on newton restarted; do
     python3 "${E}/water_tag_applications_convert.py" "$(cdir ${run})" --out "${OUT}/converted_col1m_${run}" \
         --manifest "$(manifest p9_col1m_${run}_1h)"
 done
@@ -68,5 +71,20 @@ echo "python3 ${E}/water_tag_application_checks.py parent_bitwise_parity $(dir o
 python3 "${E}/water_tag_application_checks.py" parent_bitwise_parity "$(dir on_f32)" "$(dir off_f32)" \
     >>"${OUT}/parent_bitwise_parity.log" || status=1
 tail -n 2 "${OUT}/parent_bitwise_parity.log"
-check all_channel_checkpoint_restart restart "$(dir on)" "$(dir restarted)"
+check all_channel_checkpoint_restart restart "$(cdir on)" "$(cdir restarted)"
+
+# Recorded, not gated: the TRMM restart pair under the producer's check, the
+# model's own restart of the on and the off run (the control), and the model's
+# own restart of the column. A FAIL here does not change the exit status.
+record() {
+    local key=$1
+    shift
+    echo "python3 ${E}/water_tag_application_checks.py $*" >"${OUT}/record_${key}.cmd"
+    python3 "${E}/water_tag_application_checks.py" "$@" >"${OUT}/record_${key}.log" || true
+    head -n 2 "${OUT}/record_${key}.log"
+}
+record trmm_restart restart "$(dir on)" "$(dir restarted)"
+record trmm_model_restart model_restart "$(dir on)" "$(dir restarted)" --t0 10800
+record trmm_off_model_restart model_restart "$(dir off)" "$(dir off_restarted)" --t0 10800
+record col1m_model_restart model_restart "$(cdir on)" "$(cdir restarted)" --t0 1800
 exit "${status}"

@@ -214,7 +214,7 @@ checks".
     the registration proceeds with that stated (decided 2026-10-10). A Newton
     job that fails for another reason follows the first rule.
   - More than 6 jobs or 6 node-hours at the limits: stop and ask. Section 12
-    raises this to 8 and 8 (owner, 2026-10-11).
+    raises this to 8 and 8, section 13 to 10 and 10 (owner, 2026-10-11).
   - The producer source hash differs from section 8: stop, redo the entry.
 
 ## 11. Owner inputs (decided 2026-10-10)
@@ -278,3 +278,46 @@ jobs and 1.9 node-hours, 8 at the limits. Section 10's cap rises to 8 and 8.
 
 Section 10 applies. The column case is a check job for two roles, not a
 scorer case, so it has no bundle and no parity pair.
+
+## 13. Amendment, 2026-10-11: the restart check on the column, the TRMM restart as E54
+
+Written after the fifth wave's restart job, with its data read. The TRMM
+restart pair fails `all_channel_checkpoint_restart` on the record values.
+The state at 3 h is bitwise the checkpoint's, and from the first restarted
+step on the parent differs (humidity by 5e-4 of itself after one step), the
+increment follower's records with it, and the checkpoints at 4 h and 6 h in
+`Y/c` and `Y/f`. The second wave's restart gave the same digits, so the
+divergence is deterministic. The parity between the on and the off run is
+exact in both precisions, so the producer leaves the parent alone within a
+segment. The record already states the cause: FINDINGS E54 (2026-09-18) found
+that the model does not restart a column bit for bit even with
+`reproducible_restart: true`, while the tags and the records are restored
+exactly, and BACKLOG E58 holds it as upstream's. The design asked for a
+bitwise restart on this case against that finding. The owner chose this
+amendment over a registration with the restart unverified and over a report
+to PR #170 (DECISIONS.md, "2026-10-10, part 9 PR B").
+
+### 13.1 The control
+
+`configs/p9_trmm0m_off_restarted_6h.yml`: the off run restarted from its own
+checkpoint at 3 h. Without the producer, a divergence of the same kind
+attributes the TRMM restart to the model. Its state against the off run is
+compared by `water_tag_application_checks.py model_restart`, the restart
+check's checkpoint and diagnostic comparison alone, from 3 h. The result is
+recorded in PART9.md, not gated.
+
+### 13.2 The restart check
+
+`all_channel_checkpoint_restart` runs on the column's restart pair,
+`p9_col1m_on_1h` (checkpoints every 30 min, `reproducible_restart: true`)
+and `configs/p9_col1m_restarted_1h.yml`, from 30 min to 1 h. PR A's
+integration test restarts this column and finds every record, scale, flag
+and ledger equal. The column has no EDMF. The TRMM pair's result under the
+same check, and the model's own restart of the on run and of the column, go
+to `record_*.log` beside the gate logs.
+
+### 13.3 Jobs
+
+Ten jobs, 2.3 node-hours, 10 at the limits. The column's on and Newton jobs
+of section 12 were resubmitted with the checkpoint keys before they started.
+Section 10's cap rises to 10 and 10.
