@@ -373,7 +373,7 @@ tagging_scratch(Y, atmos::AtmosModel) = (;
                     ᶜtagging_q_exp_rate_saved = similar(Y.c.ρ),
                 ) : (;)
             )...,
-            _water_tag_precipitation_scratch(Y, atmos.water_tagging_model)...,
+            _water_tag_precipitation_scratch(Y, atmos.water_tagging_model, atmos)...,
             # Each tag's part of the 0M rain-out, for `pr_tag`.
             (
                 atmos.microphysics_model isa EquilibriumMicrophysics0M ?

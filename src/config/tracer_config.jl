@@ -2107,6 +2107,8 @@ function AtmosTagging(config::AtmosConfig)
         water_precipitation && check_water_tag_precipitation_supported(
             microphysics_model,
             get(config.parsed_args, "turbconv", nothing),
+            get(config.parsed_args, "use_auto_jacobian", false) ||
+                get(config.parsed_args, "use_dense_jacobian", false),
         )
         water_tags = water_tracer_tuple(water_entries, FT)
         water_transport = water_tag_transport_from_config(

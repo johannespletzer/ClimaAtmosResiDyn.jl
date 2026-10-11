@@ -65,23 +65,42 @@ precipitation_tags(FT = Float64) = (
         precipitation = true,
         updraft_copies = true,
     )
-    # 1M only, and no EDMF (stage 2).
-    @test isnothing(
-        CA.check_water_tag_precipitation_supported(
-            CA.NonEquilibriumMicrophysics1M(),
-            nothing,
-        ),
-    )
+    # 1M only. Under EDMF `prognostic_edmfx` with the split solver (stage 2).
+    for turbconv in (nothing, "prognostic_edmfx")
+        @test isnothing(
+            CA.check_water_tag_precipitation_supported(
+                CA.NonEquilibriumMicrophysics1M(),
+                turbconv,
+            ),
+        )
+    end
     @test_throws r"microphysics_model: 1M" CA.check_water_tag_precipitation_supported(
         CA.EquilibriumMicrophysics0M(),
         nothing,
     )
-    for turbconv in ("prognostic_edmfx", "edonly_edmfx")
-        @test_throws r"refused with `turbconv" CA.check_water_tag_precipitation_supported(
+    @test_throws r"edonly_edmfx" CA.check_water_tag_precipitation_supported(
+        CA.NonEquilibriumMicrophysics1M(),
+        "edonly_edmfx",
+    )
+    @test_throws r"split solver" CA.check_water_tag_precipitation_supported(
+        CA.NonEquilibriumMicrophysics1M(),
+        "prognostic_edmfx",
+        true,
+    )
+    # One updraft only, as for every water tag under EDMF.
+    @test_throws Exception CA.check_water_tracers_transport_supported(
+        "prognostic_edmfx",
+        false,
+        2,
+    )
+    # Without EDMF the auto Jacobian stays allowed, as in stage 1.
+    @test isnothing(
+        CA.check_water_tag_precipitation_supported(
             CA.NonEquilibriumMicrophysics1M(),
-            turbconv,
-        )
-    end
+            nothing,
+            true,
+        ),
+    )
 
     # Through the configuration.
     tags = [
@@ -1834,6 +1853,61 @@ end
 # The audit's own key: off, the microphysics leaves the audit's fields out of
 # the state and does not compute them. Every part moves as with the audit on,
 # bit for bit.
+@testset "The flows weighted by subdomain under EDMF" begin
+    FT = Float64
+    flows(v) = NamedTuple{CA.WATER_TAG_FLOW_NAMES}(v)
+    # A hand-built two-subdomain cell: the environment's and the updraft's
+    # flows, each per unit mass of its own air, and the areas' densities.
+    F⁰ = flows((FT(1e-9), FT(2e-10), FT(3e-10), FT(0), FT(1e-11), FT(4e-10)))
+    Fʲ = flows((FT(1e-7), FT(3e-8), FT(2e-8), FT(1e-9), FT(0), FT(5e-9)))
+    (ρ, ρa⁰, ρaʲ) = (FT(1.1), FT(1.0), FT(0.08))
+    F = CA.water_tag_weighted_flows(F⁰, Fʲ, ρa⁰, ρaʲ, ρ)
+    # Non-negative flows keep their weighted values, bit for bit.
+    for name in CA.WATER_TAG_FLOW_NAMES
+        @test getproperty(F, name) ===
+              (ρa⁰ * getproperty(F⁰, name) + ρaʲ * getproperty(Fʲ, name)) / ρ
+    end
+    # The weighted nets are the subdomains' nets, weighted the same way.
+    net_rai(F) = (F.NR + F.SR) - (F.RN + F.RS)
+    @test net_rai(F) ≈ (ρa⁰ * net_rai(F⁰) + ρaʲ * net_rai(Fʲ)) / ρ rtol = 1e-14
+
+    # A negative weighted flow: an updraft area outside `[0, ρ]` between
+    # filter calls, here negative. Orientation keeps each pair's net and makes
+    # every flow non-negative.
+    ρaʲ_negative = FT(-0.05)
+    G = CA.water_tag_weighted_flows(F⁰, Fʲ, ρa⁰, ρaʲ_negative, ρ)
+    raw = map((f⁰, fʲ) -> (ρa⁰ * f⁰ + ρaʲ_negative * fʲ) / ρ, F⁰, Fʲ)
+    @test raw.NR < 0
+    @test all(name -> getproperty(G, name) >= 0, CA.WATER_TAG_FLOW_NAMES)
+    for (xy, yx) in ((:NR, :RN), (:NS, :SN), (:RS, :SR))
+        @test getproperty(G, xy) - getproperty(G, yx) ≈
+              getproperty(raw, xy) - getproperty(raw, yx) rtol = 1e-14
+    end
+    # The pool shares under it stay in `[0, 1]` and sum to one over a
+    # partition, where the parts would otherwise go negative: with
+    # `qR = 1e-6` and `Δt NR = -0.9e-6` the unoriented shares are `(10, -9)`.
+    Δt = FT(1)
+    H = flows((FT(-0.9e-6), FT(0), FT(0), FT(0), FT(0), FT(0)))
+    (qN, qR, qS) = (FT(1e-2), FT(1e-6), FT(0))
+    φN = (FT(0.1), FT(0.9))
+    φR = (FT(1), FT(0))
+    unoriented = map(
+        i -> CA.water_tag_pool_shares(H, qN, qR, qS, Δt, φN[i], φR[i], FT(0))[2],
+        (1, 2),
+    )
+    @test minimum(unoriented) < 0
+    Ho = CA.water_tag_oriented_flows(H, true, true, true)
+    oriented = map(
+        i -> CA.water_tag_pool_shares(Ho, qN, qR, qS, Δt, φN[i], φR[i], FT(0)),
+        (1, 2),
+    )
+    for k in 1:3
+        @test all(ψ -> 0 <= ψ[k] <= 1, oriented)
+    end
+    @test sum(ψ -> ψ[1], oriented) ≈ 1 rtol = 1e-14
+    @test sum(ψ -> ψ[2], oriented) ≈ 1 rtol = 1e-14
+end
+
 @testset "The microphysics without the audit" begin
     for FT in (Float32, Float64)
         rng = Random.MersenneTwister(23)
@@ -2917,12 +2991,13 @@ end
             },
         ),
         ᶜtagging_q_share_norm = similar(Y.c.ρ),
-        CA._water_tag_precipitation_scratch(Y, model)...,
+        CA._water_tag_precipitation_scratch(Y, model, (; turbconv_model = nothing))...,
     )
     p = (;
         atmos = (;
             microphysics_model = CA.NonEquilibriumMicrophysics1M(),
             water_tagging_model = model,
+            turbconv_model = nothing,
         ),
         params = CA.ClimaAtmosParameters(FT),
         core = (; ᶜΦ = @. FT(9.81) * ᶜz),
@@ -2939,6 +3014,8 @@ end
     @test haskey(matrix, (c(:ρq_rtag_low), c(:ρq_rtag_low)))
     @test !haskey(matrix, (c(:ρq_rtag_low), c(:ρq_rai)))
     CA.update_sedimentation_jacobian!(matrix, Y, p, FT(60), CA.UseDerivative())
+    # The parts copy their species' rows after the last update of those rows.
+    CA.update_water_precip_part_jacobian!(matrix, Y, p, CA.UseDerivative())
     # Each part's block is its species', value for value.
     for name in (:ρq_rtag_low, :ρq_rtag_high, :ρq_rtag_evap)
         @test isequal(

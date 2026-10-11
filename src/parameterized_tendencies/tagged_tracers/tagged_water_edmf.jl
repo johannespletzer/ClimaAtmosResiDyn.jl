@@ -120,6 +120,17 @@ function _water_tag_edmf_scratch(Y, model, ::PrognosticEDMFX, atmos)
         ᶜq_tag_environment_density = similar(Y.c.ρ),
         ᶜq_tag_room = similar(Y.c.ρ),
         ᶜq_tag_water_ratio = similar(Y.c.ρ),
+        # Under `water_tag_precipitation: true`: the face fluxes of rain and
+        # snow the parts share, and the rain and snow plumes.
+        (
+            has_water_tag_precipitation(model) ?
+            (;
+                ᶠq_rtag_sgs_flux = Fields.Field(CT3{FT}, axes(Y.f)),
+                ᶠq_stag_sgs_flux = Fields.Field(CT3{FT}, axes(Y.f)),
+                ᶜq_rtag_plume = tag_values(),
+                ᶜq_stag_plume = tag_values(),
+            ) : (;)
+        )...,
     )
 end
 
@@ -172,6 +183,62 @@ function _sgs_mass_flux_of_water_tags!(
     # The copies' own SGS tracer flux moves the tags.
     has_water_tag_updraft_copies(model) && return nothing
     water_tag_share_norm!(p, Y)
+    ᶠflux = p.scratch.ᶠq_tag_sgs_flux
+    _sgs_water_face_flux!(ᶠflux, Y, p, turbconv_model, @name(q_tot))
+    if has_water_tag_precipitation(model)
+        # Under the key each part takes its share of its compartment's flux:
+        # rain's and snow's as the parent moves them, and the
+        # non-precipitating water's as the difference, so that the three sum to
+        # the parent's `ρq_tot` flux at every face for any reconstruction.
+        ᶠflux_rai = p.scratch.ᶠq_rtag_sgs_flux
+        ᶠflux_sno = p.scratch.ᶠq_stag_sgs_flux
+        _sgs_water_face_flux!(ᶠflux_rai, Y, p, turbconv_model, @name(q_rai))
+        _sgs_water_face_flux!(ᶠflux_sno, Y, p, turbconv_model, @name(q_sno))
+        @. ᶠflux = ᶠflux - ᶠflux_rai - ᶠflux_sno
+        _sgs_water_tag_fluxes!(
+            Yₜ.c,
+            Y.c,
+            p.scratch.ᶜtagging_q_share_norm,
+            ᶠflux,
+            model.tags,
+            water_tag_parent(Y.c, model),
+        )
+        _sgs_water_tag_part_fluxes!(
+            Yₜ.c,
+            Y.c,
+            p.scratch,
+            ᶠflux_rai,
+            model.tags,
+            RainPart(),
+        )
+        _sgs_water_tag_part_fluxes!(
+            Yₜ.c,
+            Y.c,
+            p.scratch,
+            ᶠflux_sno,
+            model.tags,
+            SnowPart(),
+        )
+    else
+        _sgs_water_tag_fluxes!(
+            Yₜ.c,
+            Y.c,
+            p.scratch.ᶜtagging_q_share_norm,
+            ᶠflux,
+            model.tags,
+        )
+    end
+    sgs_exchange_of_water_tags!(Yₜ, Y, p, turbconv_model, model)
+    return nothing
+end
+
+# The parent's SGS mass flux of the specific quantity `χ_name` at the faces,
+# rebuilt as `edmfx_sgs_mass_flux_tendency!` builds it, each subdomain's part
+# with the parent's own reconstruction. The environment's part first, so that
+# it sets `ᶠflux` and the updrafts add to it, as the parent's code adds them in
+# the other order. The sum is the same. Zeroing a vector field would need a
+# `Ref`, which allocates.
+function _sgs_water_face_flux!(ᶠflux, Y, p, turbconv_model, χ_name)
     n = n_mass_flux_subdomains(turbconv_model)
     (; edmfx_sgsflux_upwinding) = p.atmos.numerics
     (; ᶠu³, ᶠu³ʲs, ᶜρʲs) = p.precomputed
@@ -191,40 +258,53 @@ function _sgs_mass_flux_of_water_tags!(
     ᶜρa⁰ = @. lazy(ρa⁰(Y.c.ρ, Y.c.sgsʲs, turbconv_model))
     ᶜJ = Fields.local_geometry_field(Y.c).J
     ᶠJ = Fields.local_geometry_field(Y.f).J
-    ᶜq_tot = @. lazy(specific(Y.c.ρq_tot, Y.c.ρ))
-
-    # The environment's part first, so that it sets `ᶠflux` and the updrafts
-    # add to it, as the parent's code adds them in the other order. The sum is
-    # the same. Zeroing a vector field would need a `Ref`, which allocates.
-    ᶠflux = p.scratch.ᶠq_tag_sgs_flux
+    ᶜρχ = MatrixFields.get_field(Y.c, get_ρχ_name(χ_name))
+    ᶜχ = @. lazy(specific(ᶜρχ, Y.c.ρ))
     ᶠu³_diff⁰ = @. lazy(ᶠu³⁰ - ᶠu³)
-    ᶜq_tot⁰ = ᶜspecific_env_value(@name(q_tot), Y, p)
-    ᶜwater⁰ = @. lazy((ᶜq_tot⁰ - ᶜq_tot) * draft_area(ᶜρa⁰, ᶜρ⁰))
+    ᶜχ⁰ = ᶜspecific_env_value(χ_name, Y, p)
+    ᶜwater⁰ = @. lazy((ᶜχ⁰ - ᶜχ) * draft_area(ᶜρa⁰, ᶜρ⁰))
     ᶠρ⁰ = @. lazy(ᶠinterp(ᶜρ⁰ * ᶜJ) / ᶠJ)
     ᶠwater_flux⁰ =
         _face_value_flux(ᶠu³_diff⁰, ᶜwater⁰, dt, edmfx_sgsflux_upwinding)
     @. ᶠflux = ᶠρ⁰ * ᶠwater_flux⁰
     for j in 1:n
         ᶠu³_diffʲ = @. lazy(ᶠu³ʲs.:($$j) - ᶠu³)
+        ᶜχʲ = MatrixFields.get_field(Y.c.sgsʲs.:($j), χ_name)
         ᶜwaterʲ = @. lazy(
-            (Y.c.sgsʲs.:($$j).q_tot - ᶜq_tot) *
-            draft_area(Y.c.sgsʲs.:($$j).ρa, ᶜρʲs.:($$j)),
+            (ᶜχʲ - ᶜχ) * draft_area(Y.c.sgsʲs.:($$j).ρa, ᶜρʲs.:($$j)),
         )
         ᶠρʲ = @. lazy(ᶠinterp(ᶜρʲs.:($$j) * ᶜJ) / ᶠJ)
         ᶠwater_fluxʲ =
             _face_value_flux(ᶠu³_diffʲ, ᶜwaterʲ, dt, edmfx_sgsflux_upwinding)
         @. ᶠflux += ᶠρʲ * ᶠwater_fluxʲ
     end
-
-    _sgs_water_tag_fluxes!(
-        Yₜ.c,
-        Y.c,
-        p.scratch.ᶜtagging_q_share_norm,
-        ᶠflux,
-        model.tags,
-    )
-    sgs_exchange_of_water_tags!(Yₜ, Y, p, turbconv_model, model)
     return nothing
+end
+
+# Each tag's rain or snow part takes its share of its compartment's face flux,
+# in the cell the flux leaves, as `_sgs_water_tag_fluxes!` does for the
+# non-precipitating parts. Where the compartment is not positive the share is
+# zero, as the sedimentation share is.
+_sgs_water_tag_part_fluxes!(ᶜYₜ, ᶜY, scratch, ᶠflux, ::Tuple{}, part) = nothing
+function _sgs_water_tag_part_fluxes!(ᶜYₜ, ᶜY, scratch, ᶠflux, tags::Tuple, part)
+    tag = first(tags)
+    ᶜpartₜ = water_tag_part_field(ᶜYₜ, tag, part)
+    ᶜshare = water_tag_part_share(ᶜY, scratch, tag, part)
+    @. ᶜpartₜ -= ᶜadvdivᵥ(
+        ᶠflux * ifelse(
+            _is_upward(ᶠflux),
+            ᶠbottom_bias_zero(ᶜshare),
+            ᶠtop_bias_zero(ᶜshare),
+        ),
+    )
+    return _sgs_water_tag_part_fluxes!(
+        ᶜYₜ,
+        ᶜY,
+        scratch,
+        ᶠflux,
+        Base.tail(tags),
+        part,
+    )
 end
 
 # A tag's share of the local water, as the sedimentation flux takes it: the
@@ -305,6 +385,50 @@ It needs one updraft and region tags that partition the domain, which
 """
 function sgs_exchange_of_water_tags!(Yₜ, Y, p, turbconv_model, model)
     inputs = water_exchange_inputs!(Y, p, turbconv_model, model)
+    # Under the key the rain and snow plumes read the non-precipitating
+    # parts' plume, so they are marched before its exchange overwrites it.
+    if has_water_tag_precipitation(model)
+        water_tag_precip_plume!(
+            p.scratch.ᶜq_rtag_plume,
+            inputs.ᶜεʲ,
+            Y,
+            p,
+            model,
+            RainPart(),
+        )
+        water_tag_precip_plume!(
+            p.scratch.ᶜq_stag_plume,
+            inputs.ᶜεʲ,
+            Y,
+            p,
+            model,
+            SnowPart(),
+        )
+    end
+    _exchange_of_water_tag_part!(Yₜ, p, inputs, model, NonPrecipitatingPart())
+    if has_water_tag_precipitation(model)
+        _exchange_of_water_tag_part!(
+            Yₜ,
+            p,
+            water_part_exchange_inputs!(Y, p, turbconv_model, model, RainPart()),
+            model,
+            RainPart(),
+        )
+        _exchange_of_water_tag_part!(
+            Yₜ,
+            p,
+            water_part_exchange_inputs!(Y, p, turbconv_model, model, SnowPart()),
+            model,
+            SnowPart(),
+        )
+    end
+    return nothing
+end
+
+# The exchange of one part, from the inputs of `water_exchange_inputs!` or
+# `water_part_exchange_inputs!`: each subdomain's bounded share differences,
+# then each tag's face fluxes at the mass flux. `ᶜεʲ` is overwritten.
+function _exchange_of_water_tag_part!(Yₜ, p, inputs, model, part)
     (; ᶜεʲ, ᶜε̄, ᶜroom, ᶜwater_ratio, flags, upwinding, dt) = inputs
     updraft_differences = ShareDifferences(flags, false)
     environment_differences = ShareDifferences(flags, true)
@@ -326,7 +450,7 @@ function sgs_exchange_of_water_tags!(Yₜ, Y, p, turbconv_model, model)
         ᶠu³_diffʲ,
         ᶠu³_diff⁰,
     )
-    _exchange_water_tags!(Yₜ.c, subdomains, dt, upwinding, model.tags, 1)
+    _exchange_water_tags!(Yₜ.c, subdomains, dt, upwinding, model.tags, 1, part)
     return nothing
 end
 
@@ -351,7 +475,7 @@ function water_exchange_inputs!(Y, p, turbconv_model, model)
     ᶠJ = Fields.local_geometry_field(Y.f).J
     ᶜρaʲ = Y.c.sgsʲs.:(1).ρa
     ᶜρʲ = ᶜρʲs.:(1)
-    ᶜq_totʲ = Y.c.sgsʲs.:(1).q_tot
+    (ᶜq̄, ᶜq_totʲ, ᶜq_tot⁰) = water_tag_exchange_water(Y, p, model)
     ᶜρa⁰ = @. lazy(ρa⁰(Y.c.ρ, Y.c.sgsʲs, turbconv_model))
     # The environment's density is written once, as in the energy exchange:
     # left lazy, it would bring a thermodynamic call into every broadcast below.
@@ -369,9 +493,7 @@ function water_exchange_inputs!(Y, p, turbconv_model, model)
     ᶜεʲ = p.scratch.ᶜq_tag_plume
     water_tag_plume!(ᶜεʲ, ᶜε̄, Y, p, turbconv_model, model)
 
-    # Each subdomain's water per unit mass, its area fraction and face density.
-    ᶜq_tot⁰ = ᶜspecific_env_value(@name(q_tot), Y, p)
-    ᶜq̄ = @. lazy(specific(Y.c.ρq_tot, Y.c.ρ))
+    # Each subdomain's area fraction and face density.
     ᶜaʲ = @. lazy(draft_area(ᶜρaʲ, ᶜρʲ))
     ᶜa⁰ = @. lazy(draft_area(ᶜρa⁰, ᶜρ⁰))
     ᶠρʲ = @. lazy(ᶠinterp(ᶜρʲ * ᶜJ) / ᶠJ)
@@ -437,7 +559,9 @@ function water_tag_plume!(
     ᶜlg = Fields.local_geometry_field(Y.c)
     ᶜΔz = Fields.Δz_field(Y.c)
     ᶜρaʲ = Y.c.sgsʲs.:(1).ρa
-    ᶜq_totʲ = Y.c.sgsʲs.:(1).q_tot
+    # The updraft's water the plume is rescaled to: `q_totʲ`, or under
+    # `water_tag_precipitation: true` the non-precipitating `q_tot_effʲ`.
+    ᶜq_totʲ = water_tag_exchange_water(Y, p, model)[2]
     ᶜρa⁰ = @. lazy(ρa⁰(Y.c.ρ, Y.c.sgsʲs, turbconv_model))
     ᶜentrʲ = @. lazy(
         compute_entrainment(
@@ -622,11 +746,20 @@ function _copies_from_plume!(ᶜsgsʲ, ᶜεʲ, tags::Tuple, i)
     return _copies_from_plume!(ᶜsgsʲ, ᶜεʲ, Base.tail(tags), i + 1)
 end
 
-_exchange_water_tags!(ᶜYₜ, subdomains, dt, upwinding, ::Tuple{}, i) = nothing
-function _exchange_water_tags!(ᶜYₜ, subdomains, dt, upwinding, tags::Tuple, i)
+_exchange_water_tags!(ᶜYₜ, subdomains, dt, upwinding, ::Tuple{}, i, part) =
+    nothing
+function _exchange_water_tags!(
+    ᶜYₜ,
+    subdomains,
+    dt,
+    upwinding,
+    tags::Tuple,
+    i,
+    part,
+)
     (; ᶜΔφʲ, ᶜΔφ⁰, ᶜq_totʲ, ᶜq_tot⁰, ᶜaʲ, ᶜa⁰) = subdomains
     (; ᶠρʲ, ᶠρ⁰, ᶠu³_diffʲ, ᶠu³_diff⁰) = subdomains
-    ᶜρq_tagₜ = tag_field(ᶜYₜ, first(tags))
+    ᶜρq_tagₜ = water_tag_part_field(ᶜYₜ, first(tags), part)
     ᶜvalueʲ = @. lazy(getindex(ᶜΔφʲ, i) * ᶜq_totʲ * ᶜaʲ)
     ᶜvalue⁰ = @. lazy(getindex(ᶜΔφ⁰, i) * ᶜq_tot⁰ * ᶜa⁰)
     ᶠfluxʲ = _face_value_flux(ᶠu³_diffʲ, ᶜvalueʲ, dt, upwinding)
@@ -639,6 +772,7 @@ function _exchange_water_tags!(ᶜYₜ, subdomains, dt, upwinding, tags::Tuple, 
         upwinding,
         Base.tail(tags),
         i + 1,
+        part,
     )
 end
 
@@ -682,6 +816,358 @@ WaterPlumeStep(::Val{partition}) where {partition} = WaterPlumeStep{partition}()
     # ClimaCore's `AutoBroadcaster`, whose `map` unrolls, while `ntuple` builds
     # a plain tuple that the march converts back, allocating in every cell.
     return map(ε -> (ε / total) * q_totʲ, mixed)
+end
+
+"""
+    water_tag_exchange_water(Y, p, model)
+
+The water the `N` parts' plume and exchange weight, per unit mass, lazily, as
+`(grid mean, updraft, environment)`: `q_tot`, or under
+`water_tag_precipitation: true` the non-precipitating water
+`q_tot_eff = q_tot - q_rai - q_sno`, which those parts partition.
+"""
+water_tag_exchange_water(Y, p, model) = _water_tag_exchange_water(
+    Y,
+    p,
+    Val(has_water_tag_precipitation(model)),
+)
+_water_tag_exchange_water(Y, p, ::Val{false}) = (
+    (@. lazy(specific(Y.c.ρq_tot, Y.c.ρ))),
+    Y.c.sgsʲs.:(1).q_tot,
+    ᶜspecific_env_value(@name(q_tot), Y, p),
+)
+function _water_tag_exchange_water(Y, p, ::Val{true})
+    ᶜsgsʲ = Y.c.sgsʲs.:(1)
+    ᶜq_tot⁰ = ᶜspecific_env_value(@name(q_tot), Y, p)
+    ᶜq_rai⁰ = ᶜspecific_env_value(@name(q_rai), Y, p)
+    ᶜq_sno⁰ = ᶜspecific_env_value(@name(q_sno), Y, p)
+    return (
+        (@. lazy(specific(Y.c.ρq_tot - Y.c.ρq_rai - Y.c.ρq_sno, Y.c.ρ))),
+        (@. lazy(ᶜsgsʲ.q_tot - ᶜsgsʲ.q_rai - ᶜsgsʲ.q_sno)),
+        (@. lazy(ᶜq_tot⁰ - ᶜq_rai⁰ - ᶜq_sno⁰)),
+    )
+end
+
+# The species, the updraft's field and the fall speeds of a precipitating part.
+_part_species(ᶜY, ::RainPart) = ᶜY.ρq_rai
+_part_species(ᶜY, ::SnowPart) = ᶜY.ρq_sno
+_part_updraft_species(ᶜsgsʲ, ::RainPart) = ᶜsgsʲ.q_rai
+_part_updraft_species(ᶜsgsʲ, ::SnowPart) = ᶜsgsʲ.q_sno
+_part_speeds(precomputed, ::RainPart) = (precomputed.ᶜwᵣ, precomputed.ᶜwᵣʲs.:(1))
+_part_speeds(precomputed, ::SnowPart) = (precomputed.ᶜwₛ, precomputed.ᶜwₛʲs.:(1))
+# The updraft's flow from the non-precipitating water into the part.
+_part_formation_flow(F, ::RainPart) = F.NR
+_part_formation_flow(F, ::SnowPart) = F.NS
+
+"""
+    water_part_exchange_inputs!(Y, p, turbconv_model, model, part)
+
+The inputs of the exchange of the rain or snow parts (`part`), as
+[`water_exchange_inputs!`](@ref) returns them for the non-precipitating parts:
+the grid mean's specific part values into `ᶜq_tag_mean`, the updraft's from
+the part's plume ([`water_tag_precip_plume!`](@ref)), and the bound's room and
+ratio from the part's own species in each subdomain, `q_raiʲ` and `q_rai⁰` or
+`q_snoʲ` and `q_sno⁰`. Where the environment holds none of the species or a
+negative amount, the room is not positive and nothing is exchanged. Reuses the
+non-precipitating parts' scratch, after their exchange.
+"""
+function water_part_exchange_inputs!(Y, p, turbconv_model, model, part)
+    (; edmfx_sgsflux_upwinding) = p.atmos.numerics
+    (; ᶠu³, ᶠu³ʲs, ᶜρʲs, ᶠu³⁰) = p.precomputed
+    (; dt) = p
+    upwinding = _exchange_upwinding(edmfx_sgsflux_upwinding)
+    ᶜJ = Fields.local_geometry_field(Y.c).J
+    ᶠJ = Fields.local_geometry_field(Y.f).J
+    ᶜρaʲ = Y.c.sgsʲs.:(1).ρa
+    ᶜρʲ = ᶜρʲs.:(1)
+    ᶜρa⁰ = @. lazy(ρa⁰(Y.c.ρ, Y.c.sgsʲs, turbconv_model))
+    # The environment's density, as `water_exchange_inputs!` wrote it.
+    ᶜρ⁰ = p.scratch.ᶜq_tag_environment_density
+    flags = _water_partition_flags(model.tags)
+    ᶜε̄ = p.scratch.ᶜq_tag_mean
+    set_nonnegative_part_specific!(ᶜε̄, Y.c, model.tags, part)
+    ᶜεʲ = _part_plume(p.scratch, part)
+    ᶜq̄ = @. lazy(specific(_part_species(Y.c, part), Y.c.ρ))
+    ᶜqʲ = _part_updraft_species(Y.c.sgsʲs.:(1), part)
+    ᶜq⁰ = ᶜspecific_env_value(_part_species_name(part), Y, p)
+    ᶜaʲ = @. lazy(draft_area(ᶜρaʲ, ᶜρʲ))
+    ᶜa⁰ = @. lazy(draft_area(ᶜρa⁰, ᶜρ⁰))
+    ᶠρʲ = @. lazy(ᶠinterp(ᶜρʲ * ᶜJ) / ᶠJ)
+    ᶠρ⁰ = @. lazy(ᶠinterp(ᶜρ⁰ * ᶜJ) / ᶠJ)
+    ᶠu³_diffʲ = @. lazy(ᶠu³ʲs.:(1) - ᶠu³)
+    ᶠu³_diff⁰ = @. lazy(ᶠu³⁰ - ᶠu³)
+    ᶜroom = p.scratch.ᶜq_tag_room
+    @. ᶜroom = _exchange_room(Y.c.ρ, ᶜρaʲ, ᶜρa⁰, ᶜq̄, ᶜqʲ, ᶜq⁰)
+    ᶜwater_ratio = p.scratch.ᶜq_tag_water_ratio
+    @. ᶜwater_ratio = _exchange_energy_ratio(ᶜρaʲ, ᶜρa⁰, ᶜqʲ, ᶜq⁰)
+    return (;
+        ᶜεʲ,
+        ᶜε̄,
+        ᶜroom,
+        ᶜwater_ratio,
+        flags,
+        upwinding,
+        dt,
+        ᶜq_totʲ = ᶜqʲ,
+        ᶜq_tot⁰ = ᶜq⁰,
+        ᶜaʲ,
+        ᶜa⁰,
+        ᶠρʲ,
+        ᶠρ⁰,
+        ᶠu³_diffʲ,
+        ᶠu³_diff⁰,
+    )
+end
+"""
+    water_tag_updraft_formation_audit!(ᶜaudit, Y, p, tag)
+
+Write into `ᶜaudit` the audit of `q_tag_aud_up_<name>`: what the tag `tag`
+would gain, per unit mass and time, if the rain and snow that form in the
+updraft took the updraft's composition, the bounded plume's shares `ε̃ʲ` of
+the non-precipitating parts' exchange, instead of the grid mean's pool shares
+`ψN` the flows use (`water_tag_pool_shares`):
+
+    ρaʲ (Fʲ_NR + Fʲ_NS) (ε̃ʲᵢ - ψNᵢ) / ρ.
+
+It is a diagnostic. Nothing applies it. Its time integral measures the
+approximation of the grid pool rule for the updraft's flows. It recomputes the
+exchange inputs and the weighted flows into the tags' scratch, so it allocates
+only for the tag's index. Zero without prognostic EDMF and its SGS mass flux.
+"""
+water_tag_updraft_formation_audit!(ᶜaudit, Y, p, tag) =
+    _water_tag_updraft_formation_audit!(
+        ᶜaudit,
+        Y,
+        p,
+        tag,
+        p.atmos.turbconv_model,
+    )
+_water_tag_updraft_formation_audit!(ᶜaudit, Y, p, tag, turbconv_model) =
+    (ᶜaudit .= 0; nothing)
+function _water_tag_updraft_formation_audit!(
+    ᶜaudit,
+    Y,
+    p,
+    tag,
+    turbconv_model::PrognosticEDMFX,
+)
+    model = p.atmos.water_tagging_model
+    if !p.atmos.edmfx_model.sgs_mass_flux
+        ᶜaudit .= 0
+        return nothing
+    end
+    i = findfirst(t -> tag_name(t) == tag_name(tag), model.tags)
+    inputs = water_exchange_inputs!(Y, p, turbconv_model, model)
+    (; ᶜεʲ, ᶜε̄, ᶜroom, ᶜwater_ratio, flags) = inputs
+    updraft_differences = ShareDifferences(flags, false)
+    @. ᶜεʲ = updraft_differences(ᶜεʲ, ᶜε̄, ᶜroom, ᶜwater_ratio)
+    water_tag_share_norm!(p, Y)
+    (ᶜF, _) = water_tag_microphysics_inputs!(Y, p, turbconv_model)
+    ᶜFʲ = p.scratch.ᶜtagging_mp_flowsʲ
+    ᶜqN = @. lazy(
+        max(specific(Y.c.ρq_tot - Y.c.ρq_rai - Y.c.ρq_sno, Y.c.ρ), 0),
+    )
+    ᶜqR = @. lazy(max(specific(Y.c.ρq_rai, Y.c.ρ), 0))
+    ᶜqS = @. lazy(max(specific(Y.c.ρq_sno, Y.c.ρ), 0))
+    ᶜφN = water_tag_part_share(Y.c, p.scratch, tag, NonPrecipitatingPart())
+    ᶜφR = water_tag_part_share(Y.c, p.scratch, tag, RainPart())
+    ᶜφS = water_tag_part_share(Y.c, p.scratch, tag, SnowPart())
+    Δt = eltype(Y.c.ρ)(float(p.dt))
+    @. ᶜaudit =
+        Y.c.sgsʲs.:(1).ρa * (ᶜFʲ.NR + ᶜFʲ.NS) *
+        (
+            _bounded_plume_share(ᶜεʲ, ᶜε̄, flags, i) - first(
+                water_tag_pool_shares(ᶜF, ᶜqN, ᶜqR, ᶜqS, Δt, ᶜφN, ᶜφR, ᶜφS),
+            )
+        ) / Y.c.ρ
+    return nothing
+end
+
+# Tag `i`'s bounded share in the updraft: its share in the grid mean plus the
+# bounded difference `ShareDifferences` wrote into `Δφʲ`.
+@inline function _bounded_plume_share(Δφʲ, ε̄, ::Val{partition}, i) where {partition}
+    total = _partition_total(ε̄, partition)
+    mean_share =
+        total > zero(total) ? _subdomain_share(ε̄, total, i) : zero(total)
+    return mean_share + Δφʲ[i]
+end
+
+_part_plume(scratch, ::RainPart) = scratch.ᶜq_rtag_plume
+_part_plume(scratch, ::SnowPart) = scratch.ᶜq_stag_plume
+_part_species_name(::RainPart) = @name(q_rai)
+_part_species_name(::SnowPart) = @name(q_sno)
+
+# The grid mean's specific values of each tag's rain or snow part, negative
+# ones as zero, one tuple per cell, as `set_nonnegative_specific!` writes
+# them for the non-precipitating parts.
+function set_nonnegative_part_specific!(ᶜε̄, ᶜY, tags, part)
+    part_fields = unrolled_map(tag -> water_tag_part_field(ᶜY, tag, part), tags)
+    Base.Broadcast.materialize!(
+        ᶜε̄,
+        Base.Broadcast.broadcasted(_nonnegative_specific, ᶜY.ρ, part_fields...),
+    )
+    return nothing
+end
+
+"""
+    water_tag_precip_plume!(ᶜεʲ, ᶜεᴺʲ, Y, p, model, part)
+
+Write the rain plume (`part = RainPart()`) or the snow plume into `ᶜεʲ`: the
+updraft's specific values of each tag's part, for the exchange of the parts.
+The updraft's rain takes the non-precipitating composition where it forms and
+the environment's where it flows in laterally (`updraft_sedimentation!`). So
+the plume is marched downward, as the rain falls, and at each level the
+updraft's rain is the mix of three sources, each with its composition:
+
+  - the rain that falls into the level from the level above within the
+    updraft, `min(aʲ, aʲ₊) ρʲ₊ wʲ₊ q_raiʲ₊`, with the plume's shares above;
+  - the rain formed there, `ρaʲ Fʲ_NR Δz`, with the shares of the
+    non-precipitating parts' plume `ᶜεᴺʲ` at the level;
+  - the lateral inflow where the updraft widens downward,
+    `(aʲ - aʲ₊) ρ⁰w⁰q_rai⁰`, the environment's flux as
+    `updraft_sedimentation!` forms it, with the environment's rain shares
+    `(Rᵢ - ρaʲ εʲᵢ q_raiʲ) / (ρ q_rai - ρaʲ q_raiʲ)` of the level above.
+
+The subscript `₊` marks the level above. Each amount is per unit area and
+clipped at zero. The shares are rescaled at each level so that the
+partition's sum is one, as `WaterPlumeStep` rescales the `N` plume, and the
+values are the shares times `q_raiʲ`. Where the updraft holds no rain, or no
+source brings any, the plume takes the grid mean's rain shares. Where the
+environment holds none, the inflow is dropped. Snow alike, with the flow
+`Fʲ_NS` and the snow fields. The amounts weight compositions only, so they
+need not repeat the model's face densities. Starts anew each evaluation.
+"""
+function water_tag_precip_plume!(ᶜεʲ, ᶜεᴺʲ, Y, p, model, part)
+    FT = eltype(Y.c.ρ)
+    ᶜsgsʲ = Y.c.sgsʲs.:(1)
+    ᶜρʲ = p.precomputed.ᶜρʲs.:(1)
+    ᶜΔz = Fields.Δz_field(Y.c)
+    ᶜaʲ = @. lazy(draft_area(ᶜsgsʲ.ρa, ᶜρʲ))
+    ᶜqʲ = _part_updraft_species(ᶜsgsʲ, part)
+    ᶜρq = _part_species(Y.c, part)
+    (ᶜw̄, ᶜwʲ) = _part_speeds(p.precomputed, part)
+    ᶜFʲ = p.scratch.ᶜtagging_mp_flowsʲ
+    part_fields =
+        unrolled_map(tag -> water_tag_part_field(Y.c, tag, part), model.tags)
+    ᶜε̄ = Base.Broadcast.broadcasted(_nonnegative_specific, Y.c.ρ, part_fields...)
+    ᶜformation =
+        @. lazy(max(ᶜsgsʲ.ρa * _part_formation_flow(ᶜFʲ, part), 0) * ᶜΔz)
+    ᶜenvironment_flux = @. lazy(
+        max(
+            (ᶜw̄ * ᶜρq - ᶜsgsʲ.ρa * ᶜwʲ * ᶜqʲ) / max(1 - ᶜaʲ, eps(FT)),
+            0,
+        ),
+    )
+    ᶜupdraft_flux = @. lazy(max(ᶜρʲ * ᶜwʲ * ᶜqʲ, 0))
+    ᶜinput = Base.Broadcast.broadcasted(
+        _precip_plume_level,
+        ᶜε̄,
+        ᶜεᴺʲ,
+        ᶜformation,
+        ᶜenvironment_flux,
+        ᶜaʲ,
+        ᶜupdraft_flux,
+        ᶜqʲ,
+        ᶜρq,
+        ᶜsgsʲ.ρa,
+        Y.c.ρ,
+    )
+    none = ntuple(_ -> zero(FT), Val(length(model.tags)))
+    Operators.column_accumulate!(
+        PrecipPlumeStep(_water_partition_flags(model.tags)),
+        ᶜεʲ,
+        ᶜinput;
+        init = (none, none, zero(FT), zero(FT), zero(FT), zero(FT)),
+        transform = _precip_plume_values,
+        reverse = true,
+    )
+    return nothing
+end
+
+@inline _precip_plume_level(
+    ε̄,
+    εᴺ,
+    formation,
+    environment_flux,
+    aʲ,
+    updraft_flux,
+    qʲ,
+    ρq,
+    ρaʲ,
+    ρ,
+) =
+    (ε̄, εᴺ, formation, environment_flux, aʲ, updraft_flux, qʲ, ρq, ρaʲ, ρ)
+
+# The plume's values from its state: the shares times the updraft's species.
+@inline _precip_plume_values(state) =
+    ntuple(i -> state[1][i] * state[6], Val(length(state[1])))
+
+# One level of the rain or snow plume, from the state of the level above:
+# `(shares, environment's shares, whether the environment has a composition,
+# updraft flux, area, updraft species)`. Each tuple of tag values is built
+# with `ntuple` over the partition's length, so the state is a plain tuple of
+# one type at every level. A `map` over several tuples, one of them ClimaCore's
+# `AutoBroadcaster` inside the column march, returned a `Vector`, which the
+# output field cannot hold. A callable type, so that the
+# partition travels in the type, as in `WaterPlumeStep`. Tuples are mapped,
+# never built with `ntuple`, since inside the column march they are
+# ClimaCore's `AutoBroadcaster`.
+struct PrecipPlumeStep{partition} end
+PrecipPlumeStep(::Val{partition}) where {partition} = PrecipPlumeStep{partition}()
+@inline function (::PrecipPlumeStep{partition})(above, level) where {partition}
+    (shares₊, environment₊, has_environment₊, updraft_flux₊, a₊, _) = above
+    (ε̄, εᴺ, formation, environment_flux, aʲ, updraft_flux, qʲ, ρq, ρaʲ, ρ) =
+        level
+    FT = typeof(ρ)
+    N = Val(length(partition))
+    total_mean = _partition_total(ε̄, partition)
+    mean_shares = ntuple(
+        i -> total_mean > zero(FT) ? ε̄[i] / total_mean : zero(FT),
+        N,
+    )
+    total_N = _partition_total(εᴺ, partition)
+    from_above = min(aʲ, a₊) * updraft_flux₊
+    lateral =
+        has_environment₊ > zero(FT) ? max(aʲ - a₊, zero(FT)) * environment_flux :
+        zero(FT)
+    formed = total_N > zero(FT) ? formation : zero(FT)
+    supply = from_above + lateral + formed
+    mixed = ntuple(
+        i ->
+            (
+                from_above * shares₊[i] +
+                lateral * environment₊[i] +
+                (total_N > zero(FT) ? formed * (εᴺ[i] / total_N) : zero(FT))
+            ) / max(supply, floatmin(FT)),
+        N,
+    )
+    use_mix = (supply > zero(FT)) & (qʲ > zero(FT))
+    total_mixed = _partition_total(mixed, partition)
+    shares = ntuple(
+        i ->
+            use_mix & (total_mixed > zero(FT)) ? mixed[i] / total_mixed :
+            mean_shares[i],
+        N,
+    )
+    # The environment's shares of the species at this level, for the level
+    # below: what the grid mean holds less what the updraft holds.
+    environment =
+        ntuple(i -> max(ε̄[i] * ρ - ρaʲ * shares[i] * qʲ, zero(FT)), N)
+    total_environment = _partition_total(environment, partition)
+    has_environment =
+        (ρq - ρaʲ * qʲ > zero(FT)) & (total_environment > zero(FT))
+    environment_shares = ntuple(
+        i -> has_environment ? environment[i] / total_environment : zero(FT),
+        N,
+    )
+    return (
+        shares,
+        environment_shares,
+        has_environment ? one(FT) : zero(FT),
+        updraft_flux,
+        aʲ,
+        qʲ,
+    )
 end
 
 # ============================================================================

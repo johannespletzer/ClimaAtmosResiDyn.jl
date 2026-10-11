@@ -378,6 +378,7 @@ function sedimentation_jacobian_blocks(Y, atmos, water_tag_cross_flag)
             name -> (name, name) => similar(Y.c, TridiagonalRow),
             precip_part_names,
         )...,
+        water_precip_part_cross_blocks(Y, atmos, water_tag_cross_flag)...,
         energy_tag_cross_blocks...,
         (@name(c.ρe_tot), @name(c.ρe_tot)) => similar(Y.c, TridiagonalRow),
         (@name(c.ρq_tot), @name(c.ρq_tot)) => similar(Y.c, TridiagonalRow),
@@ -836,6 +837,16 @@ function jacobian_cache(
                 "The tag $name carries sedimentation cross blocks, " *
                 "but another Jacobian row names it, so the split solver " *
                 "cannot solve it apart.",
+            )
+        end
+        for name in unrolled_map(
+            center_state_name,
+            water_precip_part_cross_names(Y, atmos),
+        )
+            name in uncoupled_names || error(
+                "The rain or snow part $name carries its species' cross \
+                blocks, but another Jacobian row names it, so the split \
+                solver cannot solve it apart.",
             )
         end
         for name in water_tag_rainout_jacobian_names(atmos, water_tag_cross_flag)
@@ -1669,8 +1680,6 @@ function update_water_tag_sedimentation_jacobian!(
     p,
     water_tag_cross_flag,
 )
-    # The rain and snow parts take their species' blocks, set above.
-    update_water_precip_part_sedimentation_jacobian!(matrix, Y, p)
     isempty(sedimenting_water_tag_names(Y)) && return nothing
     # The share denominator is a property of the current state, so it has to be
     # rebuilt here rather than reused from the tendency evaluation.
@@ -2891,6 +2900,8 @@ function update_jacobian!(alg::ManualSparseJacobian, cache, Y, p, dtγ, t)
     #     grid-scale and SGS diffusion updates.
     #   - update_diffusion_jacobian! assigns the passive tracers' diagonals,
     #     so the water tags' rain-out entries are added after it.
+    #   - The rain and snow parts' rows copy their species' rows, so
+    #     update_water_precip_part_jacobian! runs after every update of those.
     update_advection_jacobian!(matrix, Y, p, dtγ, topography_flag)
     update_sedimentation_jacobian!(matrix, Y, p, dtγ, water_tag_cross_flag)
     eddy_diffusivities =
@@ -2918,7 +2929,9 @@ function update_jacobian!(alg::ManualSparseJacobian, cache, Y, p, dtγ, t)
     update_sgs_entr_detr_jacobian!(matrix, Y, p, dtγ)
     update_sgs_boundary_condition_jacobian!(matrix, Y, p, dtγ)
     update_sgs_massflux_jacobian!(matrix, Y, p, dtγ, diffusion_flag)
-
+    # The water tags' rain and snow parts take their species' rows, after the
+    # last update of those rows.
+    update_water_precip_part_jacobian!(matrix, Y, p, water_tag_cross_flag)
     # NOTE: All velocity tendency derivatives should be set BEFORE this call.
     zero_velocity_jacobian!(matrix, Y, p, t)
     return nothing
