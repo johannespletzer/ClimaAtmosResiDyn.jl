@@ -104,6 +104,25 @@ holds that killed attempt without a receipt, and the run (14191396) is
 directory `output_active` names, and the column restart config names
 `output_0001`.
 
+The control 14191395 (off restarted, 12:48, 09:20 start) completed. Its
+state diverges from the off run as the on pair's does, `hus` by 5.372e-4 of
+itself at 10950 s and 1.052e-3 at 6 h, the same digits: the TRMM restart's
+divergence is the model's, not the producer's. The column jobs 14191396 (on,
+17:45, 09:33 start, 14.8 GB) and 14191397 (newton, 17:28) completed with 31
+channels each. By hand on 2026-10-11: the column's on run passes
+`accepted_weights` for `final_map` and `implicit`, its Newton run passes
+`accepted_weights` for all three roles (14778 records) and `trial_rollback`
+(360 steps), and the TRMM on run passes `accepted_weights` for `implicit`.
+`newton_replacement` first printed FAIL on the column's Newton run: two
+post-Newton records of one follow channel at stage 2. The follow writes two
+moves per precipitating part in one firing, each with two legs, which the
+rule of section 3 did not describe. Section 14 (owner, 2026-10-11) bounds
+the post-Newton count by the writer's moves: in the run at most two
+post-Newton records per channel and stage, the implicit role one per stage
+and tag, nothing accumulating. The check then reached its ledger tie and
+refused the run, whose config had no `q_tag_led_inc_<tag>` diagnostics at
+10 s. The Newton config gains them and the job reruns once.
+
 ## 2. Model identity
 
 `model.head_sha` of each manifest (the run tree, with the record tree under

@@ -221,21 +221,40 @@ def trial_rollback(run, dt=None):
     return f"{len(run.steps)} steps of {lengths[0]} s, one accepted trial each, ledgers = applied records"
 
 
+def records_per_firing(channel, role):
+    """How many records one hook firing may write into a channel at one stage (design section 14).
+
+    An implicit record is one evaluation the stepper keeps, so one per stage. A post-Newton map
+    is one application per mechanism and part, except the follow (tagged_water_precipitation.jl
+    at 2c63c5c53, `_rescale_water_tag_parts!`): it moves each precipitating part twice in one
+    firing, where the part falls and where it rises, and each move has a leg into the part and
+    a leg out of the non-precipitating part. So the rain and the snow channel may carry two
+    records at a stage, the non-precipitating channel four.
+    """
+    mechanism, _, compartment = channel.split(".")
+    if role == "post_newton" and mechanism == "follow":
+        return 2 if compartment in ("rain", "snow") else 4
+    return 1
+
+
 def newton_replacement(run, expect_post_newton=False):
     run.receipt()
     pin = run.header["integrator_pin"]
     implicit_stages = {i + 1 for i, g in enumerate(pin["implicit_diagonal"]) if g != 0}
-    seen, post = set(), 0
+    seen, post = {}, 0
     for n, app, _, _ in run.records():
         if app["role"] in ("implicit", "post_newton"):
             key = (n, app["channel"], app["role"], app["stage"])
-            need(key not in seen, f"{app['record_id']}: a second {app['role']} record of stage {app['stage']}")
-            seen.add(key)
+            seen[key] = seen.get(key, 0) + 1
+            limit = records_per_firing(app["channel"], app["role"])
+            need(seen[key] <= limit, f"{app['record_id']}: {seen[key]} {app['role']} records of stage {app['stage']}, "
+                 f"the writer makes at most {limit} in one firing")
             need(app["stage"] in implicit_stages, f"{app['record_id']}: stage {app['stage']} has no implicit solve")
             post += app["role"] == "post_newton"
     need(not expect_post_newton or post > 0, "no post_newton record, though the run updates at stage cadence")
     tie = model_ledger_tie(run, mechanisms=("inc", "negative"))
-    return f"{len(seen)} implicit or post_newton records, one per stage, {post} post_newton. {tie}"
+    return (f"{len(seen)} stage keys with implicit or post_newton records, each within the writer's count, "
+            f"{post} post_newton. {tie}")
 
 
 def model_ledger_tie(run, mechanisms=None):

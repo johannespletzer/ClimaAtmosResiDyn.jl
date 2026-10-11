@@ -30,7 +30,9 @@ section 12 (2026-10-11) adds two jobs on the integration test's precipitating
 column for those two checks. The parity passed in both precisions. The TRMM
 restart diverges from the first step, the model's own inexact restart of
 FINDINGS E54, so section 13 runs the restart check on the column's restart
-pair and the off run's restart as the control.
+pair and the off run's restart as the control. The control confirmed it.
+Section 14 bounds the Newton check's post-Newton count by the follow's two
+moves per part.
 The owner sets the proposed constants and approves each job. The producer
 is registered only after the six checks pass on the cluster.
 

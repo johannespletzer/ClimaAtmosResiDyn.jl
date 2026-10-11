@@ -6,8 +6,8 @@
 # case fires them. Two Newton iterations and `constrain_state!` at every
 # stage give the post-Newton maps the Newton check needs. Only job_id, the two
 # Newton keys, t_end, ode_algo (ARS222 as the TRMM case, the test runs the
-# default ARS343), the output keys and the diagnostics differ from the test's
-# config.
+# default ARS343), the output keys and the diagnostics (the increment
+# ledgers at 10 s among them) differ from the test's config.
 
 job_id: "p9_col1m_newton_1h"
 max_newton_iters_ode: 2
@@ -55,4 +55,9 @@ diagnostics:
   # Part 9's checks: every accepted step (dt = 10 s). rhoa aligns the
   # producer's ledgers for the reader.
   - short_name: [rhoa, ta, hus]
+    period: "10secs"
+  # The Newton check ties the inc and negative records to the model's own
+  # increment ledgers at every accepted step (section 14, 2026-10-11, after
+  # the first Newton run lacked them).
+  - short_name: [q_tag_led_inc_lower, q_tag_led_inc_upper, q_tag_led_inc_evap]
     period: "10secs"

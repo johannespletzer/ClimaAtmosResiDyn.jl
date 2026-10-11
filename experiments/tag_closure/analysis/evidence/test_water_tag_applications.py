@@ -270,6 +270,13 @@ class TestChecks(Fixture):
         edit_nc(self.runs["on"] / wc.ARRAYS_FILE, "ledger", lambda v: v.__setitem__((3, 0, 1), v[3, 0, 1] + 1e-9))
         self.assertIn("without an applied record", self.assert_fail("trial_rollback", *self.commands()["trial_rollback"]))
 
+    def test_records_per_firing(self):
+        # The follow's two moves per part (design section 14). Everything else is one application.
+        self.assertEqual([wchecks.records_per_firing(c, "post_newton") for c in
+                          ("follow.lower.rain", "follow.lower.snow", "follow.lower.nonprecipitating",
+                           "close.lower.rain", "rescale.evap.nonprecipitating")], [2, 2, 4, 1, 1])
+        self.assertEqual(wchecks.records_per_firing("follow.lower.nonprecipitating", "implicit"), 1)
+
     def test_newton_replacement_mutant(self):
         def twice(lines):
             for app in lines[1]["applications"]:
@@ -277,7 +284,7 @@ class TestChecks(Fixture):
                     app["stage"] = 2
                     app["coefficient"] = fx.DT * lines[0]["integrator_pin"]["b_imp"][1]
         edit_receipt(self.runs["on"], twice)
-        self.assertIn("second implicit", self.assert_fail("newton_replacement", *self.commands()["newton_replacement"]))
+        self.assertIn("2 implicit records", self.assert_fail("newton_replacement", *self.commands()["newton_replacement"]))
 
     def test_complete_active_roster_mutants(self):
         # A writer the roster misses: the model's fix ledger moves more than the records.

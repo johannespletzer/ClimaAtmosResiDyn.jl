@@ -321,3 +321,31 @@ to `record_*.log` beside the gate logs.
 Ten jobs, 2.3 node-hours, 10 at the limits. The column's on and Newton jobs
 of section 12 were resubmitted with the checkpoint keys before they started.
 Section 10's cap rises to 10 and 10.
+
+## 14. Amendment, 2026-10-11: the Newton rule's count for the follow
+
+Written after the column's Newton run (section 12), with its data read.
+`newton_replacement` printed FAIL "a second post_newton record of stage 2"
+on `follow.lower.nonprecipitating`. The rule of section 3, at most one
+record per step, channel, role and stage, described the mechanisms that
+write one application per part and firing. The follow does not
+(`tagged_water_precipitation.jl` at `2c63c5c53`, `_rescale_water_tag_parts!`
+and `_apply_part_follow!`): one firing moves each precipitating part twice,
+where it falls and where it rises, and each move has a leg into the part and
+a leg out of the non-precipitating part. The receipt names neither the hook
+nor the move. In the run, the rain channels carry at most two post-Newton
+records at a stage and the non-precipitating channels at most two of the
+four they may, the implicit role has one record per stage and tag, and the
+close and the repair one each. Nothing accumulates. The rule becomes: one
+implicit record per step, channel and stage, and post-Newton records up to
+the writer's count for one firing, two for the follow's rain and snow
+channels, four for its non-precipitating channel, one for every other
+mechanism (`records_per_firing` in the checks module, with a test). The
+owner chose this over a rule for the implicit role alone and over a
+producer change that names the move (DECISIONS.md, "2026-10-10, part 9
+PR B"). With the count right, the check reached its ledger tie and found
+that the column's Newton config had no `q_tag_led_inc_<tag>` diagnostics at
+10 s, which section 12 omitted. The config gains them and the Newton job
+reruns once, under section 10's first rule, with approval. The on and the
+restarted column configs stay as they are, so the restart pair's diagnostic
+file sets stay equal.

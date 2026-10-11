@@ -349,6 +349,18 @@ review of PR #171.
   - **A manual 1.10 bounds-checked run of the three applications groups
     precedes the merge of PR A.** **In force.** The third tracer moves the
     1.10 memory margin, which stood within 0.5 GiB of the runner's 16 GB.
+  - **The Newton check bounds the post-Newton records by the writer's
+    moves.** **In force, 2026-10-11.** The column's Newton run failed
+    `newton_replacement` on a second post-Newton record of a follow channel
+    at one stage. The follow moves each precipitating part twice in one
+    firing, where it falls and where it rises, each move with a leg into the
+    part and one out of the non-precipitating part. The rule of design
+    section 3 described the single-application mechanisms alone. Section 14:
+    one implicit record per step, channel and stage, post-Newton records up
+    to the writer's count for one firing (two for the follow's rain and snow
+    channels, four for its non-precipitating channel, one otherwise). A rule
+    for the implicit role alone, and a producer change that names the move,
+    were declined.
   - **The restart check runs on the column, the TRMM restart is recorded
     under E54, the off run's restart is the control.** **In force,
     2026-10-11.** The TRMM restart pair fails the producer's restart check
