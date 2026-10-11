@@ -340,6 +340,29 @@ after the numerics reviewer's challenge (its section 12).
     laterally, by a rain plume marched downward (design section 3.2). The
     recommendation, the local `N` plume's share, was declined.
 
+*Later on 2026-10-11, after the stage 2 test* (design section 13):
+
+  - **H10's rule for the non-precipitating parts is criterion 4's.** **In
+    force.** The `N` parts' column residual equals `q_tag_inc_left` within 5%
+    of the gross residual, measured 1.8% under first-order upwinding. The
+    first draft's 1e-8 for `N` was wrong.
+  - **The zero-share event is fixed in the stage 2 PR.** **In force.** Where
+    the parent holds a positive compartment and the partition holds none of
+    it, the SGS donor share and the cross blocks take the tag's share of the
+    non-precipitating water. Leaving H10 failed on events was declined.
+  - **The van Leer per-part drift is a part 9 item of its own.** **In
+    force.** The fix, the parts taking shares of the species' explicit face
+    flux, changes stage 1 under van Leer too. The stage 2 PR documents the
+    drift and reports the gross ledger. Fixing it in the same PR was
+    declined.
+  - **The per-cell allocation gets one bounded attempt.** **In force.** About
+    80k tokens on `water_tag_microphysics_inputs!`. If the cause is not
+    found, the allocation test stays broken and BACKLOG names it before any
+    sphere or GPU run.
+  - **The stage 2 budget is 1.5M.** **In force.** 1.2M was used by the design
+    challenge, the author, the finder and the numerics confirmation, each
+    over its cap.
+
 ## 2026-10-10, part 9 PR B
 
 The owner decided these on 2026-10-10, on the four open inputs of the part 9

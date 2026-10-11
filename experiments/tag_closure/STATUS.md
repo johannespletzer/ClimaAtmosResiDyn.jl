@@ -11,7 +11,12 @@ D5, and a build measurement that gates stage 3 (the copies). The numerics
 reviewer's challenge moved the falsifier from the closure, which the closing
 step restores every follow, to the closing ledger `q_tag_led_close`, and
 replaced the gate's proxy. The owner decided D1 to D4 and the budget on
-2026-10-11 (DECISIONS.md). Stage 2's code PR against `main` is next.
+2026-10-11 (DECISIONS.md). Stage 2's code ran its test group once: parity
+bit for bit, rain parts to rounding, and two numbers the design had not
+foreseen, both explained (design section 13). The owner corrected H10 for
+the non-precipitating parts, ordered the zero-share fix into the PR, deferred
+the van Leer per-part drift to its own item and raised the budget to 1.5M.
+The code PR against `main` opens after the fix and one more group run.
 
 ## The energy offset `c`, decided (2026-10-09)
 

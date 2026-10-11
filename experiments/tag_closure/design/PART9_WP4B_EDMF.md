@@ -32,15 +32,25 @@ exchange or the Jacobian lands in `q_tag_led_close` and `q_tag_fix_<name>`.
 What the closing step moves is the evidence, as criterion 4 reads what the
 repair moves.
 
-Hypothesis H10: on the D4-W column over a day and on the TRMM LBA EDMF column
-over 6 h, in Float64, the closing ledger `q_tag_led_close` integrated over the
-column and the run stays within 1e-8 of the run's accumulated surface rain
-and snow mass, the parts close within 1e-8 relative of each compartment at
-every output, `Σ pr_tag = pr` within 1e-8 relative, and the parent's fields
-are those of the untagged twin bit for bit. A FAIL in section 7's checks
-falsifies it. A job that does not finish leaves it open. Stage 1 closed to
-rounding on the column without EDMF under `increment`, so a closing ledger
-above rounding under EDMF names a missing or wrong operator, not a tolerance.
+Hypothesis H10, as corrected after the stage 2 test (section 13): on the
+D4-W column over a day and on the TRMM LBA EDMF column over 6 h, in Float64,
+the closing ledger `q_tag_led_close` integrated over the column and the run
+stays within 1e-8 of the run's accumulated surface rain and snow mass, the
+rain and snow parts close within 1e-8 relative of their compartment at every
+output, `Σ pr_tag = pr` within 1e-8 relative, the non-precipitating parts'
+column residual equals the increment follower's `q_tag_inc_left` within 5%
+of its gross residual (criterion 4's rule, the increment group's tolerance),
+and the parent's fields are those of the untagged twin bit for bit. A FAIL in
+section 7's checks falsifies it. A job that does not finish leaves it open.
+Stage 1 closed to rounding on the column without EDMF under `increment`, so
+a closing ledger above rounding under EDMF names a missing or wrong operator,
+not a tolerance.
+
+The first draft held the non-precipitating parts to 1e-8 as well. That was
+wrong: under `increment` the `N` parts follow the parent's implicit mismatch
+as the tags do without the key, and the follower's lag lands in
+`q_tag_inc_left` and `q_tag_res` (W55 at 6.5e-6 over a day on D4-W). The
+stage 2 test measured the `N` residual at 1.8% off the ledger (section 13).
 
 ## 2. What the code does today, and what breaks under EDMF
 
@@ -335,14 +345,14 @@ Both cases write `q_tag_*`, `q_rtag_*`, `q_stag_*`, the audit records,
 
 Checks and pass rules, Float64:
 
-| check    | rule                                                                                                                                                            |
-|:-------- |:--------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| closing  | `q_tag_led_close` integrated over the column at the end within 1e-8 of the run's accumulated surface rain and snow mass. `led_rescale` and `led_empty` reported |
-| closure  | `ΣRᵢ − ρq_rai`, `ΣSᵢ − ρq_sno` and `Σ(Nᵢ+Rᵢ+Sᵢ) − ρq_tot` within 1e-8 relative of the compartment at every output, a sanity check                               |
-| `pr_tag` | `Σ pr_tag − pr` within 1e-8 relative of `pr` at every output where `pr` is not zero                                                                             |
-| parity   | the parent's fields of `on` bit for bit those of `off` at every output, both cases                                                                              |
-| audit    | the microphysics audit and `q_tag_aud_up_*` reported, not judged                                                                                                |
-| cost     | step time `on` over `off`, reported                                                                                                                             |
+| check    | rule                                                                                                                                                                                                              |
+|:-------- |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| closing  | the signed column integral of `q_tag_led_close` at the end within 1e-8 of the run's accumulated surface rain and snow mass, its gross reported. `led_rescale` and `led_empty` reported                            |
+| closure  | `ΣRᵢ − ρq_rai` and `ΣSᵢ − ρq_sno` within 1e-8 relative of the compartment at every output, a sanity check. `ΣNᵢ − N` over the column equals `−Σ q_tag_inc_left` within 5% of the gross `N` residual (criterion 4) |
+| `pr_tag` | `Σ pr_tag − pr` within 1e-8 relative of `pr` at every output where `pr` is not zero                                                                                                                               |
+| parity   | the parent's fields of `on` bit for bit those of `off` at every output, both cases                                                                                                                                |
+| audit    | the microphysics audit and `q_tag_aud_up_*` reported, not judged                                                                                                                                                  |
+| cost     | step time `on` over `off`, reported                                                                                                                                                                               |
 
 The record goes to `analysis/evidence/PART9_WP4B.md` with the job table, the
 check logs and the verdict on H10, in a follow-up PR on `plan-rev2`.
@@ -452,3 +462,49 @@ inputs (3.1), the unsplit solver refused (3.4), the `R` and `S` audit binding
 columns in the back-substitution (3.4) and the rain magnitudes (7). The
 reviewer held D1 on condition of the audit record, and changed D2 and D3 as
 written here.
+
+## 13. Stage 2 as built, and the corrections of 2026-10-11
+
+The stage 2 code (`claude/part9-wp4b-stage2`, author Opus high, finder
+Sonnet high, numerics confirmation Opus xhigh) ran the first test group once
+on the DYCOMS RF02 EDMF column. Parity held bit for bit. The twin tests
+closed each operator to rounding (SGS flux 7e-23, diffusive flux 3e-21,
+microphysics 3e-23). The exchange summed to zero. The weighted nets matched
+the model's to 8e-23. The parts' Newton increments summed to the species'
+with the cross blocks, with a per-tag drift of 4.4e-9 against 4.3e-7. The
+rain parts closed to 1.6e-16. Two numbers did not meet the first draft:
+
+ 1. **The `N` parts closed to 8.6e-8** after the hour. The numerics
+    confirmation showed that this is the increment follower's left part,
+    `Σ q_tag_inc_left`, within 1.8% of the gross `N` residual under
+    first-order upwinding, where the increment group's rule allows 5%. H10 is
+    corrected above. Under the default van Leer upwinding a second,
+    column-neutral piece adds to it: each rain and snow part's explicit
+    advection is limited on its own (`water_tag_precip_advection!` hands it
+    back to `N`), which moves about 1.2e-7 kg m⁻² per hour between levels on
+    the test column. The closing step books it with both signs and the `N`
+    parts keep it. The owner deferred its fix, the parts taking shares of the
+    species' explicit face flux, to a part 9 item of its own, since it
+    changes stage 1 under van Leer too (2026-10-11).
+ 2. **The closing ledger reached 3.9e-8 of the rain scale** under first-order
+    upwinding, from one event at the rain top at step 18: a cell held rain
+    while the partition held none of it, so every part's share was zero and
+    the parts missed that cell's SGS donor flux and the cross blocks' part of
+    the Newton increment. The implicit sedimentation carried the difference
+    down the column with the ratio `c/(1 + c)` per level. Steps 1 to 17 and
+    20 onward stayed below 7e-19 kg m⁻². The owner decided (2026-10-11) to
+    fix it in this PR: where the parent holds a positive compartment and the
+    partition holds none of it, the donor share and the cross blocks take
+    the tag's share of the non-precipitating water, as the closing step does
+    for new rain. Section 3.2's share rule and section 3.4's cross blocks
+    read with this rule.
+
+Also decided on 2026-10-11: the rain and snow plumes take the updraft's
+cross flows as further sources, the rain plume `ρaʲ Fʲ_SR Δz` with the snow
+plume's shares and the snow plume `ρaʲ Fʲ_RS Δz` with the rain plume's,
+both marched together in one downward pass with the other plume's shares
+from the level above. The microphysics inputs under EDMF allocate 560 bytes
+per cell, which blocks GPU and sphere runs and not the column jobs. One
+bounded attempt at the cause, otherwise the allocation test stays broken and
+BACKLOG names it. The budget rose to 1.5M. The stage 2 record
+(`analysis/evidence/PART9_WP4B.md`) carries the measured numbers.

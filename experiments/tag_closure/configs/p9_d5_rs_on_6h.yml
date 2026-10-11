@@ -1,0 +1,74 @@
+# Part 9, WP4b stage 2 (design/PART9_WP4B_EDMF.md, section 7): D5 (TRMM LBA EDMF 1M) 6 h, three tags with the rain and snow parts under EDMF, increment transport. The snow part's case.
+job_id: "p9_d5_rs_on_6h"
+water_tracers:
+  - name: lower
+    region: {type: tanh_altitude, z_center: 5000.0, width: 200.0, above: false}
+  - name: upper
+    region: {type: tanh_altitude, z_center: 5000.0, width: 200.0}
+  - name: evap
+    source: surface_flux
+water_tag_precipitation: true
+water_tag_transport: "increment"
+water_tag_ledger_per_tag: true
+water_closure_check:
+  period: "30mins"
+  audit: true
+initial_condition: "TRMM_LBA"
+turbconv: "prognostic_edmfx"
+implicit_diffusion: true
+approximate_linear_solve_iters: 2
+edmfx_entr_model: "Generalized"
+edmfx_detr_model: "Generalized"
+edmfx_sgs_mass_flux: true
+edmfx_sgs_diffusive_flux: true
+edmfx_nh_pressure: true
+edmfx_vertical_diffusion: false
+edmfx_filter: true
+prognostic_tke: true
+microphysics_model: "1M"
+rad: "TRMM_LBA"
+config: "column"
+z_max: 16400.0
+z_elem: 82
+z_stretch: false
+perturb_initstate: false
+toml: [toml/prognostic_edmfx_1M.toml]
+ode_algo: "ARS222"
+dt: "120secs"
+t_end: "6hours"
+FLOAT_TYPE: "Float64"
+output_default_diagnostics: false
+diagnostics:
+  - short_name: [rhoa, ta, hus, clw, cli, husra, hussn, wa]
+    period: "30mins"
+  - short_name: [pr, prra, prsn, evspsbl, hfls, hfss]
+    period: "30mins"
+  - short_name: [arup, rhoaup, husup, husraup, hussnup]
+    period: "30mins"
+  - short_name: [q_tag_res, q_ntag_res, q_rtag_res, q_stag_res]
+    period: "30mins"
+  - short_name: [q_tag_lower, q_tag_upper, q_tag_evap]
+    period: "30mins"
+  - short_name: [q_ntag_lower, q_ntag_upper, q_ntag_evap]
+    period: "30mins"
+  - short_name: [q_rtag_lower, q_rtag_upper, q_rtag_evap]
+    period: "30mins"
+  - short_name: [q_stag_lower, q_stag_upper, q_stag_evap]
+    period: "30mins"
+  - short_name: [q_rtag_aud_lower, q_rtag_aud_upper, q_rtag_aud_evap]
+    period: "30mins"
+  - short_name: [q_stag_aud_lower, q_stag_aud_upper, q_stag_aud_evap]
+    period: "30mins"
+  - short_name: [q_tag_aud_up_lower, q_tag_aud_up_upper, q_tag_aud_up_evap]
+    period: "30mins"
+    reduction_time: average
+  - short_name: [pr_tag_lower, pr_tag_upper, pr_tag_evap]
+    period: "30mins"
+  - short_name: [q_tag_fix_lower, q_tag_fix_upper, q_tag_fix_evap]
+    period: "30mins"
+  - short_name: [q_tag_led_close, q_tag_led_rescale, q_tag_led_empty]
+    period: "30mins"
+  - short_name: [q_tag_inc_left, q_tag_inc_moved]
+    period: "30mins"
+  - short_name: [q_tag_led_inc_lower, q_tag_led_inc_upper, q_tag_led_inc_evap]
+    period: "30mins"

@@ -208,6 +208,10 @@ this fork.
   - WP4b EDMF precipitation stages 2 and 3, required for criterion 7's claim.
     Design: [design/PART9_WP4B_EDMF.md](design/PART9_WP4B_EDMF.md)
     (2026-10-11). Stage 3 waits behind its section 9 build measurement, challenged 2026-10-11.
+  - The van Leer per-part drift of the rain and snow parts (design section 13,
+    item 1): the parts take shares of the species' explicit face flux. Found
+    by stage 2's test, deferred by the owner on 2026-10-11 because it changes
+    stage 1 under van Leer.
   - WP4c leak corrections for runs without rain or snow tags, gated by PX7 and
     PX2.
   - WP5b-C cross blocks for copies, WP5b-P precipitation-weighted errors.
