@@ -97,7 +97,12 @@ and 6 h in `Y/c` and `Y/f`. Nothing else differs. The second wave's restart
 of the model on 2026-09-18, BACKLOG E58 holds it as upstream's. The owner
 amended the design on 2026-10-11 (section 13): the off run's restart is the
 control, the restart check runs on the column's restart pair, the column
-jobs were resubmitted with checkpoints before they started.
+jobs were resubmitted with checkpoints. The first column on job (14191239)
+had started at 09:03 and was cancelled at 09:15, so `p9_col1m_on_1h/output_0000`
+holds that killed attempt without a receipt, and the run (14191396) is
+`output_0001`, where `output_active` points. The check script reads the
+directory `output_active` names, and the column restart config names
+`output_0001`.
 
 ## 2. Model identity
 

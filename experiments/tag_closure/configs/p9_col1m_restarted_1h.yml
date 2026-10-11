@@ -9,7 +9,9 @@
 # (FINDINGS E54). Submit it only after `p9_col1m_on_1h` has finished.
 
 job_id: "p9_col1m_restarted_1h"
-restart_file: "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/p9_col1m_on_1h/output_0000/day0.1800.hdf5"
+# output_0001: the first on job (14191239) was cancelled after it had started
+# and left a killed attempt in output_0000. The run is job 14191396.
+restart_file: "/dss/dsstbyfs02/scratch/0D/di38kez/tag_closure/output/p9_col1m_on_1h/output_0001/day0.1800.hdf5"
 water_tag_applications: true
 
 # Checkpoints every 30 min and a reproducible restart in both column runs, as

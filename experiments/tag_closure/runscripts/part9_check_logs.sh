@@ -29,8 +29,11 @@ E="${REC}/experiments/tag_closure/analysis/evidence"
 [[ -e "${OUT}" ]] && { echo "ERROR: ${OUT} exists." >&2; exit 4; }
 mkdir -p "${OUT}"
 runs="${SCRATCH:?}/tag_closure/output"
-dir() { echo "${runs}/p9_trmm0m_$1_6h/output_0000"; }
-cdir() { echo "${runs}/p9_col1m_$1_1h/output_0000"; }
+# The run's output directory is the one output_active points at. The first
+# column on job (14191239) was cancelled after it had started, so that run's
+# output_0000 holds a killed attempt and output_0001 the run.
+dir() { readlink -f "${runs}/p9_trmm0m_$1_6h/output_active"; }
+cdir() { readlink -f "${runs}/p9_col1m_$1_1h/output_active"; }
 # The Slurm job's manifest, `<job>.<job id>.json`. A dry run's
 # `<job>.<timestamp>.json` sorts after it and is never taken.
 manifest() {
