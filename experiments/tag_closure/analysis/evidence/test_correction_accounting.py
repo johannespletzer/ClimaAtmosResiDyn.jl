@@ -27,6 +27,15 @@ from manifest import sha256_file
 from score_acceptance import Scorer, local_identities, main
 
 
+def setUpModule():
+    # score_acceptance.main registers the committed water tag producer in the
+    # global registry. The registry is restored after this module, so no other
+    # test module sees the entry.
+    registry = mock.patch.dict(correction_accounting.VERIFIED_PRODUCERS)
+    registry.start()
+    unittest.addModuleCleanup(registry.stop)
+
+
 class CorrectionTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()

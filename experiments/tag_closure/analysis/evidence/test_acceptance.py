@@ -21,7 +21,17 @@ from make_acceptance_fixture import write_fixture
 from manifest import attach_acceptance, sha256_file
 import score_acceptance as sa
 from closure_verdict import ENERGY_GROSS, WATER_GROSS
+import correction_accounting
 from score_acceptance import Scorer, float32_limit, main, origin_limits
+
+
+def setUpModule():
+    # score_acceptance.main registers the committed water tag producer in the
+    # global registry. The registry is restored after this module, so no other
+    # test module sees the entry.
+    registry = mock.patch.dict(correction_accounting.VERIFIED_PRODUCERS)
+    registry.start()
+    unittest.addModuleCleanup(registry.stop)
 
 
 class AcceptanceTests(unittest.TestCase):

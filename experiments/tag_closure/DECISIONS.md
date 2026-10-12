@@ -312,6 +312,33 @@ The list as it stood before this classification, kept as written:
 >     and the copies under first-order upwinding (W25). **Waiting.**
 >     [FINDINGS W25](FINDINGS.md)
 
+## 2026-10-12, from issue #173
+
+The owner decided these on 2026-10-12, from the external review of steps 6 to
+8 (issue #173).
+
+  - **PX12 is briefed after WP4b stage 2 closes, with its own budget.** **In
+    force.** Part 8's provenance baseline waits for it. The re-score of the
+    same part 8 bundles first regenerates `default_tables.json` and
+    `copies_tables.json` with `part8_pilot.py tables`, because `rank` refuses
+    tables written before #173.
+    [PART8.md](analysis/evidence/PART8.md#what-waits-for-px12)
+  - **The walk fix's post-fix cost measurement quotes the slowest node of its
+    cost set.** **In force.** The rule is fixed now, before the run.
+    [DELIVERY_PLAN.md](DELIVERY_PLAN.md)
+  - **A CI job for the Python evidence suite comes in a separate follow-up
+    PR.** **In force.**
+  - **The W58 comparison checks the roster both ways.** **Done** (#174). A
+    computed row of R4, R5 or R8 that no recorded row claims is a difference,
+    except the six per-tag `led_fix scorer fraction` rows that W58's record
+    predates, named in `part8_pilot.py` and each expected once (#173, point
+    3). The EV and PX5 rows are the pilot's own and outside the comparison.
+  - **The pilot's small-burden exemption reads the runtime's applicable
+    flag.** **Done** (#174). `led_fix_<tag>_applicable` is 0 where the burden
+    is below 2e-4 of the parent scale at the end, the scorer's rule, whatever
+    the activity. The fraction rule stays as a consistency check where the
+    activity is positive, and decides alone for an audit without the flag.
+
 ## 2026-10-10, part 9 PR B
 
 The owner decided these on 2026-10-10, on the four open inputs of the part 9
