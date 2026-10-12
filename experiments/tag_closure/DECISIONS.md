@@ -363,6 +363,14 @@ after the numerics reviewer's challenge (its section 12).
     challenge, the author, the finder and the numerics confirmation, each
     over its cap.
 
+*2026-10-12, after the patched commit's group runs* (design section 13):
+
+  - **A bounded numerics pass finds the step-18 mechanism by
+    instrumentation.** **In force.** The zero-share attribution was refuted:
+    the fix changed no digit of either ledger. One Opus xhigh pass, cap 200k,
+    the budget raised to 1.8M. Opening the PR with the ledger assertions
+    broken, and stopping for the day, were declined.
+
 ## 2026-10-10, part 9 PR B
 
 The owner decided these on 2026-10-10, on the four open inputs of the part 9

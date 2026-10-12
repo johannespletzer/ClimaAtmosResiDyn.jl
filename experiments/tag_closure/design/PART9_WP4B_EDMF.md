@@ -530,3 +530,17 @@ per cell, which blocks GPU and sphere runs and not the column jobs. One
 bounded attempt at the cause, otherwise the allocation test stays broken and
 BACKLOG names it. The budget rose to 1.5M. The stage 2 record
 (`analysis/evidence/PART9_WP4B.md`) carries the measured numbers.
+
+**The fix did not fire (2026-10-12).** The patched commit (`ca2dfb407`)
+ran both groups. The first-order ledger gross after the hour is
+1.3899200721007186e-9, and the van Leer signed ledger is
+6.3080365424788125e-9, each bitwise identical to the runs before the fix.
+So the step-18 event is not the zero-share rule, and that rule, kept in the
+code with its unit tests, changed nothing on this column. The attribution
+was a reading, not a measurement, and the owner's fix was built on it. The
+owner then ordered a bounded numerics pass that instruments the parts'
+mismatch after each operator at step 18 under first order, with the budget
+raised to 1.8M. The PR opens once the mechanism is named and either fixed or
+recorded as the falsifier's reading. The same run found, under `tracer`
+transport, a non-precipitating part at −2.07e-5 kg m⁻³ after the hour, which
+the pass reads if its budget allows.

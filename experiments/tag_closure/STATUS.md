@@ -16,7 +16,9 @@ bit for bit, rain parts to rounding, and two numbers the design had not
 foreseen, both explained (design section 13). The owner corrected H10 for
 the non-precipitating parts, ordered the zero-share fix into the PR, deferred
 the van Leer per-part drift to its own item and raised the budget to 1.5M.
-The code PR against `main` opens after the fix and one more group run.
+The fix changed no digit of either ledger (2026-10-12), so the step-18
+event has another mechanism. A bounded numerics pass instruments it. The
+code PR against `main` opens once it is named.
 
 ## The energy offset `c`, decided (2026-10-09)
 
