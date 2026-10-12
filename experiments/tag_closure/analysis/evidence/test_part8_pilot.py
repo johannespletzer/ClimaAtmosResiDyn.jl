@@ -148,10 +148,13 @@ class W58RecordTests(unittest.TestCase):
 
     def test_a_duplicated_row_is_a_difference(self):
         lines = self.recorded_lines()
-        i = next(k for k, line in enumerate(lines) if line.startswith("R8,trmm,copies,\"led_fix inventory fraction, pbl"))
+        head = "R8,trmm,copies,\"led_fix inventory fraction, pbl"
+        i = next(k for k, line in enumerate(lines) if line.startswith(head))
         differences = self.compare_changed(lines[:i + 1] + [lines[i]] + lines[i + 1:])
         self.assertEqual(len(differences), 1)
         self.assertEqual(differences[0]["metric"], "led_fix inventory fraction, pbl")
+        # The entry still lists the one computed row, which the first copy consumed.
+        self.assertEqual([(c[1], c[2]) for c in differences[0]["computed"]], [("pass", "whole run")])
 
     def test_the_repair_row_that_legitimately_appears_twice_reproduces(self):
         # The scored row and its reported twin share rule, mode, metric and window.
@@ -176,6 +179,20 @@ class W58RecordTests(unittest.TestCase):
             self.assertEqual((code, json.loads(out)["differences"]), (0, []))
             with self.assertRaisesRegex(DataError, "missing table"):
                 compare_w58(tmp, SCORES)
+
+    def test_tables_command_reads_the_runs_output_tree(self):
+        # `tables` takes the run or its tables directory, like `w58`, and writes a new file.
+        with tempfile.TemporaryDirectory() as tmp:
+            run = Path(tmp) / "p8_trmm0m_default_6h"
+            (run / "output_0000").mkdir(parents=True)
+            for table in ("water_tag_closure.csv", "water_tag_audit.csv"):
+                (run / "output_0000" / table).write_bytes((DATA / "g3b_trmm0m_default_6h" / table).read_bytes())
+            out = Path(tmp) / "tables.json"
+            code, _, _ = run_main(["tables", run, "default", "--json", out])
+            self.assertEqual(code, 0)
+            self.assertEqual(json.loads(out.read_text()), run_tables(DATA / "g3b_trmm0m_default_6h", "default"))
+            code, _, err = run_main(["tables", run, "default", "--json", out])
+            self.assertEqual((code, "File exists" in err), (2, True))
 
     def test_command_line(self):
         code, out, _ = run_main(["w58", DATA, SCORES])

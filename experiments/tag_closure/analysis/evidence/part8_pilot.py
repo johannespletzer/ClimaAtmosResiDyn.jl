@@ -238,7 +238,9 @@ def compare_w58(data_dir, recorded_csv, prefix="g3b"):
     window, value and verdict. Each computed row answers at most one
     recorded row, so a duplicated record row is a difference. For an
     unmatched row, `computed` lists every row with the same rule, mode and
-    metric in any window (#173).
+    metric in any window, consumed or not (#173). The check is one-way.
+    Computed rows absent from the record, the six per-tag led_fix scorer
+    rows of part 8, are not reported.
     """
     with Path(recorded_csv).open() as stream:
         recorded = [r for r in csv.DictReader(stream) if r["case"] == "trmm" and r["rule"] in ("R4", "R5", "R8")]
@@ -247,6 +249,7 @@ def compare_w58(data_dir, recorded_csv, prefix="g3b"):
     for mode in ("default", "copies"):
         for r in run_tables(tables_dir(Path(data_dir) / f"{prefix}_trmm0m_{mode}_6h"), mode):
             computed.setdefault((r["rule"], mode, r["metric"], r["window"]), []).append(r)
+    listing = {k: list(v) for k, v in computed.items()}  # every computed row, kept for the differences
     checked, differences = [], []
     for rec in recorded:
         key = (rec["rule"], rec["mode"], rec["metric"], rec["window"])
@@ -257,7 +260,7 @@ def compare_w58(data_dir, recorded_csv, prefix="g3b"):
                  "recorded_value": rec["value"], "recorded_verdict": rec["verdict"]}
         if match is None:
             entry["computed"] = [(c["value"], c["legacy_verdict"], c["window"]) for (rule, mode, metric, _), cs
-                                 in computed.items() if (rule, mode, metric) == key[:3] for c in cs]
+                                 in listing.items() if (rule, mode, metric) == key[:3] for c in cs]
             differences.append(entry)
         else:
             candidates.remove(match)  # one computed row answers one recorded row
@@ -366,7 +369,8 @@ def rank_terms(mode, score, tables, newton=None, newton_source=""):
             # A tables JSON written before #173 has no exemption flag. A default
             # would rank an exempt term again, so the old file is refused.
             require("exempt" in r, f"the tables JSON has no 'exempt' on '{r['metric']}': it predates #173. "
-                    "Regenerate it with `part8_pilot.py tables RUN_DIR MODE --json OUT` and rank again")
+                    "Regenerate it with `part8_pilot.py tables RUN MODE --json NEW` (the run or its tables "
+                    "directory, a new file) and rank again")
             t = term(mode, f"led_fix:{tag}", r["metric"], r["value"], "1", r["limit_id"], r["contract"],
                      f"tables: water_tag_audit.csv led_fix_{tag}_retained", r["note"])
             if r["exempt"]:
@@ -448,7 +452,7 @@ def main(argv=None):
         if args.command == "od2":
             dump(od2_reading(args.untagged_dir, args.period), args.json)
         elif args.command == "tables":
-            dump(run_tables(args.run_dir, args.mode, args.end_seconds), args.json)
+            dump(run_tables(tables_dir(args.run_dir), args.mode, args.end_seconds), args.json)
         else:
             score = json.loads(Path(args.score).read_text())
             tables = json.loads(Path(args.tables).read_text())

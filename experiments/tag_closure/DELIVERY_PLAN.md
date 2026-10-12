@@ -82,8 +82,10 @@ Rules that apply at every stage:
 | 12c  | `main`, follow-up on `plan-rev2` | Part 10 delivered. The walk fix is part 9's item, not 12c's.                                              | 10.                                                                                                 | 1.0M per item |
 | 12d  | `plan-rev2`                      | The 1-2-day pilot after part 8's contract exists. The 90-day run after 12a, 12b and 12c.                  | 8 for the pilot. 12a to 12c and the run approval for the 90 days.                                   | 0.8M + 0.3M   |
 
-Reading the table: 11a starts now. Part 8 starts after part 7. Everything else
-waits for a baseline or a qualification. The walk fix has one place: it is an
+Reading the table: 11a starts now. Part 8 starts after part 7. Part 8 ran
+without PX12. Its first-hour rows stay unranked until PX12 (owner,
+2026-10-09), and PX12 is briefed after WP4b stage 2 (owner, 2026-10-12).
+Everything else waits for a baseline or a qualification. The walk fix has one place: it is an
 item of part 9's queue, with its post-fix cost measurement, because part 10
 needs that measurement for criterion 10 and 11b starts after it. Part 12c holds
 the remaining optimizations after part 10. The chain 10 to 12a to 12d and 10 to
@@ -177,7 +179,9 @@ the part takes, and the skeleton of `analysis/evidence/PART8.md`.
 
 **Runs.** The W58 trio on the current `main` (three jobs). The WP9 cost pairs
 at 8 + 8 on D4-W, both modes, untagged twin (six jobs). All inside the standing
-G3 approval, each submitted after the owner's approval. PX12 belongs to part 7.
+G3 approval, each submitted after the owner's approval. PX12 is not a part 8
+run. It is briefed after WP4b stage 2 closes, with its own budget (owner,
+2026-10-12). Part 9's queue lists it and part 8's re-score.
 
 **Out of scope.** Fixes, thresholds, level raises, the sphere pilot, energy.
 
@@ -206,6 +210,15 @@ this fork.
 **Queue, seeded from the inventory, in part 8's order once known.**
 
   - WP4b EDMF precipitation stages 2 and 3, required for criterion 7's claim.
+  - PX12 on TRMM 0M, briefed after WP4b stage 2 closes, with its own brief
+    and budget, not this template's (owner, 2026-10-12,
+    [DECISIONS.md](DECISIONS.md)). Then part 8's re-score of the same bundles,
+    with no rerun, as a record follow-up on `plan-rev2`. Its first step
+    regenerates `default_tables.json` and `copies_tables.json` with
+    `part8_pilot.py tables RUN MODE --json NEW.json`, which reads the run's
+    tables directory and refuses an existing `--json` path. Then `rank` runs
+    with the published tables' prior, `--newton 0.0041 --newton-source "FINDINGS W57, D4-W, prior"`.
+    [PART8.md](analysis/evidence/PART8.md#what-waits-for-px12)
   - WP4c leak corrections for runs without rain or snow tags, gated by PX7 and
     PX2.
   - WP5b-C cross blocks for copies, WP5b-P precipitation-weighted errors.

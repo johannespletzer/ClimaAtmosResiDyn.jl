@@ -81,11 +81,13 @@ W58, the contract rows, the ranked table of each mode and the cost. Its
 verdict: H1 and H2 were not falsified. No recorded pass of W58 failed, and
 each mode's first term is the prior's (the default's closure, the copies'
 repair). H3's default half was not falsified, with an 8 + 8 step of 8.998x to
-9.379x against OD3's 2x. As pre-registered, its copies half was split. Two of
-three builds fall within 4 h. Under the across-node rule the owner chose after
-the results (2026-10-09, after PRs #166 and #167), the slowest build of 4.48 h
-is quoted and the half is not falsified. The builds of 3.02 h and 3.09 h are
-the favourable case.
+9.379x against OD3's 2x. Its copies half says the copies do not build within
+4 h. As written, two of the three builds fall within 4 h (3.02 h and 3.09 h)
+and one does not (4.48 h). The design as pre-registered fixed no rule for a
+split across nodes. After the results, the owner chose an across-node rule
+(2026-10-09, after PRs #166 and #167). Under it the slowest build of 4.48 h is
+quoted and the half is not falsified. The builds of 3.02 h and 3.09 h are the
+favourable case.
 No stop rule of the design's section 10 applied.
 
 **Part 8's pilot runs and its accounting and cost baseline are complete. Its

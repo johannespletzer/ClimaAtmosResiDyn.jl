@@ -318,7 +318,11 @@ The owner decided these on 2026-10-12, from the external review of steps 6 to
 8 (issue #173).
 
   - **PX12 is briefed after WP4b stage 2 closes, with its own budget.** **In
-    force.** Part 8's provenance baseline waits for it.
+    force.** Part 8's provenance baseline waits for it. The re-score of the
+    same part 8 bundles first regenerates `default_tables.json` and
+    `copies_tables.json` with `part8_pilot.py tables`, because `rank` refuses
+    tables written before #173.
+    [PART8.md](analysis/evidence/PART8.md#what-waits-for-px12)
   - **The walk fix's post-fix cost measurement quotes the slowest node of its
     cost set.** **In force.** The rule is fixed now, before the run.
     [DELIVERY_PLAN.md](DELIVERY_PLAN.md)

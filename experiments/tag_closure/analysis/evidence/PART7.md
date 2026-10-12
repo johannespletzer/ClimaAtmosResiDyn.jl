@@ -246,8 +246,10 @@ Three limits stay open (#173).
   - Source injection is absent in the offline references, and its floors are
     stated as zero. A labelled source pulse and a precipitating case remain
     runtime obligations.
-  - The process criterion uses `weighted_share_error`. `maximum_share_error`
-    is reported only, so an error on a small export pathway can be diluted.
+  - The scorer's process criterion is `weighted_error`, the label error
+    weighted by the applied amount, against PROCESS_WEIGHTED_MAX (0.05). The
+    reference's `maximum_share_error` is written but read by nothing, so an
+    error on a small export pathway can be diluted.
     Whether pathway criteria are needed is an open owner question.
 
 ## Review record

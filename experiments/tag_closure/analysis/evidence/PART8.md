@@ -399,10 +399,11 @@ OD3's 2x. It holds on all three nodes (8.998x to 9.379x), as E88's 9.098x did.
 So it is not falsified. The copies half says the copies do not build within
 4 h. It holds on p8_copies_b (4.48 h). It does not hold on p8_copies_a and
 p8_copies_c (3.02 h and 3.09 h). So the reading is split across the nodes.
-The design fixes no rule for a split build. Two readings were open. Read as
-written, a build within 4 h falsifies the copies half, and two did. Read with
-section 8's "less favourable quoted", which the design states for the blocks
-of one job, the slowest build of 4.48 h is quoted and the half holds. The
+The design as pre-registered fixed no rule for a split build. Two readings
+were open. Read literally, any build within 4 h falsifies the copies half, and
+two did. Read with section 8's "less favourable quoted", which the design then
+stated only for the blocks of one job, the slowest build of 4.48 h is quoted
+and the half holds. The
 owner decided on 2026-10-09, after the results and PRs #166 and #167, that
 the rule extends to the nodes of a cost set. The copies' build is quoted as
 4.48 h (p8_copies_b). The builds of 3.02 h and 3.09 h (p8_copies_a and
@@ -437,13 +438,14 @@ threshold, tolerance or default.
     eligible comparator and the re-score (#173).
   - **H3, the cost: not falsified.** The default half holds on all three
     nodes (8.998x to 9.379x against OD3's 2x, E88 9.098x). It is not
-    falsified. As pre-registered, the copies half was split. Two builds
-    fall within 4 h (3.02 h and 3.09 h), and one does not (4.48 h). After
-    the results, the owner decided on 2026-10-09 that section 8's rule "less
-    favourable quoted" extends from the blocks of one job to the nodes of a
-    cost set. Under that rule the copies' build is quoted as 4.48 h, the
-    other two are the favourable case, and the copies half is not
-    falsified (#173). Neither half is a criterion 10 verdict.
+    falsified. The copies half says the copies do not build within 4 h. As
+    written, two builds fall within 4 h (3.02 h and 3.09 h) and one does not
+    (4.48 h). The design as pre-registered fixed no rule for this split.
+    After the results, the owner decided on 2026-10-09 that section 8's rule
+    "less favourable quoted" extends from the blocks of one job to the nodes
+    of a cost set. Under that rule the copies' build is quoted as 4.48 h, the
+    other two are the favourable case, and the copies half is not falsified
+    (#173). Neither half is a criterion 10 verdict.
 
 The stop rules of section 10, one by one:
 
@@ -493,9 +495,12 @@ PX12.
 ## What waits for PX12
 
 *Filled when PX12's eligibility file is attached.* The same bundles are then
-re-scored, with no rerun. The tables JSON is regenerated first with
-`part8_pilot.py tables`, because `rank` refuses the published one, which
-predates the exemption flag (#173). The design's section 9 lists what waits:
+re-scored, with no rerun. The tables JSON is regenerated first, because
+`rank` refuses the published one, which predates the exemption flag (#173).
+For each mode, `part8_pilot.py tables RUN MODE --json NEW.json` reads the
+run's tables directory (`RUN/output_0000` or `RUN` itself) and writes a new
+file, since `--json` refuses an existing path. `rank` then runs with the
+published tables' prior, `--newton 0.0041` and `--newton-source "FINDINGS W57, D4-W, prior"`. The design's section 9 lists what waits:
 
   - the first-hour origin verdicts, `WATER.ORIGINS.<tag>.3600`, and their rank,
   - the copies' eligibility: own residual, repair, refinement, OD12 floors,
