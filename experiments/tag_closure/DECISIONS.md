@@ -371,6 +371,20 @@ after the numerics reviewer's challenge (its section 12).
     the budget raised to 1.8M. Opening the PR with the ledger assertions
     broken, and stopping for the day, were declined.
 
+*2026-10-12, after the mechanism pass* (design section 13):
+
+  - **The flux share takes the non-precipitating composition wherever the
+    partition holds none of the compartment, whatever the parent's sign.**
+    **In force.** The measured event is the parts' missing cross block to
+    the updraft's rain where a Newton stage holds negative rain at the rain
+    top. The rule of 2026-10-11, with its positive-parent condition, could
+    not fire there. Keeping that rule, and applying the change to the cross
+    blocks only, were declined.
+  - **The second mismatch at the same cell is measured before the PR
+    opens.** **In force.** One more instrumented pass on the exchange at a
+    non-positive parent, cap 200k, the budget raised to 2.1M. Recording it
+    as a queue item was declined.
+
 ## 2026-10-10, part 9 PR B
 
 The owner decided these on 2026-10-10, on the four open inputs of the part 9

@@ -253,7 +253,11 @@ share and the cross blocks (`water_tag_part_flux_share`), as the closing
 step gives new rain its composition. The partition's shares then sum to one
 wherever the parent holds the compartment and the partition holds
 non-precipitating water. Where the compartment is not positive the share
-stays zero, and a source tag keeps its own share.
+stays zero, and a source tag keeps its own share. *Corrected 2026-10-12
+(section 13):* the share takes the non-precipitating composition wherever
+the partition holds none of the compartment, whatever the parent's sign. A
+Newton stage holds negative rain at the rain top, and a zero share there left
+the parts without the species' cross block to the updraft's rain.
 
 With this no follower is needed for `R` and `S`, as stage 1 decided (P2).
 
@@ -544,3 +548,40 @@ raised to 1.8M. The PR opens once the mechanism is named and either fixed or
 recorded as the falsifier's reading. The same run found, under `tracer`
 transport, a non-precipitating part at −2.07e-5 kg m⁻³ after the hour, which
 the pass reads if its budget allows.
+
+**The mechanism, measured (2026-10-12).** The numerics pass instrumented
+the parts' mismatch at the snapshots, around the closing step, at the
+implicit stage's start, at every implicit tendency call and after each Newton
+solve (`mech_4b/hooks_ca.jl`, logs `run2.log` and `run3.log` in the
+session's scratch, to be archived with the record). At step 18 the second
+ARS222 stage drives the grid rain at the rain top (level 16) to −1.35e-10
+with the parts following exactly. The third stage starts from that negative
+value (−3.10e-10, parts equal to it). The flux share rule then returns zero,
+because the parent is not positive, so the parts' rows lose the species'
+cross block to `sgsʲs.1.q_rai` (the updraft holds `ρaʲ` 5.8e-3 and `q_raiʲ`
+3.4e-8 there) while the species' row keeps it. The residual is balanced to
+1e-16, the increments are not: `Δparts − Δrai` is 1.39e-11 at level 16 and
+decays downward by the sedimentation's `c/(1 + c)`, 1.53e-9 over the column.
+The end-of-step clip then empties the cell and the closing step books
+−1.53e-9. Step 17, whose third stage starts non-negative, stays balanced.
+Stage 1 has no cross blocks and is not involved. The rule as approved on
+2026-10-11 could not fire, because its condition asked for a positive parent.
+
+The corrected rule (the non-precipitating composition wherever the partition
+holds none, whatever the parent's sign) was run through the same hooks: the
+step-18 booking falls to +2.0e-13 and the hour's ledger to +1.2e-13. The
+owner applied it on 2026-10-12. The unit test pins a negative parent, and
+test item 6 repeats the solve with negative rain and empty rain parts at the
+rain top.
+
+**A second piece, to be measured.** At step 19's third stage the same cell
+starts at −1.64e-10 and the tendency mismatch there is 2.6e-12 kg m⁻³ s⁻¹,
+the increment mismatch 4.5e-9 over the column, unchanged by the fix. The
+end-of-step clip routes most of it into the rescale and empty ledgers (by
+reading), and 1.4e-10 reaches the closing ledger. The candidate is the `R`
+exchange, which reads grid shares that are zero at a non-positive parent
+against plume shares that sum to one. The owner ordered one more
+instrumented pass (2026-10-12, budget 2.1M) before the PR opens. The
+falsifier for the runs is extended: beside the closing ledger, the rescale
+and empty ledgers at every output, and the per-stage Newton increment
+mismatch where a run records it.

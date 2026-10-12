@@ -17,8 +17,10 @@ foreseen, both explained (design section 13). The owner corrected H10 for
 the non-precipitating parts, ordered the zero-share fix into the PR, deferred
 the van Leer per-part drift to its own item and raised the budget to 1.5M.
 The fix changed no digit of either ledger (2026-10-12), so the step-18
-event has another mechanism. A bounded numerics pass instruments it. The
-code PR against `main` opens once it is named.
+event was measured: the parts' missing cross block to the updraft's rain
+where a Newton stage holds negative rain. The share rule is corrected
+(2026-10-12). A second, smaller mismatch at the same cell is being measured.
+The code PR against `main` opens after that.
 
 ## The energy offset `c`, decided (2026-10-09)
 
