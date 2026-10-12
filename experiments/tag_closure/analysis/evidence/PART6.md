@@ -98,8 +98,13 @@ not evidence about ClimaAtmos's nonlinear Newton floor.
 
 An independent quadrature of the smooth profile checks analytic integration
 at orders 8/16/32. Translation refines the grid and the timestep together at
-one fixed CFL number. Grid 16/32/64 pairs with dt 120/60/30 s, so grid times
-dt is 1920 s and C = |u| dt grid / L = 0.0192 on every rung. Newton is
+one fixed nominal CFL number. Grid 16/32/64 pairs with dt 120/60/30 s, so grid
+times dt is 1920 s and C = |u| dt grid / L = 0.0192 on every rung. On the
+uniform smooth grids C is also the local CFL. On the stretched boundary grids
+(grid_power 1.15 in water_transport_design.json) the local CFL is largest in
+the first cell. There it is 0.0291, 0.0323 and 0.0358 for grids 16, 32 and 64.
+A fixed maximum local CFL would need its own pre-registered ladder. The
+published verdicts stand (#173). Newton is
 explicitly inapplicable. Mixing reports every dt and
 actual Newton count (1/2/4). Grid refinement is inapplicable to two fixed
 reservoirs, so the exchange ladder refines the time step alone. No best pair is selected. Raw per-tag errors, native mass defects,

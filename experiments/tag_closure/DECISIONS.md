@@ -312,6 +312,19 @@ The list as it stood before this classification, kept as written:
 >     and the copies under first-order upwinding (W25). **Waiting.**
 >     [FINDINGS W25](FINDINGS.md)
 
+## 2026-10-12, from issue #173
+
+The owner decided these on 2026-10-12, from the external review of steps 6 to
+8 (issue #173).
+
+  - **PX12 is briefed after WP4b stage 2 closes, with its own budget.** **In
+    force.** Part 8's provenance baseline waits for it.
+  - **The walk fix's post-fix cost measurement quotes the slowest node of its
+    cost set.** **In force.** The rule is fixed now, before the run.
+    [DELIVERY_PLAN.md](DELIVERY_PLAN.md)
+  - **A CI job for the Python evidence suite comes in a separate follow-up
+    PR.** **In force.**
+
 ## 2026-10-10, part 9 PR B
 
 The owner decided these on 2026-10-10, on the four open inputs of the part 9

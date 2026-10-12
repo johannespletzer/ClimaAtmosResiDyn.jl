@@ -289,7 +289,10 @@ residual, the copies' first term is the copies' repair. So H2 is not
 falsified, and part 9 takes the prior order: default closure, partition
 repair, `led_fix:pbl`, and copies' repair, closure, copies' own residual. The
 default's ranks 2 to 5 are zeros. Their order is the tie rule's table order,
-not a measured order.
+not a measured order. The ranked terms are closure and accounting readings,
+not origin errors. The default's are 1.89e-12 of WATER_GROSS and then zeros.
+So the ranking does not say which mechanism gives the largest provenance
+error. That waits for PX12's eligible comparator and the re-score (#173).
 The default's first-hour origins wait for PX12 and give part 9 nothing.
 Event counts (27413 and 15317) equal the design's prior. D_p equals the prior
 to its printed digits.
@@ -426,7 +429,11 @@ threshold, tolerance or default.
     prior's first term first in each mode. In the default it is the closure
     residual (1.89e-12 of WATER_GROSS). In the copies it is the copies' repair
     (0.2526 of COMPARATOR_REPAIR_PER_DAY). The first three terms of each mode
-    are the prior's. Part 9 takes the prior order.
+    are the prior's. Part 9 takes the prior order. The ranked terms are
+    closure and accounting readings, not origin errors. The default's are
+    1.89e-12 of WATER_GROSS and then zeros. So the ranking does not say which
+    mechanism gives the largest provenance error. That waits for PX12's
+    eligible comparator and the re-score (#173).
   - **H3, the cost: not falsified.** The default half holds on all three
     nodes (8.998x to 9.379x against OD3's 2x, E88 9.098x). It is not
     falsified. The copies half is not falsified either. Two builds fall
@@ -434,7 +441,9 @@ threshold, tolerance or default.
     decided on 2026-10-09 that section 8's rule "less favourable quoted"
     extends from the blocks of one job to the nodes of a cost set. So the
     copies' build is quoted as 4.48 h, and the other two are the favourable
-    case. Neither half is a criterion 10 verdict.
+    case. Neither half is a criterion 10 verdict. The owner chose the
+    across-node rule after the results. As pre-registered, the copies half
+    was split, since two of three builds fall within 4 h (#173).
 
 The stop rules of section 10, one by one:
 
@@ -477,8 +486,9 @@ The difference the design's section 2 lists is closed. Commit `dd2df01e8`
 (2026-10-09, before the runs) moved the part 8 brief's walk fix measurement
 to part 9's queue, as the delivery plan's section 3 has it.
 
-What waits for PX12 is the next section. Part 8 is done except PX12's
-readings.
+What waits for PX12 is the next section. Part 8's pilot runs and its
+accounting and cost baseline are complete. Its provenance baseline is pending
+PX12.
 
 ## What waits for PX12
 

@@ -219,6 +219,8 @@ this fork.
   - The walk fix, as this queue's item and nowhere else: upstream in ClimaCore
     or ClimaAtmos by the owner's decision, with the post-fix measurement
     pre-registered under WP9's spread rule and the OD3 copies row re-measured.
+    The slowest node of the cost set is quoted (owner, 2026-10-12,
+    [DECISIONS.md](DECISIONS.md)).
     A fork patch only as a second named departure, bit-for-bit tested. Part 10
     scores criterion 10 on that measurement.
   - PP-SUB and the probe PRs only after PX8 and OD13.

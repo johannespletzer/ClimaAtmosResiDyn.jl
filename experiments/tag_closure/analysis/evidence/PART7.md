@@ -234,6 +234,22 @@ The focused tests are in
 [test_water_transfer_reference.py](test_water_transfer_reference.py). The
 whole evidence directory passes on this tree.
 
+## Limits of this evidence
+
+Three limits stay open (#173).
+
+  - The references assume a well-mixed donor within each compartment. That
+    does not show that an EDMF environment, updraft and grid mean share one
+    composition. A discriminating fixture is a candidate for step 7
+    eligibility. It needs time-varying rates and a donor whose composition
+    changes within a step.
+  - Source injection is absent in the offline references, and its floors are
+    stated as zero. A labelled source pulse and a precipitating case remain
+    runtime obligations.
+  - The process criterion uses `weighted_share_error`. `maximum_share_error`
+    is reported only, so an error on a small export pathway can be diluted.
+    Whether pathway criteria are needed is an open owner question.
+
 ## Review record
 
 The PR's text said that an independent review had resolved its findings.
