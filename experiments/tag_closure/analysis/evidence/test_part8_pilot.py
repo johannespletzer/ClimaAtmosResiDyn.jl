@@ -117,6 +117,51 @@ class W58RecordTests(unittest.TestCase):
             changed.write_text("".join(lines))
             self.assertEqual(len(compare_w58(DATA, changed)["differences"]), 1)
 
+    def recorded_lines(self):
+        return SCORES.read_text().splitlines(keepends=True)
+
+    def compare_changed(self, lines):
+        with tempfile.TemporaryDirectory() as tmp:
+            changed = Path(tmp) / "scores.csv"
+            changed.write_text("".join(lines))
+            return compare_w58(DATA, changed)["differences"]
+
+    def test_a_changed_window_is_a_difference(self):
+        # Value and verdict stay, only the recorded window changes.
+        lines = self.recorded_lines()
+        i = next(k for k, line in enumerate(lines) if line.startswith("R4,trmm,copies,\"gross"))
+        self.assertIn(",6 h,", lines[i])
+        lines[i] = lines[i].replace(",6 h,", ",whole run,")
+        differences = self.compare_changed(lines)
+        self.assertEqual(len(differences), 1)
+        self.assertEqual(differences[0]["window"], "whole run")
+        # The entry lists the computed row in its own window.
+        self.assertEqual([c[2] for c in differences[0]["computed"]], ["6 h"])
+
+    def test_a_missing_row_is_a_difference(self):
+        lines = self.recorded_lines()
+        i = next(k for k, line in enumerate(lines) if line.startswith("R4,trmm,copies,\"gross"))
+        lines[i] = lines[i].replace("gross residual at 6 h, of the water", "gross residual at 7 h, of the water")
+        differences = self.compare_changed(lines)
+        self.assertEqual(len(differences), 1)
+        self.assertEqual(differences[0]["computed"], [])
+
+    def test_a_duplicated_row_is_a_difference(self):
+        lines = self.recorded_lines()
+        i = next(k for k, line in enumerate(lines) if line.startswith("R8,trmm,copies,\"led_fix inventory fraction, pbl"))
+        differences = self.compare_changed(lines[:i + 1] + [lines[i]] + lines[i + 1:])
+        self.assertEqual(len(differences), 1)
+        self.assertEqual(differences[0]["metric"], "led_fix inventory fraction, pbl")
+
+    def test_the_repair_row_that_legitimately_appears_twice_reproduces(self):
+        # The scored row and its reported twin share rule, mode, metric and window.
+        # The verdict tells them apart, and each consumes one computed row.
+        with SCORES.open() as stream:
+            twins = [r for r in csv.DictReader(stream)
+                     if r["case"] == "trmm" and r["metric"] == "copies' repair, gross, per day"]
+        self.assertEqual(sorted(r["verdict"] for r in twins), ["pass", "reported"])
+        self.assertEqual(compare_w58(DATA, SCORES)["differences"], [])
+
     def test_rerun_prefix_reads_the_runs_output_tree(self):
         # The model writes each run's tables under <run>/output_0000, as W58's
         # output on scratch has them. The rerun is read from that tree.
@@ -208,6 +253,16 @@ class TableRowTests(unittest.TestCase):
         self.assertEqual((evap["contract"], evap["note"]),
                          ("not applicable", "source tag over its absolute burden, small-burden exemption"))
         self.assertAlmostEqual(by["led_fix inventory fraction, evap"]["value"], 1e-3)
+        self.assertEqual((pbl["exempt"], evap["exempt"]), (False, True))
+        # The ranking lists the exempt term and does not rank it (#173).
+        terms = {t["term"]: t for t in rank_terms("default", {"rows": []}, rows)}
+        exempt = terms["led_fix:evap"]
+        self.assertEqual((exempt["rank"], exempt["fraction_of_limit"], exempt["status"]),
+                         ("", None, part8_pilot.EXEMPT))
+        self.assertTrue(exempt["note"].startswith("small-burden exemption: listed, not ranked."))
+        self.assertEqual(exempt["value"], evap["value"])
+        self.assertIsInstance(terms["led_fix:pbl"]["rank"], int)
+        self.assertAlmostEqual(terms["led_fix:pbl"]["fraction_of_limit"], 5e-4 / LIMITS["LED_FIX_MAX"])
 
 
 def write_run(directory, times, water_column, z=(50.0, 200.0, 500.0), z_max=700.0, period="10m"):
@@ -295,7 +350,7 @@ def tables(mode):
     rows = [{"rule": "R8", "metric": "partition repair retained gross per day", "value": 1e-3,
              "limit_id": "AGGREGATE_REPAIR_PER_DAY", "contract": "c", "note": ""},
             {"rule": "R8", "metric": "led_fix scorer fraction, pbl", "value": 0.01,
-             "limit_id": "LED_FIX_MAX", "contract": "c", "note": "events 3"},
+             "limit_id": "LED_FIX_MAX", "contract": "c", "note": "events 3", "exempt": False},
             {"rule": "EV", "metric": "intervention events at the end", "value": 12.0, "limit_id": None,
              "contract": "reported", "note": ""}]
     if mode == "copies":

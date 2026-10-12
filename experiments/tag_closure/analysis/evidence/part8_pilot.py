@@ -57,6 +57,8 @@ PRIOR = "prior"
 # term shows its value and its comparator, with no fraction of a limit, and
 # is listed, not ranked (decided 2026-10-09).
 READING = "NOT ASSESSABLE"
+# A led_fix term under the small-burden exemption has no contract reading. It is listed, not ranked (#173).
+EXEMPT = "not applicable"
 # Every limit used here, by the ID the design cites. Values come from the scorer.
 LIMITS = {
     "WATER_GROSS": WATER_GROSS,
@@ -120,10 +122,10 @@ def table_rows(closure, audit, mode, end=TRMM_END, tags=TRMM_TAGS, kinds=TRMM_KI
     """
     rows = []
 
-    def add(rule, metric, window, value, limit_id, legacy, contract, note=""):
+    def add(rule, metric, window, value, limit_id, legacy, contract, note="", exempt=False):
         rows.append({"rule": rule, "mode": mode, "metric": metric, "window": window, "value": value,
                      "limit_id": limit_id, "limit": LIMITS.get(limit_id), "legacy_verdict": legacy,
-                     "contract": contract, "note": note})
+                     "contract": contract, "note": note, "exempt": exempt})
 
     last = row_at(closure, end)
     half = end / 2
@@ -171,9 +173,9 @@ def table_rows(closure, audit, mode, end=TRMM_END, tags=TRMM_TAGS, kinds=TRMM_KI
         parent, burden = stop.get(f"led_fix_{tag}_parent_fraction"), stop.get(f"led_fix_{tag}_burden_fraction")
         exempt = bool(parent and burden and parent > 0 and burden > 0 and parent / burden < SMALL)
         add("R8", f"led_fix scorer fraction, {tag}", window, scored, "LED_FIX_MAX", verdict(scored <= LED_FIX_MAX),
-            "not applicable" if exempt else "scored per OD2 window by the scorer, at accepted-step cadence",
+            EXEMPT if exempt else "scored per OD2 window by the scorer, at accepted-step cadence",
             f"{kind} tag over its {'signed inventory' if kind == 'region' else 'absolute burden'}"
-            + (", small-burden exemption" if exempt else ""))
+            + (", small-burden exemption" if exempt else ""), exempt=exempt)
         key = f"led_inc_{tag}_inventory_fraction"
         if key in stop:
             add("R8", f"led_inc inventory fraction, {tag}", "whole run", stop[key], None, "reported", "reported")
@@ -231,6 +233,11 @@ def compare_w58(data_dir, recorded_csv, prefix="g3b"):
 
     With the default prefix it reproduces W58 from its own tables. With
     `p8` it lists every row of the part 8 rerun that differs from W58.
+    A recorded row matches a computed row only on rule, mode, metric,
+    window, value and verdict. Each computed row answers at most one
+    recorded row, so a duplicated record row is a difference. For an
+    unmatched row, `computed` lists every row with the same rule, mode and
+    metric in any window (#173).
     """
     with Path(recorded_csv).open() as stream:
         recorded = [r for r in csv.DictReader(stream) if r["case"] == "trmm" and r["rule"] in ("R4", "R5", "R8")]
@@ -238,19 +245,21 @@ def compare_w58(data_dir, recorded_csv, prefix="g3b"):
     computed = {}
     for mode in ("default", "copies"):
         for r in run_tables(tables_dir(Path(data_dir) / f"{prefix}_trmm0m_{mode}_6h"), mode):
-            computed.setdefault((r["rule"], mode, r["metric"]), []).append(r)
+            computed.setdefault((r["rule"], mode, r["metric"], r["window"]), []).append(r)
     checked, differences = [], []
     for rec in recorded:
-        key = (rec["rule"], rec["mode"], rec["metric"])
+        key = (rec["rule"], rec["mode"], rec["metric"], rec["window"])
         candidates = computed.get(key, [])
         match = next((c for c in candidates if same_value(c["value"], rec["value"]) and
                       c["legacy_verdict"] == rec["verdict"]), None)
         entry = {"rule": rec["rule"], "mode": rec["mode"], "metric": rec["metric"], "window": rec["window"],
                  "recorded_value": rec["value"], "recorded_verdict": rec["verdict"]}
         if match is None:
-            entry["computed"] = [(c["value"], c["legacy_verdict"]) for c in candidates]
+            entry["computed"] = [(c["value"], c["legacy_verdict"], c["window"]) for (rule, mode, metric, _), cs
+                                 in computed.items() if (rule, mode, metric) == key[:3] for c in cs]
             differences.append(entry)
         else:
+            candidates.remove(match)  # one computed row answers one recorded row
             entry.update(contract=match["contract"], limit_id=match["limit_id"])
             checked.append(entry)
     return {"reproduced": checked, "differences": differences}
@@ -296,6 +305,7 @@ def rank_terms(mode, score, tables, newton=None, newton_source=""):
     first, largest fraction first. Prior terms from another case, terms the
     scorer marks NOT ASSESSABLE (the first-hour origins until PX12) and terms
     without a limit follow unranked, in the order of the design's section 7.
+    So do led_fix terms under the small-burden exemption (#173).
     A NOT ASSESSABLE term shows its value and its comparator and no fraction.
     A fraction is a reading against the cited limit, not a verdict.
     """
@@ -352,8 +362,12 @@ def rank_terms(mode, score, tables, newton=None, newton_source=""):
     for tag in TRMM_TAGS:
         r = by_metric.get(("R8", f"led_fix scorer fraction, {tag}"))
         if r:
-            out.append(term(mode, f"led_fix:{tag}", r["metric"], r["value"], "1", r["limit_id"], r["contract"],
-                            f"tables: water_tag_audit.csv led_fix_{tag}_retained", r["note"]))
+            t = term(mode, f"led_fix:{tag}", r["metric"], r["value"], "1", r["limit_id"], r["contract"],
+                     f"tables: water_tag_audit.csv led_fix_{tag}_retained", r["note"])
+            if r["exempt"]:
+                t.update(status=EXEMPT, fraction_of_limit=None,
+                         note=("small-burden exemption: listed, not ranked. " + t["note"]).strip())
+            out.append(t)
     r = by_metric[("EV", "intervention events at the end")]
     out.append(term(mode, "intervention_events", r["metric"], r["value"], "count", None,
                     rows.get("COMMON.ACCEPTED_APPLICATION_ACTIVITY", {}).get("verdict", "absent"),
@@ -366,7 +380,7 @@ def rank_terms(mode, score, tables, newton=None, newton_source=""):
     out.append(term(mode, "precip_sum_defect", "max absolute D_p over outputs", value, "kg m^-2 s^-1", None,
                     status, "score: WATER.PRECIP_INSTANTANEOUS max_absolute_rate_defect"))
     measured = [t for t in out if t["fraction_of_limit"] is not None and not t["status"].startswith(PRIOR)
-                and t["status"] != READING]
+                and t["status"] not in (READING, EXEMPT)]
     ranked = sorted(measured, key=lambda t: -t["fraction_of_limit"])
     rest = [t for t in out if all(t is not u for u in measured)]
     for i, t in enumerate(ranked, 1):
