@@ -288,6 +288,13 @@ total departs from the parent's by the follower's left part,
   - Under EDMF only `prognostic_edmfx` with one updraft and the split solver.
     Updraft copies are refused.
   - Only 1-moment microphysics.
+  - Under EDMF the closing step's signed column integral stays above the
+    design's 1e-8 of the accumulated rain under van Leer (5.1e-9 against
+    4.0e-10 after an hour of DYCOMS RF02), and under `tracer` a part can go
+    below zero, since nothing restores it. Both are measured in the tests and
+    marked broken. The candidate source is the parts' microphysics rule for
+    a negative compartment, which keeps a part frozen while the cached rates
+    evaporate it. That rule is a separate part 9 item.
   - The three parts cost three fields per tag, two audit fields per tag unless
     `water_tag_precipitation_audit: false`, and the flows. The flows evaluate the microphysics rates again, so their cost is of
     the same order as the microphysics. Under EDMF they are evaluated once per
