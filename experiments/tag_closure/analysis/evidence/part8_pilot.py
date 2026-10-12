@@ -60,6 +60,12 @@ PRIOR = "prior"
 READING = "NOT ASSESSABLE"
 # A led_fix term under the small-burden exemption has no contract reading. It is listed, not ranked (#173).
 EXEMPT = "not applicable"
+# Rows the pilot computes that W58's record predates (the scorer fraction row
+# came with part 8, 2026-10-09). `w58` expects each once and no other extra
+# (owner, 2026-10-12, #173 point 3).
+W58_RULES = ("R4", "R5", "R8")
+UNRECORDED = tuple(("R8", mode, f"led_fix scorer fraction, {tag}", "whole run")
+                   for mode in ("default", "copies") for tag in TRMM_TAGS)
 # Every limit used here, by the ID the design cites. Values come from the scorer.
 LIMITS = {
     "WATER_GROSS": WATER_GROSS,
@@ -172,7 +178,15 @@ def table_rows(closure, audit, mode, end=TRMM_END, tags=TRMM_TAGS, kinds=TRMM_KI
         denominator = retained / stop[fkey] if stop[fkey] > 0 else None
         scored = (retained - start) / denominator if denominator else 0.0
         parent, burden = stop.get(f"led_fix_{tag}_parent_fraction"), stop.get(f"led_fix_{tag}_burden_fraction")
-        exempt = bool(parent and burden and parent > 0 and burden > 0 and parent / burden < SMALL)
+        # The runtime's applicable flag is 0 where the burden is below SMALL of
+        # the parent scale at the end, the scorer's rule, whatever the activity.
+        # The fraction rule below is the same test, but only where activity is
+        # positive. An audit without the flag falls back to it (owner, 2026-10-12).
+        by_fractions = bool(parent and burden and parent > 0 and burden > 0 and parent / burden < SMALL)
+        flag = stop.get(f"led_fix_{tag}_applicable")
+        exempt = flag == 0.0 if flag is not None and not math.isnan(flag) else by_fractions
+        if flag is not None and parent and burden and parent > 0 and burden > 0:
+            require(exempt == by_fractions, f"led_fix_{tag}_applicable disagrees with the fraction rule")
         add("R8", f"led_fix scorer fraction, {tag}", window, scored, "LED_FIX_MAX", verdict(scored <= LED_FIX_MAX),
             EXEMPT if exempt else "scored per OD2 window by the scorer, at accepted-step cadence",
             f"{kind} tag over its {'signed inventory' if kind == 'region' else 'absolute burden'}"
@@ -238,12 +252,15 @@ def compare_w58(data_dir, recorded_csv, prefix="g3b"):
     window, value and verdict. Each computed row answers at most one
     recorded row, so a duplicated record row is a difference. For an
     unmatched row, `computed` lists every row with the same rule, mode and
-    metric in any window, consumed or not (#173). The check is one-way.
-    Computed rows absent from the record, the six per-tag led_fix scorer
-    rows of part 8, are not reported.
+    metric in any window, consumed or not (#173). The check is two-way: a
+    computed row of W58's rules that no recorded row claims is a difference
+    unless it is one of `UNRECORDED`, the six per-tag led_fix scorer rows
+    that W58's record predates, and each of those must be computed once.
+    They are returned as `unrecorded` (owner, 2026-10-12). The EV and PX5
+    rows are the pilot's own and outside the comparison.
     """
     with Path(recorded_csv).open() as stream:
-        recorded = [r for r in csv.DictReader(stream) if r["case"] == "trmm" and r["rule"] in ("R4", "R5", "R8")]
+        recorded = [r for r in csv.DictReader(stream) if r["case"] == "trmm" and r["rule"] in W58_RULES]
     require(recorded, "the record has no TRMM R4, R5 or R8 rows")
     computed = {}
     for mode in ("default", "copies"):
@@ -266,7 +283,31 @@ def compare_w58(data_dir, recorded_csv, prefix="g3b"):
             candidates.remove(match)  # one computed row answers one recorded row
             entry.update(contract=match["contract"], limit_id=match["limit_id"])
             checked.append(entry)
-    return {"reproduced": checked, "differences": differences}
+    # Computed rows of W58's rules left unclaimed. Those of a rule, mode and
+    # metric with a difference above are listed there already.
+    named = {(d["rule"], d["mode"], d["metric"]) for d in differences}
+    unrecorded = []
+    for (rule, mode, metric, window), cs in computed.items():
+        for c in cs:
+            if rule not in W58_RULES or (rule, mode, metric) in named:
+                continue
+            entry = {"rule": rule, "mode": mode, "metric": metric, "window": window,
+                     "computed_value": c["value"], "computed_verdict": c["legacy_verdict"]}
+            if (rule, mode, metric, window) in UNRECORDED and not any(
+                    (u["rule"], u["mode"], u["metric"], u["window"]) == (rule, mode, metric, window)
+                    for u in unrecorded):
+                unrecorded.append(entry)
+            else:
+                differences.append(dict(entry, recorded_value=None, recorded_verdict=None,
+                                        note="computed, claimed by no recorded row"))
+    for key in UNRECORDED:
+        if key not in named and not any((u["rule"], u["mode"], u["metric"], u["window"]) == key
+                                        for u in unrecorded):
+            rule, mode, metric, window = key
+            differences.append({"rule": rule, "mode": mode, "metric": metric, "window": window,
+                                "recorded_value": None, "recorded_verdict": None, "computed": [],
+                                "note": "expected unrecorded row, not computed"})
+    return {"reproduced": checked, "differences": differences, "unrecorded": unrecorded}
 
 
 def od2_reading(directory, period="10m"):

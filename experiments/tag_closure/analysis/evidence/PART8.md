@@ -96,7 +96,10 @@ first stop does not apply.
 From `$B/w58.json` (`part8_pilot.py w58 --prefix p8`), from the scorer's
 rows and from `$B/logs/s7_compare.txt`. Not every value is compared bit for
 bit. The `w58` command compares the 18 rows of R4, R5 and R8 to the last
-digit. R3's top-level change is compared to all digits. R7 is compared at the
+digit. Since 2026-10-12 it also checks the roster both ways. A computed row
+of those rules that no recorded row claims is a difference, except the six
+per-tag `led_fix scorer fraction` rows, which W58's record predates and which
+must each be computed once (#173, point 3). R3's top-level change is compared to all digits. R7 is compared at the
 three printed digits at 3 h and 6 h, and to all digits at 1 h. C7 is not
 recomputed. The table below says what applies to each rule.
 
