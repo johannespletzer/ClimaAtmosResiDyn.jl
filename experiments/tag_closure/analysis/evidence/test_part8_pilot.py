@@ -452,6 +452,13 @@ class RankTests(unittest.TestCase):
         with self.assertRaisesRegex(DataError, "unknown limit"):
             rank_terms("default", self.default_score(), bad)
 
+    def test_tables_from_before_the_exemption_flag_are_refused(self):
+        # A tables JSON written before #173 has no "exempt". It is refused with the fix named.
+        old = tables("default")
+        del old[1]["exempt"]
+        with self.assertRaisesRegex(DataError, "predates #173. Regenerate it with `part8_pilot.py tables"):
+            rank_terms("default", self.default_score(), old)
+
     def test_command_line(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

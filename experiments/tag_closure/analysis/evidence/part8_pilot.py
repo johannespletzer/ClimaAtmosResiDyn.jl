@@ -15,7 +15,8 @@ and lists each row that differs from W58's record. `od2` reads OD2's boundary
 on the untagged twin at its own output cadence. `tables` writes the
 table-derived rows of one run.
 `rank` builds one mode's ranked table of error terms from the scorer's result
-and the table rows.
+and the table rows. It refuses a tables JSON written before #173, which has
+no exemption flag. Such a file is regenerated with `tables` first.
 
 It adds no threshold. Every limit it compares comes from score_acceptance.py,
 or from closure_verdict.py as the scorer does. test_acceptance.py pins the
@@ -362,6 +363,10 @@ def rank_terms(mode, score, tables, newton=None, newton_source=""):
     for tag in TRMM_TAGS:
         r = by_metric.get(("R8", f"led_fix scorer fraction, {tag}"))
         if r:
+            # A tables JSON written before #173 has no exemption flag. A default
+            # would rank an exempt term again, so the old file is refused.
+            require("exempt" in r, f"the tables JSON has no 'exempt' on '{r['metric']}': it predates #173. "
+                    "Regenerate it with `part8_pilot.py tables RUN_DIR MODE --json OUT` and rank again")
             t = term(mode, f"led_fix:{tag}", r["metric"], r["value"], "1", r["limit_id"], r["contract"],
                      f"tables: water_tag_audit.csv led_fix_{tag}_retained", r["note"])
             if r["exempt"]:
