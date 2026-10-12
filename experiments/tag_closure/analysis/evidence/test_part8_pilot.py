@@ -14,6 +14,7 @@ import io
 import json
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 import numpy as np
@@ -117,6 +118,77 @@ class W58RecordTests(unittest.TestCase):
             changed.write_text("".join(lines))
             self.assertEqual(len(compare_w58(DATA, changed)["differences"]), 1)
 
+    def recorded_lines(self):
+        return SCORES.read_text().splitlines(keepends=True)
+
+    def compare_changed(self, lines):
+        with tempfile.TemporaryDirectory() as tmp:
+            changed = Path(tmp) / "scores.csv"
+            changed.write_text("".join(lines))
+            return compare_w58(DATA, changed)["differences"]
+
+    def test_a_changed_window_is_a_difference(self):
+        # Value and verdict stay, only the recorded window changes.
+        lines = self.recorded_lines()
+        i = next(k for k, line in enumerate(lines) if line.startswith("R4,trmm,copies,\"gross"))
+        self.assertIn(",6 h,", lines[i])
+        lines[i] = lines[i].replace(",6 h,", ",whole run,")
+        differences = self.compare_changed(lines)
+        self.assertEqual(len(differences), 1)
+        self.assertEqual(differences[0]["window"], "whole run")
+        # The entry lists the computed row in its own window.
+        self.assertEqual([c[2] for c in differences[0]["computed"]], ["6 h"])
+
+    def test_a_missing_row_is_a_difference(self):
+        lines = self.recorded_lines()
+        i = next(k for k, line in enumerate(lines) if line.startswith("R4,trmm,copies,\"gross"))
+        lines[i] = lines[i].replace("gross residual at 6 h, of the water", "gross residual at 7 h, of the water")
+        differences = self.compare_changed(lines)
+        # The renamed record row is not computed, and the computed row it
+        # left behind is claimed by no recorded row. Both are differences.
+        self.assertEqual([(d["metric"], d.get("computed"), d.get("note")) for d in differences],
+                         [("gross residual at 7 h, of the water", [], None),
+                          ("gross residual at 6 h, of the water", None, "computed, claimed by no recorded row")])
+
+    def test_a_duplicated_row_is_a_difference(self):
+        lines = self.recorded_lines()
+        head = "R8,trmm,copies,\"led_fix inventory fraction, pbl"
+        i = next(k for k, line in enumerate(lines) if line.startswith(head))
+        differences = self.compare_changed(lines[:i + 1] + [lines[i]] + lines[i + 1:])
+        self.assertEqual(len(differences), 1)
+        self.assertEqual(differences[0]["metric"], "led_fix inventory fraction, pbl")
+        # The entry still lists the one computed row, which the first copy consumed.
+        self.assertEqual([(c[1], c[2]) for c in differences[0]["computed"]], [("pass", "whole run")])
+
+    def test_the_six_unrecorded_rows_are_named_and_no_other(self):
+        # W58's record predates the per-tag scorer fraction row. The six are
+        # returned as unrecorded, each once, and a seventh unclaimed row or a
+        # missing one of the six is a difference (owner, 2026-10-12).
+        result = compare_w58(DATA, SCORES)
+        self.assertEqual(result["differences"], [])
+        self.assertEqual(sorted((u["mode"], u["metric"]) for u in result["unrecorded"]),
+                         sorted((m, f"led_fix scorer fraction, {t}") for m in ("default", "copies")
+                                for t in ("pbl", "free", "evap")))
+        five = part8_pilot.UNRECORDED[:5]
+        with mock.patch.object(part8_pilot, "UNRECORDED", five):
+            differences = compare_w58(DATA, SCORES)["differences"]
+        self.assertEqual([(d["metric"], d["note"]) for d in differences],
+                         [("led_fix scorer fraction, evap", "computed, claimed by no recorded row")])
+        seven = part8_pilot.UNRECORDED + (("R8", "default", "led_fix scorer fraction, nowhere", "whole run"),)
+        with mock.patch.object(part8_pilot, "UNRECORDED", seven):
+            differences = compare_w58(DATA, SCORES)["differences"]
+        self.assertEqual([(d["metric"], d["note"]) for d in differences],
+                         [("led_fix scorer fraction, nowhere", "expected unrecorded row, not computed")])
+
+    def test_the_repair_row_that_legitimately_appears_twice_reproduces(self):
+        # The scored row and its reported twin share rule, mode, metric and window.
+        # The verdict tells them apart, and each consumes one computed row.
+        with SCORES.open() as stream:
+            twins = [r for r in csv.DictReader(stream)
+                     if r["case"] == "trmm" and r["metric"] == "copies' repair, gross, per day"]
+        self.assertEqual(sorted(r["verdict"] for r in twins), ["pass", "reported"])
+        self.assertEqual(compare_w58(DATA, SCORES)["differences"], [])
+
     def test_rerun_prefix_reads_the_runs_output_tree(self):
         # The model writes each run's tables under <run>/output_0000, as W58's
         # output on scratch has them. The rerun is read from that tree.
@@ -131,6 +203,20 @@ class W58RecordTests(unittest.TestCase):
             self.assertEqual((code, json.loads(out)["differences"]), (0, []))
             with self.assertRaisesRegex(DataError, "missing table"):
                 compare_w58(tmp, SCORES)
+
+    def test_tables_command_reads_the_runs_output_tree(self):
+        # `tables` takes the run or its tables directory, like `w58`, and writes a new file.
+        with tempfile.TemporaryDirectory() as tmp:
+            run = Path(tmp) / "p8_trmm0m_default_6h"
+            (run / "output_0000").mkdir(parents=True)
+            for table in ("water_tag_closure.csv", "water_tag_audit.csv"):
+                (run / "output_0000" / table).write_bytes((DATA / "g3b_trmm0m_default_6h" / table).read_bytes())
+            out = Path(tmp) / "tables.json"
+            code, _, _ = run_main(["tables", run, "default", "--json", out])
+            self.assertEqual(code, 0)
+            self.assertEqual(json.loads(out.read_text()), run_tables(DATA / "g3b_trmm0m_default_6h", "default"))
+            code, _, err = run_main(["tables", run, "default", "--json", out])
+            self.assertEqual((code, "File exists" in err), (2, True))
 
     def test_command_line(self):
         code, out, _ = run_main(["w58", DATA, SCORES])
@@ -191,7 +277,8 @@ class TableRowTests(unittest.TestCase):
                       "led_fix_pbl_burden_fraction": fix / 4, "led_fix_pbl_parent_fraction": fix / 100,
                       "led_fix_evap_retained": fix, "led_fix_evap_events": 1.0,
                       "led_fix_evap_inventory_fraction": fix / 1, "led_fix_evap_burden_fraction": fix / 0.01,
-                      "led_fix_evap_parent_fraction": fix / 100})
+                      "led_fix_evap_parent_fraction": fix / 100,
+                      "led_fix_pbl_applicable": 1.0, "led_fix_evap_applicable": 0.0})
             return r
 
         rows = table_rows(closure, [row(0.0, 0.0), row(86400.0, 1e-3)], "default", end=86400.0,
@@ -208,6 +295,39 @@ class TableRowTests(unittest.TestCase):
         self.assertEqual((evap["contract"], evap["note"]),
                          ("not applicable", "source tag over its absolute burden, small-burden exemption"))
         self.assertAlmostEqual(by["led_fix inventory fraction, evap"]["value"], 1e-3)
+        self.assertEqual((pbl["exempt"], evap["exempt"]), (False, True))
+        # The ranking lists the exempt term and does not rank it (#173).
+        terms = {t["term"]: t for t in rank_terms("default", {"rows": []}, rows)}
+        exempt = terms["led_fix:evap"]
+        self.assertEqual((exempt["rank"], exempt["fraction_of_limit"], exempt["status"]),
+                         ("", None, part8_pilot.EXEMPT))
+        self.assertTrue(exempt["note"].startswith("small-burden exemption: listed, not ranked."))
+        self.assertEqual(exempt["value"], evap["value"])
+        self.assertIsInstance(terms["led_fix:pbl"]["rank"], int)
+        self.assertAlmostEqual(terms["led_fix:pbl"]["fraction_of_limit"], 5e-4 / LIMITS["LED_FIX_MAX"])
+        # With zero activity the fractions are 0 and cannot tell a small burden.
+        # The runtime's flag can, and it is the scorer's rule (owner, 2026-10-12).
+        idle = row(86400.0, 0.0)
+        for key in ("led_fix_pbl", "led_fix_evap"):
+            for frac in ("inventory", "burden", "parent"):
+                idle[f"{key}_{frac}_fraction"] = 0.0
+        by = {r["metric"]: r for r in table_rows(closure, [row(0.0, 0.0), idle], "default", end=86400.0,
+                                                 tags=("pbl", "evap"))}
+        self.assertEqual((by["led_fix scorer fraction, pbl"]["exempt"], by["led_fix scorer fraction, evap"]["exempt"]),
+                         (False, True))
+        self.assertEqual(by["led_fix scorer fraction, evap"]["contract"], part8_pilot.EXEMPT)
+        # Without the flag, an older audit, the fraction rule decides alone.
+        bare = row(86400.0, 1e-3)
+        del bare["led_fix_pbl_applicable"], bare["led_fix_evap_applicable"]
+        by = {r["metric"]: r for r in table_rows(closure, [row(0.0, 0.0), bare], "default", end=86400.0,
+                                                 tags=("pbl", "evap"))}
+        self.assertEqual((by["led_fix scorer fraction, pbl"]["exempt"], by["led_fix scorer fraction, evap"]["exempt"]),
+                         (False, True))
+        # A flag that contradicts the fraction rule is refused.
+        wrong = row(86400.0, 1e-3)
+        wrong["led_fix_evap_applicable"] = 1.0
+        with self.assertRaisesRegex(DataError, "led_fix_evap_applicable disagrees"):
+            table_rows(closure, [row(0.0, 0.0), wrong], "default", end=86400.0, tags=("pbl", "evap"))
 
 
 def write_run(directory, times, water_column, z=(50.0, 200.0, 500.0), z_max=700.0, period="10m"):
@@ -295,7 +415,7 @@ def tables(mode):
     rows = [{"rule": "R8", "metric": "partition repair retained gross per day", "value": 1e-3,
              "limit_id": "AGGREGATE_REPAIR_PER_DAY", "contract": "c", "note": ""},
             {"rule": "R8", "metric": "led_fix scorer fraction, pbl", "value": 0.01,
-             "limit_id": "LED_FIX_MAX", "contract": "c", "note": "events 3"},
+             "limit_id": "LED_FIX_MAX", "contract": "c", "note": "events 3", "exempt": False},
             {"rule": "EV", "metric": "intervention events at the end", "value": 12.0, "limit_id": None,
              "contract": "reported", "note": ""}]
     if mode == "copies":
@@ -396,6 +516,13 @@ class RankTests(unittest.TestCase):
         bad[0]["limit_id"] = "NOT_A_LIMIT"
         with self.assertRaisesRegex(DataError, "unknown limit"):
             rank_terms("default", self.default_score(), bad)
+
+    def test_tables_from_before_the_exemption_flag_are_refused(self):
+        # A tables JSON written before #173 has no "exempt". It is refused with the fix named.
+        old = tables("default")
+        del old[1]["exempt"]
+        with self.assertRaisesRegex(DataError, "predates #173. Regenerate it with `part8_pilot.py tables"):
+            rank_terms("default", self.default_score(), old)
 
     def test_command_line(self):
         with tempfile.TemporaryDirectory() as tmp:

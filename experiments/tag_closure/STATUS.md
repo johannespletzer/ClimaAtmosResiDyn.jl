@@ -104,12 +104,17 @@ W58, the contract rows, the ranked table of each mode and the cost. Its
 verdict: H1 and H2 were not falsified. No recorded pass of W58 failed, and
 each mode's first term is the prior's (the default's closure, the copies'
 repair). H3's default half was not falsified, with an 8 + 8 step of 8.998x to
-9.379x against OD3's 2x. Its copies half was not falsified. The slowest build of
-4.48 h is quoted, and the builds of 3.02 h and 3.09 h are the favourable case
-(owner decision of 2026-10-09, after PRs #166 and #167).
+9.379x against OD3's 2x. Its copies half says the copies do not build within
+4 h. As written, two of the three builds fall within 4 h (3.02 h and 3.09 h)
+and one does not (4.48 h). The design as pre-registered fixed no rule for a
+split across nodes. After the results, the owner chose an across-node rule
+(2026-10-09, after PRs #166 and #167). Under it the slowest build of 4.48 h is
+quoted and the half is not falsified. The builds of 3.02 h and 3.09 h are the
+favourable case.
 No stop rule of the design's section 10 applied.
 
-**Part 8 is done except PX12's readings.** The owner decided its items on
+**Part 8's pilot runs and its accounting and cost baseline are complete. Its
+provenance baseline is pending PX12.** The owner decided its items on
 2026-10-09, after PRs #166 and #167. WA-COST's cap is deferred until the walk
 fix is measured, and no cap
 is set from this cost set. Choices 1, 2, 3, 7 and 9 of the design's section
@@ -536,7 +541,8 @@ not checked, it says so.
       + **W50:** the copies' repair is open. First, rerun W50's 60-level
         copies day and its twin on post-#139 `main` (two jobs) and score
         PX5's rule. Then PX12 on TRMM 0M (about 12 short jobs). Not
-        submitted.
+        submitted. PX12 is briefed after WP4b stage 2 closes, with its own
+        budget (owner, 2026-10-12, #173).
       + **G4.3 to G4.6:** the definitions are decided (points 1, 4's form, 5
         and 7). The levels of points 2, 3, 4 and 6 are set from post-#139 runs
         at G4's start.

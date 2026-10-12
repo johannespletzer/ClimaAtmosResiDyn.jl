@@ -530,7 +530,12 @@ python3 experiments/tag_closure/analysis/evidence/part8_pilot.py rank --mode def
 
 `w58` recomputes W58's TRMM rows R4, R5 and R8 from the closure and audit
 tables with `g3base_score.py`'s arithmetic. On the repository's tables it
-reproduces all 18 recorded rows bit for bit and exits 0. With `--prefix p8`
+reproduces all 18 recorded rows bit for bit and exits 0. The roster is
+checked both ways. A computed row of R4, R5 or R8 that no recorded row claims
+is a difference, except the six per-tag `led_fix scorer fraction` rows that
+W58's record predates, returned as `unrecorded`. `rank` refuses a tables JSON
+without the `exempt` flag, written before #173, and names the `tables`
+command that regenerates it. With `--prefix p8`
 it reads the rerun's tables from each run's `output_0000` under the output
 root and lists each row that differs, with exit 1. A missing input exits 2.
 `od2` reads OD2's boundary on the untagged twin at a named output period.

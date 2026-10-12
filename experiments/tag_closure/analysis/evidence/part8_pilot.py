@@ -15,7 +15,8 @@ and lists each row that differs from W58's record. `od2` reads OD2's boundary
 on the untagged twin at its own output cadence. `tables` writes the
 table-derived rows of one run.
 `rank` builds one mode's ranked table of error terms from the scorer's result
-and the table rows.
+and the table rows. It refuses a tables JSON written before #173, which has
+no exemption flag. Such a file is regenerated with `tables` first.
 
 It adds no threshold. Every limit it compares comes from score_acceptance.py,
 or from closure_verdict.py as the scorer does. test_acceptance.py pins the
@@ -57,6 +58,14 @@ PRIOR = "prior"
 # term shows its value and its comparator, with no fraction of a limit, and
 # is listed, not ranked (decided 2026-10-09).
 READING = "NOT ASSESSABLE"
+# A led_fix term under the small-burden exemption has no contract reading. It is listed, not ranked (#173).
+EXEMPT = "not applicable"
+# Rows the pilot computes that W58's record predates (the scorer fraction row
+# came with part 8, 2026-10-09). `w58` expects each once and no other extra
+# (owner, 2026-10-12, #173 point 3).
+W58_RULES = ("R4", "R5", "R8")
+UNRECORDED = tuple(("R8", mode, f"led_fix scorer fraction, {tag}", "whole run")
+                   for mode in ("default", "copies") for tag in TRMM_TAGS)
 # Every limit used here, by the ID the design cites. Values come from the scorer.
 LIMITS = {
     "WATER_GROSS": WATER_GROSS,
@@ -120,10 +129,10 @@ def table_rows(closure, audit, mode, end=TRMM_END, tags=TRMM_TAGS, kinds=TRMM_KI
     """
     rows = []
 
-    def add(rule, metric, window, value, limit_id, legacy, contract, note=""):
+    def add(rule, metric, window, value, limit_id, legacy, contract, note="", exempt=False):
         rows.append({"rule": rule, "mode": mode, "metric": metric, "window": window, "value": value,
                      "limit_id": limit_id, "limit": LIMITS.get(limit_id), "legacy_verdict": legacy,
-                     "contract": contract, "note": note})
+                     "contract": contract, "note": note, "exempt": exempt})
 
     last = row_at(closure, end)
     half = end / 2
@@ -169,11 +178,19 @@ def table_rows(closure, audit, mode, end=TRMM_END, tags=TRMM_TAGS, kinds=TRMM_KI
         denominator = retained / stop[fkey] if stop[fkey] > 0 else None
         scored = (retained - start) / denominator if denominator else 0.0
         parent, burden = stop.get(f"led_fix_{tag}_parent_fraction"), stop.get(f"led_fix_{tag}_burden_fraction")
-        exempt = bool(parent and burden and parent > 0 and burden > 0 and parent / burden < SMALL)
+        # The runtime's applicable flag is 0 where the burden is below SMALL of
+        # the parent scale at the end, the scorer's rule, whatever the activity.
+        # The fraction rule below is the same test, but only where activity is
+        # positive. An audit without the flag falls back to it (owner, 2026-10-12).
+        by_fractions = bool(parent and burden and parent > 0 and burden > 0 and parent / burden < SMALL)
+        flag = stop.get(f"led_fix_{tag}_applicable")
+        exempt = flag == 0.0 if flag is not None and not math.isnan(flag) else by_fractions
+        if flag is not None and parent and burden and parent > 0 and burden > 0:
+            require(exempt == by_fractions, f"led_fix_{tag}_applicable disagrees with the fraction rule")
         add("R8", f"led_fix scorer fraction, {tag}", window, scored, "LED_FIX_MAX", verdict(scored <= LED_FIX_MAX),
-            "not applicable" if exempt else "scored per OD2 window by the scorer, at accepted-step cadence",
+            EXEMPT if exempt else "scored per OD2 window by the scorer, at accepted-step cadence",
             f"{kind} tag over its {'signed inventory' if kind == 'region' else 'absolute burden'}"
-            + (", small-burden exemption" if exempt else ""))
+            + (", small-burden exemption" if exempt else ""), exempt=exempt)
         key = f"led_inc_{tag}_inventory_fraction"
         if key in stop:
             add("R8", f"led_inc inventory fraction, {tag}", "whole run", stop[key], None, "reported", "reported")
@@ -231,29 +248,66 @@ def compare_w58(data_dir, recorded_csv, prefix="g3b"):
 
     With the default prefix it reproduces W58 from its own tables. With
     `p8` it lists every row of the part 8 rerun that differs from W58.
+    A recorded row matches a computed row only on rule, mode, metric,
+    window, value and verdict. Each computed row answers at most one
+    recorded row, so a duplicated record row is a difference. For an
+    unmatched row, `computed` lists every row with the same rule, mode and
+    metric in any window, consumed or not (#173). The check is two-way: a
+    computed row of W58's rules that no recorded row claims is a difference
+    unless it is one of `UNRECORDED`, the six per-tag led_fix scorer rows
+    that W58's record predates, and each of those must be computed once.
+    They are returned as `unrecorded` (owner, 2026-10-12). The EV and PX5
+    rows are the pilot's own and outside the comparison.
     """
     with Path(recorded_csv).open() as stream:
-        recorded = [r for r in csv.DictReader(stream) if r["case"] == "trmm" and r["rule"] in ("R4", "R5", "R8")]
+        recorded = [r for r in csv.DictReader(stream) if r["case"] == "trmm" and r["rule"] in W58_RULES]
     require(recorded, "the record has no TRMM R4, R5 or R8 rows")
     computed = {}
     for mode in ("default", "copies"):
         for r in run_tables(tables_dir(Path(data_dir) / f"{prefix}_trmm0m_{mode}_6h"), mode):
-            computed.setdefault((r["rule"], mode, r["metric"]), []).append(r)
+            computed.setdefault((r["rule"], mode, r["metric"], r["window"]), []).append(r)
+    listing = {k: list(v) for k, v in computed.items()}  # every computed row, kept for the differences
     checked, differences = [], []
     for rec in recorded:
-        key = (rec["rule"], rec["mode"], rec["metric"])
+        key = (rec["rule"], rec["mode"], rec["metric"], rec["window"])
         candidates = computed.get(key, [])
         match = next((c for c in candidates if same_value(c["value"], rec["value"]) and
                       c["legacy_verdict"] == rec["verdict"]), None)
         entry = {"rule": rec["rule"], "mode": rec["mode"], "metric": rec["metric"], "window": rec["window"],
                  "recorded_value": rec["value"], "recorded_verdict": rec["verdict"]}
         if match is None:
-            entry["computed"] = [(c["value"], c["legacy_verdict"]) for c in candidates]
+            entry["computed"] = [(c["value"], c["legacy_verdict"], c["window"]) for (rule, mode, metric, _), cs
+                                 in listing.items() if (rule, mode, metric) == key[:3] for c in cs]
             differences.append(entry)
         else:
+            candidates.remove(match)  # one computed row answers one recorded row
             entry.update(contract=match["contract"], limit_id=match["limit_id"])
             checked.append(entry)
-    return {"reproduced": checked, "differences": differences}
+    # Computed rows of W58's rules left unclaimed. Those of a rule, mode and
+    # metric with a difference above are listed there already.
+    named = {(d["rule"], d["mode"], d["metric"]) for d in differences}
+    unrecorded = []
+    for (rule, mode, metric, window), cs in computed.items():
+        for c in cs:
+            if rule not in W58_RULES or (rule, mode, metric) in named:
+                continue
+            entry = {"rule": rule, "mode": mode, "metric": metric, "window": window,
+                     "computed_value": c["value"], "computed_verdict": c["legacy_verdict"]}
+            if (rule, mode, metric, window) in UNRECORDED and not any(
+                    (u["rule"], u["mode"], u["metric"], u["window"]) == (rule, mode, metric, window)
+                    for u in unrecorded):
+                unrecorded.append(entry)
+            else:
+                differences.append(dict(entry, recorded_value=None, recorded_verdict=None,
+                                        note="computed, claimed by no recorded row"))
+    for key in UNRECORDED:
+        if key not in named and not any((u["rule"], u["mode"], u["metric"], u["window"]) == key
+                                        for u in unrecorded):
+            rule, mode, metric, window = key
+            differences.append({"rule": rule, "mode": mode, "metric": metric, "window": window,
+                                "recorded_value": None, "recorded_verdict": None, "computed": [],
+                                "note": "expected unrecorded row, not computed"})
+    return {"reproduced": checked, "differences": differences, "unrecorded": unrecorded}
 
 
 def od2_reading(directory, period="10m"):
@@ -296,6 +350,7 @@ def rank_terms(mode, score, tables, newton=None, newton_source=""):
     first, largest fraction first. Prior terms from another case, terms the
     scorer marks NOT ASSESSABLE (the first-hour origins until PX12) and terms
     without a limit follow unranked, in the order of the design's section 7.
+    So do led_fix terms under the small-burden exemption (#173).
     A NOT ASSESSABLE term shows its value and its comparator and no fraction.
     A fraction is a reading against the cited limit, not a verdict.
     """
@@ -352,8 +407,17 @@ def rank_terms(mode, score, tables, newton=None, newton_source=""):
     for tag in TRMM_TAGS:
         r = by_metric.get(("R8", f"led_fix scorer fraction, {tag}"))
         if r:
-            out.append(term(mode, f"led_fix:{tag}", r["metric"], r["value"], "1", r["limit_id"], r["contract"],
-                            f"tables: water_tag_audit.csv led_fix_{tag}_retained", r["note"]))
+            # A tables JSON written before #173 has no exemption flag. A default
+            # would rank an exempt term again, so the old file is refused.
+            require("exempt" in r, f"the tables JSON has no 'exempt' on '{r['metric']}': it predates #173. "
+                    "Regenerate it with `part8_pilot.py tables RUN MODE --json NEW` (the run or its tables "
+                    "directory, a new file) and rank again")
+            t = term(mode, f"led_fix:{tag}", r["metric"], r["value"], "1", r["limit_id"], r["contract"],
+                     f"tables: water_tag_audit.csv led_fix_{tag}_retained", r["note"])
+            if r["exempt"]:
+                t.update(status=EXEMPT, fraction_of_limit=None,
+                         note=("small-burden exemption: listed, not ranked. " + t["note"]).strip())
+            out.append(t)
     r = by_metric[("EV", "intervention events at the end")]
     out.append(term(mode, "intervention_events", r["metric"], r["value"], "count", None,
                     rows.get("COMMON.ACCEPTED_APPLICATION_ACTIVITY", {}).get("verdict", "absent"),
@@ -366,7 +430,7 @@ def rank_terms(mode, score, tables, newton=None, newton_source=""):
     out.append(term(mode, "precip_sum_defect", "max absolute D_p over outputs", value, "kg m^-2 s^-1", None,
                     status, "score: WATER.PRECIP_INSTANTANEOUS max_absolute_rate_defect"))
     measured = [t for t in out if t["fraction_of_limit"] is not None and not t["status"].startswith(PRIOR)
-                and t["status"] != READING]
+                and t["status"] not in (READING, EXEMPT)]
     ranked = sorted(measured, key=lambda t: -t["fraction_of_limit"])
     rest = [t for t in out if all(t is not u for u in measured)]
     for i, t in enumerate(ranked, 1):
@@ -429,7 +493,7 @@ def main(argv=None):
         if args.command == "od2":
             dump(od2_reading(args.untagged_dir, args.period), args.json)
         elif args.command == "tables":
-            dump(run_tables(args.run_dir, args.mode, args.end_seconds), args.json)
+            dump(run_tables(tables_dir(args.run_dir), args.mode, args.end_seconds), args.json)
         else:
             score = json.loads(Path(args.score).read_text())
             tables = json.loads(Path(args.tables).read_text())

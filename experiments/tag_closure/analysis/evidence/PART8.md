@@ -96,7 +96,10 @@ first stop does not apply.
 From `$B/w58.json` (`part8_pilot.py w58 --prefix p8`), from the scorer's
 rows and from `$B/logs/s7_compare.txt`. Not every value is compared bit for
 bit. The `w58` command compares the 18 rows of R4, R5 and R8 to the last
-digit. R3's top-level change is compared to all digits. R7 is compared at the
+digit. Since 2026-10-12 it also checks the roster both ways. A computed row
+of those rules that no recorded row claims is a difference, except the six
+per-tag `led_fix scorer fraction` rows, which W58's record predates and which
+must each be computed once (#173, point 3). R3's top-level change is compared to all digits. R7 is compared at the
 three printed digits at 3 h and 6 h, and to all digits at 1 h. C7 is not
 recomputed. The table below says what applies to each rule.
 
@@ -289,7 +292,10 @@ residual, the copies' first term is the copies' repair. So H2 is not
 falsified, and part 9 takes the prior order: default closure, partition
 repair, `led_fix:pbl`, and copies' repair, closure, copies' own residual. The
 default's ranks 2 to 5 are zeros. Their order is the tie rule's table order,
-not a measured order.
+not a measured order. The ranked terms are closure and accounting readings,
+not origin errors. The default's are 1.89e-12 of WATER_GROSS and then zeros.
+So the ranking does not say which mechanism gives the largest provenance
+error. That waits for PX12's eligible comparator and the re-score (#173).
 The default's first-hour origins wait for PX12 and give part 9 nothing.
 Event counts (27413 and 15317) equal the design's prior. D_p equals the prior
 to its printed digits.
@@ -396,14 +402,16 @@ OD3's 2x. It holds on all three nodes (8.998x to 9.379x), as E88's 9.098x did.
 So it is not falsified. The copies half says the copies do not build within
 4 h. It holds on p8_copies_b (4.48 h). It does not hold on p8_copies_a and
 p8_copies_c (3.02 h and 3.09 h). So the reading is split across the nodes.
-The design fixes no rule for a split build. Two readings were open. Read as
-written, a build within 4 h falsifies the copies half, and two did. Read with
-section 8's "less favourable quoted", which the design states for the blocks
-of one job, the slowest build of 4.48 h is quoted and the half holds. The
-owner decided on 2026-10-09, after PRs #166 and #167, that the rule extends
-to the nodes of a cost set. The copies' build is quoted as 4.48 h
-(p8_copies_b). The builds of 3.02 h and 3.09 h (p8_copies_a and p8_copies_c)
-are recorded as the favourable case. The copies half is not falsified.
+The design as pre-registered fixed no rule for a split build. Two readings
+were open. Read literally, any build within 4 h falsifies the copies half, and
+two did. Read with section 8's "less favourable quoted", which the design then
+stated only for the blocks of one job, the slowest build of 4.48 h is quoted
+and the half holds. The
+owner decided on 2026-10-09, after the results and PRs #166 and #167, that
+the rule extends to the nodes of a cost set. The copies' build is quoted as
+4.48 h (p8_copies_b). The builds of 3.02 h and 3.09 h (p8_copies_a and
+p8_copies_c) are recorded as the favourable case. The copies half is not
+falsified.
 Neither half is a criterion 10 verdict.
 Criterion 10 is scored in part 10.
 
@@ -426,15 +434,21 @@ threshold, tolerance or default.
     prior's first term first in each mode. In the default it is the closure
     residual (1.89e-12 of WATER_GROSS). In the copies it is the copies' repair
     (0.2526 of COMPARATOR_REPAIR_PER_DAY). The first three terms of each mode
-    are the prior's. Part 9 takes the prior order.
+    are the prior's. Part 9 takes the prior order. The ranked terms are
+    closure and accounting readings, not origin errors. The default's are
+    1.89e-12 of WATER_GROSS and then zeros. So the ranking does not say which
+    mechanism gives the largest provenance error. That waits for PX12's
+    eligible comparator and the re-score (#173).
   - **H3, the cost: not falsified.** The default half holds on all three
     nodes (8.998x to 9.379x against OD3's 2x, E88 9.098x). It is not
-    falsified. The copies half is not falsified either. Two builds fall
-    within 4 h (3.02 h and 3.09 h), and one does not (4.48 h). The owner
-    decided on 2026-10-09 that section 8's rule "less favourable quoted"
-    extends from the blocks of one job to the nodes of a cost set. So the
-    copies' build is quoted as 4.48 h, and the other two are the favourable
-    case. Neither half is a criterion 10 verdict.
+    falsified. The copies half says the copies do not build within 4 h. As
+    written, two builds fall within 4 h (3.02 h and 3.09 h) and one does not
+    (4.48 h). The design as pre-registered fixed no rule for this split.
+    After the results, the owner decided on 2026-10-09 that section 8's rule
+    "less favourable quoted" extends from the blocks of one job to the nodes
+    of a cost set. Under that rule the copies' build is quoted as 4.48 h, the
+    other two are the favourable case, and the copies half is not falsified
+    (#173). Neither half is a criterion 10 verdict.
 
 The stop rules of section 10, one by one:
 
@@ -477,13 +491,19 @@ The difference the design's section 2 lists is closed. Commit `dd2df01e8`
 (2026-10-09, before the runs) moved the part 8 brief's walk fix measurement
 to part 9's queue, as the delivery plan's section 3 has it.
 
-What waits for PX12 is the next section. Part 8 is done except PX12's
-readings.
+What waits for PX12 is the next section. Part 8's pilot runs and its
+accounting and cost baseline are complete. Its provenance baseline is pending
+PX12.
 
 ## What waits for PX12
 
 *Filled when PX12's eligibility file is attached.* The same bundles are then
-re-scored, with no rerun. The design's section 9 lists what waits:
+re-scored, with no rerun. The tables JSON is regenerated first, because
+`rank` refuses the published one, which predates the exemption flag (#173).
+For each mode, `part8_pilot.py tables RUN MODE --json NEW.json` reads the
+run's tables directory (`RUN/output_0000` or `RUN` itself) and writes a new
+file, since `--json` refuses an existing path. `rank` then runs with the
+published tables' prior, `--newton 0.0041` and `--newton-source "FINDINGS W57, D4-W, prior"`. The design's section 9 lists what waits:
 
   - the first-hour origin verdicts, `WATER.ORIGINS.<tag>.3600`, and their rank,
   - the copies' eligibility: own residual, repair, refinement, OD12 floors,
