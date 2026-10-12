@@ -232,12 +232,15 @@ mean's.
     by difference-form fluxes. Each rain part takes its share of the `ρq_rai`
     flux, each snow part its share of the `ρq_sno` flux, and each
     non-precipitating part its share of the rest of the `ρq_tot` flux. The
-    three sum to the parent's `ρq_tot` flux at every face. Where the parent
-    holds rain or snow in a cell and the partition holds none of it, the
-    region tags take the flux that leaves the cell, and the Jacobian's cross
-    blocks there, by their shares of the non-precipitating water
+    three sum to the parent's `ρq_tot` flux at every face. Where the partition
+    holds none of a cell's rain or snow, whatever the sign the parent's
+    compartment has at that Newton stage, the region tags take the flux that
+    leaves the cell, and the Jacobian's cross blocks there, by their shares
+    of the non-precipitating water
     ([`ClimaAtmos.water_tag_part_flux_share`](@ref)), as the closing step
-    gives new rain its composition.
+    gives new rain its composition. A Newton stage can hold negative rain at
+    the rain top, and a zero share there left the parts without the species'
+    block to the updraft's rain.
   - **The exchange.** The non-precipitating parts exchange composition at the
     updraft's mass flux as without the key, with the plume rescaled to the
     updraft's non-precipitating water `q_tot_effʲ`. The rain and snow parts
@@ -267,7 +270,9 @@ operators above miss. It is not at rounding:
 
   - Where a cell holds rain but the partition holds none of it, no part
     sediments any of it, and the closing step gives the partition that rain
-    by the non-precipitating composition.
+    by the non-precipitating composition. The SGS flux and the cross blocks
+    there take the same composition, so the Newton increments of the parts
+    sum to the species' also where a stage holds negative rain.
   - Under the default `tracer_upwinding: vanleer_limiter` each rain and snow
     part's explicit advection is limited on its own, so the parts' sum moves
     apart from the species' by water that sums to zero over the column. The

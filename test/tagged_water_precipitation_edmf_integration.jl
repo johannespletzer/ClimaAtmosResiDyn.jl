@@ -256,6 +256,28 @@ end
         # species' increment by its share's difference from 0.3.
         drift = maximum(abs, (parent(ΔY.c.ρq_rtag_tropo) .- 0.3 .* Δ_rai)[raining])
         @info "The per-tag drift of one solve" drift scale
+        # A Newton stage can hold negative rain at the rain top while the
+        # partition holds none of it. The parts' rows must keep the species'
+        # cross block to the updraft's rain there, by the shares of the
+        # non-precipitating water, or their increments lag the species' by
+        # that block's action (the measured step-18 event of the design's
+        # section 13). The highest raining cell is set negative with empty
+        # rain parts, and the solve is repeated on every cell with rain.
+        Y_neg = copy(Y)
+        top = findlast(raining)
+        parent(Y_neg.c.ρq_rai)[top] = -3e-10
+        parent(Y_neg.c.ρq_rtag_tropo)[top] = 0
+        parent(Y_neg.c.ρq_rtag_strat)[top] = 0
+        @test parent(Y_neg.c.sgsʲs.:(1).q_rai)[top] != 0
+        CA.update_jacobian!(alg, cache, Y_neg, p, FT(60), t)
+        LinearAlgebra.ldiv!(ΔY, cache.solver, R)
+        with_rain = parent(Y_neg.c.ρq_rai) .!= 0
+        Δ_rai = parent(ΔY.c.ρq_rai)
+        Δ_sum = parent(ΔY.c.ρq_rtag_tropo) .+ parent(ΔY.c.ρq_rtag_strat)
+        scale = maximum(abs, Δ_rai[with_rain])
+        mismatch = maximum(abs, (Δ_sum .- Δ_rai)[with_rain])
+        @info "The solve with negative rain at the rain top" mismatch scale top
+        @test mismatch <= 1e-10 * scale
     end
 
     # 8. `pr_tag` closes to `pr`.

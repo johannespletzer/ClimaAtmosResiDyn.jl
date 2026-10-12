@@ -2018,10 +2018,15 @@ end
     shares = flux_shares(compartments, N, (2e-7, 8e-7, 0), (1e-7, 1e-7, 0), CA.RainPart())
     @test shares[1] ≈ 0.2 rtol = 1e-12
     @test shares[2] ≈ 0.8 rtol = 1e-12
-    # No rain in the parent: no share.
-    compartments = (FT(1e-2) + FT(2e-7), FT(0), FT(2e-7))
-    shares = flux_shares(compartments, N, (0, 0, 0), (1e-7, 1e-7, 0), CA.RainPart())
-    @test all(iszero, shares)
+    # No rain in the parent, and negative rain, as a Newton stage can hold
+    # it: the shares of `N` still, so the cross blocks sum to the species'.
+    for rain in (FT(0), FT(-3e-10))
+        compartments = (FT(1e-2) + FT(2e-7), rain, FT(2e-7))
+        shares = flux_shares(compartments, N, (0, 0, 0), (1e-7, 1e-7, 0), CA.RainPart())
+        @test shares[1] ≈ 0.25 rtol = 1e-14
+        @test shares[2] ≈ 0.75 rtol = 1e-14
+        @test shares[3] == 0
+    end
 end
 
 # The audit's own key: off, the microphysics leaves the audit's fields out of

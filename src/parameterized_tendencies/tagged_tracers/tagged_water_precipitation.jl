@@ -474,14 +474,17 @@ end
 
 Lazy field of `tag`'s share of the rain or snow compartment `part` for the SGS
 mass flux and its Jacobian cross blocks. It is
-[`water_tag_part_share`](@ref), except where the parent holds a positive
-amount of the compartment and the partition holds none of it. There a region
-tag takes its share of the non-precipitating water instead, as the closing
+[`water_tag_part_share`](@ref), except where the partition holds none of the
+compartment. There a region tag takes its share of the non-precipitating
+water instead, whatever the sign of the parent's compartment, as the closing
 step gives new rain or snow the non-precipitating composition. The
-partition's shares then sum to one wherever the parent holds the compartment
-and the partition holds non-precipitating water. Where the compartment is not
-positive the share stays zero. A source tag keeps its own share. Needs
-[`water_tag_share_norm!`](@ref) for the current state.
+partition's shares then sum to one wherever the partition holds
+non-precipitating water, so the parts' cross blocks sum to the species' also
+where a Newton stage holds negative rain or snow. A share of zero there left
+the parts without the species' block to the updraft's rain, which the
+implicit sedimentation carried down the column into the closing ledger. A
+source tag keeps its own share. Needs [`water_tag_share_norm!`](@ref) for
+the current state.
 """
 function water_tag_part_flux_share(ᶜY, scratch, tag, part)
     ᶜshare = water_tag_part_share(ᶜY, scratch, tag, part)
@@ -495,7 +498,7 @@ function water_tag_part_flux_share(ᶜY, scratch, tag, part)
     )
 end
 @inline _part_flux_share(share, share_nonprecip, parent, norm) =
-    ifelse((parent > zero(parent)) & !(norm > zero(norm)), share_nonprecip, share)
+    ifelse(!(norm > zero(norm)), share_nonprecip, share)
 
 # The share denominators of the rain and snow parts, beside the one
 # `water_tag_share_norm!` fills for `ρq_tag_<name>`.
@@ -602,8 +605,8 @@ with the SGS mass flux and the split solver
 (`water_tag_cross_flag`) the species' blocks to the updraft's species,
 `sgsʲs.1.q_rai` or `sgsʲs.1.q_sno`, and to `f.u₃`, each scaled by the part's
 share of its compartment ([`water_tag_part_flux_share`](@ref)). Where the
-parent holds the compartment and the partition holds none of it, that is a
-region tag's share of the non-precipitating water, so that the partition's
+partition holds none of the compartment, whatever the parent's sign, that is
+a region tag's share of the non-precipitating water, so that the partition's
 cross blocks still sum to the species'. Each part moves by
 its share of its species' operators: the sedimentation, the `K_e` diffusion
 and the SGS mass flux. So where the shares sum to one the parts' Newton
