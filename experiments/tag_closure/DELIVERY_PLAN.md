@@ -212,6 +212,11 @@ this fork.
     item 1): the parts take shares of the species' explicit face flux. Found
     by stage 2's test, deferred by the owner on 2026-10-11 because it changes
     stage 1 under van Leer.
+  - Stage 1's negative-compartment rule in the parts' microphysics (design
+    section 13, the second piece): where rain or snow is negative and `N` is
+    not, the flows carry the `N` composition and the withheld ledger books
+    only where `N` is negative too. Measured by stage 2's second pass,
+    deferred by the owner on 2026-10-12. Changes stage 1 on the column.
   - WP4c leak corrections for runs without rain or snow tags, gated by PX7 and
     PX2.
   - WP5b-C cross blocks for copies, WP5b-P precipitation-weighted errors.

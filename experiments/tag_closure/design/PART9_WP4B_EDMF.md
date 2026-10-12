@@ -585,3 +585,37 @@ instrumented pass (2026-10-12, budget 2.1M) before the PR opens. The
 falsifier for the runs is extended: beside the closing ledger, the rescale
 and empty ledgers at every output, and the per-stage Newton increment
 mismatch where a run records it.
+
+**The second piece, measured (2026-10-12).** The second pass instrumented
+every operator of the implicit tendency at levels 14 to 17 of steps 18 and
+19 (`mech2_4b/hooks_ops.jl`, logs `runA.log` and `runB.log`). The exchange
+is ruled out: it sums to zero over the partition and is off at the rain top,
+where the environment's room is not positive. The operator is the
+microphysics. At step 19's third stage the cell starts at −1.64e-10, the
+model's cached rates still evaporate rain out of it (2.60e-12 kg m⁻³ s⁻¹,
+69% from the environment's flows and 31% from the updraft's, cached at the
+step's start when the cell held +5.6e-10), and stage 1's rule for a negative
+compartment freezes its parts (`_water_tag_negative_gross_change`, the
+net-flow rule's `min(ΔR, 0) φR` with `φR = 0`). The parts miss the loss. The
+Newton increment mismatch at the cell is `dtγ` times that residual
+(9.12e-11 against 9.12e-11, 1.9e-5 apart). The end-of-step clip then routes
+99.998% of it into `q_tag_led_rescale` (−4.56e-9 at step 19, −3.7e-8 over
+the hour, 1e-6 of the rain scale), not into `q_tag_res` as the docstring
+says, and 8.4e-14 into `q_tag_led_close`. At step 18 the same cell has a
+gain, which is withheld into `q_tag_exp_negative_precip` and then added by
+the closing step after the solve turns the cell positive, so it is booked
+twice. A candidate fix (`mech2_4b/hooks_mpfix.jl`: where rain or snow is
+negative and `N` is not, the flows carry the `N` composition, and the
+withheld ledger books only when `N` is negative too) takes every ledger to
+rounding over the hour and leaves the species' fields untouched.
+
+It is a stage 1 design property that EDMF exposes, not a stage 2 defect.
+The owner deferred the rule change to a part 9 item of its own on
+2026-10-12, since it changes stage 1's decided rule (option C per
+compartment) on the non-EDMF column too, and keeps this PR to one
+mechanism. The four runs report `q_tag_led_rescale`, `q_tag_led_empty` and
+`q_tag_exp_negative_precip` as data beside the closing ledger. The van Leer
+signed ledger (6.3e-9 on the test column) may have the same source and is
+not measured. If its assertion fails on the corrected share rule it is
+marked broken with its value and named here. The instrumentation scripts and
+logs of both passes go to the archive with the record.

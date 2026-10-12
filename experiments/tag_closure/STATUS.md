@@ -19,8 +19,9 @@ the van Leer per-part drift to its own item and raised the budget to 1.5M.
 The fix changed no digit of either ledger (2026-10-12), so the step-18
 event was measured: the parts' missing cross block to the updraft's rain
 where a Newton stage holds negative rain. The share rule is corrected
-(2026-10-12). A second, smaller mismatch at the same cell is being measured.
-The code PR against `main` opens after that.
+(2026-10-12). The second, smaller mismatch at the same cell is stage 1's
+rule for a negative compartment in the parts' microphysics, deferred to its
+own item. The code PR against `main` opens after the group reruns.
 
 ## The energy offset `c`, decided (2026-10-09)
 

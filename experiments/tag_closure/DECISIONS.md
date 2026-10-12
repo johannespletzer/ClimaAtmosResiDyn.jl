@@ -385,6 +385,17 @@ after the numerics reviewer's challenge (its section 12).
     non-positive parent, cap 200k, the budget raised to 2.1M. Recording it
     as a queue item was declined.
 
+*2026-10-12, after the second pass* (design section 13):
+
+  - **Stage 1's negative-compartment rule in the parts' microphysics is a
+    part 9 item of its own.** **In force.** The second mismatch is that rule,
+    exposed by EDMF's negative Newton-stage rain at the rain top. The
+    candidate fix (the `N` composition for a negative compartment's flows,
+    the withheld ledger only where `N` is negative too) is recorded with its
+    measurement. The stage 2 PR opens after the share fix and the group
+    reruns. Fixing it in this PR and fixing the accounting alone were
+    declined.
+
 ## 2026-10-10, part 9 PR B
 
 The owner decided these on 2026-10-10, on the four open inputs of the part 9
