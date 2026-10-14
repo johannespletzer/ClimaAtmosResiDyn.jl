@@ -608,8 +608,8 @@ share of its compartment ([`water_tag_part_flux_share`](@ref)). Where the
 partition holds none of the compartment, whatever the parent's sign, that is
 a region tag's share of the non-precipitating water, so that the partition's
 cross blocks still sum to the species'. Each part moves by
-its share of its species' operators: the sedimentation, the `K_e` diffusion
-and the SGS mass flux. So where the shares sum to one the parts' Newton
+its share of its species' operators: the sedimentation and the SGS mass
+flux. So where the shares sum to one the parts' Newton
 increments sum to the species' to rounding. Per tag the cross blocks are an
 approximation, since a part's own mass flux derivative is not the species'.
 No other row names a part, so the split solver solves each apart, after the
@@ -1043,9 +1043,7 @@ function _set_water_tag_subdomain_flows!(Y, p, mp1m, ::PrognosticEDMFX)
             ᶜT⁰, ᶜw⁰_air, cmp, thp, dt, mp1m.n_substeps,
         )
     else
-        (; ᶜT′T′, ᶜq′q′, ᶜsgs_moments) = p.precomputed
-        corr_Tq = correlation_Tq(p.params)
-        α = sgs_variance_fidelity(CAP.cloud_fraction_steepness_scale(p.params))
+        (; ᶜT′T′, ᶜq′q′, ᶜcorr_Tq, ᶜα, ᶜsgs_moments) = p.precomputed
         ξ_liq = CAP.sgs_liquid_uniform_fraction(p.params)
         ξ_ice = CAP.sgs_ice_uniform_fraction(p.params)
         # The model passes `λ` and `mu_S` positionally, and so do the flows,
@@ -1057,7 +1055,7 @@ function _set_water_tag_subdomain_flows!(Y, p, mp1m, ::PrognosticEDMFX)
         @. ᶜF⁰ = microphysics_tendencies_1m(
             WaterTagFlows1M(), sgs_quad, cmp, thp, ᶜρ⁰, ᶜT⁰, ᶜw⁰_air,
             ᶜq_tot_nonneg⁰, ᶜq_lcl⁰, ᶜq_icl⁰, ᶜq_rai⁰, ᶜq_sno⁰,
-            ᶜT′T′, ᶜq′q′, corr_Tq, ᶜsgs_moments.λ_lagrange, α, ξ_liq, ξ_ice,
+            ᶜT′T′, ᶜq′q′, ᶜcorr_Tq, ᶜsgs_moments.λ_lagrange, ᶜα, ξ_liq, ξ_ice,
             dt, mp1m.n_substeps_quad, ᶜλ⁰, ᶜmu_S⁰,
         )
     end

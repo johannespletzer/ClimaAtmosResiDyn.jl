@@ -70,9 +70,9 @@ Under `water_tag_precipitation: true` only `hyperdiff`, `vdiff` and `sponge`
 can be nonzero. There the target is `max(N, 0)`, for
 `N = ρq_tot - ρq_rai - ρq_sno`. See `docs/src/tagged_water_precipitation.md`.
 The copies are refused with the key. Under prognostic EDMF the parts diffuse
-as their compartments, `N` at `K_h + K_e` and rain and snow at `K_e` only,
-which sums to the parent's `K_h q_tot_eff + K_e q_tot`. So `vdiff` reads the
-boundary layer's term only, and `hdiff` reads zero.
+as their compartments, `N` at `K_h` and rain and snow not at all, which sums
+to the parent's `K_h q_tot_eff`. So `vdiff` reads the boundary layer's term
+only, and `hdiff` reads zero.
 """
 function water_tag_leak!(ᶜleak, Y, p, path::Val)
     @. ᶜleak = 0

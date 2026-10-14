@@ -10,15 +10,6 @@
 # quadrature is set here, as the default configuration has it, so that a test
 # names the branch it runs. A build without it overrides the key.
 function edmf_column_config()
-    entrainment_toml = joinpath(mktempdir(pwd()), "interface_entrainment.toml")
-    write(
-        entrainment_toml,
-        """
-        [EDMF_interface_entr_efficiency]
-        value = 0.4
-        type = "float"
-        """,
-    )
     return Dict{String, Any}(
         "config" => "column",
         "initial_condition" => "DYCOMS_RF02",
@@ -35,16 +26,13 @@ function edmf_column_config()
         "prognostic_tke" => true,
         "microphysics_model" => "1M",
         "use_sgs_quadrature" => true,
-        "fixed_terminal_velocity_liquid" => false,
+        "cloud_liquid_terminal_velocity" => "Stokes",
         "z_elem" => 30,
         "z_max" => 1500.0,
         "z_stretch" => false,
         "perturb_initstate" => false,
         "rad" => "DYCOMS",
-        "toml" => [
-            joinpath(pkgdir(CA), "toml", "prognostic_edmfx_1M.toml"),
-            entrainment_toml,
-        ],
+        "toml" => [joinpath(pkgdir(CA), "toml", "prognostic_edmfx_1M.toml")],
         "ode_algo" => "ARS222",
         "dt" => "120secs",
         "t_end" => "1hours",

@@ -255,10 +255,9 @@ mean's.
     takes the grid mean's composition of its species. The plumes are a
     reconstruction, not an independent tracking of the updraft's rain and
     snow.
-  - **The diffusive flux.** The rain and snow parts diffuse as their species,
-    at `K_e` only, and take no horizontal EDMF flux. The non-precipitating
-    parts diffuse at `K_h + K_e`. The parts' sum moves as the parent's
-    `K_h q_tot_eff + K_e q_tot`.
+  - **The diffusive flux.** The rain and snow parts take no EDMF diffusion,
+    as their species. The non-precipitating parts diffuse at `K_h`. The parts'
+    sum moves as the parent's `K_h q_tot_eff`.
   - **The Jacobian.** Each part's row is its species' row: the diagonal value
     for value, and the species' blocks to the updraft's species and to `f.u₃`
     scaled by the part's share
