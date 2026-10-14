@@ -130,7 +130,7 @@ end
     # mean diffuses the tags, and the updraft, which has no copy of them, is
     # skipped. A field the updraft carries still takes the grid mean's
     # specific tendency. Here that is `q_tot`, which this function moves by
-    # `K_h` and by `K_e` alike in the grid mean and in the updraft.
+    # `K_h` alike in the grid mean and in the updraft.
     @testset "The updrafts' vertical diffusion skips only the tags" begin
         Yₜ = zero(Y)
         CA.edmfx_sgs_diffusive_flux_tendency!(Yₜ, Y, p, t, turbconv_model)
