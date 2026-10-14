@@ -62,10 +62,11 @@ function _check_water_tag_exchange_partition(
         none, so the exchange would do nothing. $advice",
     )
     masks = map(name -> getproperty(cache.ᶜwater_masks, name), names)
-    mask_sum = reduce((a, b) -> a .+ b, map(parent, masks))
+    mask_sum = reduce((a, b) -> a .+ b, masks)
     # The largest deviation over every process, so that all of them refuse
     # together, rather than some while the others go on and wait for them.
-    deviation = _collective_maximum(maximum(abs.(mask_sum .- 1)), first(masks))
+    # `maximum` on a field reduces across the processes.
+    deviation = maximum(abs.(mask_sum .- 1))
     deviation > 0.01 && error(
         "The water tags exchange composition at the updraft's mass flux under \
         `turbconv: prognostic_edmfx`, and a tag's share there is its value \
@@ -75,12 +76,6 @@ function _check_water_tag_exchange_partition(
     )
     return nothing
 end
-
-# The maximum of a local value over the processes that hold `field`. Arrays
-# that are not fields, as in the unit tests, are one process's.
-_collective_maximum(value, field::Fields.Field) =
-    ClimaComms.allreduce(ClimaComms.context(field), value, max)
-_collective_maximum(value, field) = value
 
 # ============================================================================
 # Scratch

@@ -345,17 +345,15 @@ energy_source_partition_tolerance(::Type{FT}) where {FT} = 100 * eps(FT)
 How far the region tags are from a partition of unity: the largest
 `|Σᵢ Mᵢ - 1|` over the domain, reduced across processes, for the masks in
 `ᶜmasks` of the tags `names`. It is `1` without a region tag, where the sum is
-zero. `ᶜρ` gives the float type and the processes. The cache keeps it. See
+zero. `ᶜρ` gives the float type. The cache keeps it. See
 [`energy_source_partition_verified`](@ref).
 """
 function energy_source_partition_deviation(ᶜmasks, names, ᶜρ)
     FT = eltype(ᶜρ)
     isempty(names) && return one(FT)
-    mask_sum = reduce(
-        (a, b) -> a .+ b,
-        map(name -> parent(getproperty(ᶜmasks, name)), names),
-    )
-    return FT(_collective_maximum(maximum(abs.(mask_sum .- 1)), ᶜρ))
+    mask_sum =
+        reduce((a, b) -> a .+ b, map(name -> getproperty(ᶜmasks, name), names))
+    return FT(maximum(abs.(mask_sum .- 1)))
 end
 
 """
@@ -388,14 +386,9 @@ _energy_source_copy_cache(Y, model) =
 function _check_increment_partition(ᶜmasks, names, model)
     follows_implicit_increment(model) || return nothing
     isempty(names) && return nothing
-    mask_sum = reduce(
-        (a, b) -> a .+ b,
-        map(name -> parent(getproperty(ᶜmasks, name)), names),
-    )
-    deviation = _collective_maximum(
-        maximum(abs.(mask_sum .- 1)),
-        getproperty(ᶜmasks, first(names)),
-    )
+    mask_sum =
+        reduce((a, b) -> a .+ b, map(name -> getproperty(ᶜmasks, name), names))
+    deviation = maximum(abs.(mask_sum .- 1))
     # 100 rounding units, as the water tags' increment transport allows
     # (`water_increment_partition_tolerance`). A region and its complement sum
     # to 1 within a few. A gap the size of the closure tolerance does not pass.
