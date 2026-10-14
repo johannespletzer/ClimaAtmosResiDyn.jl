@@ -474,27 +474,31 @@ end
                 mp, tps, s.ρ, s.T, s.w, s.q_tot, s.q_lcl, s.q_icl, s.q_rai,
                 s.q_sno, dt, nsub,
             )
-            # The substeps repeat CloudMicrophysics' arithmetic, so the net
-            # tendencies are the model's. The compiler may fuse a `muladd`
-            # in one and not the other, so they agree to the rounding of
-            # the step's water over the step, not bit for bit.
             gross =
                 abs(flows.NR) + abs(flows.NS) + abs(flows.RN) +
                 abs(flows.RS) + abs(flows.SR) + abs(flows.SN)
             water = s.q_lcl + s.q_icl + s.q_rai + s.q_sno
-            tolerance = 64 * eps(FT) * (water / dt + gross)
-            @test abs(flows.dq_rai_dt - reference.dq_rai_dt) <= tolerance
-            @test abs(flows.dq_sno_dt - reference.dq_sno_dt) <= tolerance
-            # The flows' net is the net, to the same rounding.
+            scale = water / dt + gross
+            # The flows' net is the replay's own net tendency, to the rounding
+            # of the step's water over the step.
+            tolerance = 64 * eps(FT) * scale
             @test abs(
-                (flows.NR + flows.SR - flows.RN - flows.RS) - reference.dq_rai_dt,
+                (flows.NR + flows.SR - flows.RN - flows.RS) - flows.dq_rai_dt,
             ) <= tolerance
             @test abs(
-                (flows.NS + flows.RS - flows.SN - flows.SR) - reference.dq_sno_dt,
+                (flows.NS + flows.RS - flows.SN - flows.SR) - flows.dq_sno_dt,
             ) <= tolerance
-            # Each flow runs from its donor.
+            # The replay runs CloudMicrophysics' own substeps, but not bit for
+            # bit. Its substep has `muladd`s, which the compiler fuses or not
+            # depending on where the code is inlined, and its limiters can
+            # magnify the difference by orders of magnitude. The attribution
+            # takes the model's tendencies and moves the difference by the
+            # net-flow rule, so this bounds that share by √eps.
+            @test abs(flows.dq_rai_dt - reference.dq_rai_dt) <= sqrt(eps(FT)) * scale
+            @test abs(flows.dq_sno_dt - reference.dq_sno_dt) <= sqrt(eps(FT)) * scale
+            # Each flow runs from its donor, and none is negative.
             @test all(
-                f -> f >= -tolerance,
+                f -> f >= 0,
                 (flows.NR, flows.NS, flows.RN, flows.RS, flows.SR, flows.SN),
             )
             two_way += (flows.NR > 0 && flows.RN > 0)
@@ -503,27 +507,46 @@ end
         # net-flow rule cannot tell apart.
         @test two_way > 10
 
-        # The flows read every process of CloudMicrophysics' substep that
-        # moves water between compartments, and no other, so a new process
-        # cannot be missed. Each term's type gives its species.
+        # Each process of CloudMicrophysics' substep goes to the flow its
+        # term's type gives: a transfer between compartments to the flow from
+        # its donor's compartment to its receiver's, a vapour exchange of rain
+        # or snow to the flow into it when positive and out of it when
+        # negative, and a transfer inside `N` to no flow. A new or renamed
+        # process fails here.
         s = first(states)
         q = BMT.Condensates1M(s.q_lcl, s.q_icl, s.q_rai, s.q_sno)
         (; increments) =
             BMT._substep_1m(mp, tps, s.ρ, s.T, s.w, s.q_tot, q, dt)
-        terms = BMT._microphysics_source_terms(
-            BMT.Microphysics1Moment(), mp, tps, s.ρ, s.T, s.w, s.q_tot,
-            s.q_lcl, s.q_icl, s.q_rai, s.q_sno,
+        (terms, _) = BMT._vapor_terms(
+            mp.processes.vapor_relaxation,
+            BMT._microphysics_source_terms(
+                BMT.Microphysics1Moment(), mp, tps, s.ρ, s.T, s.w, s.q_tot,
+                s.q_lcl, s.q_icl, s.q_rai, s.q_sno,
+            ),
+            tps, s.ρ, s.T, s.q_tot, q, dt,
         )
         @test keys(increments) == keys(terms)
         compartment(species) =
-            species in (:q_lcl, :q_icl) ? :N : species == :q_rai ? :R : :S
+            species in (:q_lcl, :q_icl) ? :N :
+            species == :q_rai ? :R :
+            species == :q_sno ? :S : error("unknown species $species")
         for (name, term) in pairs(terms)
             species = typeof(term).parameters
-            crosses =
-                term isa BMT.Transfer ?
-                compartment(species[1]) != compartment(species[2]) :
-                compartment(species[1]) != :N
-            @test (name in CA.WATER_TAG_1M_PROCESSES) == crosses
+            for sign in (1, -1)
+                term isa BMT.Transfer && sign == -1 && continue
+                Δ = map(_ -> zero(FT), increments)
+                Δ = merge(Δ, NamedTuple{(name,)}((FT(sign),)))
+                (from, to) =
+                    term isa BMT.Transfer ?
+                    (compartment(species[1]), compartment(species[2])) :
+                    sign > 0 ? (:N, compartment(species[1])) :
+                    (compartment(species[1]), :N)
+                expected = map(
+                    flow -> FT(from != to && flow == Symbol(from, to)),
+                    NamedTuple{CA.WATER_TAG_FLOW_NAMES}(CA.WATER_TAG_FLOW_NAMES),
+                )
+                @test CA.water_tag_1m_substep_flows(Δ) == expected
+            end
         end
 
         # The scheme tag goes through the model's quadrature evaluator, over
@@ -541,8 +564,9 @@ end
         reference = CA.microphysics_tendencies_1m(BMT.Microphysics1Moment(), args...)
         flows = CA.microphysics_tendencies_1m(CA.WaterTagFlows1M(), args...)
         @test keys(flows) == CA.WATER_TAG_FLOW_NAMES
+        # The two calls are separate kernels, so they round apart as above.
         tolerance =
-            64 * eps(FT) *
+            sqrt(eps(FT)) *
             (
                 (s.q_lcl + s.q_icl + s.q_rai + s.q_sno) / dt +
                 sum(abs, values(flows))

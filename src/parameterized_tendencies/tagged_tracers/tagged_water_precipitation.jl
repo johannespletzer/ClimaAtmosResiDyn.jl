@@ -619,6 +619,7 @@ function BMT.bulk_microphysics_tendencies(
         map(name -> getproperty(flows, name), WATER_TAG_FLOW_NAMES),
     )
 end
+
 """
     water_tag_1m_flows(mp, tps, ρ, T, w, q_tot, q_lcl, q_icl, q_rai, q_sno, Δt, nsub)
 
@@ -631,10 +632,18 @@ autoconversion may depend on.
 
 It runs the substeps of `BMT.bulk_microphysics_tendencies(BMT.LinearizedAverage(), ...)`
 with CloudMicrophysics' own substep, `BMT._substep_1m`, which also returns each
-process's transfer over the substep. `_water_tag_1m_substep` sums the
-transfers that cross between compartments into the six flows. The net tendencies
-it returns are the model's. The flows' net is the tendencies' net to the rounding
-of the step's water over the step, and a test holds it to that.
+process's transfer over the substep. [`water_tag_1m_substep_flows`](@ref) sums
+the transfers that cross between compartments into the six flows. The flows' net
+is the returned tendencies' net to the rounding of the step's water over the step,
+and a test holds it to that.
+
+The returned tendencies are those of the model's call only up to rounding that
+CloudMicrophysics' limiters can magnify. Its substep has `muladd`s, which the
+compiler fuses or not depending on where the code is inlined, so the same state
+can round differently here and in the model's call. Where the limiters cancel
+nearly all of a source, that difference grows by orders of magnitude. The
+attribution takes the model's tendencies, and the net-flow rule moves the
+difference ([`water_tag_microphysics_change`](@ref)).
 
 These are the gross flows. Each flow is later attributed with the composition of
 the compartment it leaves ([`water_tag_microphysics_change`](@ref)).
@@ -684,53 +693,24 @@ the compartment it leaves ([`water_tag_microphysics_change`](@ref)).
 end
 
 """
-    WATER_TAG_1M_PROCESSES
+    water_tag_1m_substep_flows(Δ)
 
-The processes of `BMT._substep_1m` that `_water_tag_1m_substep` reads.
-The rest move water inside the non-precipitating water `N`: the phase changes
-of cloud liquid and ice, ice melt and liquid freezing. A test checks that this
-list and those four are every process CloudMicrophysics returns, so a new
-process cannot be missed.
+The six flows of [`WATER_TAG_FLOW_NAMES`](@ref) over one substep, from `Δ`,
+each process's transfer over the substep as `BMT._substep_1m` returns it [kg/kg].
+
+The type of each process term gives its donor and receiver. Cloud liquid and ice
+belong to the non-precipitating water `N`, so the phase changes of cloud liquid
+and ice, ice melt and liquid freezing move no water between compartments and are
+left out. The vapour exchange of rain and of snow goes either way, positive from
+the vapour to the condensate. Its sign decides the flow: condensation and
+deposition go into `NR` and `NS`, evaporation and sublimation into `RN` and
+`SN`. Rain condenses only under the joint relaxation of the vapour-driven phase
+changes. A test checks each process against its term's type.
 """
-const WATER_TAG_1M_PROCESSES = (
-    :S_acnv_lcl_rai,
-    :S_accr_lcl_rai,
-    :S_accr_lcl_sno_warm,
-    :S_acnv_icl_sno,
-    :S_accr_lcl_sno_cold,
-    :S_accr_icl_rai,
-    :S_accr_icl_sno,
-    :S_accr_freeze_icl_rai,
-    :S_accr_rai_sno_cold,
-    :S_accr_melt_lcl_sno,
-    :S_accr_rai_sno_warm,
-    :S_accr_melt_rai_sno,
-    :S_melt_sno_rai,
-    :S_phase_change_vap_rai,
-    :S_phase_change_vap_sno,
-)
-
-"""
-    _water_tag_1m_substep(mp, tps, ρ, T, w, q_tot, q, Δt)
-
-One substep of the 1-moment microphysics, `BMT._substep_1m`, and the flows
-between the compartments over it. Returns the new species `q` (a
-`BMT.Condensates1M`), the new temperature `T` and the six `flows` [kg/kg].
-
-`BMT._substep_1m` returns each process's transfer. The type of each process
-term gives its donor and receiver. Cloud liquid and ice belong to `N`. The
-vapour exchange of rain and of snow goes either way, positive from the vapour
-to the condensate, so its sign decides the flow: condensation and deposition
-go into `NR` and `NS`, evaporation and sublimation into `RN` and `SN`. Each
-substep's sign is read separately, so a step in which rain both forms and
-evaporates keeps both flows.
-"""
-@inline function _water_tag_1m_substep(mp, tps, ρ, T, w, q_tot, q, Δt)
-    (; q, T, increments) = BMT._substep_1m(mp, tps, ρ, T, w, q_tot, q, Δt)
-    Δ = increments
+@inline function water_tag_1m_substep_flows(Δ)
     vap_rai = Δ.S_phase_change_vap_rai
     vap_sno = Δ.S_phase_change_vap_sno
-    flows = (;
+    return (;
         NR = Δ.S_acnv_lcl_rai + Δ.S_accr_lcl_rai + Δ.S_accr_lcl_sno_warm +
              max(vap_rai, zero(vap_rai)),
         NS = Δ.S_acnv_icl_sno + Δ.S_accr_lcl_sno_cold + Δ.S_accr_icl_rai +
@@ -741,7 +721,23 @@ evaporates keeps both flows.
              Δ.S_accr_melt_rai_sno + Δ.S_melt_sno_rai,
         SN = max(-vap_sno, zero(vap_sno)),
     )
-    return (; q, T, flows)
+end
+
+"""
+    _water_tag_1m_substep(mp, tps, ρ, T, w, q_tot, q, Δt)
+
+One substep of the 1-moment microphysics, `BMT._substep_1m`, and the flows
+between the compartments over it ([`water_tag_1m_substep_flows`](@ref)). Returns
+the new species `q` (a `BMT.Condensates1M`), the new temperature `T` and the six
+`flows` [kg/kg].
+
+Each substep's vapour exchange has one sign, and the flows split it by that sign
+substep by substep. So rain that condenses in one substep and evaporates in a
+later one keeps both flows.
+"""
+@inline function _water_tag_1m_substep(mp, tps, ρ, T, w, q_tot, q, Δt)
+    (; q, T, increments) = BMT._substep_1m(mp, tps, ρ, T, w, q_tot, q, Δt)
+    return (; q, T, flows = water_tag_1m_substep_flows(increments))
 end
 
 """
@@ -973,8 +969,10 @@ gross flows `F` over the step `Δt`, each with the composition of the compartmen
 it leaves over the step ([`water_tag_pool_shares`](@ref), [`water_tag_gross_flow_change`](@ref)),
 plus the net-flow rule ([`water_tag_net_flow_change`](@ref)) on what the
 flows' net misses of the model's own tendencies, `dq_rai_dt` and `dq_sno_dt`.
-That remainder is rounding where the flows are available, so the gross flows
-set the attribution. Where they are not, `F` is zero, and the net-flow rule is
+Where the flows are available, that remainder is rounding of the replay against
+the model's call, which CloudMicrophysics' limiters can magnify to about 1e-10 of
+the step's flows in Float64 and 5e-5 in Float32, so the gross flows set the
+attribution. Where they are not, `F` is zero, and the net-flow rule is
 the fallback. `qN`, `qR` and `qS` are the compartments' water per unit mass,
 and `φN`, `φR`, `φS` the tag's shares of them. Returns `(ΔN, ΔR, ΔS)`.
 

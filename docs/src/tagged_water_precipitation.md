@@ -239,6 +239,7 @@ ClimaAtmos.update_water_precip_part_sedimentation_jacobian!
 ClimaAtmos.WATER_TAG_FLOW_NAMES
 ClimaAtmos.WaterTagFlows1M
 ClimaAtmos.water_tag_1m_flows
+ClimaAtmos.water_tag_1m_substep_flows
 ClimaAtmos.water_tag_1m_flows_grid_mean
 ClimaAtmos.set_water_tag_microphysics_flows!
 ClimaAtmos.water_tag_gross_flow_change
