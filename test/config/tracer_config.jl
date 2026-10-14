@@ -2443,3 +2443,108 @@ end
     @test isnothing(CA.check_energy_source_throughput_setup(nothing, ()))
     @test isnothing(CA.check_energy_source_throughput_setup((;), ()))
 end
+
+@testset "The config parsers for flags and levels" begin
+    # Each named parser keeps its default and its error text, character for
+    # character.
+    bool_parsers = (
+        (CA.energy_source_repair_from_config, "energy_source_tag_repair", true),
+        (
+            CA.energy_source_updraft_copy_from_config,
+            "energy_source_tag_updraft_copy",
+            false,
+        ),
+        (
+            CA.energy_source_increment_explicit_microphysics_from_config,
+            "energy_source_tag_increment_allow_explicit_microphysics",
+            false,
+        ),
+        (CA.water_tag_updraft_copy_from_config, "water_tag_updraft_copy", false),
+        (CA.water_tag_precipitation_from_config, "water_tag_precipitation", false),
+        (
+            CA.water_tag_precipitation_audit_from_config,
+            "water_tag_precipitation_audit",
+            true,
+        ),
+    )
+    for (parse, key, default) in bool_parsers
+        @test parse(nothing) === default
+        @test parse(true) === true
+        @test parse(false) === false
+        @test_throws ErrorException(
+            "`$key` must be `true` or `false`, got \"true\".",
+        ) parse("true")
+        @test_throws ErrorException("`$key` must be `true` or `false`, got 1.") parse(1)
+    end
+    @test_throws ErrorException(
+        "`water_tag_precipitation` must be `true` or `false`, got \"true\".",
+    ) CA.water_tag_precipitation_from_config("true")
+    @test CA.tag_ledger_per_tag_from_config(nothing, "water_tag_ledger_per_tag") ===
+          false
+    @test CA.tag_ledger_per_tag_from_config(true, "water_tag_ledger_per_tag") === true
+    @test_throws ErrorException(
+        "`energy_source_tag_ledger_per_tag` must be `true` or `false`, got \"yes\".",
+    ) CA.tag_ledger_per_tag_from_config("yes", "energy_source_tag_ledger_per_tag")
+
+    context = "The water closure check's"
+    @test CA.negative_water_void_above_from_config(nothing, context, FT) === nothing
+    @test CA.negative_water_void_above_from_config(0, context, Float32) === 0.0f0
+    @test_throws ErrorException(
+        "The water closure check's `negative_water_void_above` must not be negative, got -1.0. Use `~` to switch the flag off.",
+    ) CA.negative_water_void_above_from_config(-1, "The water closure check's", Float64)
+    @test CA.closure_tolerance_from_config(nothing, context, FT) === nothing
+    @test CA.closure_tolerance_from_config(0, context, FT) === 0.0
+    @test_throws ErrorException(
+        "$context `tolerance` must not be negative, got -0.5. It is compared against the absolute value of the relative residual.",
+    ) CA.closure_tolerance_from_config(-0.5, context, FT)
+    @test CA.closure_abort_above_from_config(nothing, context, FT) === nothing
+    @test CA.closure_abort_above_from_config(2, context, Float32) === 2.0f0
+    @test_throws ErrorException(
+        "$context `abort_above` must be positive, got 0.0. Use `~` to keep warning without ever ending the run.",
+    ) CA.closure_abort_above_from_config(0, context, FT)
+    @test CA.closure_void_above_from_config(nothing, context, FT) === nothing
+    @test CA.closure_void_above_from_config(1, context, FT) === 1.0
+    @test_throws ErrorException(
+        "$context `void_above` must be positive, got 0.0. Use `~` for no void level.",
+    ) CA.closure_void_above_from_config(0, context, FT)
+    @test CA.closure_throughput_tolerance_from_config(nothing, context, FT, false) ===
+          nothing
+    @test CA.closure_throughput_tolerance_from_config(1, context, FT, true) === 1.0
+    @test_throws ErrorException(
+        "$context `throughput_tolerance` must be positive, got 0.0. Use `~` for no level.",
+    ) CA.closure_throughput_tolerance_from_config(0, context, FT, true)
+
+    # The shared parsers the named ones call.
+    @test CA.bool_from_config(nothing, "k"; default = true) === true
+    @test CA.bool_from_config(nothing, "k"; default = false) === false
+    @test CA.bool_from_config(false, "k"; default = true) === false
+    @test_throws ErrorException("`k` must be `true` or `false`, got \"no\".") CA.bool_from_config(
+        "no",
+        "k";
+        default = false,
+    )
+    @test CA.nonnegative_from_config(0, "Ctx", "key", Float32; hint = "H.") ===
+          0.0f0
+    @test_throws ErrorException("Ctx `key` must not be negative, got -2.0. H.") CA.nonnegative_from_config(
+        -2,
+        "Ctx",
+        "key",
+        FT;
+        hint = "H.",
+    )
+    @test CA.positive_from_config(3, "Ctx", "key", FT; hint = "H.") === 3.0
+    @test_throws ErrorException("Ctx `key` must be positive, got 0.0. H.") CA.positive_from_config(
+        0,
+        "Ctx",
+        "key",
+        FT;
+        hint = "H.",
+    )
+    @test_throws ErrorException("Ctx `key` must be positive, got NaN. H.") CA.positive_from_config(
+        NaN,
+        "Ctx",
+        "key",
+        FT;
+        hint = "H.",
+    )
+end
