@@ -44,7 +44,7 @@ function copies_edmf_config()
         "prognostic_tke" => true,
         "microphysics_model" => "1M",
         "implicit_microphysics" => false,
-        "fixed_terminal_velocity_liquid" => false,
+        "cloud_liquid_terminal_velocity" => "Stokes",
         "z_elem" => 30,
         "z_max" => 1500.0,
         "z_stretch" => false,

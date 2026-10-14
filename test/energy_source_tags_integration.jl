@@ -474,7 +474,7 @@ end
                         "microphysics_model" => "1M",
                         # Cloud liquid falls at a fixed speed by default. The
                         # diagnostic speed is nonzero wherever there is cloud.
-                        "fixed_terminal_velocity_liquid" => false,
+                        "cloud_liquid_terminal_velocity" => "Stokes",
                         "energy_source_tag_offset" => c,
                         "t_end" => "60secs",
                         "output_dir" => mktempdir(pwd()),
@@ -883,7 +883,7 @@ end
                         "z_max" => 10000.0,
                         "z_elem" => 100,
                         "microphysics_model" => "1M",
-                        "fixed_terminal_velocity_liquid" => false,
+                        "cloud_liquid_terminal_velocity" => "Stokes",
                         "energy_source_tag_offset" => c,
                         "output_dir" => mktempdir(pwd()),
                     ),

@@ -55,7 +55,7 @@ end
         "microphysics_model" => "1M",
         # Cloud liquid falls at a fixed speed by default. The diagnostic speed
         # differs between the updraft and the grid mean.
-        "fixed_terminal_velocity_liquid" => false,
+        "cloud_liquid_terminal_velocity" => "Stokes",
         "z_elem" => 30,
         "z_max" => 1500.0,
         "z_stretch" => false,
