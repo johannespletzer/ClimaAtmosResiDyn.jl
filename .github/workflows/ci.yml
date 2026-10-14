@@ -97,7 +97,10 @@ env:
   # Quarantined jobs, `<version>/<group>` separated by spaces, for example
   # '1.10/tagging_water_precipitation'. Such a job still runs and shows its
   # result, but its failure does not fail the run. Only the owner adds one.
-  ALLOW_FAIL: ''
+  # The two EDMF rain and snow groups compile builds that pass a runner's
+  # 16 GB on their own. They run on terrabyte instead (docs/clima_atmos_specific.md,
+  # "Which jobs run when").
+  ALLOW_FAIL: '1.11/tagging_water_precipitation_edmf 1.11/tagging_water_precipitation_edmf_tracer'
 
 jobs:
   plan:

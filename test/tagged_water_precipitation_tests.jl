@@ -65,23 +65,42 @@ precipitation_tags(FT = Float64) = (
         precipitation = true,
         updraft_copies = true,
     )
-    # 1M only, and no EDMF (stage 2).
-    @test isnothing(
-        CA.check_water_tag_precipitation_supported(
-            CA.NonEquilibriumMicrophysics1M(),
-            nothing,
-        ),
-    )
+    # 1M only. Under EDMF `prognostic_edmfx` with the split solver (stage 2).
+    for turbconv in (nothing, "prognostic_edmfx")
+        @test isnothing(
+            CA.check_water_tag_precipitation_supported(
+                CA.NonEquilibriumMicrophysics1M(),
+                turbconv,
+            ),
+        )
+    end
     @test_throws r"microphysics_model: 1M" CA.check_water_tag_precipitation_supported(
         CA.EquilibriumMicrophysics0M(),
         nothing,
     )
-    for turbconv in ("prognostic_edmfx", "edonly_edmfx")
-        @test_throws r"refused with `turbconv" CA.check_water_tag_precipitation_supported(
+    @test_throws r"edonly_edmfx" CA.check_water_tag_precipitation_supported(
+        CA.NonEquilibriumMicrophysics1M(),
+        "edonly_edmfx",
+    )
+    @test_throws r"split solver" CA.check_water_tag_precipitation_supported(
+        CA.NonEquilibriumMicrophysics1M(),
+        "prognostic_edmfx",
+        true,
+    )
+    # One updraft only, as for every water tag under EDMF.
+    @test_throws Exception CA.check_water_tracers_transport_supported(
+        "prognostic_edmfx",
+        false,
+        2,
+    )
+    # Without EDMF the auto Jacobian stays allowed, as in stage 1.
+    @test isnothing(
+        CA.check_water_tag_precipitation_supported(
             CA.NonEquilibriumMicrophysics1M(),
-            turbconv,
-        )
-    end
+            nothing,
+            true,
+        ),
+    )
 
     # Through the configuration.
     tags = [
@@ -1870,6 +1889,315 @@ end
     end
 end
 
+@testset "The flows weighted by subdomain under EDMF" begin
+    FT = Float64
+    flows(v) = NamedTuple{CA.WATER_TAG_FLOW_NAMES}(v)
+    # A hand-built two-subdomain cell: the environment's and the updraft's
+    # flows, each per unit mass of its own air, and the areas' densities.
+    F⁰ = flows((FT(1e-9), FT(2e-10), FT(3e-10), FT(0), FT(1e-11), FT(4e-10)))
+    Fʲ = flows((FT(1e-7), FT(3e-8), FT(2e-8), FT(1e-9), FT(0), FT(5e-9)))
+    (ρ, ρa⁰, ρaʲ) = (FT(1.1), FT(1.0), FT(0.08))
+    F = CA.water_tag_weighted_flows(F⁰, Fʲ, ρa⁰, ρaʲ, ρ)
+    # Non-negative flows keep their weighted values, bit for bit.
+    for name in CA.WATER_TAG_FLOW_NAMES
+        @test getproperty(F, name) ===
+              (ρa⁰ * getproperty(F⁰, name) + ρaʲ * getproperty(Fʲ, name)) / ρ
+    end
+    # The weighted nets are the subdomains' nets, weighted the same way.
+    net_rai(F) = (F.NR + F.SR) - (F.RN + F.RS)
+    @test net_rai(F) ≈ (ρa⁰ * net_rai(F⁰) + ρaʲ * net_rai(Fʲ)) / ρ rtol = 1e-14
+
+    # A negative weighted flow: an updraft area outside `[0, ρ]` between
+    # filter calls, here negative. Orientation keeps each pair's net and makes
+    # every flow non-negative.
+    ρaʲ_negative = FT(-0.05)
+    G = CA.water_tag_weighted_flows(F⁰, Fʲ, ρa⁰, ρaʲ_negative, ρ)
+    raw = map((f⁰, fʲ) -> (ρa⁰ * f⁰ + ρaʲ_negative * fʲ) / ρ, F⁰, Fʲ)
+    @test raw.NR < 0
+    @test all(name -> getproperty(G, name) >= 0, CA.WATER_TAG_FLOW_NAMES)
+    for (xy, yx) in ((:NR, :RN), (:NS, :SN), (:RS, :SR))
+        @test getproperty(G, xy) - getproperty(G, yx) ≈
+              getproperty(raw, xy) - getproperty(raw, yx) rtol = 1e-14
+    end
+    # The pool shares under it stay in `[0, 1]` and sum to one over a
+    # partition, where the parts would otherwise go negative: with
+    # `qR = 1e-6` and `Δt NR = -0.9e-6` the unoriented shares are `(10, -9)`.
+    Δt = FT(1)
+    H = flows((FT(-0.9e-6), FT(0), FT(0), FT(0), FT(0), FT(0)))
+    (qN, qR, qS) = (FT(1e-2), FT(1e-6), FT(0))
+    φN = (FT(0.1), FT(0.9))
+    φR = (FT(1), FT(0))
+    unoriented = map(
+        i -> CA.water_tag_pool_shares(H, qN, qR, qS, Δt, φN[i], φR[i], FT(0))[2],
+        (1, 2),
+    )
+    @test minimum(unoriented) < 0
+    Ho = CA.water_tag_oriented_flows(H, true, true, true)
+    oriented = map(
+        i -> CA.water_tag_pool_shares(Ho, qN, qR, qS, Δt, φN[i], φR[i], FT(0)),
+        (1, 2),
+    )
+    for k in 1:3
+        @test all(ψ -> 0 <= ψ[k] <= 1, oriented)
+    end
+    @test sum(ψ -> ψ[1], oriented) ≈ 1 rtol = 1e-14
+    @test sum(ψ -> ψ[2], oriented) ≈ 1 rtol = 1e-14
+end
+
+# One level of the rain and snow plumes, on plain tuples: two region tags and
+# a source tag. The mix keeps a composition all sources share, weights the
+# sources by their amounts, gives the water that converts between rain and
+# snow the other plume's shares at the same level, and falls back to the grid
+# mean's shares where the updraft holds no rain. Each conversion case has a
+# known donor, and the shares are checked against it and against the two
+# plumes' balance.
+@testset "One level of the rain and snow plumes" begin
+    FT = Float64
+    step = CA.PrecipPlumeStep(Val((true, true, false)))
+    composition = (FT(0.3), FT(0.7), FT(0.2))
+    none = (FT(0), FT(0), FT(0))
+    (ρ, ρaʲ, qʲ, aʲ, a₊) = (FT(1.1), FT(0.088), FT(2e-6), FT(0.08), FT(0.06))
+    ρq = FT(1e-6) * ρ
+    ε̄ = map(c -> c * ρq / ρ, composition)
+    εᴺ = map(c -> c * FT(5e-3), composition)
+    # `(ε̄, formation, environment's flux, updraft's flux, qʲ, ρq)`
+    plume_level(ε̄, formation, qʲ) =
+        (ε̄, formation, FT(4e-6), FT(5e-6), qʲ, ρq)
+    # `(shares, environment's shares, has environment, updraft flux, qʲ)`
+    plume_above(shares, has_environment) =
+        (shares, shares, has_environment, FT(3e-6), FT(1e-6))
+    level(rain, snow, εᴺ, cross_SR, cross_RS) =
+        (rain, snow, εᴺ, aʲ, ρaʲ, ρ, cross_SR, cross_RS)
+    no_snow = plume_level(none, FT(0), FT(0))
+    empty_above = (none, none, FT(0), FT(0), FT(0))
+    close(a, b) = all(map((x, y) -> isapprox(x, y; rtol = 1e-14), a, b))
+
+    # One composition in every source: the level keeps it.
+    above = (plume_above(composition, one(FT)), empty_above, a₊)
+    state = step(above, level(plume_level(ε̄, FT(2e-6), qʲ), no_snow, εᴺ, 0, 0))
+    @test close(state[1][1], composition)
+    @test state[1][1][1] + state[1][1][2] ≈ 1 rtol = 1e-14
+    @test close(CA._rain_plume_values(state), map(c -> c * qʲ, composition))
+    @test state[3] == aʲ
+
+    # The rain from above all of tag 1, the rain formed all of tag 2, with no
+    # lateral inflow: the shares are the two amounts' weights.
+    tag_1 = (one(FT), zero(FT), zero(FT))
+    tag_2 = (zero(FT), one(FT), zero(FT))
+    above = (plume_above(tag_1, zero(FT)), empty_above, a₊)
+    εᴺ_2 = (zero(FT), FT(5e-3), zero(FT))
+    state = step(above, level(plume_level(ε̄, FT(2e-6), qʲ), no_snow, εᴺ_2, 0, 0))
+    weight_above = a₊ * FT(3e-6)
+    @test state[1][1][1] ≈ weight_above / (weight_above + FT(2e-6)) rtol = 1e-14
+    @test state[1][1][2] ≈ FT(2e-6) / (weight_above + FT(2e-6)) rtol = 1e-14
+    @test state[1][1][3] == 0
+
+    # Each plume's balance at a level with conversion: its shares times its
+    # supply are the other sources' amounts plus the converted water, at the
+    # other plume's shares at the same level.
+    function balanced(state, sources_R, sources_S, cross_SR, cross_RS)
+        (x_R, x_S) = (state[1][1], state[2][1])
+        supply_R = sum(sources_R) + cross_SR
+        supply_S = sum(sources_S) + cross_RS
+        return all(
+            i ->
+                isapprox(
+                    x_R[i] * supply_R,
+                    sources_R[i] + cross_SR * x_S[i];
+                    rtol = 1e-14,
+                    atol = 1e-30,
+                ) && isapprox(
+                    x_S[i] * supply_S,
+                    sources_S[i] + cross_RS * x_R[i];
+                    rtol = 1e-14,
+                    atol = 1e-30,
+                ),
+            1:3,
+        )
+    end
+    snow_level = plume_level(map(c -> c * ρq / ρ, composition), FT(0), qʲ)
+    (cross_SR, cross_RS) = (FT(1e-6), FT(4e-7))
+
+    # Both conversions in one cell. The rain from above is all tag 1 and the
+    # snow above all tag 2. Each plume then holds the other's tag in the
+    # proportion that the two-equation balance gives.
+    above = (plume_above(tag_1, zero(FT)), plume_above(tag_2, zero(FT)), a₊)
+    state = step(
+        above,
+        level(plume_level(ε̄, FT(0), qʲ), snow_level, εᴺ, cross_SR, cross_RS),
+    )
+    total = weight_above + cross_SR + cross_RS
+    @test state[1][1][1] ≈ (weight_above + cross_RS) / total rtol = 1e-14
+    @test state[1][1][2] ≈ cross_SR / total rtol = 1e-14
+    @test state[2][1][1] ≈ cross_RS / total rtol = 1e-14
+    @test state[2][1][2] ≈ (weight_above + cross_SR) / total rtol = 1e-14
+    @test balanced(
+        state,
+        map(x -> weight_above * x, tag_1),
+        map(x -> weight_above * x, tag_2),
+        cross_SR,
+        cross_RS,
+    )
+
+    # A local donor with no snow plume above. The rain from above is all
+    # tag 1, the snow forms at the level from water of tag 2, and as much
+    # snow turns into rain as rain falls in. The rain is half of each tag.
+    above = (plume_above(tag_1, zero(FT)), empty_above, a₊)
+    snow_formed = plume_level(map(c -> c * ρq / ρ, composition), FT(2e-6), qʲ)
+    state = step(
+        above,
+        level(plume_level(ε̄, FT(0), qʲ), snow_formed, εᴺ_2, weight_above, 0),
+    )
+    @test close(state[2][1], tag_2)
+    @test close(state[1][1], (FT(0.5), FT(0.5), FT(0)))
+    @test balanced(
+        state,
+        map(x -> weight_above * x, tag_1),
+        map(x -> FT(2e-6) * x, tag_2),
+        weight_above,
+        FT(0),
+    )
+
+    # No snow plume above and no snow formed: the snow plume has no supply,
+    # so the rain formed from snow takes the grid mean's snow shares.
+    state = step(
+        above,
+        level(plume_level(ε̄, FT(0), qʲ), snow_level, εᴺ, cross_SR, 0),
+    )
+    rain_supply = weight_above + cross_SR
+    @test close(
+        state[1][1],
+        map(
+            (x, c) -> (weight_above * x + cross_SR * c) / rain_supply,
+            tag_1,
+            composition,
+        ),
+    )
+    @test close(state[2][1], composition)
+
+    # Rain and snow fed only by each other: neither has a mix, and both take
+    # the grid mean's shares.
+    above = (empty_above, empty_above, a₊)
+    state = step(
+        above,
+        level(plume_level(ε̄, FT(0), qʲ), snow_level, εᴺ, cross_SR, cross_RS),
+    )
+    @test close(state[1][1], composition)
+    @test close(state[2][1], composition)
+
+    # No rain in the updraft: the grid mean's shares, and no values.
+    above = (plume_above(tag_1, zero(FT)), empty_above, a₊)
+    state = step(above, level(plume_level(ε̄, FT(2e-6), FT(0)), no_snow, εᴺ_2, 0, 0))
+    @test close(state[1][1], composition)
+    @test all(iszero, CA._rain_plume_values(state))
+end
+
+# The rain and snow mix at the edges of the floating-point range, in both
+# types: zero supplies, subnormal ones, and supplies far apart. The mixes stay
+# finite and non-negative. A plume with a mix keeps a composition that sums
+# to one over the two region tags, and the donor's tag where it has one.
+@testset "The rain and snow mix at the edges of the range" begin
+    for FT in (Float32, Float64)
+        tag_1 = (one(FT), zero(FT), zero(FT))
+        tag_2 = (zero(FT), one(FT), zero(FT))
+        mean = (FT(0.3), FT(0.7), FT(0.2))
+        smallest = nextfloat(zero(FT))
+        subnormal = floatmin(FT) / 4
+        # `(s_R, s_S, c_R, c_S)`: the supplies other than conversion and the
+        # conversions into rain and into snow.
+        cases = (
+            (zero(FT), zero(FT), zero(FT), zero(FT)),
+            (smallest, zero(FT), zero(FT), zero(FT)),
+            (smallest, smallest, smallest, smallest),
+            (subnormal, subnormal, subnormal, zero(FT)),
+            (one(FT), subnormal, zero(FT), zero(FT)),
+            (FT(1e-6), floatmin(FT), FT(1e-7), zero(FT)),
+            (FT(1e-6), FT(1e-6), FT(1e-7), FT(3e-8)),
+        )
+        for (s_R, s_S, c_R, c_S) in cases
+            (x_R, x_S, has_R, has_S) = CA._precip_conversion_mix(
+                map(x -> x * s_R, tag_1),
+                s_R,
+                map(x -> x * s_S, tag_2),
+                s_S,
+                c_R,
+                c_S,
+                mean,
+                mean,
+            )
+            @test all(isfinite, x_R) && all(isfinite, x_S)
+            @test all(>=(0), x_R) && all(>=(0), x_S)
+            has_R && @test x_R[1] + x_R[2] ≈ 1 rtol = sqrt(eps(FT))
+            has_S && @test x_S[1] + x_S[2] ≈ 1 rtol = sqrt(eps(FT))
+            # Without conversion into it, a plume with a supply is its
+            # donor's tag.
+            has_R && s_R > 0 && c_R == 0 && @test x_R[1] ≈ 1 rtol = sqrt(eps(FT))
+            has_S && s_S > 0 && c_S == 0 && @test x_S[2] ≈ 1 rtol = sqrt(eps(FT))
+        end
+        # No supply at all: neither plume has a mix.
+        (_, _, has_R, has_S) = CA._precip_conversion_mix(
+            map(zero, tag_1),
+            zero(FT),
+            map(zero, tag_2),
+            zero(FT),
+            zero(FT),
+            zero(FT),
+            mean,
+            mean,
+        )
+        @test !has_R && !has_S
+    end
+end
+
+# The share of a rain or snow part in the SGS flux and the cross blocks. Where
+# the parent holds rain and the partition holds none of it, the region tags
+# take their shares of the non-precipitating water. Where the parent holds no
+# rain, nothing. A source tag keeps its own share.
+@testset "The flux share where the partition holds no rain" begin
+    FT = Float64
+    function flux_shares(compartments, N, R, S, part)
+        (; Y, p, model) = one_cell_setup(FT, compartments, N, R, S)
+        scratch = (;
+            ᶜtagging_q_share_norm = zeros(FT, 1),
+            ᶜtagging_q_share_norm_rai = zeros(FT, 1),
+            ᶜtagging_q_share_norm_sno = zeros(FT, 1),
+        )
+        CA.water_tag_share_norm!((; p..., scratch), Y)
+        return map(
+            tag -> only(
+                Base.Broadcast.materialize(
+                    CA.water_tag_part_flux_share(Y.c, scratch, tag, part),
+                ),
+            ),
+            model.tags,
+        )
+    end
+    N = (FT(2.5e-3), FT(7.5e-3), FT(1e-3))
+    # Rain the partition holds none of: the shares of `N`.
+    compartments = (FT(1e-2) + FT(1.2e-6), FT(1e-6), FT(2e-7))
+    shares = flux_shares(compartments, N, (0, 0, 0), (1e-7, 1e-7, 0), CA.RainPart())
+    @test shares[1] ≈ 0.25 rtol = 1e-14
+    @test shares[2] ≈ 0.75 rtol = 1e-14
+    @test shares[3] == 0
+    # Snow the partition holds: its own shares.
+    shares = flux_shares(compartments, N, (0, 0, 0), (1e-7, 1e-7, 0), CA.SnowPart())
+    @test shares[1] ≈ 0.5 rtol = 1e-14
+    @test shares[2] ≈ 0.5 rtol = 1e-14
+    # Rain the partition holds: its own shares.
+    shares = flux_shares(compartments, N, (2e-7, 8e-7, 0), (1e-7, 1e-7, 0), CA.RainPart())
+    @test shares[1] ≈ 0.2 rtol = 1e-12
+    @test shares[2] ≈ 0.8 rtol = 1e-12
+    # No rain in the parent, and negative rain, as a Newton stage can hold
+    # it: the shares of `N` still, so the cross blocks sum to the species'.
+    for rain in (FT(0), FT(-3e-10))
+        compartments = (FT(1e-2) + FT(2e-7), rain, FT(2e-7))
+        shares = flux_shares(compartments, N, (0, 0, 0), (1e-7, 1e-7, 0), CA.RainPart())
+        @test shares[1] ≈ 0.25 rtol = 1e-14
+        @test shares[2] ≈ 0.75 rtol = 1e-14
+        @test shares[3] == 0
+    end
+end
+
 # The audit's own key: off, the microphysics leaves the audit's fields out of
 # the state and does not compute them. Every part moves as with the audit on,
 # bit for bit.
@@ -2956,12 +3284,13 @@ end
             },
         ),
         ᶜtagging_q_share_norm = similar(Y.c.ρ),
-        CA._water_tag_precipitation_scratch(Y, model)...,
+        CA._water_tag_precipitation_scratch(Y, model, (; turbconv_model = nothing))...,
     )
     p = (;
         atmos = (;
             microphysics_model = CA.NonEquilibriumMicrophysics1M(),
             water_tagging_model = model,
+            turbconv_model = nothing,
         ),
         params = CA.ClimaAtmosParameters(FT),
         core = (; ᶜΦ = @. FT(9.81) * ᶜz),
@@ -2978,6 +3307,8 @@ end
     @test haskey(matrix, (c(:ρq_rtag_low), c(:ρq_rtag_low)))
     @test !haskey(matrix, (c(:ρq_rtag_low), c(:ρq_rai)))
     CA.update_sedimentation_jacobian!(matrix, Y, p, FT(60), CA.UseDerivative())
+    # The parts copy their species' rows after the last update of those rows.
+    CA.update_water_precip_part_jacobian!(matrix, Y, p, CA.UseDerivative())
     # Each part's block is its species', value for value.
     for name in (:ρq_rtag_low, :ρq_rtag_high, :ρq_rtag_evap)
         @test isequal(

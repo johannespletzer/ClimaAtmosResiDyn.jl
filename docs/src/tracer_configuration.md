@@ -200,7 +200,9 @@ every process in the table.
 
 Setting `water_tag_precipitation: true` splits each water tag into the water
 that is neither rain nor snow, rain, and snow. It is Experimental and needs 1M
-microphysics without EDMF. See [Rain and Snow Tags](tagged_water_precipitation.md).
+microphysics. Under EDMF it needs `turbconv: prognostic_edmfx` with one
+updraft and the manual Jacobian. See
+[Rain and Snow Tags](tagged_water_precipitation.md).
 
 * * *
 

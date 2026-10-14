@@ -101,6 +101,12 @@ function compute_pr_tag!(out, state, cache, time, tag)
     return water_tag_precipitation_flux!(result, state, cache, tag)
 end
 
+function compute_q_tag_aud_up!(out, state, cache, time, tag)
+    result = isnothing(out) ? similar(state.c.ρq_tot) : out
+    water_tag_updraft_formation_audit!(result, state, cache, tag)
+    return result
+end
+
 function compute_q_tag_res!(out, state, cache, time, ρq_tag_names, model)
     ᶜres = isnothing(out) ? similar(state.c.ρq_tot) : out
     # Against the partition's target, the parent's non-negative water. Under
@@ -497,6 +503,25 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
                            "Only under water_tag_precipitation: true.",
                 compute! = (out, u, p, t) ->
                     compute_pr_tag!(out, u, p, t, tag),
+            )
+            short_name = "q_tag_aud_up_$name"
+            delete!(ALL_DIAGNOSTICS, short_name)
+            add_diagnostic_variable!(;
+                short_name,
+                units = "kg kg^-1 s^-1",
+                long_name = "Tagged Updraft Formation Composition Audit ($name)",
+                comments = "Under prognostic EDMF the rain and snow that form " *
+                           "in the updraft take the composition of the grid " *
+                           "mean's non-precipitating water. This is what the " *
+                           "tag `$name` would gain on top with the updraft's " *
+                           "own composition instead, the bounded plume's: " *
+                           "`ρaʲ (Fʲ_NR + Fʲ_NS) (ε̃ʲ - ψN) / ρ`, a rate at the " *
+                           "output's state. Its time integral measures the " *
+                           "approximation. Not applied to the tags. Zero " *
+                           "without prognostic EDMF. Only under " *
+                           "water_tag_precipitation: true.",
+                compute! = (out, u, p, t) ->
+                    compute_q_tag_aud_up!(out, u, p, t, tag),
             )
         end
 

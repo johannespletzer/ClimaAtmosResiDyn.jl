@@ -2469,7 +2469,9 @@ function WaterTaggingModel(
         error(
             "`water_tag_precipitation: true` is refused with \
             `water_tag_updraft_copy: true`. The updraft copies of the rain and \
-            snow parts are not built yet. Drop one of the two keys.",
+            snow parts are not built yet. Under `turbconv: prognostic_edmfx` \
+            the parts follow the updraft without copies, so drop \
+            `water_tag_updraft_copy`.",
         )
     # The correction gives the partition the parent's increment, less what the
     # partition's own tendencies moved. Without a partition the tags that carry

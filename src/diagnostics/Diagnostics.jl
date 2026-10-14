@@ -93,6 +93,7 @@ import ..NonPrecipitatingPart
 import ..RainPart
 import ..SnowPart
 import ..water_tag_precipitation_flux!
+import ..water_tag_updraft_formation_audit!
 import ..water_tag_fraction
 import ..water_tag_part_target
 import ..water_partition_target

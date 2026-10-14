@@ -42,6 +42,8 @@ const KNOWN_TEST_GROUPS = (
     "tagging_water_applications_parity",
     "tagging_water_applications_float32",
     "tagging_water_precipitation_sphere",
+    "tagging_water_precipitation_edmf",
+    "tagging_water_precipitation_edmf_tracer",
     "tagging_water_rainout_jacobian",
     "parameterizations",
     "restarts",
@@ -343,6 +345,23 @@ end
 if TEST_GROUP in ("tagging_water_precipitation", "all")
     @safetestset "Water tags with rain and snow parts" begin
         @time include("tagged_water_precipitation_integration.jl")
+    end
+end
+
+# The rain and snow parts under prognostic EDMF. The transport is a type
+# parameter of the tags' model, so the parts under `increment`, under `tracer`
+# and the column without tags are three EDMF builds, and three overran a job's
+# time limit before. So the first group builds the column with the parts under
+# `increment` and without tags, and the second the parts under `tracer`.
+if TEST_GROUP in ("tagging_water_precipitation_edmf", "all")
+    @safetestset "Water tags with rain and snow parts under EDMF" begin
+        @time include("tagged_water_precipitation_edmf_integration.jl")
+    end
+end
+
+if TEST_GROUP in ("tagging_water_precipitation_edmf_tracer", "all")
+    @safetestset "Water tags with rain and snow parts under EDMF as tracers" begin
+        @time include("tagged_water_precipitation_edmf_tracer_integration.jl")
     end
 end
 

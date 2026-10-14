@@ -8,8 +8,10 @@
 #####   - `ρq_rtag_<name>` (`R`): rain, a share of `ρq_rai`;
 #####   - `ρq_stag_<name>` (`S`): snow, a share of `ρq_sno`.
 ##### The tag's total water is the sum of its parts and is derived for output.
-##### The key needs 1-moment microphysics and is refused under EDMF and with
-##### updraft copies. How the parts move: docs/src/tagged_water_precipitation.md.
+##### The key needs 1-moment microphysics. Under EDMF it needs
+##### `prognostic_edmfx` with one updraft and the split solver, and it is
+##### refused with updraft copies. How the parts move:
+##### docs/src/tagged_water_precipitation.md.
 
 # ============================================================================
 # The three parts
@@ -404,15 +406,43 @@ end
 # tendency. They
 # live in `p.scratch` because the microphysics may be evaluated with dual
 # numbers, as the tags' own share denominator does.
-_water_tag_precipitation_scratch(Y, ::Nothing) = (;)
-_water_tag_precipitation_scratch(Y, model) =
+_water_tag_precipitation_scratch(Y, ::Nothing, atmos) = (;)
+_water_tag_precipitation_scratch(Y, model, atmos) =
     has_water_tag_precipitation(model) ?
     (;
         ᶜtagging_q_share_norm_rai = similar(Y.c.ρ),
         ᶜtagging_q_share_norm_sno = similar(Y.c.ρ),
         ᶜtagging_q_rai_snapshot = similar(Y.c.ρ),
         ᶜtagging_q_sno_snapshot = similar(Y.c.ρ),
+        _water_tag_precipitation_edmf_scratch(Y, atmos.turbconv_model)...,
     ) : (;)
+
+# Under prognostic EDMF: the flows on the updraft's state, the environment's
+# inputs to the flows on its state, the flows weighted with the Newton
+# iterate's areas, and the weighted nets the parts read. The environment's
+# inputs are the model's, recomputed here, since the model's own scratch for
+# them is overwritten right after. The flows on the environment's state live
+# in `p.tagging.ᶜwater_mp_flows`. Nothing else writes these fields, so they
+# keep their values from the precomputed state to the tendency.
+_water_tag_precipitation_edmf_scratch(Y, turbconv_model) = (;)
+function _water_tag_precipitation_edmf_scratch(Y, ::PrognosticEDMFX)
+    FT = eltype(Y.c.ρ)
+    flows() =
+        Fields.Field(NamedTuple{WATER_TAG_FLOW_NAMES, NTuple{6, FT}}, axes(Y.c))
+    return (;
+        ᶜtagging_mp_flowsʲ = flows(),
+        ᶜtagging_mp_flows_weighted = flows(),
+        ᶜtagging_mp_net_rai = similar(Y.c.ρ),
+        ᶜtagging_mp_net_sno = similar(Y.c.ρ),
+        ᶜtagging_mp_ρ⁰ = similar(Y.c.ρ),
+        ᶜtagging_mp_q_lcl⁰ = similar(Y.c.ρ),
+        ᶜtagging_mp_q_icl⁰ = similar(Y.c.ρ),
+        ᶜtagging_mp_q_rai⁰ = similar(Y.c.ρ),
+        ᶜtagging_mp_q_sno⁰ = similar(Y.c.ρ),
+        ᶜtagging_mp_λ⁰ = similar(Y.c.ρ),
+        ᶜtagging_mp_mu_S⁰ = similar(Y.c.ρ),
+    )
+end
 
 # ============================================================================
 # Shares
@@ -438,6 +468,37 @@ function water_tag_part_share(ᶜY, scratch, tag, part)
         return @. lazy(water_tag_source_sediment_share(ᶜρq_part, ᶜparent))
     end
 end
+
+"""
+    water_tag_part_flux_share(ᶜY, scratch, tag, part)
+
+Lazy field of `tag`'s share of the rain or snow compartment `part` for the SGS
+mass flux and its Jacobian cross blocks. It is
+[`water_tag_part_share`](@ref), except where the partition holds none of the
+compartment. There a region tag takes its share of the non-precipitating
+water instead, whatever the sign of the parent's compartment, as the closing
+step gives new rain or snow the non-precipitating composition. The
+partition's shares then sum to one wherever the partition holds
+non-precipitating water, so the parts' cross blocks sum to the species' also
+where a Newton stage holds negative rain or snow. A share of zero there left
+the parts without the species' block to the updraft's rain, which the
+implicit sedimentation carried down the column into the closing ledger. A
+source tag keeps its own share. Needs [`water_tag_share_norm!`](@ref) for
+the current state.
+"""
+function water_tag_part_flux_share(ᶜY, scratch, tag, part)
+    ᶜshare = water_tag_part_share(ᶜY, scratch, tag, part)
+    _is_partition_tag(tag) || return ᶜshare
+    ᶜshare_nonprecip =
+        water_tag_part_share(ᶜY, scratch, tag, NonPrecipitatingPart())
+    ᶜparent = water_tag_part_parent(ᶜY, part)
+    ᶜnorm = water_tag_part_norm(scratch, part)
+    return @. lazy(
+        _part_flux_share(ᶜshare, ᶜshare_nonprecip, ᶜparent, ᶜnorm),
+    )
+end
+@inline _part_flux_share(share, share_nonprecip, parent, norm) =
+    ifelse(!(norm > zero(norm)), share_nonprecip, share)
 
 # The share denominators of the rain and snow parts, beside the one
 # `water_tag_share_norm!` fills for `ρq_tag_<name>`.
@@ -536,18 +597,33 @@ function _sediment_precip_parts!(ᶜYₜ, ᶜY, ᶜw, ᶠρ, tags::Tuple, part)
 end
 
 """
-    update_water_precip_part_sedimentation_jacobian!(matrix, Y, p)
+    update_water_precip_part_jacobian!(matrix, Y, p, water_tag_cross_flag)
 
-Set the Jacobian block of each rain and snow part to the block of its parent
-species, `ρq_rai` or `ρq_sno`, value for value. Each part falls by the
-species' own linear operator, so its block is the species' block. The parts
-take nothing else implicitly that has a block, and no other row names them, so
-the split solver solves each apart. Called at the end of the sedimentation
-update, after the species' blocks are set. The parts are found in the state.
-A no-op without the key, which the model's type decides at compile time.
+Set each rain and snow part's row of the Jacobian to its species' row,
+`ρq_rai` or `ρq_sno`: the diagonal value for value, and under prognostic EDMF
+with the SGS mass flux and the split solver
+(`water_tag_cross_flag`) the species' blocks to the updraft's species,
+`sgsʲs.1.q_rai` or `sgsʲs.1.q_sno`, and to `f.u₃`, each scaled by the part's
+share of its compartment ([`water_tag_part_flux_share`](@ref)). Where the
+partition holds none of the compartment, whatever the parent's sign, that is
+a region tag's share of the non-precipitating water, so that the partition's
+cross blocks still sum to the species'. Each part moves by
+its share of its species' operators: the sedimentation, the `K_e` diffusion
+and the SGS mass flux. So where the shares sum to one the parts' Newton
+increments sum to the species' to rounding. Per tag the cross blocks are an
+approximation, since a part's own mass flux derivative is not the species'.
+No other row names a part, so the split solver solves each apart, after the
+coupled fields. Called after the last update of the species' rows. A cache
+built with `jacobian_cache(...; split_uncoupled_fields = false)`, a keyword
+and not a configuration key, has no cross blocks, and the parts keep their
+diagonal only. The configuration path refuses the key under prognostic EDMF
+with the automatic or dense Jacobian. The parts
+are found in the state. A no-op without the key, which the model's type
+decides at compile time.
 """
-function update_water_precip_part_sedimentation_jacobian!(matrix, Y, p)
-    has_water_tag_precipitation(p.atmos.water_tagging_model) || return nothing
+function update_water_precip_part_jacobian!(matrix, Y, p, water_tag_cross_flag)
+    model = p.atmos.water_tagging_model
+    has_water_tag_precipitation(model) || return nothing
     part_names = water_precip_part_names(Y)
     isempty(part_names) && return nothing
     ∂ᶜρq_rai_err_∂ᶜρq_rai = matrix[@name(c.ρq_rai), @name(c.ρq_rai)]
@@ -561,7 +637,87 @@ function update_water_precip_part_sedimentation_jacobian!(matrix, Y, p)
             @. ∂ᶜpart_err_∂ᶜpart = ∂ᶜρq_sno_err_∂ᶜρq_sno
         end
     end
+    _has_part_cross_blocks(Y, p.atmos) || return nothing
+    use_derivative(water_tag_cross_flag) || return nothing
+    water_tag_share_norm!(p, Y)
+    _update_part_cross_blocks!(matrix, Y, p.scratch, model.tags, RainPart())
+    _update_part_cross_blocks!(matrix, Y, p.scratch, model.tags, SnowPart())
     return nothing
+end
+
+_update_part_cross_blocks!(matrix, Y, scratch, ::Tuple{}, part) = nothing
+function _update_part_cross_blocks!(matrix, Y, scratch, tags::Tuple, part)
+    tag = first(tags)
+    row = _part_state_name(tag, part)
+    species = _species_state_name(part)
+    updraft_species = _updraft_species_state_name(part)
+    ᶜshare = water_tag_part_flux_share(Y.c, scratch, tag, part)
+    ∂ᶜpart_err_∂ᶜχʲ = matrix[row, updraft_species]
+    @. ∂ᶜpart_err_∂ᶜχʲ =
+        DiagonalMatrixRow(ᶜshare) * matrix[species, updraft_species]
+    ∂ᶜpart_err_∂ᶠu₃ = matrix[row, @name(f.u₃)]
+    @. ∂ᶜpart_err_∂ᶠu₃ =
+        DiagonalMatrixRow(ᶜshare) * matrix[species, @name(f.u₃)]
+    return _update_part_cross_blocks!(matrix, Y, scratch, Base.tail(tags), part)
+end
+
+# The state names of a part's row, its species and the updraft's species.
+@generated _part_state_name(::WaterTag{name}, ::RainPart) where {name} =
+    :(MatrixFields.FieldName(:c, $(QuoteNode(Symbol(:ρq_rtag_, name)))))
+@generated _part_state_name(::WaterTag{name}, ::SnowPart) where {name} =
+    :(MatrixFields.FieldName(:c, $(QuoteNode(Symbol(:ρq_stag_, name)))))
+_species_state_name(::RainPart) = @name(c.ρq_rai)
+_species_state_name(::SnowPart) = @name(c.ρq_sno)
+_updraft_species_state_name(::RainPart) = @name(c.sgsʲs.:(1).q_rai)
+_updraft_species_state_name(::SnowPart) = @name(c.sgsʲs.:(1).q_sno)
+
+"""
+    water_precip_part_cross_names(Y, atmos)
+
+The rain and snow parts whose rows take their species' cross blocks: every
+part under prognostic EDMF with the SGS mass flux and the key, none otherwise.
+"""
+water_precip_part_cross_names(Y, atmos) =
+    _has_part_cross_blocks(Y, atmos) ? water_precip_part_names(Y) : ()
+
+# Whether the parts' rows take their species' cross blocks, as a `Bool`. The
+# names above are a tuple or `()` by a flag the type does not carry, so the
+# Jacobian update tests this instead of their emptiness. The state's parts are
+# tested first. A state without them needs nothing of the model, so the unit
+# tests' stand-ins, `NamedTuple`s without EDMF fields, pass through.
+_has_part_cross_blocks(Y, atmos) =
+    !isempty(water_precip_part_names(Y)) &&
+    _water_tag_turbconv_model(atmos) isa PrognosticEDMFX &&
+    atmos.edmfx_model.sgs_mass_flux &&
+    has_water_tag_precipitation(atmos.water_tagging_model)
+
+# The cross blocks of the rain and snow parts, under the split solver
+# (`water_tag_cross_flag`): to the updraft's species and to `f.u₃`, as the
+# species' rows have them (`sgs_massflux_jacobian_blocks`).
+function water_precip_part_cross_blocks(Y, atmos, water_tag_cross_flag)
+    use_derivative(water_tag_cross_flag) || return ()
+    names = water_precip_part_cross_names(Y, atmos)
+    isempty(names) && return ()
+    FT = Spaces.undertype(axes(Y.c))
+    (; TridiagonalRow, BidiagonalRow_ACT3) = jacobian_row_types(FT)
+    return (
+        map(
+            name ->
+                (
+                    center_state_name(name),
+                    _updraft_species_state_name(
+                        _is_rain_part_field(name) ? RainPart() : SnowPart(),
+                    ),
+                ) => similar(Y.c, TridiagonalRow),
+            names,
+        )...,
+        map(
+            name ->
+                (center_state_name(name), @name(f.u₃)) =>
+                    similar(Y.c, BidiagonalRow_ACT3),
+            names,
+        )...,
+    )
 end
 
 # Whether a part's name is a rain part, at compile time.
@@ -807,6 +963,13 @@ function _set_water_tag_microphysics_flows!(
 )
     has_water_tag_precipitation(model) || return nothing
     hasproperty(p, :tagging) || return nothing
+    _set_water_tag_subdomain_flows!(Y, p, mp1m, p.atmos.turbconv_model)
+    return nothing
+end
+
+# The flows on the grid mean's state, as the model's tendencies are without
+# EDMF.
+function _set_water_tag_subdomain_flows!(Y, p, mp1m, turbconv_model)
     (; dt) = p
     (; ᶜT, ᶜu, ᶜq_tot_nonneg) = p.precomputed
     ᶜflows = p.tagging.ᶜwater_mp_flows
@@ -836,6 +999,130 @@ function _set_water_tag_microphysics_flows!(
         )
     end
     return nothing
+end
+
+# Under prognostic EDMF the model's tendencies are each subdomain's own, on
+# its state (`set_microphysics_tendency_cache!`). So are the flows: `Fʲ` on
+# the updraft's state into `p.scratch.ᶜtagging_mp_flowsʲ`, `F⁰` on the
+# environment's into `p.tagging.ᶜwater_mp_flows`, with the model's inputs and
+# arguments. The tendency weights them with the iterate's areas
+# (`water_tag_microphysics_inputs!`). One updraft, which
+# `check_water_tracers_transport_supported` requires.
+function _set_water_tag_subdomain_flows!(Y, p, mp1m, ::PrognosticEDMFX)
+    (; dt) = p
+    (; ᶜρʲs, ᶜTʲs, ᶜuʲs, ᶜq_tot_nonnegʲs) = p.precomputed
+    (; ᶜu⁰, ᶜT⁰, ᶜp, ᶜq_tot_nonneg⁰, ᶜq_liq⁰, ᶜq_ice⁰) = p.precomputed
+    thp = CAP.thermodynamics_params(p.params)
+    cmp = CAP.microphysics_1m_params(p.params)
+    ᶜFʲ = p.scratch.ᶜtagging_mp_flowsʲ
+    ᶜF⁰ = p.tagging.ᶜwater_mp_flows
+    ᶜsgsʲ = Y.c.sgsʲs.:(1)
+    ᶜwʲ_air = @. lazy(w_component(WVec(ᶜuʲs.:(1))))
+    @. ᶜFʲ = water_tag_1m_flows_grid_mean(
+        ᶜρʲs.:(1), ᶜq_tot_nonnegʲs.:(1), ᶜsgsʲ.q_lcl, ᶜsgsʲ.q_icl,
+        ᶜsgsʲ.q_rai, ᶜsgsʲ.q_sno, ᶜTʲs.:(1), ᶜwʲ_air, cmp, thp, dt,
+        mp1m.n_substeps,
+    )
+    # The environment's inputs, with the expressions of
+    # `set_microphysics_tendency_cache!`.
+    ᶜρ⁰ = p.scratch.ᶜtagging_mp_ρ⁰
+    ᶜq_lcl⁰ = p.scratch.ᶜtagging_mp_q_lcl⁰
+    ᶜq_icl⁰ = p.scratch.ᶜtagging_mp_q_icl⁰
+    ᶜq_rai⁰ = p.scratch.ᶜtagging_mp_q_rai⁰
+    ᶜq_sno⁰ = p.scratch.ᶜtagging_mp_q_sno⁰
+    @. ᶜρ⁰ = TD.air_density(thp, ᶜT⁰, ᶜp, ᶜq_tot_nonneg⁰, ᶜq_liq⁰, ᶜq_ice⁰)
+    ᶜq_lcl⁰ .= ᶜspecific_env_value(@name(q_lcl), Y, p)
+    ᶜq_icl⁰ .= ᶜspecific_env_value(@name(q_icl), Y, p)
+    ᶜq_rai⁰ .= ᶜspecific_env_value(@name(q_rai), Y, p)
+    ᶜq_sno⁰ .= ᶜspecific_env_value(@name(q_sno), Y, p)
+    sgs_quad = p.atmos.sgs_quadrature
+    ᶜw⁰_air = @. lazy(w_component(WVec(ᶜu⁰)))
+    if not_quadrature(sgs_quad)
+        @. ᶜF⁰ = water_tag_1m_flows_grid_mean(
+            ᶜρ⁰, ᶜq_tot_nonneg⁰, ᶜq_lcl⁰, ᶜq_icl⁰, ᶜq_rai⁰, ᶜq_sno⁰,
+            ᶜT⁰, ᶜw⁰_air, cmp, thp, dt, mp1m.n_substeps,
+        )
+    else
+        (; ᶜT′T′, ᶜq′q′, ᶜsgs_moments) = p.precomputed
+        corr_Tq = correlation_Tq(p.params)
+        α = sgs_variance_fidelity(CAP.cloud_fraction_steepness_scale(p.params))
+        ξ_liq = CAP.sgs_liquid_uniform_fraction(p.params)
+        ξ_ice = CAP.sgs_ice_uniform_fraction(p.params)
+        # The model passes `λ` and `mu_S` positionally, and so do the flows,
+        # so that the nets repeat its arithmetic.
+        ᶜλ⁰ = p.scratch.ᶜtagging_mp_λ⁰
+        ᶜmu_S⁰ = p.scratch.ᶜtagging_mp_mu_S⁰
+        @. ᶜλ⁰ = TD.liquid_fraction(thp, ᶜT⁰, max(0, ᶜq_lcl⁰), max(0, ᶜq_icl⁰))
+        @. ᶜmu_S⁰ = ᶜq_tot_nonneg⁰ - TD.q_vap_saturation(thp, ᶜT⁰, ᶜρ⁰)
+        @. ᶜF⁰ = microphysics_tendencies_1m(
+            WaterTagFlows1M(), sgs_quad, cmp, thp, ᶜρ⁰, ᶜT⁰, ᶜw⁰_air,
+            ᶜq_tot_nonneg⁰, ᶜq_lcl⁰, ᶜq_icl⁰, ᶜq_rai⁰, ᶜq_sno⁰,
+            ᶜT′T′, ᶜq′q′, corr_Tq, ᶜsgs_moments.λ_lagrange, α, ξ_liq, ξ_ice,
+            dt, mp1m.n_substeps_quad, ᶜλ⁰, ᶜmu_S⁰,
+        )
+    end
+    return nothing
+end
+
+"""
+    water_tag_weighted_flows(F⁰, Fʲ, ρa⁰, ρaʲ, ρ)
+
+The flows of the grid mean under EDMF, per unit mass, from the flows on the
+environment's state `F⁰` and on the updraft's `Fʲ`, weighted as the model
+weights its nets: `(ρa⁰ F⁰ + ρaʲ Fʲ) / ρ`. A weighted flow can be negative
+where a subdomain's content or area is, so each pair is oriented
+([`water_tag_oriented_flows`](@ref) with every pair touched). That keeps each
+pair's net and leaves non-negative flows as they are, bit for bit, and the
+pool's shares then stay non-negative.
+"""
+@inline function water_tag_weighted_flows(F⁰, Fʲ, ρa⁰, ρaʲ, ρ)
+    # Written out field by field. A `map` with a closure over the two
+    # `NamedTuple`s allocates in every cell of the broadcast.
+    F = (;
+        NR = _weighted_flow(F⁰.NR, Fʲ.NR, ρa⁰, ρaʲ, ρ),
+        NS = _weighted_flow(F⁰.NS, Fʲ.NS, ρa⁰, ρaʲ, ρ),
+        RN = _weighted_flow(F⁰.RN, Fʲ.RN, ρa⁰, ρaʲ, ρ),
+        RS = _weighted_flow(F⁰.RS, Fʲ.RS, ρa⁰, ρaʲ, ρ),
+        SR = _weighted_flow(F⁰.SR, Fʲ.SR, ρa⁰, ρaʲ, ρ),
+        SN = _weighted_flow(F⁰.SN, Fʲ.SN, ρa⁰, ρaʲ, ρ),
+    )
+    return water_tag_oriented_flows(F, true, true, true)
+end
+@inline _weighted_flow(f⁰, fʲ, ρa⁰, ρaʲ, ρ) = (ρa⁰ * f⁰ + ρaʲ * fʲ) / ρ
+
+# The flows and the nets of rain and snow the parts read, per unit mass. Without
+# EDMF the grid mean's. Under prognostic EDMF the subdomains' flows and nets,
+# weighted with the areas of `Y`, which is the Newton iterate on the implicit
+# path, as `microphysics_tendency!` weights its nets.
+# The model's turbulence closure, or `nothing` for a stand-in of the model
+# without one, a `NamedTuple` as the unit tests build. Resolved by dispatch,
+# since `AtmosModel` forwards the property to a group and `hasproperty` does
+# not see it.
+_water_tag_turbconv_model(atmos::AtmosModel) = atmos.turbconv_model
+_water_tag_turbconv_model(atmos::NamedTuple) = get(atmos, :turbconv_model, nothing)
+
+water_tag_microphysics_inputs!(Y, p, turbconv_model) =
+    (p.tagging.ᶜwater_mp_flows, p.precomputed.ᶜmp_tendency)
+function water_tag_microphysics_inputs!(Y, p, turbconv_model::PrognosticEDMFX)
+    ᶜρa⁰ = @. lazy(ρa⁰(Y.c.ρ, Y.c.sgsʲs, turbconv_model))
+    ᶜρaʲ = Y.c.sgsʲs.:(1).ρa
+    ᶜmp⁰ = p.precomputed.ᶜmp_tendency⁰
+    ᶜmpʲ = p.precomputed.ᶜmp_tendencyʲs.:(1)
+    ᶜF = p.scratch.ᶜtagging_mp_flows_weighted
+    @. ᶜF = water_tag_weighted_flows(
+        p.tagging.ᶜwater_mp_flows,
+        p.scratch.ᶜtagging_mp_flowsʲ,
+        ᶜρa⁰,
+        ᶜρaʲ,
+        Y.c.ρ,
+    )
+    ᶜnet_rai = p.scratch.ᶜtagging_mp_net_rai
+    ᶜnet_sno = p.scratch.ᶜtagging_mp_net_sno
+    @. ᶜnet_rai =
+        (ᶜρa⁰ * ᶜmp⁰.dq_rai_dt + ᶜρaʲ * ᶜmpʲ.dq_rai_dt) / Y.c.ρ
+    @. ᶜnet_sno =
+        (ᶜρa⁰ * ᶜmp⁰.dq_sno_dt + ᶜρaʲ * ᶜmpʲ.dq_sno_dt) / Y.c.ρ
+    return (ᶜF, (; dq_rai_dt = ᶜnet_rai, dq_sno_dt = ᶜnet_sno))
 end
 
 """
@@ -1286,8 +1573,8 @@ function _water_tag_precipitation_microphysics_tendency!(
     ᶜpools = (; N = ᶜqN, R = ᶜqR, S = ᶜqS)
     # Which compartments are negative at this state, `±0` not.
     ᶜnegative = water_tag_negative_compartments(Y.c)
-    ᶜF = p.tagging.ᶜwater_mp_flows
-    ᶜmp = p.precomputed.ᶜmp_tendency
+    (ᶜF, ᶜmp) =
+        water_tag_microphysics_inputs!(Y, p, _water_tag_turbconv_model(p.atmos))
     # The ledgers take what a negative compartment keeps, once per cell.
     (ᶜnegN, ᶜnegR, ᶜnegS) = ᶜnegative
     ᶜwithheldₜ = Yₜ.c.q_tag_exp_negative
@@ -2250,26 +2537,43 @@ function water_tag_precipitation_audit_from_config(value)
 end
 
 """
-    check_water_tag_precipitation_supported(microphysics_model, turbconv)
+    check_water_tag_precipitation_supported(microphysics_model, turbconv, unsplit_jacobian = false)
 
 Refuse `water_tag_precipitation: true` with microphysics other than 1-moment,
 whose rain and snow are the prognostic `ρq_rai` and `ρq_sno` the parts
-partition, and under EDMF. Updraft copies are refused where the model is
-built.
+partition. Under `turbconv: prognostic_edmfx` the key needs the manual
+Jacobian's split solver: refuse it with `use_auto_jacobian: true` or
+`use_dense_jacobian: true` (`unsplit_jacobian`), whose solver does not carry
+the parts' cross blocks, so their Newton increments would lag their species'.
+Refuse it with `edonly_edmfx`, which has no rules for the parts.
+`check_water_tracers_transport_supported` already requires one updraft, and
+updraft copies are refused where the model is built.
 """
-function check_water_tag_precipitation_supported(microphysics_model, turbconv)
+function check_water_tag_precipitation_supported(
+    microphysics_model,
+    turbconv,
+    unsplit_jacobian = false,
+)
     microphysics_model isa NonEquilibriumMicrophysics1M || error(
         "`water_tag_precipitation: true` needs `microphysics_model: 1M`, got \
         $(nameof(typeof(microphysics_model))). Its rain and snow parts \
         partition the prognostic `ρq_rai` and `ρq_sno` of the 1-moment \
         scheme.",
     )
-    turbconv in ("prognostic_edmfx", "edonly_edmfx") && error(
+    turbconv == "edonly_edmfx" && error(
         "`water_tag_precipitation: true` is refused with `turbconv: \
-        $turbconv`. The rain and snow parts are built for a column or grid \
-        without EDMF so far. Under EDMF the updraft's rain, the sub-grid \
-        fluxes and the diffusive fluxes need their own rules, which are not \
-        built yet. Drop one of the two keys.",
+        edonly_edmfx`. The rain and snow parts follow the EDMF updraft under \
+        `turbconv: prognostic_edmfx` only. Drop one of the two keys.",
     )
+    turbconv == "prognostic_edmfx" && unsplit_jacobian &&
+        error(
+            "`water_tag_precipitation: true` under `turbconv: prognostic_edmfx` \
+            needs the manual Jacobian with its split solver, and is refused with \
+            `use_auto_jacobian: true` or `use_dense_jacobian: true`. The rain and \
+            snow parts' rows take their species' blocks to the updraft's rain and \
+            snow and to the vertical velocity, which only the split solver \
+            carries. Without them the parts' Newton increments lag their \
+            species'. Drop one of the keys.",
+        )
     return nothing
 end
