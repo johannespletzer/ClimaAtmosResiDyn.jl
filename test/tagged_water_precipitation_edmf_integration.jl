@@ -1,0 +1,387 @@
+#=
+Integration test for the water tags' rain and snow parts under prognostic
+EDMF, `water_tag_precipitation: true` with `turbconv: prognostic_edmfx` (stage
+2 of WP4b, design/PART9_WP4B_EDMF.md on the record branch).
+
+The column is the DYCOMS RF02 EDMF column of the other EDMF groups, with
+1-moment microphysics, for an hour. An altitude region and its complement
+partition the water, and a `surface_flux` source tag rides along. The file
+builds the column twice: with the parts following the parent's increment
+(`water_tag_transport: increment`, the default under EDMF) and without tags.
+The column runs with SGS quadrature. It checks:
+
+ 1. at the start, each part is its masked share of its compartment.
+ 2. after the hour, the closing ledger `q_tag_led_close` over the column
+    against the hour's surface rain and snow, sampled once per step, and the
+    compartments' closure. Rain closes to
+    rounding. The non-precipitating parts' column total departs from the
+    parent's by the increment follower's left part, `q_tag_inc_left`. Under
+    van Leer the ledger's signed column integral is bounded and its gross is
+    printed, and the non-precipitating closure per cell is marked broken. The
+    first-order case, where the ledger is at rounding, is in
+    `tagged_water_precipitation_edmf_tracer_integration.jl`.
+ 3. the note's section 5 twin test: a tag that holds all of each compartment
+    takes each operator's tendency of that compartment, for the SGS mass flux,
+    the vertical diffusive flux and the microphysics.
+ 4. the exchange of each part sums to zero over the partition.
+ 5. the flows' weighted nets are the model's rain and snow nets at an
+    iterate whose areas differ from the precomputed state's. The column is
+    warm, so its snow is zero.
+ 6. one linear solve: the parts' Newton increments sum to their species' with
+    the cross blocks to `f.u₃` and the updraft's species, which the split
+    solver solves apart, and each tag's drift from its share is printed.
+ 7. the model's fields are those of the column without tags, bit for bit.
+ 8. `pr_tag` of the partition closes to `pr`.
+ 9. a checkpoint restores the parts bit for bit, and one continued step keeps
+    the parts closed.
+10. the new kernels' allocations on a second call, bounded by what they
+    allocated.
+
+The refusals (`edonly_edmfx`, updraft copies, the unsplit solver) are in the
+unit tests, `tagged_water_precipitation_tests.jl`. The parts under the default
+`tracer` transport are a third model type, in
+`tagged_water_precipitation_edmf_tracer_integration.jl`, a test group of its
+own. That file's first-order build runs without SGS quadrature and repeats
+check 5 there. See `docs/src/tagged_water_precipitation.md`.
+=#
+using Test
+import LinearAlgebra
+import ClimaComms
+ClimaComms.@import_required_backends
+import ClimaAtmos as CA
+include("tagged_water_precipitation_common.jl")
+include("tagged_water_precipitation_edmf_common.jl")
+
+function second_call_allocations(f::F, args::Vararg{Any, N}) where {F, N}
+    f(args...)
+    return @allocated f(args...)
+end
+
+@testset "Rain and snow parts under PrognosticEDMFX" begin
+    FT = Float64
+    config = merge(
+        edmf_column_config(),
+        precipitation_tag_config("increment"),
+        Dict{String, Any}("dt_save_state_to_disk" => "1hours"),
+    )
+    simulation = build(config, "water_tags_precipitation_edmf")
+    Y = simulation.integrator.u
+    p = simulation.integrator.p
+    model = p.atmos.water_tagging_model
+    turbconv_model = p.atmos.turbconv_model
+    @test CA.follows_water_increment(model)
+    @test !CA.not_quadrature(p.atmos.sgs_quadrature)
+
+    # 1. The start.
+    @testset "The parts start at their masked shares" begin
+        masks = p.tagging.ᶜwater_masks
+        for (prefix, ᶜρq) in pairs(compartments(Y))
+            for name in (:tropo, :strat)
+                ᶜmask = getproperty(masks, Symbol(:ρq_tag_, name))
+                @test parent(getproperty(Y.c, Symbol(prefix, name))) ≈
+                      parent(ᶜmask) .* max.(ᶜρq, 0) atol = 1e-14
+            end
+        end
+    end
+
+    sampled_precipitation = run_sampling_precipitation!(simulation)
+    t = simulation.integrator.t
+
+    # 2. The closing ledger against the hour's precipitation.
+    @testset "The closing ledger after the hour" begin
+        # Column integrals (`sum` of a field integrates it), in kg m⁻². The
+        # scale is the hour's surface rain and snow, sampled once per step
+        # (`run_sampling_precipitation!`). The design's H10 takes the
+        # accumulated precipitation of its own runs. This sample is a proxy
+        # for it, and the test is not H10's check.
+        led_close = abs(sum(Y.c.q_tag_led_close))
+        led_close_gross = sum(abs.(Y.c.q_tag_led_close))
+        column_precipitation = sum(Y.c.ρq_rai) + sum(Y.c.ρq_sno)
+        result = closure(Y)
+        # The non-precipitating parts' departure from their compartment, and
+        # the part of the parent's increment the follower left out of them.
+        ᶜN_gap = @. Y.c.ρq_tag_tropo + Y.c.ρq_tag_strat -
+           max(Y.c.ρq_tot - Y.c.ρq_rai - Y.c.ρq_sno, 0)
+        N_gap = sum(ᶜN_gap)
+        N_gross = sum(abs.(ᶜN_gap))
+        left = sum(Y.c.q_tag_inc_left)
+        @info "The closing ledger and the closure under EDMF" led_close led_close_gross sampled_precipitation column_precipitation result N_gap N_gross left
+        # Under van Leer the parts' own limited advection moves the parts'
+        # sum apart from the species' by water that sums to zero over the
+        # column, which the closing step books with both signs. So the gross
+        # is printed, and the signed integral is held to the design's bound.
+        # Both signs cancel in the signed integral, so passing it would not
+        # clear the operators. The design judges the gross. Measured 5.12e-9
+        # signed and 3.15e-8 gross, against a bound of 3.2e-10 from
+        # 0.032 kg m⁻² of sampled precipitation. The candidate source is the
+        # stage 1 rule for a negative compartment in the parts' microphysics,
+        # deferred to its own part 9 item (design PART9_WP4B_EDMF.md, section
+        # 13, "The second piece, measured"). The per-part van Leer drift is
+        # the other.
+        @test_broken led_close <= 1e-8 * sampled_precipitation
+        @test result.rain < 1e-8
+        # The non-precipitating parts' column total is the parent's less the
+        # follower's left part, as without the key
+        # (`tagged_water_increment_integration.jl`). With first-order
+        # upwinding and no quadrature the two agree to 1.5% of the gross departure.
+        @test abs(N_gap + left) < 0.05 * N_gross
+        # Their largest departure per cell stays above 1e-8: 8.6e-8, and
+        # 1.8e-8 with first-order upwinding, where van Leer's part is gone.
+        @test_broken result.total < 1e-8
+    end
+
+    # 3. The twin test, operator by operator.
+    @testset "A tag that holds each compartment takes its tendencies" begin
+        Y_twin = copy(Y)
+        (ᶜN, ᶜR, ᶜS) = values(compartments(Y_twin))
+        for (prefix, values_) in ((:ρq_tag_, ᶜN), (:ρq_rtag_, ᶜR), (:ρq_stag_, ᶜS))
+            parent(getproperty(Y_twin.c, Symbol(prefix, :tropo))) .= values_
+            parent(getproperty(Y_twin.c, Symbol(prefix, :strat))) .= 0
+            parent(getproperty(Y_twin.c, Symbol(prefix, :evap))) .= 0
+        end
+        CA.set_precomputed_quantities!(Y_twin, p, t)
+        function zero_tendency()
+            Yₜ = similar(Y_twin)
+            fill!(parent(Yₜ), 0)
+            return Yₜ
+        end
+        function compare(Yₜ, what)
+            for (part, species) in ((:ρq_rtag_tropo, :ρq_rai), (:ρq_stag_tropo, :ρq_sno))
+                expected = parent(getproperty(Yₜ.c, species))
+                @test maximum(abs, parent(getproperty(Yₜ.c, part)) .- expected) <=
+                      1e-10 * max(maximum(abs, expected), floatmin(FT))
+            end
+            expected_N =
+                parent(Yₜ.c.ρq_tot) .- parent(Yₜ.c.ρq_rai) .- parent(Yₜ.c.ρq_sno)
+            error_N = maximum(abs, parent(Yₜ.c.ρq_tag_tropo) .- expected_N)
+            @info "The twin test of $what" error_N maximum(abs, expected_N)
+            # The microphysics keeps `ρq_tot`, so `N`'s scale is rain's and
+            # snow's.
+            scale_N = maximum(
+                abs,
+                abs.(parent(Yₜ.c.ρq_tot)) .+ abs.(parent(Yₜ.c.ρq_rai)) .+
+                abs.(parent(Yₜ.c.ρq_sno)),
+            )
+            @test error_N <= 1e-10 * max(scale_N, floatmin(FT))
+        end
+        Yₜ = zero_tendency()
+        CA.edmfx_sgs_mass_flux_tendency!(Yₜ, Y_twin, p, t, turbconv_model)
+        CA.sgs_mass_flux_of_water_tags!(Yₜ, Y_twin, p, turbconv_model)
+        compare(Yₜ, "the SGS mass flux")
+        Yₜ = zero_tendency()
+        CA.edmfx_sgs_diffusive_flux_tendency!(Yₜ, Y_twin, p, t, turbconv_model)
+        compare(Yₜ, "the diffusive flux")
+        Yₜ = zero_tendency()
+        CA.microphysics_tendency!(
+            Yₜ,
+            Y_twin,
+            p,
+            t,
+            p.atmos.microphysics_model,
+            turbconv_model,
+        )
+        CA.water_tag_precipitation_microphysics_tendency!(Yₜ, Y_twin, p)
+        compare(Yₜ, "the microphysics")
+    end
+
+    CA.set_precomputed_quantities!(Y, p, t)
+
+    # 4. The exchange of the rain and snow parts.
+    @testset "The exchange of the rain and snow parts" begin
+        Yₜ = similar(Y)
+        fill!(parent(Yₜ), 0)
+        CA.sgs_exchange_of_water_tags!(Yₜ, Y, p, turbconv_model, model)
+        for prefix in (:ρq_tag_, :ρq_rtag_, :ρq_stag_)
+            ᶜsum =
+                parent(getproperty(Yₜ.c, Symbol(prefix, :tropo))) .+
+                parent(getproperty(Yₜ.c, Symbol(prefix, :strat)))
+            scale = maximum(abs, parent(getproperty(Yₜ.c, Symbol(prefix, :tropo))))
+            @info "The exchange of $prefix" scale maximum(abs, ᶜsum)
+            @test maximum(abs, ᶜsum) <= 1e-12 * max(scale, floatmin(FT))
+        end
+        # No test on one composition everywhere: the plumes start with the
+        # surface flux's composition in the lowest cell, so the updraft's rain
+        # that forms there differs from the grid mean's even then. That needs
+        # a column without the surface moisture flux, a build of its own.
+    end
+
+    # 5. The weighted nets at an iterate with other areas.
+    @testset "The weighted nets follow the iterate's areas" begin
+        test_weighted_nets(Y, p, t, turbconv_model)
+    end
+
+    # 6. One linear solve with the parts' cross blocks.
+    @testset "The parts' Newton increments" begin
+        alg = CA.ManualSparseJacobian(; approximate_solve_iters = 2)
+        cache = CA.jacobian_cache(alg, Y, p.atmos)
+        @test cache.solver isa CA.SplitJacobianSolver
+        rain_parts = (:ρq_rtag_tropo, :ρq_rtag_strat)
+        for name in (rain_parts..., :ρq_stag_tropo, :ρq_stag_strat)
+            field = only(
+                filter(
+                    f -> CA.jacobian_name_chain(f.name)[end] == name,
+                    collect(cache.solver.uncoupled),
+                ),
+            )
+            @test CA.@name(f.u₃) in map(first, field.lower)
+        end
+        CA.update_jacobian!(alg, cache, Y, p, FT(60), t)
+        matrix = cache.matrix
+        c(name) = CA.MatrixFields.FieldName(:c, name)
+        updraft_rain = CA.@name(c.sgsʲs.:(1).q_rai)
+        @test maximum(abs, parent(matrix[c(:ρq_rtag_tropo), updraft_rain])) > 0
+        @test maximum(abs, parent(matrix[c(:ρq_rtag_tropo), CA.@name(f.u₃)])) > 0
+        # A right-hand side whose partition's rain rows sum to the species'.
+        R = similar(Y)
+        parent(R) .= sin.(1:length(parent(R))) .* 1e-6
+        parent(R.c.ρq_rtag_tropo) .= 0.3 .* parent(R.c.ρq_rai)
+        parent(R.c.ρq_rtag_strat) .= 0.7 .* parent(R.c.ρq_rai)
+        ΔY = similar(Y)
+        LinearAlgebra.ldiv!(ΔY, cache.solver, R)
+        raining = parent(Y.c.ρq_rai) .> 0
+        Δ_rai = parent(ΔY.c.ρq_rai)
+        Δ_sum = parent(ΔY.c.ρq_rtag_tropo) .+ parent(ΔY.c.ρq_rtag_strat)
+        scale = maximum(abs, Δ_rai[raining])
+        @test maximum(abs, (Δ_sum .- Δ_rai)[raining]) <= 1e-10 * scale
+        # Per tag the copied cross blocks are an approximation: a tag that
+        # holds 0.3 of the species' right-hand side moves from 0.3 of the
+        # species' increment by its share's difference from 0.3.
+        drift = maximum(abs, (parent(ΔY.c.ρq_rtag_tropo) .- 0.3 .* Δ_rai)[raining])
+        @info "The per-tag drift of one solve" drift scale
+        # A Newton stage can hold negative rain at the rain top while the
+        # partition holds none of it. The parts' rows must keep the species'
+        # cross block to the updraft's rain there, by the shares of the
+        # non-precipitating water, or their increments lag the species' by
+        # that block's action (the measured step-18 event of the design's
+        # section 13). The highest raining cell is set negative with empty
+        # rain parts, and the solve is repeated on every cell with rain.
+        Y_neg = copy(Y)
+        top = findlast(raining)
+        parent(Y_neg.c.ρq_rai)[top] = -3e-10
+        parent(Y_neg.c.ρq_rtag_tropo)[top] = 0
+        parent(Y_neg.c.ρq_rtag_strat)[top] = 0
+        @test parent(Y_neg.c.sgsʲs.:(1).q_rai)[top] != 0
+        CA.update_jacobian!(alg, cache, Y_neg, p, FT(60), t)
+        LinearAlgebra.ldiv!(ΔY, cache.solver, R)
+        with_rain = parent(Y_neg.c.ρq_rai) .!= 0
+        Δ_rai = parent(ΔY.c.ρq_rai)
+        Δ_sum = parent(ΔY.c.ρq_rtag_tropo) .+ parent(ΔY.c.ρq_rtag_strat)
+        scale = maximum(abs, Δ_rai[with_rain])
+        mismatch = maximum(abs, (Δ_sum .- Δ_rai)[with_rain])
+        @info "The solve with negative rain at the rain top" mismatch scale top
+        @test mismatch <= 1e-10 * scale
+    end
+
+    # 8. `pr_tag` closes to `pr`.
+    @testset "pr_tag of the partition" begin
+        ᶠflux(tag) = CA.water_tag_precipitation_flux!(
+            similar(p.precomputed.surface_rain_flux),
+            Y,
+            p,
+            tag,
+        )
+        tags = model.tags
+        pr_partition = sum(i -> only(parent(ᶠflux(tags[i]))), 1:2)
+        pr =
+            only(parent(p.precomputed.surface_rain_flux)) +
+            only(parent(p.precomputed.surface_snow_flux))
+        @info "pr_tag against pr" pr_partition pr
+        @test abs(pr_partition - pr) <= 1e-8 * max(abs(pr), floatmin(FT))
+    end
+
+    # 8b. Every diagnostic of the water tags computes on the EDMF state.
+    @testset "The water tags' diagnostics under EDMF" begin
+        test_water_tag_diagnostics_compute(Y, p, t)
+    end
+
+    # 9. The checkpoint.
+    @testset "A checkpoint with the parts under EDMF" begin
+        restart_file = joinpath(simulation.output_dir, "day0.3600.hdf5")
+        @test isfile(restart_file)
+        restarted = build(
+            merge(config, Dict{String, Any}("restart_file" => restart_file)),
+            "water_tags_precipitation_edmf_restart",
+        )
+        Y_restart = restarted.integrator.u
+        for name in propertynames(Y.c)
+            CA.is_tagged_tracer_name(name) || continue
+            @test isequal(
+                parent(getproperty(Y_restart.c, name)),
+                parent(getproperty(Y.c, name)),
+            )
+        end
+        # One more step from the checkpoint.
+        continued = run!(
+            build(
+                merge(
+                    config,
+                    Dict{String, Any}(
+                        "restart_file" => restart_file,
+                        "t_end" => "62mins",
+                    ),
+                ),
+                "water_tags_precipitation_edmf_continued",
+            ),
+        )
+        result = closure(continued.integrator.u)
+        @info "The closure one step after the restart" result
+        @test result.rain < 1e-8
+        # As after the hour, item 2.
+        @test_broken result.total < 1e-8
+    end
+
+    # 10. Allocations of the new kernels on a second call, Julia 1.11, the
+    # 30-level column. The flows' 32 bytes and the SGS flux's 120 come from
+    # the parent's helpers, as without the key (`tagged_water_edmf_integration.jl`
+    # bounds the latter's one call by 64). `water_tag_microphysics_inputs!`
+    # allocates nothing. The rest of the microphysics hook allocates at most
+    # 26736 bytes and the Jacobian update at most 3552. The bounds on these two
+    # hold on Julia 1.11, where they were measured.
+    @testset "The new kernels' allocations" begin
+        Yₜ = similar(Y)
+        fill!(parent(Yₜ), 0)
+        flows = second_call_allocations(CA.set_water_tag_microphysics_flows!, Y, p)
+        hook = second_call_allocations(
+            CA.water_tag_precipitation_microphysics_tendency!,
+            Yₜ,
+            Y,
+            p,
+        )
+        inputs = second_call_allocations(
+            CA.water_tag_microphysics_inputs!,
+            Y,
+            p,
+            turbconv_model,
+        )
+        sgs = second_call_allocations(
+            CA.sgs_mass_flux_of_water_tags!,
+            Yₜ,
+            Y,
+            p,
+            turbconv_model,
+        )
+        alg = CA.ManualSparseJacobian(; approximate_solve_iters = 2)
+        cache = CA.jacobian_cache(alg, Y, p.atmos)
+        jacobian = second_call_allocations(
+            CA.update_water_precip_part_jacobian!,
+            cache.matrix,
+            Y,
+            p,
+            cache.derivative_flags.water_tag_cross_flag,
+        )
+        @info "Allocations of the new kernels" flows hook inputs sgs jacobian
+        @test flows <= 64
+        @test sgs <= 4 * 64
+        @test inputs == 0
+        if VERSION >= v"1.11"
+            @test hook <= 26736
+            @test jacobian <= 3552
+        end
+    end
+
+    # 7. The column without tags.
+    plain = run!(build(edmf_column_config(), "water_tags_precipitation_edmf_plain"))
+    @testset "The model's fields are those without tags" begin
+        test_parity(Y, plain.integrator.u)
+    end
+end

@@ -32,10 +32,12 @@ water_tracers:
     region: {type: tanh_altitude, z_center: 3000.0, width: 300.0}
 ```
 
-The key needs 1-moment microphysics. It is refused under
-`turbconv: prognostic_edmfx` and `edonly_edmfx`, and with
-`water_tag_updraft_copy: true`. A checkpoint written with the key restarts only
-with it, and one written without it only without it.
+The key needs 1-moment microphysics. Under `turbconv: prognostic_edmfx` it
+needs one updraft and the manual Jacobian's split solver, so it is refused with
+`use_auto_jacobian: true` or `use_dense_jacobian: true`. It is refused under
+`edonly_edmfx` and with `water_tag_updraft_copy: true`. A checkpoint written
+with the key restarts only with it, and one written without it only without
+it.
 
 ## How the parts move
 
@@ -124,7 +126,8 @@ hyperdiffusion. The vertical diffusion and the viscous sponge also take the
 parts on their values and the parent on the diffusing water, so where that
 water is negative they too move the parent by its negative part and the tags
 not. `q_tag_leak_vdiff` and `q_tag_leak_sponge` report those rates. The other
-leak diagnostics read zero, since EDMF and the copies are refused with the key.
+leak diagnostics read zero. The copies are refused with the key, and under EDMF
+the parts' diffusive fluxes sum to the parent's (see "Under EDMF" below).
 Each leak is the raw difference, as without the key: the path's tendency of the
 parts' sum minus its tendency of the parent. It is taken where the parts sum to
 the target ``\max(N, 0)``, with ``N`` the water that is neither rain nor snow.
@@ -207,13 +210,108 @@ no gain. The ledgers `q_tag_exp_negative` and `q_tag_exp_negative_precip`
 record what the negative non-precipitating water and the negative rain and
 snow keep.
 
+## Under EDMF
+
+Under `turbconv: prognostic_edmfx` the parts have no updraft state. The
+updraft's rain and snow reach them through the operators that move the grid
+mean's.
+
+  - **The microphysics.** The model's 1-moment tendencies are each subdomain's
+    own, on its state. So are the flows: once on the environment's state and
+    once on the updraft's, with the model's inputs
+    ([`ClimaAtmos.set_water_tag_microphysics_flows!`](@ref)). The tendency
+    weights them with the areas of the Newton iterate, as the model weights its
+    nets, `(ρa⁰ F⁰ + ρaʲ Fʲ) / ρ`, and orients each pair so that no flow is
+    negative ([`ClimaAtmos.water_tag_weighted_flows`](@ref)). Every flow
+    carries the grid mean's composition of the compartment it leaves, the
+    pool rule above. The rain that forms in the updraft is therefore
+    attributed with the grid mean's composition. The diagnostic
+    `q_tag_aud_up_<name>` measures that approximation: what the tag would gain
+    if the updraft's formation took the updraft's composition instead.
+  - **The SGS mass flux.** The parent moves `ρq_tot`, `ρq_rai` and `ρq_sno`
+    by difference-form fluxes. Each rain part takes its share of the `ρq_rai`
+    flux, each snow part its share of the `ρq_sno` flux, and each
+    non-precipitating part its share of the rest of the `ρq_tot` flux. The
+    three sum to the parent's `ρq_tot` flux at every face. Where the partition
+    holds none of a cell's rain or snow, whatever the sign the parent's
+    compartment has at that Newton stage, the region tags take the flux that
+    leaves the cell, and the Jacobian's cross blocks there, by their shares
+    of the non-precipitating water
+    ([`ClimaAtmos.water_tag_part_flux_share`](@ref)), as the closing step
+    gives new rain its composition. A Newton stage can hold negative rain at
+    the rain top, and a zero share there left the parts without the species'
+    block to the updraft's rain.
+  - **The exchange.** The non-precipitating parts exchange composition at the
+    updraft's mass flux as without the key, with the plume rescaled to the
+    updraft's non-precipitating water `q_tot_effʲ`. The rain and snow parts
+    get an exchange of their own, with their own bound, from a rain plume and
+    a snow plume ([`ClimaAtmos.water_tag_precip_plumes!`](@ref)). The
+    updraft's rain takes the non-precipitating plume's composition where it
+    forms, the snow plume's where it forms from snow, and the environment's
+    where it falls in laterally. Snow alike. The two plumes are marched
+    downward together, as the rain falls. Rain and snow can each convert into
+    the other at one level, so the two plumes' compositions there are solved
+    together, tag by tag. Where one plume has no supply, the water it converts
+    takes the grid mean's composition of its species. The plumes are a
+    reconstruction, not an independent tracking of the updraft's rain and
+    snow.
+  - **The diffusive flux.** The rain and snow parts diffuse as their species,
+    at `K_e` only, and take no horizontal EDMF flux. The non-precipitating
+    parts diffuse at `K_h + K_e`. The parts' sum moves as the parent's
+    `K_h q_tot_eff + K_e q_tot`.
+  - **The Jacobian.** Each part's row is its species' row: the diagonal value
+    for value, and the species' blocks to the updraft's species and to `f.u₃`
+    scaled by the part's share
+    ([`ClimaAtmos.update_water_precip_part_jacobian!`](@ref)). The split solver
+    solves the parts after the coupled fields, by back-substitution. So the
+    parts' Newton increments sum to the species'. Per tag the copied blocks
+    are an approximation.
+
+The parts have no follower under `water_tag_transport: increment`, as without
+EDMF. The closing step after each follow sets the parts to their compartments,
+and books what it moves in `q_tag_led_close`, so that ledger measures what the
+operators above miss. It is not at rounding:
+
+  - Where a cell holds rain but the partition holds none of it, no part
+    sediments any of it, and the closing step gives the partition that rain
+    by the non-precipitating composition. The SGS flux and the cross blocks
+    there take the same composition, so the Newton increments of the parts
+    sum to the species' also where a stage holds negative rain.
+  - Under the default `tracer_upwinding: vanleer_limiter` each rain and snow
+    part's explicit advection is limited on its own, so the parts' sum moves
+    apart from the species' by water that sums to zero over the column. The
+    closing step takes it out of the rain and snow parts. The
+    non-precipitating parts hand the parts' advection back, so they keep it.
+
+Under `water_tag_transport: increment` the non-precipitating parts' column
+total departs from the parent's by the follower's left part,
+`q_tag_inc_left`, as the tags' total does without the key.
+
 ## Limits and cost
 
-  - Without EDMF only. Updraft copies are refused.
+  - Under EDMF only `prognostic_edmfx` with one updraft and the split solver.
+    Updraft copies are refused.
   - Only 1-moment microphysics.
+  - Under EDMF and van Leer the closing step is not at rounding. After an
+    hour of DYCOMS RF02 its column integral is 5.1e-9 kg m⁻² signed and
+    3.2e-8 kg m⁻² gross. The test's bound is 3.2e-10 kg m⁻², 1e-8 of the
+    hour's surface rain and snow sampled once per step. The signed integral
+    is a balance check only, since opposite corrections cancel in it. The
+    design judges each correction role by its gross, which the tests do not
+    do. Under `tracer` a part can go below zero, since nothing restores it:
+    the source tag's non-precipitating part reaches -2.1e-5 kg m⁻³. Both are
+    measured in the tests and marked broken. The candidate source is the
+    parts' microphysics rule for a negative compartment, which keeps a part
+    frozen while the cached rates evaporate it. That rule is a separate part
+    9 item.
+  - Under EDMF the tests run on a warm column, so the snow parts and the
+    snow flows are checked only to stay zero. Parity without SGS quadrature
+    is not tested under EDMF.
   - The three parts cost three fields per tag, two audit fields per tag unless
     `water_tag_precipitation_audit: false`, and the flows. The flows evaluate the microphysics rates again, so their cost is of
-    the same order as the microphysics.
+    the same order as the microphysics. Under EDMF they are evaluated once per
+    subdomain, twice with one updraft, and the exchange adds two plumes and two
+    flux reconstructions per tag.
 
 ## Rain and snow tags API
 
@@ -235,7 +333,14 @@ ClimaAtmos.water_tag_audit_state_names
 ClimaAtmos.water_partition_state_names
 ClimaAtmos.water_precip_part_names
 ClimaAtmos.water_tag_sedimenting_mass_names
-ClimaAtmos.update_water_precip_part_sedimentation_jacobian!
+ClimaAtmos.update_water_precip_part_jacobian!
+ClimaAtmos.water_precip_part_cross_names
+ClimaAtmos.water_tag_weighted_flows
+ClimaAtmos.water_tag_exchange_water
+ClimaAtmos.water_part_exchange_inputs!
+ClimaAtmos.water_tag_precip_plumes!
+ClimaAtmos.water_tag_part_flux_share
+ClimaAtmos.water_tag_updraft_formation_audit!
 ClimaAtmos.WATER_TAG_FLOW_NAMES
 ClimaAtmos.WaterTagFlows1M
 ClimaAtmos.water_tag_1m_flows

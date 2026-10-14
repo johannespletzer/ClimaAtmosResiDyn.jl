@@ -385,10 +385,13 @@ function edmfx_sgs_diffusive_flux_tendency!(
         # microphysics species (`α = 0`) receive only K_e transport (K_h
         # transport is applied above via q_tot_eff distribution to cloud
         # species; precip has no K_h transport), while passive tracers
-        # (`α = 1`) receive the full ρ·(K_h + K_e) diffusion.
+        # (`α = 1`) receive the full ρ·(K_h + K_e) diffusion. The water
+        # tags' rain and snow parts diffuse as their species, at `K_e` only.
         ᶜρχₜ_diffusion = p.scratch.ᶜtemp_scalar
         foreach_gs_tracer(Yₜ, Y) do ᶜρχₜ, ᶜρχ, ρχ_name
-            α = ρχ_name in microphysics_tracer_names(Y) ? FT(0) : FT(1)
+            α =
+                ρχ_name in microphysics_tracer_names(Y) ||
+                _is_water_precip_part_field(ρχ_name) ? FT(0) : FT(1)
             ᶜχ = (@. lazy(specific(ᶜρχ, Y.c.ρ)))
             ᶠρK = @. lazy(α * ᶠρK_h + ᶠρK_e)
             ᶜ∇ᵥρK∇χ = ᶜdiffusive_flux_divergenceᵥ(ᶠρK, ᶜχ)
@@ -557,9 +560,11 @@ function edmfx_sgs_horizontal_diffusive_flux_tendency!(
     # cloud species through the aggregate flux, rain and snow not at all. The
     # vertical path gives them only the interfacial-entrainment `K_e`, which
     # has no horizontal analogue, so they receive no horizontal transport.
-    # Passive tracers use the unscaled `K_h`.
+    # Passive tracers use the unscaled `K_h`. The water tags' rain and snow
+    # parts move as their species, so they are skipped too.
     foreach_gs_tracer(Yₜ, Y) do ᶜρχₜ, ᶜρχ, ρχ_name
         ρχ_name in microphysics_tracer_names(Y) && return
+        _is_water_precip_part_field(ρχ_name) && return
         ᶜχ = @. lazy(specific(ᶜρχ, ᶜρ))
         ᶜρχₜ_diffusion = p.scratch.ᶜtemp_scalar_3
         @. ᶜρχₜ_diffusion = wdivₕ(ᶜρ * ᶜK_h_h * gradₕ(ᶜχ))

@@ -69,7 +69,10 @@ sphere the result is DSSed, as a tendency diagnostic is. See
 Under `water_tag_precipitation: true` only `hyperdiff`, `vdiff` and `sponge`
 can be nonzero. There the target is `max(N, 0)`, for
 `N = ρq_tot - ρq_rai - ρq_sno`. See `docs/src/tagged_water_precipitation.md`.
-The copies and EDMF are refused with the key.
+The copies are refused with the key. Under prognostic EDMF the parts diffuse
+as their compartments, `N` at `K_h + K_e` and rain and snow at `K_e` only,
+which sums to the parent's `K_h q_tot_eff + K_e q_tot`. So `vdiff` reads the
+boundary layer's term only, and `hdiff` reads zero.
 """
 function water_tag_leak!(ᶜleak, Y, p, path::Val)
     @. ᶜleak = 0
@@ -122,8 +125,9 @@ end
 # The vertical diffusion and the sponge take the parts on their values and the
 # parent on `N/ρ`. A closed partition's parts sum to `max(N, 0)`, so the tags'
 # sum departs from the parent by the path's operator on `-min(N, 0)/ρ`. That is
-# zero where `N` is not negative. EDMF is refused with the key, so the boundary
-# layer's diffusion is the only vertical path.
+# zero where `N` is not negative. Under EDMF the parts' diffusive fluxes sum to
+# the parent's (`edmfx_sgs_diffusive_flux_tendency!`), so the boundary layer's
+# diffusion is the only vertical path that leaks.
 function _negative_nonprecipitating_water(Y)
     ᶜN = water_tag_part_parent(Y.c, NonPrecipitatingPart())
     return @. lazy(-water_tag_negative_part(ᶜN) / Y.c.ρ)
