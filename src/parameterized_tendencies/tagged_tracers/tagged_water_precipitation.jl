@@ -893,15 +893,13 @@ function _set_water_tag_microphysics_flows!(
             ᶜT, ᶜw_air, cmp, thp, dt, mp1m.n_substeps,
         )
     else
-        (; ᶜT′T′, ᶜq′q′, ᶜsgs_moments) = p.precomputed
-        corr_Tq = correlation_Tq(p.params)
-        α = sgs_variance_fidelity(CAP.cloud_fraction_steepness_scale(p.params))
+        (; ᶜT′T′, ᶜq′q′, ᶜcorr_Tq, ᶜα, ᶜsgs_moments) = p.precomputed
         ξ_liq = CAP.sgs_liquid_uniform_fraction(p.params)
         ξ_ice = CAP.sgs_ice_uniform_fraction(p.params)
         @. ᶜflows = microphysics_tendencies_1m(
             WaterTagFlows1M(), sgs_quad, cmp, thp, Y.c.ρ, ᶜT, ᶜw_air,
             ᶜq_tot_nonneg, ᶜq_lcl, ᶜq_icl, ᶜq_rai, ᶜq_sno,
-            ᶜT′T′, ᶜq′q′, corr_Tq, ᶜsgs_moments.λ_lagrange, α, ξ_liq, ξ_ice,
+            ᶜT′T′, ᶜq′q′, ᶜcorr_Tq, ᶜsgs_moments.λ_lagrange, ᶜα, ξ_liq, ξ_ice,
             dt, mp1m.n_substeps_quad,
         )
     end
