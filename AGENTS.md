@@ -44,11 +44,21 @@ Always read the ClimaAtmos-specific guide before working in this repository:
   the setup script prints when it finishes. See
   [runscripts/README.md](runscripts/README.md).
 - For package tests, prefer `Pkg.test()` over manually `include`ing `test/runtests.jl` because test-only deps are loaded through the package test path.
-- A test process keeps every model type it compiles. An EDMF build holds
-  12 to 14 GiB and a GitHub runner has 16 GB, so a test file should not
-  compile two EDMF model types. A job that runs out reads "The operation was
-  canceled." or "lost communication", not a failed test. See
+- A Julia test process keeps every model type it compiles, so its peak
+  memory grows with each one. A GitHub runner has 16 GB. Measure a new
+  tagged-simulation file's peak RSS before it goes into CI, for example with
+  `/usr/bin/time -f %M` or in a Slurm job with `--mem=15G`. One new EDMF
+  model type per process is the safe default. A second fits where the
+  measurement leaves room, as in `tagged_water_edmf_integration.jl`, whose
+  tagged and untagged builds share one process. Files included in one
+  process share its memory, so isolating a build needs a test group of its
+  own. Keep the tagged-against-untagged parity comparison when splitting,
+  for example through a saved state. See
   [Test groups](docs/clima_atmos_specific.md#test-groups).
+- A CI job that ends with "The operation was canceled." or "The hosted
+  runner lost communication" may have run out of memory. A runner shutdown
+  reads the same. Check the job's annotations and the file's measured peak
+  RSS before naming memory as the cause.
 - Keep edits inside the owning subtree when possible; use [src/ClimaAtmos.jl](src/ClimaAtmos.jl) to trace where a feature is wired.
 - Match existing style: explicit names, narrow imports, comments that explain why.
 - Write comments in simple sentences. Prefer a few short sentences over one long one strung together with colons, dashes and parentheses. Use few semicolons. Two clauses become two sentences.
