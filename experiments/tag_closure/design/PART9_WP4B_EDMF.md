@@ -32,19 +32,54 @@ exchange or the Jacobian lands in `q_tag_led_close` and `q_tag_fix_<name>`.
 What the closing step moves is the evidence, as criterion 4 reads what the
 repair moves.
 
-Hypothesis H10, as corrected after the stage 2 test (section 13): on the
-D4-W column over a day and on the TRMM LBA EDMF column over 6 h, in Float64,
-the closing ledger `q_tag_led_close` integrated over the column and the run
-stays within 1e-8 of the run's accumulated surface rain and snow mass, the
-rain and snow parts close within 1e-8 relative of their compartment at every
-output, `Σ pr_tag = pr` within 1e-8 relative, the non-precipitating parts'
-column residual equals the increment follower's `q_tag_inc_left` within 5%
-of its gross residual (criterion 4's rule, the increment group's tolerance),
-and the parent's fields are those of the untagged twin bit for bit. A FAIL in
-section 7's checks falsifies it. A job that does not finish leaves it open.
-Stage 1 closed to rounding on the column without EDMF under `increment`, so
-a closing ledger above rounding under EDMF names a missing or wrong operator,
-not a tolerance.
+Hypothesis H10, as corrected after the stage 2 test (section 13) and the
+review of 2026-10-12 (section 14): on the D4-W column over a day and on the
+TRMM LBA EDMF column over 6 h, in Float64,
+
+  - the closing step's retained gross activity stays within 1e-8 of the run's
+    accumulated surface rain and snow mass (section 7, "closing");
+  - each other correction role that can carry an operator's mismatch is
+    assessed on its own, by its gross activity (section 7, "roles");
+  - the rain and snow parts close within 1e-8 relative of their compartment at
+    every output;
+  - `Σ pr_tag = pr` within 1e-8 relative;
+  - the non-precipitating parts' column residual equals the increment
+    follower's `q_tag_inc_left` within 5% of its gross residual (criterion
+    4's rule, the increment group's tolerance);
+  - the parent's exported diagnostics are those of the untagged twin bit for
+    bit (section 4 names the roster).
+
+A FAIL in section 7's checks falsifies it. A job that does not finish leaves
+it open. Stage 1 closed to rounding on the column without EDMF under
+`increment`, so closing activity above rounding under EDMF names a missing or
+wrong operator, not a tolerance.
+
+**Gross, not signed.** Opposite corrections cancel in a signed ledger. A
+correction of +1e-6 kg m⁻² in one cell and −1e-6 kg m⁻² in another passes a
+signed test exactly, with a gross activity of 2e-6 kg m⁻². So the signed
+column integral of `q_tag_led_close` is a balance diagnostic only. It is
+reported and judges nothing. Each role is judged by the sum of the absolute
+values of its corrections, per cell, before any sum over cells or steps.
+
+**What the ledgers can show, and what they cannot.** The per-step gross
+`<L>_gross` sums `|ΔL|` per cell over the accepted steps. It sees no
+cancellation across cells or steps, but it nets the several follows inside
+one step, so it is a lower bound on what the role applied. The attempted
+total `<L>_attempted` sums every call's change, including calls on stage
+values the stepper discards, so it is an upper bound. The closing ledger is
+one field for the partition and both compartments, not one per tag and per
+compartment. So H10 can fail on the gross, but per-tag and per-compartment
+evidence of accepted applications does not exist. Each role's verdict
+therefore carries the word *incomplete* for that part of the assessment, and
+an endpoint ledger does not stand in for it.
+
+**Known failures stay failures.** The owner deferred two mechanisms to part 9
+items of their own (section 13): stage 1's rule for a negative compartment in
+the parts' microphysics, which routes its mismatch into `q_tag_led_rescale`,
+and the van Leer per-part drift. Each is recorded as a known failure and an
+operating limit of stage 2. Their deferral does not make H10 pass. While
+either stands, H10's verdict is at best "not falsified on the closing role,
+failed or incomplete on the rescale role".
 
 The first draft held the non-precipitating parts to 1e-8 as well. That was
 wrong: under `increment` the `N` parts follow the parent's implicit mismatch
@@ -172,11 +207,14 @@ composition where it forms and the environment's where it flows in laterally
 (`advection.jl:421-424`). It is a second steady plume, the rain plume, marched
 downward as the rain falls. At each level the updraft's rain is the mix of
 three sources, each with its composition: the rain that fell into the level
-from the level above within the updraft, with that level's rain plume shares,
-the rain formed there, `ρaʲ Fʲ_NR Δt`, with the `N` plume's shares, and the
-lateral inflow where the updraft narrows, `ρ⁰ w⁰ q_rai⁰` as
-`updraft_sedimentation!` forms it, with the environment's rain shares
-`(Rᵢ − ρaʲ εʲᵢ q_raiʲ) / (ρ q_rai − ρaʲ q_raiʲ)` from the level above. The
+from the level above within the updraft, `min(aʲ, aʲ₊) ρʲ₊ wʲ₊ q_raiʲ₊`, with
+that level's rain plume shares, the rain formed there, `ρaʲ Fʲ_NR Δz`, with
+the `N` plume's shares, and the lateral inflow where the updraft narrows,
+`(aʲ − aʲ₊) ρ⁰ w⁰ q_rai⁰` as `updraft_sedimentation!` forms it, with the
+environment's rain shares `(Rᵢ − ρaʲ εʲᵢ q_raiʲ) / (ρ q_rai − ρaʲ q_raiʲ)`
+from the level above. Each amount is a mass flux per unit area, in
+kg m⁻² s⁻¹, clipped at zero. The formation is the flow per unit mass times
+`ρaʲ` and the cell's depth `Δz`, so it adds to the sedimentation fluxes. The
 shares are rescaled at each level so that the partition's sum is one, as
 `WaterPlumeStep` rescales the `N` plume. Where the updraft holds no rain
 (`q_raiʲ ≤ 0`) the rain plume takes the grid mean's rain shares, and where
@@ -186,14 +224,39 @@ own and starts anew each exchange evaluation, as the `N` plume does.
 `water_tag_edmf_audit` reports where the `R` and `S` bounds bind, as it does
 for `N`.
 
-**Cross flows (added 2026-10-11, as built).** The updraft's rain also forms
-from snow, and its snow from rain. At each level the rain plume takes the
-updraft's snow-to-rain flow `ρaʲ Fʲ_SR Δz` as a fourth source, with the snow
-plume's shares, and the snow plume takes `ρaʲ Fʲ_RS Δz` with the rain
-plume's shares. Both plumes are marched downward together in one state, and
-each cross source uses the other plume's shares from the level above, so no
-level needs a solve. Where the other plume holds nothing above, its cross
-source is dropped.
+**Cross flows (added 2026-10-11, revised 2026-10-14).** The updraft's rain
+also forms from snow, and its snow from rain. At each level the rain plume
+takes the updraft's snow-to-rain flow `c_R = ρaʲ Fʲ_SR Δz` as a fourth
+source, and the snow plume takes `c_S = ρaʲ Fʲ_RS Δz`. The converted water
+carries the donor plume's composition at the same level, not the level
+above. Both plumes are marched downward together in one state, and the two
+compositions at a level are solved together. Per tag `i`, with `A_R[i]` the
+rain plume's other three sources weighted by their shares and `a_R` their
+total amount, and `A_S[i]` and `a_S` the snow plume's:
+
+    x_R[i] = (A_R[i] + c_R x_S[i]) / (a_R + c_R)
+    x_S[i] = (A_S[i] + c_S x_R[i]) / (a_S + c_S)
+
+In closed form, with `det = a_R a_S + a_R c_S + c_R a_S`:
+
+    x_R[i] = (A_R[i] (a_S + c_S) + c_R A_S[i]) / det
+    x_S[i] = (A_S[i] (a_R + c_R) + c_S A_R[i]) / det
+
+`det` is not negative. It is zero only where a plume has no supply at all, or
+where both plumes' supplies are pure conversion. Where a plume has no supply
+at all, its donor composition is the grid mean's shares of its species at the
+level, and the other plume mixes those in. Where both supplies are pure
+conversion, both plumes take the grid mean's shares. The shares are then
+rescaled so that the partition's sum is one, as above.
+
+The first build took the other plume's shares from the level above and
+dropped the cross source where that plume held nothing above. Rain from above
+all of tag A, with snow converting locally and all of tag B in equal amount,
+should mix to half A and half B. The first rule kept all A where no snow fell
+from above. Both keep the partition's sum, so closure could not tell them
+apart. The local solve is still a reconstruction of a steady plume, not an
+independent provenance. It is a better approximation of the donor, not a
+validated one.
 
 The exchange needs region tags that partition the domain
 (`check_water_tag_exchange_partition`), as today. It is implicit with the
@@ -281,8 +344,31 @@ transport under EDMF (DECISIONS.md, "WP5's default transport under EDMF").
 The tags' code writes tag fields and scratch the tags own. The new flux
 reconstructions read `p.precomputed` and `Y` and write `Yₜ` tag rows. The
 Jacobian changes touch the parts' blocks only. So the parent's fields stay bit
-for bit those of the run without tags. Section 6 item 7 and section 7's parity
-check hold it.
+for bit those of the run without tags.
+
+Two checks hold it, and they show different things:
+
+  - **Full state, short column.** Section 6 item 7 compares every field of the
+    untagged column's state `Y`, centre and face, with the tagged run's, by
+    `isequal` on the arrays, at the end of the test group's hour on the
+    30-level column. It does not compare intermediate outputs.
+  - **Exported diagnostics, long runs.** Section 7's four runs save no native
+    state (`dt_save_state_to_disk` keeps its default, `Inf`). So their parity
+    check covers the parent's diagnostics they export, and only those:
+    `rhoa`, `ta`, `hus`, `clw`, `cli`, `husra`, `hussn`, `wa`, `pr`, `prra`,
+    `prsn`, `evspsbl`, `hfls`, `hfss`, `arup`, `rhoaup`, `husup`, `husraup`
+    and `hussnup`, instantaneous every 30 min, and `pr` averaged over each
+    30 min window. The comparison is bitwise equality of each variable's
+    NetCDF array, `on` against `off`, at every output time. Total energy,
+    horizontal momentum, TKE and the updraft's other prognostic fields are
+    not in the roster.
+
+Full-state parity over the long runs stays an outstanding gate. The route is a
+native state save at 30 min in both twins (`dt_save_state_to_disk: "30mins"`)
+and a comparison of every field of the untagged state, read from both runs'
+files. It needs a comparison script that does not exist yet, and a check that
+the save does not change the run. Until then the record states the roster
+above as what the long runs show.
 
 ## 5. Cost
 
@@ -311,10 +397,12 @@ tag:
 The first group checks:
 
  1. at the start each part is its masked share of its compartment.
- 2. after the hour the closing ledger `q_tag_led_close`, integrated over the
-    column, is within rounding of zero against the hour's rain throughput
-    (the rain that fell and formed), and the compartments close within 1e-8
-    relative. Both numbers are printed.
+ 2. after the hour the closing step's gross activity is within rounding of
+    zero against the hour's accumulated surface rain and snow, and the
+    compartments close within 1e-8 relative. The signed ledger is printed
+    beside the gross. Where the test cannot sum the surface precipitation
+    from the steps, its scale is named a proxy and does not stand for the
+    accumulated mass of section 7.
  3. the twin test of the note's section 5, operator by operator, for the SGS
     mass flux of each compartment, the exchange, the vertical diffusive flux
     and the microphysics nets: a tag that holds all of a compartment takes
@@ -367,18 +455,41 @@ in the grid and in the updraft from 1 h on 60 levels, and `hussn` is zero.
 The 30-level test column is not checked. The snow part is exercised on D5.
 Both cases write `q_tag_*`, `q_rtag_*`, `q_stag_*`, the audit records,
 `q_tag_led_close`, `q_tag_led_rescale`, `q_tag_led_empty`, `pr_tag_*`, `pr`,
-`husra` and `hussn` at 30 min.
+`husra` and `hussn` at 30 min. The `on` runs also write each role's per-step
+gross (`q_tag_led_close_gross`, `q_tag_led_rescale_gross`,
+`q_tag_led_empty_gross`, `q_tag_exp_negative_precip_gross`), the attempted
+totals of the first three (`<L>_attempted`) and each tag's
+`q_tag_led_fixgross_<name>`. All four runs write `pr` averaged over each
+30 min window.
+
+**The scale.** The accumulated surface rain and snow mass `P`, in kg m⁻², is
+the sum over the windows of the 30-min average of `pr` times 1800 s. With a
+fixed step the average is the mean over the window's steps, so `P` is the sum
+of the steps' surface fluxes times the step. An endpoint value of `pr` times a
+duration is not `P`.
+
+**A role's gross activity.** For a ledger `L` per unit mass, `G(L)` is the
+column integral of `ρ <L>_gross` at the end of the run, in kg m⁻². It sums
+`|ΔL|` per cell and accepted step, so neither cells nor steps cancel. The
+follows inside one step still net, so `G` is a lower bound. The column
+integral of `ρ <L>_attempted` is the upper bound.
 
 Checks and pass rules, Float64:
 
-| check    | rule                                                                                                                                                                                                              |
-|:-------- |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| closing  | the signed column integral of `q_tag_led_close` at the end within 1e-8 of the run's accumulated surface rain and snow mass, its gross reported. `led_rescale` and `led_empty` reported                            |
-| closure  | `ΣRᵢ − ρq_rai` and `ΣSᵢ − ρq_sno` within 1e-8 relative of the compartment at every output, a sanity check. `ΣNᵢ − N` over the column equals `−Σ q_tag_inc_left` within 5% of the gross `N` residual (criterion 4) |
-| `pr_tag` | `Σ pr_tag − pr` within 1e-8 relative of `pr` at every output where `pr` is not zero                                                                                                                               |
-| parity   | the parent's fields of `on` bit for bit those of `off` at every output, both cases                                                                                                                                |
-| audit    | the microphysics audit and `q_tag_aud_up_*` reported, not judged                                                                                                                                                  |
-| cost     | step time `on` over `off`, reported                                                                                                                                                                               |
+| check    | rule                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+|:-------- |:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| closing  | `G(q_tag_led_close) ≤ 1e-8 P`. The signed column integral of `q_tag_led_close` and the attempted bound are reported beside it and judge nothing. Per tag and per compartment: incomplete, since the closing ledger is one field for the partition and both compartments                                                                                                                                                                                                                                                      |
+| roles    | `G(q_tag_led_rescale)`, `G(q_tag_led_empty)` and `G(q_tag_exp_negative_precip)`, each reported against `P`. The rescale and empty ledgers also book the partition's legitimate share of the parent's limiter changes, so their gross cannot pass on its own: their verdict is *incomplete*. Section 13's rescale-routed mismatch, −3.7e-8 kg m⁻² over the hour on the test column (1e-6 of the rain scale), is a known failure of the deferred negative-compartment rule. Each tag's `q_tag_led_fixgross_<name>` is reported |
+| closure  | `ΣRᵢ − ρq_rai` and `ΣSᵢ − ρq_sno` within 1e-8 relative of the compartment at every output, a sanity check. `ΣNᵢ − N` over the column equals `−Σ q_tag_inc_left` within 5% of the gross `N` residual (criterion 4)                                                                                                                                                                                                                                                                                                            |
+| `pr_tag` | `Σ pr_tag − pr` within 1e-8 relative of `pr` at every output where `pr` is not zero                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| parity   | the parent's exported diagnostics of `on` bitwise equal to those of `off`, array by array, at every output, both cases (roster in section 4). Full-state parity over the long runs: outstanding gate (section 4)                                                                                                                                                                                                                                                                                                             |
+| audit    | the microphysics audit and `q_tag_aud_up_*` reported, not judged                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| cost     | step time `on` over `off`, reported                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+
+H10's verdict names each role apart: pass, fail or incomplete. It passes only
+if every role passes. A role that is incomplete leaves H10 open, and the
+deferred mechanisms of section 13 stay listed as known failures until their
+own items close.
 
 The record goes to `analysis/evidence/PART9_WP4B.md` with the job table, the
 check logs and the verdict on H10, in a follow-up PR on `plan-rev2`.
@@ -529,7 +640,8 @@ Also decided on 2026-10-11: the rain and snow plumes take the updraft's
 cross flows as further sources, the rain plume `ρaʲ Fʲ_SR Δz` with the snow
 plume's shares and the snow plume `ρaʲ Fʲ_RS Δz` with the rain plume's,
 both marched together in one downward pass with the other plume's shares
-from the level above. The microphysics inputs under EDMF allocate 560 bytes
+from the level above. That rule is replaced by the local solve of section 3.2
+(2026-10-14). The microphysics inputs under EDMF allocate 560 bytes
 per cell, which blocks GPU and sphere runs and not the column jobs. One
 bounded attempt at the cause, otherwise the allocation test stays broken and
 BACKLOG names it. The budget rose to 1.5M. The stage 2 record
@@ -619,3 +731,35 @@ signed ledger (6.3e-9 on the test column) may have the same source and is
 not measured. If its assertion fails on the corrected share rule it is
 marked broken with its value and named here. The instrumentation scripts and
 logs of both passes go to the archive with the record.
+
+## 14. The review of 2026-10-12, and the changes of 2026-10-14
+
+The review of this design (PR #172, at `6a1bfe055`) found four points. Each
+is answered above.
+
+ 1. **The signed closing ledger could not falsify H10.** Opposite corrections
+    cancel in it, and section 13's mismatch went to the rescale ledger, which
+    the rule only reported. Section 1 and section 7 now judge each role by its
+    per-step gross against the accumulated precipitation `P`. The signed
+    ledger is a balance diagnostic. Per-tag and per-compartment evidence of
+    accepted applications does not exist, so that part of each verdict is
+    *incomplete*. The `on` configs gain the gross and attempted outputs, and
+    all four configs gain `pr` averaged over 30 min, so that `P` is measured.
+    The revised rule is for the owner to confirm.
+ 2. **The long runs cannot show full-state parity.** They save no native
+    state. Section 4 narrows their claim to the exported diagnostics, names
+    the roster and the bitwise comparison, and keeps full-state parity over
+    the long runs as an outstanding gate.
+ 3. **The plume's formation amount had the wrong unit.** Section 3.2 now uses
+    `ρaʲ Fʲ Δz`, in kg m⁻² s⁻¹, as the code does, so it adds to the
+    sedimentation fluxes.
+ 4. **The rain-snow conversion took the donor's composition from the level
+    above** and was dropped where the donor plume held nothing there (raised
+    on #175). Section 3.2 now solves the two plumes' compositions at the
+    level together, with the grid mean's shares where a plume has no supply.
+    It stays a reconstruction, not an independent provenance.
+
+The review's suggested experiment stays open: known labels in the updraft and
+the environment near cloud base, and a local snow conversion, compared against
+an independent donor solution, with grid and step refinement. No such run is
+in this design's budget.

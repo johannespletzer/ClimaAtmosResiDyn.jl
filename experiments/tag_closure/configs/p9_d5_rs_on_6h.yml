@@ -72,3 +72,12 @@ diagnostics:
     period: "30mins"
   - short_name: [q_tag_led_inc_lower, q_tag_led_inc_upper, q_tag_led_inc_evap]
     period: "30mins"
+  - short_name: [pr]
+    period: "30mins"
+    reduction_time: average
+  - short_name: [q_tag_led_close_gross, q_tag_led_rescale_gross, q_tag_led_empty_gross, q_tag_exp_negative_precip_gross]
+    period: "30mins"
+  - short_name: [q_tag_led_close_attempted, q_tag_led_rescale_attempted, q_tag_led_empty_attempted]
+    period: "30mins"
+  - short_name: [q_tag_led_fixgross_lower, q_tag_led_fixgross_upper, q_tag_led_fixgross_evap]
+    period: "30mins"

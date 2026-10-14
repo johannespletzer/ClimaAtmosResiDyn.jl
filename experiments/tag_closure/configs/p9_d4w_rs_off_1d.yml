@@ -34,3 +34,6 @@ diagnostics:
     period: "30mins"
   - short_name: [arup, rhoaup, husup, husraup, hussnup]
     period: "30mins"
+  - short_name: [pr]
+    period: "30mins"
+    reduction_time: average
