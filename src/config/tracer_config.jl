@@ -144,8 +144,8 @@ end
     bool_from_config(value, key; default::Bool)
 
 Read the flag `key` as a `Bool`. `~` gives `default`. Anything other than
-`true` or `false` is an error, so that a quoted `"true"` or `"false"` cannot
-silently read as the other.
+`true` or `false` is an error, so that a quoted `"true"` cannot silently read as
+`false`, nor a quoted `"false"` as `true`.
 """
 function bool_from_config(value, key; default::Bool)
     isnothing(value) && return default

@@ -1,5 +1,5 @@
 #####
-##### Reading the fork's records back from a checkpoint
+##### Reading what the tags and the parent budget saved back from a checkpoint
 #####
 ##### The tags and the parent budget each read their own attributes and fields
 ##### from a restart file. These helpers hold the steps they share.

@@ -273,9 +273,9 @@ during simulation setup rather than at package load time:
     those configured, everything recorded here is partition repair.
 
 A no-op when water tagging is disabled. Entries that already exist in the
-diagnostics catalog are replaced. An entry this model does not have, such as
-`q_tag_res` without region tags, is dropped, because an earlier model's entry
-would compute that model's quantity.
+diagnostics catalog are replaced. A fixed-name entry this model does not have,
+such as `q_tag_res` without region tags, is dropped, because an earlier model's
+entry would compute that model's quantity.
 """
 function register_water_tagging_diagnostics!(model::AtmosModel)
     # The 0M entries come first. They drop every `pr_tag_*`, `prra_tag_*` and
@@ -376,7 +376,8 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
         ρq_tag_name = Symbol(:ρq_tag_, name)
         part_names = (ρq_tag_name, Symbol(:ρq_rtag_, name), Symbol(:ρq_stag_, name))
 
-        # Its compute depends on `water_tag_precipitation`.
+        # The compute of `q_tag_<name>` and `qv_tag_<name>` depends on
+        # `water_tag_precipitation`.
         total_compute(out, u, p, t) =
             precipitation ? compute_q_tag_total!(out, u, p, t, part_names) :
             compute_q_tag!(out, u, p, t, ρq_tag_name)

@@ -3724,11 +3724,12 @@ end
     end
 
     @testset "The key and its refusals" begin
-        @test CA.tag_ledger_per_tag_from_config(true, "water_tag_leak_correction")
-        @test !CA.tag_ledger_per_tag_from_config(nothing, "water_tag_leak_correction")
-        @test_throws r"`water_tag_leak_correction` must be `true` or `false`" CA.tag_ledger_per_tag_from_config(
+        @test CA.bool_from_config(true, "water_tag_leak_correction"; default = false)
+        @test !CA.bool_from_config(nothing, "water_tag_leak_correction"; default = false)
+        @test_throws r"`water_tag_leak_correction` must be `true` or `false`" CA.bool_from_config(
             "true",
-            "water_tag_leak_correction",
+            "water_tag_leak_correction";
+            default = false,
         )
         edmf = Dict{String, Any}(
             "turbconv" => "prognostic_edmfx",

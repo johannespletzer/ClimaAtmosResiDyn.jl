@@ -89,7 +89,8 @@ import ...slab_q_flux
 # and restores it around that evaluation.
 import ...save_water_tag_exp_rate!
 import ...restore_water_tag_exp_rate!
-# The checkpoint reader opens and closes the restart file the way the tags do.
+# `read_checkpoint_endpoints` opens the restart file with the reader helper the
+# tags use.
 import ...with_restart_reader
 
 include("integrals.jl")

@@ -386,6 +386,8 @@ _energy_source_copy_cache(Y, model) =
 function _check_increment_partition(ᶜmasks, names, model)
     follows_implicit_increment(model) || return nothing
     isempty(names) && return nothing
+    # Summing the mask fields, not their parent arrays, keeps the sum a field,
+    # so `maximum` reduces across the processes.
     mask_sum =
         reduce((a, b) -> a .+ b, map(name -> getproperty(ᶜmasks, name), names))
     deviation = maximum(abs.(mask_sum .- 1))

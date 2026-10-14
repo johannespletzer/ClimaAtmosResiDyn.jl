@@ -13,8 +13,8 @@
 Register a diagnostic as `add_diagnostic_variable!` does, but drop any entry
 named `short_name` first, so there is no overwrite warning. The diagnostics
 catalog is global, and each simulation registers the entries of its own model.
-An entry an earlier model registered must not stay, since its compute function
-may capture that model's tags.
+So an entry of the same name from an earlier model is replaced, since its
+compute function or metadata may belong to that model.
 """
 function replace_diagnostic_variable!(; short_name, kwargs...)
     delete!(ALL_DIAGNOSTICS, short_name)

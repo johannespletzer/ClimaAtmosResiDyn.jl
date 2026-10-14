@@ -65,7 +65,8 @@ function _check_water_tag_exchange_partition(
     mask_sum = reduce((a, b) -> a .+ b, masks)
     # The largest deviation over every process, so that all of them refuse
     # together, rather than some while the others go on and wait for them.
-    # `maximum` on a field reduces across the processes.
+    # Summing the mask fields, not their parent arrays, keeps the sum a field,
+    # so `maximum` reduces across the processes.
     deviation = maximum(abs.(mask_sum .- 1))
     deviation > 0.01 && error(
         "The water tags exchange composition at the updraft's mass flux under \

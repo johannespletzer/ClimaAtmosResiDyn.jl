@@ -1287,7 +1287,7 @@ function restore_tag_ledger_checkpoint!(tagging, restart_file, context)
         all_fields,
     )
     later = filter(f -> is_negative_water_checkpoint_field(first(f)), all_fields)
-    with_restart_reader(restart_file, context) do reader
+    return with_restart_reader(restart_file, context) do reader
         restore_negative_water_accumulator!(reader, later, restart_file)
         restore_water_application_ledgers!(
             _water_meter(tagging),
@@ -1297,7 +1297,8 @@ function restore_tag_ledger_checkpoint!(tagging, restart_file, context)
         )
         isempty(fields) && return nothing
         missing_names = missing_checkpoint_fields(reader, fields)
-        if length(missing_names) == length(fields)
+        none_carried = length(missing_names) == length(fields)
+        if none_carried
             @warn(
                 "The restart file $restart_file carries none of the tags' \
                 accumulators: their cache ledgers, gross twins, counts, \
@@ -1317,8 +1318,8 @@ function restore_tag_ledger_checkpoint!(tagging, restart_file, context)
             )
         end
         read_checkpoint_fields!(reader, fields)
+        return nothing
     end
-    return nothing
 end
 
 # Read the water tag producer's cumulative ledgers. Where the checkpoint has none
@@ -1328,7 +1329,8 @@ restore_water_application_ledgers!(::Nothing, reader, fields, restart_file) =
     nothing
 function restore_water_application_ledgers!(meter, reader, fields, restart_file)
     missing_names = missing_checkpoint_fields(reader, fields)
-    if length(missing_names) == length(fields)
+    none_carried = length(missing_names) == length(fields)
+    if none_carried
         @warn(
             "The restart file $restart_file carries none of the water tag \
             producer's ledgers. They start at zero, and the receipt marks this \
@@ -1352,7 +1354,8 @@ end
 function restore_negative_water_accumulator!(reader, fields, restart_file)
     isempty(fields) && return nothing
     missing_names = missing_checkpoint_fields(reader, fields)
-    if length(missing_names) == length(fields)
+    none_carried = length(missing_names) == length(fields)
+    if none_carried
         @warn(
             "The restart file $restart_file was written before the parent's \
             negative water accumulator was carried in a checkpoint. It starts at \
