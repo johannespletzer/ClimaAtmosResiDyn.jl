@@ -236,9 +236,8 @@ function precomputed_quantities(Y, atmos)
         # live, keeps the collapse of K at an unresolved inversion from
         # leaking to the adjacent interior face.
         #
-        # All four face fields are written by `set_face_diffusivities!` on
-        # every explicit update (ᶠK_entr is zeroed there when the interface
-        # entrainment closure is off), and ᶜl_mix by `materialized_mixing_length!`,
+        # All three face fields are written by `set_face_diffusivities!` on
+        # every explicit update, and ᶜl_mix by `materialized_mixing_length!`,
         # before any read, so `similar` is safe.
         (
             atmos.turbconv_model isa AbstractEDMF ?
@@ -246,7 +245,6 @@ function precomputed_quantities(Y, atmos)
                 ᶠbuoygrad = similar(Y.f, FT),
                 ᶠK_h = similar(Y.f, FT),
                 ᶠK_u = similar(Y.f, FT),
-                ᶠK_entr = similar(Y.f, FT),
                 ᶜl_mix = similar(Y.c, FT),
                 # Horizontal eddy viscosity/diffusivity of the TKE-based
                 # closure, with the mixing length limited by the horizontal
@@ -291,8 +289,30 @@ function precomputed_quantities(Y, atmos)
     }
     covariance_quantities = if uses_sgs_quadrature
         base = (;
+            # σ²_T and σ²_q accumulate three variance blocks in
+            # `set_covariance_cache!`: the turbulent closure
+            # (`2 c ℓ² |∇_z ψ|²`), the horizontal geometric term
+            # (`c_g (c_Δx Δx_h)² |∇_h ψ|²`, Richardson-weighted), and the
+            # resolved vertical uniform-box term
+            # (`c_g (c_Δz Δz)² (∂_z ψ)²`, exact for a linear profile when
+            # `c_g = 1/12` and `c_Δz = 1`).
             ᶜT′T′ = zeros(axes(Y.c)),
             ᶜq′q′ = zeros(axes(Y.c)),
+            # T–q correlation the quadrature actually samples (filled by
+            # `set_tq_correlation!`): the prescribed `Tq_correlation_coefficient`
+            # for `tq_correlation_model: constant`, or `T′q′ / √(T′T′ q′q′)` for
+            # `tq_correlation_model: diagnosed`. The gradient-based covariance
+            # `ᶜT′q′` is only allocated for the diagnosed model (prescribed-ρ_turb
+            # turbulent cross + horizontal geometric cross + vertical uniform-box
+            # cross; see `set_covariance_cache!`).
+            ᶜcorr_Tq = zeros(axes(Y.c)),
+            # Local SGS variance fidelity (see `sgs_variance_fidelity`),
+            # refreshed inside `set_covariance_cache!`.
+            ᶜα = zeros(axes(Y.c)),
+            (
+                atmos.tq_correlation_model isa DiagnosedTqCorrelation ?
+                (; ᶜT′q′ = zeros(axes(Y.c))) : (;)
+            )...,
         )
         uses_microphysics_quadrature_moments ?
         (; base..., ᶜsgs_moments = similar(Y.c, SGSMomentsNT)) :
@@ -751,8 +771,7 @@ NVTX.@annotate function set_implicit_precomputed_quantities!(Y, p, t)
         # Two-pass SGS: recompute condensate using SGS quadrature over (T, q_tot)
         sgs_quad = p.atmos.sgs_quadrature
         if !isnothing(sgs_quad)
-            (; ᶜT′T′, ᶜq′q′) = p.precomputed
-            corr_Tq = correlation_Tq(p.params)
+            (; ᶜT′T′, ᶜq′q′, ᶜcorr_Tq) = p.precomputed
             @. ᶜsa_result = compute_sgs_saturation_adjustment(
                 thermo_params,
                 $(sgs_quad),
@@ -761,7 +780,7 @@ NVTX.@annotate function set_implicit_precomputed_quantities!(Y, p, t)
                 ᶜq_tot_nonneg,
                 ᶜT′T′,
                 ᶜq′q′,
-                corr_Tq,
+                ᶜcorr_Tq,
             )
             @. ᶜq_liq = ᶜsa_result.q_liq
             @. ᶜq_ice = ᶜsa_result.q_ice

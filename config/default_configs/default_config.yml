@@ -264,6 +264,9 @@ implicit_microphysics:
 use_sgs_quadrature:
   help: "Enable subgrid-scale quadrature integration for microphysics tendencies. When true, microphysics tendencies are integrated over the joint SGS PDF of (T, q_tot). [`true` (default), `false`]"
   value: true
+tq_correlation_model:
+  help: "Closure for the SGS T-q correlation that couples σ_T and σ_q in the sampled joint PDF. `constant` uses the prescribed `Tq_correlation_coefficient`. `diagnosed` builds T′q′ as the sum of the covariance blocks consistent with the variance decomposition — turbulent (prescribed ρ_turb · σ_T,turb · σ_q,turb) and vertical uniform-box (Δz² ∂_z θ_li · ∂_z q_tot / 12); the isentropic horizontal block carries no θ′ and contributes none — then forms ρ = T′q′ / √(T′T′ q′q′), falling back to the prescribed value where the variances vanish. [`constant` (default), `diagnosed`]"
+  value: "constant"
 sgs_distribution:
   help: "Distribution type for SGS quadrature over microphysics. [`gaussian` (default), `lognormal`, `mean` (grid-mean only, no SGS sampling)]"
   value: "gaussian"
@@ -276,24 +279,24 @@ microphysics_n_substeps:
 microphysics_n_substeps_quadrature:
   help: "Number of susbteps for time averaging bulk microphysics tendencies with subgrid-scale quadrature. Default: 2"
   value: 2
-fixed_terminal_velocity_liquid:
-  help: "Use fixed terminal velocity for cloud liquid sedimentation [`true` (default), `false`]"
-  value: true
-fixed_terminal_velocity_ice:
-  help: "Use fixed terminal velocity for cloud ice sedimentation [`true` (default), `false`]"
-  value: true
-fixed_terminal_velocity_rain:
-  help: "Use fixed terminal velocity for rain sedimentation [`true`, `false` (default)]"
-  value: false
-fixed_terminal_velocity_snow:
-  help: "Use fixed terminal velocity for snow sedimentation [`true` (default), `false`]"
-  value: true
+cloud_liquid_terminal_velocity:
+  help: "Cloud liquid sedimentation velocity for 1M microphysics [`Fixed` (default), `Stokes`]"
+  value: "Fixed"
+cloud_ice_terminal_velocity:
+  help: "Cloud ice sedimentation velocity for 1M microphysics [`Fixed` (default), `Chen2022` (Chen et al. 2022 small ice)]"
+  value: "Fixed"
+rain_terminal_velocity:
+  help: "Rain sedimentation velocity for 1M microphysics [`Fixed` (default), `Blk1M` (1-moment power law), `Chen2022`]"
+  value: "Fixed"
+snow_terminal_velocity:
+  help: "Snow sedimentation velocity for 1M microphysics [`Fixed`, `Blk1M` (1-moment power law), `Chen2022` (default, Chen et al. 2022 large ice)]"
+  value: "Chen2022"
 cloud_liquid_formation:
   help: "Cloud liquid formation option for 1M microphysics [`CloudLiquidFormation` (default), ~]"
   value: "CloudLiquidFormation"
 cloud_ice_formation:
   help: "Cloud ice formation option for 1M microphysics [`PrescribedIceNumber` (default), `TemperatureDependentIceNumber`, `ConstantTimescale`, `TemperatureDependent`, ~]"
-  value: "PrescribedIceNumber"
+  value: "TemperatureDependentIceNumber"
 cloud_ice_melt:
   help: "Cloud ice melting option for 1M microphysics [`CloudIceMelt` (default), ~]"
   value: "CloudIceMelt"
@@ -330,6 +333,9 @@ cloud_ice_snow_accretion:
 rain_snow_accretion:
   help: "Rain-snow collision accretion option for 1M microphysics [`RainSnowAccretion` (default), ~]"
   value: "RainSnowAccretion"
+vapor_relaxation:
+  help: "Coupling of the vapor-driven phase changes in the 1M substep solver [`Joint` (default), `PerProcess`]"
+  value: "Joint"
 
 viscous_sponge:
   help: "Viscous sponge [`true`, `false` (default)]"

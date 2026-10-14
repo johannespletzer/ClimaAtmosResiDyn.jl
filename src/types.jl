@@ -72,22 +72,22 @@ it.
 Any process that is not passed keeps its default, so
 `NonEquilibriumMicrophysics1M()` turns every process on with these variants:
 
-| Process                         | Default variant                 |
-|:------------------------------- |:------------------------------- |
-| `cloud_liquid_formation`        | `CloudLiquidFormation()`        |
-| `cloud_ice_formation`           | `PrescribedIceNumber()`         |
-| `cloud_ice_melt`                | `CloudIceMelt()`                |
-| `cloud_liquid_freezing`         | `HomogeneousAndHeterogeneous()` |
-| `rain_autoconversion`           | `Kessler1M()`                   |
-| `snow_autoconversion`           | `NoSupersaturation()`           |
-| `rain_condensation_evaporation` | `RainEvaporation()`             |
-| `snow_deposition_sublimation`   | `DepositionAndSublimation()`    |
-| `snow_melt`                     | `SnowMelt()`                    |
-| `cloud_liquid_rain_accretion`   | `CloudLiquidRainAccretion()`    |
-| `cloud_liquid_snow_accretion`   | `CloudLiquidSnowAccretion()`    |
-| `cloud_ice_rain_accretion`      | `CloudIceRainAccretion()`       |
-| `cloud_ice_snow_accretion`      | `CloudIceSnowAccretion()`       |
-| `rain_snow_accretion`           | `RainSnowAccretion()`           |
+| Process                         | Default variant                   |
+|:------------------------------- |:--------------------------------- |
+| `cloud_liquid_formation`        | `CloudLiquidFormation()`          |
+| `cloud_ice_formation`           | `TemperatureDependentIceNumber()` |
+| `cloud_ice_melt`                | `CloudIceMelt()`                  |
+| `cloud_liquid_freezing`         | `HomogeneousAndHeterogeneous()`   |
+| `rain_autoconversion`           | `Kessler1M()`                     |
+| `snow_autoconversion`           | `NoSupersaturation()`             |
+| `rain_condensation_evaporation` | `RainEvaporation()`               |
+| `snow_deposition_sublimation`   | `DepositionAndSublimation()`      |
+| `snow_melt`                     | `SnowMelt()`                      |
+| `cloud_liquid_rain_accretion`   | `CloudLiquidRainAccretion()`      |
+| `cloud_liquid_snow_accretion`   | `CloudLiquidSnowAccretion()`      |
+| `cloud_ice_rain_accretion`      | `CloudIceRainAccretion()`         |
+| `cloud_ice_snow_accretion`      | `CloudIceSnowAccretion()`         |
+| `rain_snow_accretion`           | `RainSnowAccretion()`             |
 
 These match the defaults of the corresponding config keys, so a model built here
 and one built from an unmodified configuration file agree (see
@@ -128,7 +128,7 @@ struct NonEquilibriumMicrophysics1M{OPT} <: AbstractMicrophysicsModel
         # `cloud_ice_formation` overrides the CloudMicrophysics default
         # (`ConstantTimescale`) so that these defaults match `default_config.yml`
         processes = CMP.Microphysics1MOptions(;
-            cloud_ice_formation = CMP.PrescribedIceNumber(),
+            cloud_ice_formation = CMP.TemperatureDependentIceNumber(),
             process_options...,
         )
         return new{typeof(processes)}(n_substeps, n_substeps_quad, processes)
@@ -2900,7 +2900,28 @@ Groups tagged-tracer models and types.
 end
 
 """
-    AtmosWater{MM, CM, MTTS, TNM, SQ, TVL, TVI, TVR, TVS}(; microphysics_model = DryModel(), kwargs...)
+    AbstractTqCorrelationModel
+
+Closure for the SGS T–q correlation sampled by the joint-PDF quadrature.
+Selected by the YAML key `tq_correlation_model`.
+
+  - `ConstantTqCorrelation` (`"constant"`, default): the prescribed
+    `Tq_correlation_coefficient` everywhere.
+  - `DiagnosedTqCorrelation` (`"diagnosed"`): `ρ = T′q′ / √(T′T′ q′q′)` from
+    the gradient-based covariance `T′q′`, summed over the three variance
+    blocks — turbulent `ρ_turb · σ_T,turb · σ_q,turb` (prescribed `ρ_turb`),
+    horizontal geometric `c_g (c_Δx Δx_h)² ∇_h θ_li · ∇_h q_tot`, and vertical
+    uniform-box `c_g (c_Δz Δz)² ∂_z θ_li · ∂_z q_tot` — transformed to T basis
+    and rescaled under the σ_q bound so `ρ` is clamp-invariant. Falls back to
+    the prescribed value where all blocks vanish, and is clamped to `[-1, 1]`
+    to absorb Float32 roundoff at the Cauchy-Schwarz boundary.
+"""
+abstract type AbstractTqCorrelationModel end
+struct ConstantTqCorrelation <: AbstractTqCorrelationModel end
+struct DiagnosedTqCorrelation <: AbstractTqCorrelationModel end
+
+"""
+    AtmosWater{MM, CM, MTTS, TNM, SQ, TQC, TVL, TVI, TVR, TVS}(; microphysics_model = DryModel(), kwargs...)
 
 Group of moisture, cloud, and microphysics choices inside an
 `AtmosModel`.
@@ -2914,8 +2935,13 @@ Group of moisture, cloud, and microphysics choices inside an
   - `tracer_nonnegativity_method`: `nothing`, or a `TracerNonnegativityMethod`.
   - `sgs_quadrature`: `nothing`, or an `SGSQuadrature` used to integrate cloud
     and microphysics quantities over the subgrid-scale distribution.
-  - `terminal_velocity_mode`: `DiagnosticTerminalVelocity()` (the default) or a
-    `FixedTerminalVelocity`.
+  - `tq_correlation_model`: An `AbstractTqCorrelationModel`; `ConstantTqCorrelation()`
+    by default (`DiagnosedTqCorrelation()` diagnoses the T–q correlation from the
+    gradient covariance).
+  - `terminal_velocity_liquid`, `terminal_velocity_ice`, `terminal_velocity_rain`,
+    `terminal_velocity_snow`: the `AbstractTerminalVelocityMode` of each species,
+    `FixedTerminalVelocity()` for cloud liquid, cloud ice and rain,
+    and `Chen2022TerminalVelocity()` for snow by default.
 
 # Examples
 
@@ -2926,16 +2952,17 @@ water = ClimaAtmos.AtmosWater(;
 )
 ```
 """
-@kwdef struct AtmosWater{MM, CM, MTTS, TNM, SQ, TVL, TVI, TVR, TVS}
+@kwdef struct AtmosWater{MM, CM, MTTS, TNM, SQ, TQC, TVL, TVI, TVR, TVS}
     microphysics_model::MM = DryModel()
     cloud_model::CM = QuadratureCloud()
     microphysics_tendency_timestepping::MTTS = nothing
     tracer_nonnegativity_method::TNM = nothing
     sgs_quadrature::SQ = nothing
+    tq_correlation_model::TQC = ConstantTqCorrelation()
     terminal_velocity_liquid::TVL = FixedTerminalVelocity()
     terminal_velocity_ice::TVI = FixedTerminalVelocity()
-    terminal_velocity_rain::TVR = DiagnosticTerminalVelocity()
-    terminal_velocity_snow::TVS = FixedTerminalVelocity()
+    terminal_velocity_rain::TVR = FixedTerminalVelocity()
+    terminal_velocity_snow::TVS = Chen2022TerminalVelocity()
 end
 
 """

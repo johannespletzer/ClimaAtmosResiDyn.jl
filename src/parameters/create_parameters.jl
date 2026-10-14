@@ -520,7 +520,6 @@ function TurbulenceConvectionParameters(
         :entr_inv_tau => :entr_inv_tau,
         :entr_detr_limit_inv_tau => :entr_detr_limit_inv_tau,
         :cloud_fraction_param_vec => :cloud_fraction_param_vec,
-        :EDMF_interface_entr_efficiency => :interface_entr_efficiency,
         :EDMF_sfc_mass_flux_ustar_coeff => :sfc_mass_flux_ustar_coeff,
         :EDMF_convective_zi => :convective_zi,
         :EDMF_sfc_mass_flux_cap_fraction => :sfc_mass_flux_cap_fraction,
@@ -544,10 +543,11 @@ Build the SGS covariance, quadrature and cloud-fraction parameter set.
 Most values come from ClimaParams through an explicit name map. The
 cloud-fraction floor release-shape parameters are not yet in ClimaParams'
 default TOML: they fall back to the defaults set here, and are read from
-`toml_dict` only when a run or calibration TOML defines them. The defaults
-`margin = abs_margin = sharpness = 1` and `residual = 0` release the
-cloud-fraction floor on a one-width saturation margin guarded by an absolute
-margin of one floor width.
+`toml_dict` only when a run or calibration TOML defines them. The default
+`residual = 1` keeps the relative floor fully active everywhere (no
+saturation-margin release); `margin = abs_margin = sharpness = 1` describe the
+release shape that a `residual < 1` would turn on (a one-width saturation margin
+guarded by an absolute margin of one floor width).
 
 `overrides` is merged last, so it wins over both the TOML values and the
 defaults above.
@@ -568,13 +568,19 @@ function SGSQuadratureParameters(
         :sgs_variance_geometric_coeff => :sgs_variance_geometric_coeff,
         :sgs_variance_horizontal_scale_factor =>
             :sgs_variance_horizontal_scale_factor,
+        :sgs_variance_vertical_scale_factor =>
+            :sgs_variance_vertical_scale_factor,
         :sgs_variance_max_rel_std => :sgs_variance_max_rel_std,
-        :sgs_variance_geometric_Ri_factor => :sgs_variance_geometric_Ri_factor,
         :sgs_liquid_uniform_fraction => :sgs_liquid_uniform_fraction,
         :sgs_ice_uniform_fraction => :sgs_ice_uniform_fraction,
         :cloud_fraction_steepness_scale => :cloud_fraction_steepness_scale,
         :cloud_fraction_eps_rel => :cloud_fraction_eps_rel,
         :cloud_fraction_sigma_abs => :cloud_fraction_sigma_abs,
+        # Shared with CloudMicrophysics' 1M relaxation timescales.
+        :condensation_evaporation_timescale =>
+            :condensation_evaporation_timescale,
+        :sublimation_deposition_timescale =>
+            :sublimation_deposition_timescale,
     )
     parameters = CP.get_parameter_values(toml_dict, name_map, "ClimaAtmos")
     FT = CP.float_type(toml_dict)
@@ -584,14 +590,20 @@ function SGSQuadratureParameters(
     # TODO: promote each to ClimaParams (and the name_map above) once it has
     # been calibrated, and remove it from this block.
     provisional_defaults = (;
-        # Cloud-fraction floor release shape (see `_compute_cloud_fraction`):
-        # margin = abs_margin = sharpness = 1, residual = 0 release the floor on
-        # a one-width saturation margin guarded by an absolute margin of one
-        # floor width.
+        # Cloud-fraction floor release (see `_compute_cloud_fraction`):
+        # residual = 1 keeps the relative floor fully active everywhere (no
+        # release, D ≡ 1). margin = abs_margin = sharpness = 1 are the release
+        # shape used when residual < 1: a one-width saturation margin guarded
+        # by an absolute margin of one floor width.
         cloud_fraction_floor_release_margin = FT(1),
         cloud_fraction_floor_release_abs_margin = FT(1),
         cloud_fraction_floor_release_sharpness = FT(1),
-        cloud_fraction_floor_residual = FT(0),
+        cloud_fraction_floor_residual = FT(1),
+        # Depth [m] of the along-surface displacement of the geometric
+        # variance block.
+        sgs_variance_isentropic_depth = FT(1000),
+        # Equilibrium-ratio modulator weight (see `sgs_variance_fidelity`).
+        sgs_fidelity_equilibrium_weight = FT(0.5),
     )
     provisional_present = filter(collect(keys(provisional_defaults))) do name
         haskey(toml_dict.data, string(name))
