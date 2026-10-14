@@ -390,7 +390,8 @@ function edmfx_sgs_diffusive_flux_tendency!(
             end
         end
 
-        # The loop has diffused each water tag's whole value at `K_h + K_e`.
+        # The loop has diffused each water tag's whole value at `K_h`, and the
+        # rain and snow parts not at all.
         # Under `water_tag_leak_correction` each tag takes back the `K_h`
         # diffusion of its share of the rain and snow, which the parent does
         # not diffuse, and so does each copy. A no-op otherwise.
