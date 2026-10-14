@@ -292,13 +292,21 @@ total departs from the parent's by the follower's left part,
   - Under EDMF only `prognostic_edmfx` with one updraft and the split solver.
     Updraft copies are refused.
   - Only 1-moment microphysics.
-  - Under EDMF the closing step's signed column integral stays above the
-    design's 1e-8 of the accumulated rain under van Leer (5.1e-9 against
-    4.0e-10 after an hour of DYCOMS RF02), and under `tracer` a part can go
-    below zero, since nothing restores it. Both are measured in the tests and
-    marked broken. The candidate source is the parts' microphysics rule for
-    a negative compartment, which keeps a part frozen while the cached rates
-    evaporate it. That rule is a separate part 9 item.
+  - Under EDMF and van Leer the closing step is not at rounding. After an
+    hour of DYCOMS RF02 its column integral is 5.1e-9 kg m⁻² signed and
+    3.2e-8 kg m⁻² gross. The test's bound is 3.2e-10 kg m⁻², 1e-8 of the
+    hour's surface rain and snow sampled once per step. The signed integral
+    is a balance check only, since opposite corrections cancel in it. The
+    design judges each correction role by its gross, which the tests do not
+    do. Under `tracer` a part can go below zero, since nothing restores it:
+    the source tag's non-precipitating part reaches -2.1e-5 kg m⁻³. Both are
+    measured in the tests and marked broken. The candidate source is the
+    parts' microphysics rule for a negative compartment, which keeps a part
+    frozen while the cached rates evaporate it. That rule is a separate part
+    9 item.
+  - Under EDMF the tests run on a warm column, so the snow parts and the
+    snow flows are checked only to stay zero. Parity without SGS quadrature
+    is not tested under EDMF.
   - The three parts cost three fields per tag, two audit fields per tag unless
     `water_tag_precipitation_audit: false`, and the flows. The flows evaluate the microphysics rates again, so their cost is of
     the same order as the microphysics. Under EDMF they are evaluated once per

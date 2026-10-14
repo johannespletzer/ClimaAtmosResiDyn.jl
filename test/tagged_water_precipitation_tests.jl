@@ -2053,6 +2053,63 @@ end
     @test all(iszero, CA._rain_plume_values(state))
 end
 
+# The rain and snow mix at the edges of the floating-point range, in both
+# types: zero supplies, subnormal ones, and supplies far apart. The mixes stay
+# finite and non-negative. A plume with a mix keeps a composition that sums
+# to one over the two region tags, and the donor's tag where it has one.
+@testset "The rain and snow mix at the edges of the range" begin
+    for FT in (Float32, Float64)
+        tag_1 = (one(FT), zero(FT), zero(FT))
+        tag_2 = (zero(FT), one(FT), zero(FT))
+        mean = (FT(0.3), FT(0.7), FT(0.2))
+        smallest = nextfloat(zero(FT))
+        subnormal = floatmin(FT) / 4
+        # `(s_R, s_S, c_R, c_S)`: the supplies other than conversion and the
+        # conversions into rain and into snow.
+        cases = (
+            (zero(FT), zero(FT), zero(FT), zero(FT)),
+            (smallest, zero(FT), zero(FT), zero(FT)),
+            (smallest, smallest, smallest, smallest),
+            (subnormal, subnormal, subnormal, zero(FT)),
+            (one(FT), subnormal, zero(FT), zero(FT)),
+            (FT(1e-6), floatmin(FT), FT(1e-7), zero(FT)),
+            (FT(1e-6), FT(1e-6), FT(1e-7), FT(3e-8)),
+        )
+        for (s_R, s_S, c_R, c_S) in cases
+            (x_R, x_S, has_R, has_S) = CA._precip_conversion_mix(
+                map(x -> x * s_R, tag_1),
+                s_R,
+                map(x -> x * s_S, tag_2),
+                s_S,
+                c_R,
+                c_S,
+                mean,
+                mean,
+            )
+            @test all(isfinite, x_R) && all(isfinite, x_S)
+            @test all(>=(0), x_R) && all(>=(0), x_S)
+            has_R && @test x_R[1] + x_R[2] ≈ 1 rtol = sqrt(eps(FT))
+            has_S && @test x_S[1] + x_S[2] ≈ 1 rtol = sqrt(eps(FT))
+            # Without conversion into it, a plume with a supply is its
+            # donor's tag.
+            has_R && s_R > 0 && c_R == 0 && @test x_R[1] ≈ 1 rtol = sqrt(eps(FT))
+            has_S && s_S > 0 && c_S == 0 && @test x_S[2] ≈ 1 rtol = sqrt(eps(FT))
+        end
+        # No supply at all: neither plume has a mix.
+        (_, _, has_R, has_S) = CA._precip_conversion_mix(
+            map(zero, tag_1),
+            zero(FT),
+            map(zero, tag_2),
+            zero(FT),
+            zero(FT),
+            zero(FT),
+            mean,
+            mean,
+        )
+        @test !has_R && !has_S
+    end
+end
+
 # The share of a rain or snow part in the SGS flux and the cross blocks. Where
 # the parent holds rain and the partition holds none of it, the region tags
 # take their shares of the non-precipitating water. Where the parent holds no

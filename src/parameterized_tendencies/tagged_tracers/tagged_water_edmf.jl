@@ -1232,7 +1232,10 @@ end
 # supply at all, it gives the water it converts the grid mean's shares of its
 # species. Where both are fed only by each other, neither has a mix. Returns
 # the two mixes and whether each has one. The amounts are divided by the larger
-# plume's total first, so that their products do not underflow in `Float32`.
+# plume's total first, so that the products of comparable amounts stay in
+# range. The division is direct: a reciprocal of a subnormal total would be
+# infinite. A plume whose amounts underflow against the other's counts as
+# having no supply.
 @inline function _precip_conversion_mix(
     sources_R,
     supply_R,
@@ -1246,8 +1249,8 @@ end
     FT = typeof(supply_R)
     N = Val(length(sources_R))
     scale = max(supply_R + c_R, supply_S + c_S)
-    inv_scale = scale > zero(FT) ? inv(scale) : zero(FT)
-    (s_R, s_S, k_R, k_S) = (supply_R, supply_S, c_R, c_S) .* inv_scale
+    (s_R, s_S, k_R, k_S) =
+        map(x -> _scaled_amount(x, scale), (supply_R, supply_S, c_R, c_S))
     total_R = s_R + k_R
     total_S = s_S + k_S
     determinant = s_R * s_S + s_R * k_S + k_R * s_S
@@ -1256,8 +1259,8 @@ end
     has_S = coupled | ((total_S > zero(FT)) & (total_R == zero(FT)))
     mixed_R = ntuple(
         i -> begin
-            A_R = sources_R[i] * inv_scale
-            A_S = sources_S[i] * inv_scale
+            A_R = _scaled_amount(sources_R[i], scale)
+            A_S = _scaled_amount(sources_S[i], scale)
             coupled ? (A_R * total_S + k_R * A_S) / determinant :
             (A_R + k_R * mean_S[i]) / max(total_R, floatmin(FT))
         end,
@@ -1265,8 +1268,8 @@ end
     )
     mixed_S = ntuple(
         i -> begin
-            A_R = sources_R[i] * inv_scale
-            A_S = sources_S[i] * inv_scale
+            A_R = _scaled_amount(sources_R[i], scale)
+            A_S = _scaled_amount(sources_S[i], scale)
             coupled ? (A_S * total_R + k_S * A_R) / determinant :
             (A_S + k_S * mean_R[i]) / max(total_S, floatmin(FT))
         end,
@@ -1274,6 +1277,7 @@ end
     )
     return (mixed_R, mixed_S, has_R, has_S)
 end
+@inline _scaled_amount(x, scale) = scale > zero(scale) ? x / scale : zero(scale)
 
 # One plume's state at one level: its mix rescaled so that the partition's sum
 # is one, or the grid mean's shares where it has no mix or the updraft holds
