@@ -148,3 +148,27 @@ function test_weighted_nets(Y, p, t, turbconv_model)
         @test mismatch <= 1e-10 * water
     end
 end
+
+# Every registered diagnostic of the water tags computes on the model's state,
+# with finite values. A diagnostic that no test requests would otherwise fail
+# only in a run that asks for it. `q_tag_aud_up_<name>` is EDMF's own.
+function test_water_tag_diagnostics_compute(Y, p, t)
+    prefixes = ("q_tag_", "q_ntag_", "q_rtag_", "q_stag_", "pr_tag_")
+    names = sort!(
+        filter(
+            name -> any(prefix -> startswith(name, prefix), prefixes),
+            collect(keys(CA.Diagnostics.ALL_DIAGNOSTICS)),
+        ),
+    )
+    @test any(name -> startswith(name, "q_tag_aud_up_"), names)
+    for name in names
+        diagnostic = CA.Diagnostics.get_diagnostic_variable(name)
+        value =
+            isnothing(diagnostic.compute!) ? diagnostic.compute(Y, p, t) :
+            diagnostic.compute!(nothing, Y, p, t)
+        value isa Base.Broadcast.Broadcasted &&
+            (value = Base.Broadcast.materialize(value))
+        @test all(isfinite, parent(value))
+    end
+    @info "The water tags' diagnostics computed on the EDMF state" names
+end

@@ -289,6 +289,11 @@ end
         @test abs(pr_partition - pr) <= 1e-8 * max(abs(pr), floatmin(FT))
     end
 
+    # 8b. Every diagnostic of the water tags computes on the EDMF state.
+    @testset "The water tags' diagnostics under EDMF" begin
+        test_water_tag_diagnostics_compute(Y, p, t)
+    end
+
     # 9. The checkpoint.
     @testset "A checkpoint with the parts under EDMF" begin
         restart_file = joinpath(simulation.output_dir, "day0.3600.hdf5")

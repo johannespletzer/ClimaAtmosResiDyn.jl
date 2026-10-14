@@ -68,6 +68,7 @@ include("tagged_water_precipitation_edmf_common.jl")
             @test value >= 0
         end
     end
+    test_water_tag_diagnostics_compute(Y, simulation.integrator.p, simulation.integrator.t)
     # The closing step closes the compartments at every follow, so the
     # partition stays bounded by them.
     @test result.rain < 1e-8
