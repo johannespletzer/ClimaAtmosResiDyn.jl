@@ -100,9 +100,9 @@ end
     # The closing ledger at rounding: every operator of the parts sums to the
     # species' where the parent holds rain.
     # With the parts' cross blocks summing to the species' at every cell, the
-    # closing step books rounding only: 2.0e-13 kg m⁻² gross over the hour on
-    # this column without quadrature, against 0.032 kg m⁻² of sampled
-    # precipitation. The bound leaves a factor of 16.
+    # closing step books rounding only: 4.4e-15 kg m⁻² gross over the hour on
+    # this column without quadrature, against 0.028 kg m⁻² of sampled
+    # precipitation. The bound leaves a factor of 600.
     @test led_close_gross <= 1e-10 * sampled_precipitation
     @test result.rain < 1e-12
     # The non-precipitating parts' column total is the parent's less the
