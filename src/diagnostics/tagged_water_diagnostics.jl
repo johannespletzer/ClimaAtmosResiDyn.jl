@@ -272,14 +272,10 @@ during simulation setup rather than at package load time:
     tracer nonnegativity constraint, or a `PrescribedFlow` setup; with none of
     those configured, everything recorded here is partition repair.
 
-A no-op when water tagging is disabled. Per-tag entries that already exist in the
-diagnostics catalog are kept where their compute function only depends on the
-tag name. `q_tag_<name>` and `qv_tag_<name>` depend on
-`water_tag_precipitation` too, so they are dropped and re-registered, as are the
-entries of the rain and snow parts. The `q_tag_res` entry is always dropped and
-re-registered, because the set of region tags it sums over can differ between
-setups — including differing to *empty*, in which case no new entry replaces
-the stale one.
+A no-op when water tagging is disabled. Entries that already exist in the
+diagnostics catalog are replaced. An entry this model does not have, such as
+`q_tag_res` without region tags, is dropped, because an earlier model's entry
+would compute that model's quantity.
 """
 function register_water_tagging_diagnostics!(model::AtmosModel)
     # The 0M entries come first. They drop every `pr_tag_*`, `prra_tag_*` and
@@ -380,8 +376,7 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
         ρq_tag_name = Symbol(:ρq_tag_, name)
         part_names = (ρq_tag_name, Symbol(:ρq_rtag_, name), Symbol(:ρq_stag_, name))
 
-        # Its compute depends on `water_tag_precipitation`, so a stale entry
-        # from an earlier model is dropped first.
+        # Its compute depends on `water_tag_precipitation`.
         total_compute(out, u, p, t) =
             precipitation ? compute_q_tag_total!(out, u, p, t, part_names) :
             compute_q_tag!(out, u, p, t, ρq_tag_name)
@@ -389,8 +384,7 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
             precipitation ? compute_qv_tag_part!(out, u, p, t, ρq_tag_name) :
             compute_qv_tag!(out, u, p, t, ρq_tag_name)
         short_name = "q_tag_$name"
-        delete!(ALL_DIAGNOSTICS, short_name)
-        add_diagnostic_variable!(;
+        replace_diagnostic_variable!(;
             short_name,
             units = "kg kg^-1",
             long_name = "Tagged Total Water Content ($name)",
@@ -406,8 +400,7 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
         )
 
         short_name = "qv_tag_$name"
-        delete!(ALL_DIAGNOSTICS, short_name)
-        add_diagnostic_variable!(;
+        replace_diagnostic_variable!(;
             short_name,
             units = "kg kg^-1",
             long_name = "Tagged Water Vapor Content ($name)",
@@ -489,8 +482,7 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
         # That function also drops the entries of an earlier model.
         if precipitation
             short_name = "pr_tag_$name"
-            delete!(ALL_DIAGNOSTICS, short_name)
-            add_diagnostic_variable!(;
+            replace_diagnostic_variable!(;
                 short_name,
                 units = "kg m^-2 s^-1",
                 long_name = "Tagged Precipitation ($name)",
@@ -505,8 +497,7 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
                     compute_pr_tag!(out, u, p, t, tag),
             )
             short_name = "q_tag_aud_up_$name"
-            delete!(ALL_DIAGNOSTICS, short_name)
-            add_diagnostic_variable!(;
+            replace_diagnostic_variable!(;
                 short_name,
                 units = "kg kg^-1 s^-1",
                 long_name = "Tagged Updraft Formation Composition Audit ($name)",
@@ -526,33 +517,31 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
         end
 
         short_name = "q_tag_fix_$name"
-        if !haskey(ALL_DIAGNOSTICS, short_name)
-            add_diagnostic_variable!(;
-                short_name,
-                units = "kg kg^-1",
-                long_name = "Cumulative Tagged Water Numerical Correction ($name)",
-                comments = "Water moved into (positive) or out of (negative) " *
-                           "the tag `$name` by the tracer limiters and state " *
-                           "constraints. Cumulative since the start of the " *
-                           "run and carried through a restart, so the " *
-                           "change over an interval is the difference of two " *
-                           "outputs, and a time average of this variable is " *
-                           "not meaningful. For a region tag, partition " *
-                           "repair writes here whenever " *
-                           "transport has driven any region tag negative, " *
-                           "even with no limiter configured. A source tag gets " *
-                           "only the rescale that follows a limiter, " *
-                           "nonnegativity constraint or prescribed flow " *
-                           "correcting `ρq_tot`, so it stays zero without one " *
-                           "(see `register_water_tagging_diagnostics!`). Each " *
-                           "increment is accumulated at its own step's density " *
-                           "and divided by the current density here, so this " *
-                           "is not exactly the sum of the per-step specific " *
-                           "corrections.",
-                compute! = (out, u, p, t) ->
-                    compute_q_tag_fix!(out, u, p, t, ρq_tag_name),
-            )
-        end
+        replace_diagnostic_variable!(;
+            short_name,
+            units = "kg kg^-1",
+            long_name = "Cumulative Tagged Water Numerical Correction ($name)",
+            comments = "Water moved into (positive) or out of (negative) " *
+                       "the tag `$name` by the tracer limiters and state " *
+                       "constraints. Cumulative since the start of the " *
+                       "run and carried through a restart, so the " *
+                       "change over an interval is the difference of two " *
+                       "outputs, and a time average of this variable is " *
+                       "not meaningful. For a region tag, partition " *
+                       "repair writes here whenever " *
+                       "transport has driven any region tag negative, " *
+                       "even with no limiter configured. A source tag gets " *
+                       "only the rescale that follows a limiter, " *
+                       "nonnegativity constraint or prescribed flow " *
+                       "correcting `ρq_tot`, so it stays zero without one " *
+                       "(see `register_water_tagging_diagnostics!`). Each " *
+                       "increment is accumulated at its own step's density " *
+                       "and divided by the current density here, so this " *
+                       "is not exactly the sum of the per-step specific " *
+                       "corrections.",
+            compute! = (out, u, p, t) ->
+                compute_q_tag_fix!(out, u, p, t, ρq_tag_name),
+        )
 
         # The gross and the count of `q_tag_fix_<name>`, keyed by the tag name
         # alone, as the ledger is.
@@ -573,8 +562,7 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
                 "1",
             ),
         )
-            haskey(ALL_DIAGNOSTICS, short_name) && continue
-            add_diagnostic_variable!(;
+            replace_diagnostic_variable!(;
                 short_name,
                 units,
                 long_name = "Gross Tagged Water Numerical Correction ($name)",

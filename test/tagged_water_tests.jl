@@ -1,5 +1,6 @@
 using Test
 import Random
+import Logging
 import ClimaAtmos as CA
 import ClimaCore.MatrixFields: @name
 
@@ -954,6 +955,77 @@ column_atmos_model(; kwargs...) =
         CA.Diagnostics.register_tag_ledger_diagnostics!(column_atmos_model())
         for short_name in exp_names
             @test !haskey(CA.Diagnostics.ALL_DIAGNOSTICS, short_name)
+        end
+    end
+
+    @testset "A second tag set replaces the first one's diagnostics" begin
+        # The diagnostics catalog is global, and each simulation registers its
+        # model's entries. A second model whose tags have the same names must
+        # get its own entries, without an overwrite warning.
+        tagged_model() = column_atmos_model(;
+            tagging_model = CA.TaggingModel((
+                CA.TracerTag{:strat}(CA.TanhAltitudeRegion(12000.0, 1000.0)),
+            )),
+            water_tagging_model = CA.WaterTaggingModel((
+                CA.WaterTag{:tropics}(CA.TanhLatitudeRegion(20.0, 2.0, true)),
+                CA.WaterTag{:evap}(nothing, :surface_flux),
+            )),
+            energy_source_tagging_model = CA.EnergySourceTaggingModel(
+                (
+                    CA.EnergySourceTag{:tropics}(
+                        CA.TanhLatitudeRegion(20.0, 2.0, true),
+                    ),
+                    CA.EnergySourceTag{:rad}(nothing, :radiation),
+                ),
+                50000.0;
+                transport = CA.EnthalpyIncrementEnergySourceTransport(),
+            ),
+            energy_process_record = CA.ProcessRecordModel((
+                CA.RecordedProcess{:radiation}(),
+            )),
+            water_process_record = CA.ProcessRecordModel((
+                CA.RecordedProcess{:surface_flux}(),
+            )),
+        )
+        register!(model) = begin
+            CA.Diagnostics.register_tagging_diagnostics!(model)
+            CA.Diagnostics.register_water_tagging_diagnostics!(model)
+            CA.Diagnostics.register_energy_source_tagging_diagnostics!(model)
+            CA.Diagnostics.register_process_record_diagnostics!(model)
+        end
+        names = (
+            "e_tag_strat",
+            "q_tag_tropics",
+            "qv_tag_evap",
+            "q_tag_fix_tropics",
+            "q_tag_fixgross_tropics",
+            "q_tag_fixcount_evap",
+            "e_src_tropics",
+            "e_src_fix_rad",
+            "e_src_fixgross_tropics",
+            "e_src_fixcount_rad",
+            "e_src_inc_left",
+            "e_src_inc_moved",
+            "e_prc_radiation",
+            "q_prc_surface_flux",
+        )
+        register!(tagged_model())
+        # `DiagnosticVariable` is immutable, so an entry registered again
+        # from the same tag names is `===` the first one. A marked stand-in
+        # for each first entry shows an entry that was kept.
+        first_entries = Dict(
+            name => CA.Diagnostics.DiagnosticVariable(;
+                short_name = name,
+                long_name = "First model's entry",
+                units = CA.Diagnostics.ALL_DIAGNOSTICS[name].units,
+                compute! = (out, u, p, t) -> nothing,
+            ) for name in names
+        )
+        merge!(CA.Diagnostics.ALL_DIAGNOSTICS, first_entries)
+        second_model = tagged_model()
+        @test_logs min_level = Logging.Warn register!(second_model)
+        for name in names
+            @test CA.Diagnostics.ALL_DIAGNOSTICS[name] !== first_entries[name]
         end
     end
 

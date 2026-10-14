@@ -109,8 +109,7 @@ Registering from the model is what lets the grid be any size: a fixed set
 registered at load time would have to cap it.
 
 A no-op unless the chemistry model is `StratosphericPassiveTracers`. Entries
-that already exist are kept, since a tracer's compute function depends only on
-its name.
+that already exist are replaced, since their box edges can differ.
 """
 register_stratospheric_tracer_diagnostics!(model::AtmosModel) =
     register_stratospheric_tracer_diagnostics!(model.chemistry_model)
@@ -122,10 +121,6 @@ function register_stratospheric_tracer_diagnostics!(
     for tracer_index in 1:n_tracers(chemistry_model)
         ρχ_name = names[tracer_index]
         short_name = specific_tracer_short_name(ρχ_name)
-        # Delete before registering. An earlier simulation in this process may
-        # have registered this short name with different box edges, and a stale
-        # entry would keep reporting those in its `comment`.
-        delete!(ALL_DIAGNOSTICS, short_name)
         ρχ_key = Val(ρχ_name)
 
         # Boxes are free to sit anywhere, so the box edges are what identify a
@@ -135,7 +130,10 @@ function register_stratospheric_tracer_diagnostics!(
         height_lower = chemistry_model.height_lower_edges[tracer_index]
         height_upper = chemistry_model.height_upper_edges[tracer_index]
 
-        add_diagnostic_variable!(;
+        # An earlier simulation in this process may have registered this short
+        # name with different box edges. A kept entry would keep reporting
+        # those in its `comment`, so it is replaced.
+        replace_diagnostic_variable!(;
             short_name,
             long_name = "Stratospheric Passive Tracer, Source Box \
                          $tracer_index",
