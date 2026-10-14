@@ -1029,7 +1029,7 @@ with its composition:
   - the rain formed there, `ρaʲ Fʲ_NR Δz`, with the shares of the
     non-precipitating parts' plume `ᶜεᴺʲ` at the level.
   - the rain formed from snow there, `ρaʲ Fʲ_SR Δz`, with the snow plume's
-    shares above.
+    shares at the level.
   - the lateral inflow where the updraft widens downward,
     `(aʲ - aʲ₊) ρ⁰w⁰q_rai⁰`, the environment's flux as
     `updraft_sedimentation!` forms it, with the environment's rain shares
@@ -1040,11 +1040,14 @@ clipped at zero. The shares are rescaled at each level so that the
 partition's sum is one, as `WaterPlumeStep` rescales the `N` plume, and the
 values are the shares times `q_raiʲ`. Where the updraft holds no rain, or no
 source brings any, the plume takes the grid mean's rain shares. Where the
-environment holds none, the inflow is dropped, and where the snow plume above
-holds none, the rain formed from snow is dropped. Snow alike, with the flows
-`Fʲ_NS` and `Fʲ_RS`, the rain plume's shares above and the snow fields. The two
-plumes are marched together, so that each takes the other's shares from the
-level above, and the march runs twice, once for each output. The amounts weight
+environment holds none, the inflow is dropped. Snow alike, with the flows
+`Fʲ_NS` and `Fʲ_RS`, the rain plume's shares at the level and the snow fields.
+Rain and snow can each convert into the other in one cell, so the two plumes'
+shares at a level solve a linear system of two equations per tag
+(`_precip_conversion_mix`). Where the snow plume has no supply at all, the
+rain formed from snow takes the grid mean's snow shares, and rain alike. The
+two plumes are marched together, and the march runs twice, once for each
+output. The amounts weight
 compositions only, so they need not repeat the model's face densities. Starts
 anew each evaluation.
 """
@@ -1157,79 +1160,137 @@ PrecipPlumeStep(::Val{partition}) where {partition} = PrecipPlumeStep{partition}
     shares_N =
         ntuple(i -> total_N > zero(FT) ? εᴺ[i] / total_N : zero(FT), N)
     has_N = total_N > zero(FT)
-    rain_state = _precip_plume_mix(
-        rain₊,
-        rain,
-        shares_N,
-        has_N,
-        snow₊[1],
+    (sources_R, supply_R) =
+        _precip_plume_sources(rain₊, rain, shares_N, has_N, aʲ, a₊, N)
+    (sources_S, supply_S) =
+        _precip_plume_sources(snow₊, snow, shares_N, has_N, aʲ, a₊, N)
+    mean_R = _precip_mean_shares(rain[1], Val(partition))
+    mean_S = _precip_mean_shares(snow[1], Val(partition))
+    (mixed_R, mixed_S, has_R, has_S) = _precip_conversion_mix(
+        sources_R,
+        supply_R,
+        sources_S,
+        supply_S,
         cross_SR,
-        aʲ,
-        a₊,
-        ρaʲ,
-        ρ,
-        Val(partition),
-    )
-    snow_state = _precip_plume_mix(
-        snow₊,
-        snow,
-        shares_N,
-        has_N,
-        rain₊[1],
         cross_RS,
-        aʲ,
-        a₊,
-        ρaʲ,
-        ρ,
-        Val(partition),
+        mean_R,
+        mean_S,
     )
+    rain_state =
+        _precip_plume_state(mixed_R, has_R, mean_R, rain, ρaʲ, ρ, Val(partition))
+    snow_state =
+        _precip_plume_state(mixed_S, has_S, mean_S, snow, ρaʲ, ρ, Val(partition))
     return (rain_state, snow_state, aʲ)
 end
 
-# One plume at one level: the mix of its four sources, rescaled so that the
-# partition's sum is one, and the environment's shares for the level below.
-# `other₊` are the other plume's shares above, the composition of the water
-# that converts into this plume's species (`cross`).
-@inline function _precip_plume_mix(
-    above,
-    level,
-    shares_N,
-    has_N,
-    other₊,
-    cross,
-    aʲ,
-    a₊,
-    ρaʲ,
-    ρ,
-    ::Val{partition},
-) where {partition}
-    (shares₊, environment₊, has_environment₊, updraft_flux₊, _) = above
-    (ε̄, formation, environment_flux, updraft_flux, qʲ, ρq) = level
-    FT = typeof(ρ)
-    N = Val(length(partition))
-    total_mean = _partition_total(ε̄, partition)
-    mean_shares = ntuple(
-        i -> total_mean > zero(FT) ? ε̄[i] / total_mean : zero(FT),
-        N,
+# The grid mean's shares of one species, rescaled so that the partition's sum
+# is one, or zeros where the partition holds none of it.
+@inline function _precip_mean_shares(ε̄, ::Val{partition}) where {partition}
+    FT = eltype(ε̄)
+    total = _partition_total(ε̄, partition)
+    return ntuple(
+        i -> total > zero(FT) ? ε̄[i] / total : zero(FT),
+        Val(length(partition)),
     )
+end
+
+# The sources of one plume at one level other than conversion from the other
+# species: the amounts times their shares, summed per tag, and the amounts'
+# sum.
+@inline function _precip_plume_sources(above, level, shares_N, has_N, aʲ, a₊, N)
+    (shares₊, environment₊, has_environment₊, updraft_flux₊, _) = above
+    (_, formation, environment_flux, _, _, _) = level
+    FT = typeof(aʲ)
     from_above = min(aʲ, a₊) * updraft_flux₊
     lateral =
         has_environment₊ > zero(FT) ? max(aʲ - a₊, zero(FT)) * environment_flux :
         zero(FT)
     formed = has_N ? formation : zero(FT)
-    converted = _partition_total(other₊, partition) > zero(FT) ? cross : zero(FT)
-    supply = from_above + lateral + formed + converted
-    mixed = ntuple(
+    sources = ntuple(
         i ->
-            (
-                from_above * shares₊[i] +
-                lateral * environment₊[i] +
-                formed * shares_N[i] +
-                converted * other₊[i]
-            ) / max(supply, floatmin(FT)),
+            from_above * shares₊[i] +
+            lateral * environment₊[i] +
+            formed * shares_N[i],
         N,
     )
-    use_mix = (supply > zero(FT)) & (qʲ > zero(FT))
+    return (sources, from_above + lateral + formed)
+end
+
+# The two plumes' mixes at one level, with the water that converts between
+# rain and snow there. Converted water carries the other plume's composition at
+# the same level, so each tag's mixes solve
+#
+#     x_R (s_R + c_R) = A_R + c_R x_S,
+#     x_S (s_S + c_S) = A_S + c_S x_R,
+#
+# with `A` the other sources' amounts times their shares, `s` their sum, and
+# `c_R` (`ρaʲ Fʲ_SR Δz`) and `c_S` (`ρaʲ Fʲ_RS Δz`) the conversions into rain
+# and into snow. Both directions can run in one cell, since the gross flows are
+# oriented only where a compartment is negative. The determinant
+# `s_R s_S + s_R c_S + c_R s_S` is positive wherever each plume has a supply
+# and one of them has a source other than conversion. Where one plume has no
+# supply at all, it gives the water it converts the grid mean's shares of its
+# species. Where both are fed only by each other, neither has a mix. Returns
+# the two mixes and whether each has one. The amounts are divided by the larger
+# plume's total first, so that their products do not underflow in `Float32`.
+@inline function _precip_conversion_mix(
+    sources_R,
+    supply_R,
+    sources_S,
+    supply_S,
+    c_R,
+    c_S,
+    mean_R,
+    mean_S,
+)
+    FT = typeof(supply_R)
+    N = Val(length(sources_R))
+    scale = max(supply_R + c_R, supply_S + c_S)
+    inv_scale = scale > zero(FT) ? inv(scale) : zero(FT)
+    (s_R, s_S, k_R, k_S) = (supply_R, supply_S, c_R, c_S) .* inv_scale
+    total_R = s_R + k_R
+    total_S = s_S + k_S
+    determinant = s_R * s_S + s_R * k_S + k_R * s_S
+    coupled = determinant > zero(FT)
+    has_R = coupled | ((total_R > zero(FT)) & (total_S == zero(FT)))
+    has_S = coupled | ((total_S > zero(FT)) & (total_R == zero(FT)))
+    mixed_R = ntuple(
+        i -> begin
+            A_R = sources_R[i] * inv_scale
+            A_S = sources_S[i] * inv_scale
+            coupled ? (A_R * total_S + k_R * A_S) / determinant :
+            (A_R + k_R * mean_S[i]) / max(total_R, floatmin(FT))
+        end,
+        N,
+    )
+    mixed_S = ntuple(
+        i -> begin
+            A_R = sources_R[i] * inv_scale
+            A_S = sources_S[i] * inv_scale
+            coupled ? (A_S * total_R + k_S * A_R) / determinant :
+            (A_S + k_S * mean_R[i]) / max(total_S, floatmin(FT))
+        end,
+        N,
+    )
+    return (mixed_R, mixed_S, has_R, has_S)
+end
+
+# One plume's state at one level: its mix rescaled so that the partition's sum
+# is one, or the grid mean's shares where it has no mix or the updraft holds
+# none of the species, and the environment's shares for the level below.
+@inline function _precip_plume_state(
+    mixed,
+    has_mix,
+    mean_shares,
+    level,
+    ρaʲ,
+    ρ,
+    ::Val{partition},
+) where {partition}
+    (ε̄, _, _, updraft_flux, qʲ, ρq) = level
+    FT = typeof(ρ)
+    N = Val(length(partition))
+    use_mix = has_mix & (qʲ > zero(FT))
     total_mixed = _partition_total(mixed, partition)
     shares = ntuple(
         i ->

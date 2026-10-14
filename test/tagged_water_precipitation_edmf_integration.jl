@@ -8,11 +8,12 @@ The column is the DYCOMS RF02 EDMF column of the other EDMF groups, with
 partition the water, and a `surface_flux` source tag rides along. The file
 builds the column twice: with the parts following the parent's increment
 (`water_tag_transport: increment`, the default under EDMF) and without tags.
-It checks:
+The column runs with SGS quadrature. It checks:
 
  1. at the start, each part is its masked share of its compartment.
  2. after the hour, the closing ledger `q_tag_led_close` over the column
-    against the hour's rain, and the compartments' closure. Rain closes to
+    against the hour's surface rain and snow, sampled once per step, and the
+    compartments' closure. Rain closes to
     rounding. The non-precipitating parts' column total departs from the
     parent's by the increment follower's left part, `q_tag_inc_left`. Under
     van Leer the ledger's signed column integral is bounded and its gross is
@@ -23,8 +24,9 @@ It checks:
     takes each operator's tendency of that compartment, for the SGS mass flux,
     the vertical diffusive flux and the microphysics.
  4. the exchange of each part sums to zero over the partition.
- 5. the flows' weighted nets are the model's nets at an iterate whose areas
-    differ from the precomputed state's.
+ 5. the flows' weighted nets are the model's rain and snow nets at an
+    iterate whose areas differ from the precomputed state's. The column is
+    warm, so its snow is zero.
  6. one linear solve: the parts' Newton increments sum to their species' with
     the cross blocks to `f.u₃` and the updraft's species, which the split
     solver solves apart, and each tag's drift from its share is printed.
@@ -39,8 +41,8 @@ The refusals (`edonly_edmfx`, updraft copies, the unsplit solver) are in the
 unit tests, `tagged_water_precipitation_tests.jl`. The parts under the default
 `tracer` transport are a third model type, in
 `tagged_water_precipitation_edmf_tracer_integration.jl`, a test group of its
-own. The column without SGS quadrature only: the quadrature is a model type of
-its own. See `docs/src/tagged_water_precipitation.md`.
+own. That file's first-order build runs without SGS quadrature and repeats
+check 5 there. See `docs/src/tagged_water_precipitation.md`.
 =#
 using Test
 import LinearAlgebra
@@ -68,6 +70,7 @@ end
     model = p.atmos.water_tagging_model
     turbconv_model = p.atmos.turbconv_model
     @test CA.follows_water_increment(model)
+    @test !CA.not_quadrature(p.atmos.sgs_quadrature)
 
     # 1. The start.
     @testset "The parts start at their masked shares" begin
@@ -81,17 +84,19 @@ end
         end
     end
 
-    run!(simulation)
+    sampled_precipitation = run_sampling_precipitation!(simulation)
     t = simulation.integrator.t
 
-    # 2. The closing ledger against the hour's rain.
+    # 2. The closing ledger against the hour's precipitation.
     @testset "The closing ledger after the hour" begin
         # Column integrals (`sum` of a field integrates it), in kg m⁻². The
-        # rain scale takes the surface rain rate at the end for the hour.
+        # scale is the hour's surface rain and snow, sampled once per step
+        # (`run_sampling_precipitation!`). The design's H10 takes the
+        # accumulated precipitation of its own runs. This sample is a proxy
+        # for it, and the test is not H10's check.
         led_close = abs(sum(Y.c.q_tag_led_close))
         led_close_gross = sum(abs.(Y.c.q_tag_led_close))
-        pr = abs(only(parent(p.precomputed.surface_rain_flux)))
-        rain_scale = sum(Y.c.ρq_rai) + pr * FT(3600)
+        column_precipitation = sum(Y.c.ρq_rai) + sum(Y.c.ρq_sno)
         result = closure(Y)
         # The non-precipitating parts' departure from their compartment, and
         # the part of the parent's increment the follower left out of them.
@@ -100,22 +105,25 @@ end
         N_gap = sum(ᶜN_gap)
         N_gross = sum(abs.(ᶜN_gap))
         left = sum(Y.c.q_tag_inc_left)
-        @info "The closing ledger and the closure under EDMF" led_close led_close_gross rain_scale result N_gap N_gross left
+        @info "The closing ledger and the closure under EDMF" led_close led_close_gross sampled_precipitation column_precipitation result N_gap N_gross left
         # Under van Leer the parts' own limited advection moves the parts'
         # sum apart from the species' by water that sums to zero over the
         # column, which the closing step books with both signs. So the gross
         # is printed, and the signed integral is held to the design's bound.
-        # Measured 5.12e-9 against 4.03e-10 at d60f3567d (2026-10-12), after
-        # the share rule fix. The candidate source is the stage 1 rule for a
-        # negative compartment in the parts' microphysics, deferred to its own
-        # part 9 item (design PART9_WP4B_EDMF.md, section 13, "The second
-        # piece, measured"). The per-part van Leer drift is the other.
-        @test_broken led_close <= 1e-8 * rain_scale
+        # Both signs cancel in the signed integral, so passing it would not
+        # clear the operators. The design judges the gross. Measured 5.12e-9
+        # signed and 3.15e-8 gross, against a bound of 3.2e-10 from
+        # 0.032 kg m⁻² of sampled precipitation. The candidate source is the
+        # stage 1 rule for a negative compartment in the parts' microphysics,
+        # deferred to its own part 9 item (design PART9_WP4B_EDMF.md, section
+        # 13, "The second piece, measured"). The per-part van Leer drift is
+        # the other.
+        @test_broken led_close <= 1e-8 * sampled_precipitation
         @test result.rain < 1e-8
         # The non-precipitating parts' column total is the parent's less the
         # follower's left part, as without the key
         # (`tagged_water_increment_integration.jl`). With first-order
-        # upwinding the two agreed to 1.8% of the gross departure.
+        # upwinding and no quadrature the two agree to 1.5% of the gross departure.
         @test abs(N_gap + left) < 0.05 * N_gross
         # Their largest departure per cell stays above 1e-8: 8.6e-8, and
         # 1.8e-8 with first-order upwinding, where van Leer's part is gone.
@@ -199,28 +207,7 @@ end
 
     # 5. The weighted nets at an iterate with other areas.
     @testset "The weighted nets follow the iterate's areas" begin
-        Y_iterate = copy(Y)
-        parent(Y_iterate.c.sgsʲs.:(1).ρa) .*= 1.05
-        (ᶜF, ᶜnets) = CA.water_tag_microphysics_inputs!(Y_iterate, p, turbconv_model)
-        Yₜ = similar(Y)
-        fill!(parent(Yₜ), 0)
-        CA.microphysics_tendency!(
-            Yₜ,
-            Y_iterate,
-            p,
-            t,
-            p.atmos.microphysics_model,
-            turbconv_model,
-        )
-        model_rai = parent(Yₜ.c.ρq_rai) ./ parent(Y_iterate.c.ρ)
-        @test maximum(abs, parent(ᶜnets.dq_rai_dt) .- model_rai) <=
-              1e-12 * max(maximum(abs, model_rai), floatmin(FT))
-        # The flows' net is the model's to the rounding of the step's water.
-        ᶜflow_net = @. (ᶜF.NR + ᶜF.SR) - (ᶜF.RN + ᶜF.RS)
-        water = maximum(parent(Y.c.ρq_tot) ./ parent(Y.c.ρ)) / FT(p.dt)
-        mismatch = maximum(abs, parent(ᶜflow_net) .- model_rai)
-        @info "The flows' net against the model's rain tendency" mismatch water
-        @test mismatch <= 1e-10 * water
+        test_weighted_nets(Y, p, t, turbconv_model)
     end
 
     # 6. One linear solve with the parts' cross blocks.

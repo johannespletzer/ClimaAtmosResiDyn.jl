@@ -249,8 +249,12 @@ mean's.
     updraft's rain takes the non-precipitating plume's composition where it
     forms, the snow plume's where it forms from snow, and the environment's
     where it falls in laterally. Snow alike. The two plumes are marched
-    downward together, as the rain falls, each taking the other's composition
-    from the level above.
+    downward together, as the rain falls. Rain and snow can each convert into
+    the other at one level, so the two plumes' compositions there are solved
+    together, tag by tag. Where one plume has no supply, the water it converts
+    takes the grid mean's composition of its species. The plumes are a
+    reconstruction, not an independent tracking of the updraft's rain and
+    snow.
   - **The diffusive flux.** The rain and snow parts diffuse as their species,
     at `K_e` only, and take no horizontal EDMF flux. The non-precipitating
     parts diffuse at `K_h + K_e`. The parts' sum moves as the parent's

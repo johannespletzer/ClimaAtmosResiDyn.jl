@@ -1907,9 +1907,11 @@ end
 
 # One level of the rain and snow plumes, on plain tuples: two region tags and
 # a source tag. The mix keeps a composition all sources share, weights the
-# sources by their amounts, takes the other plume's shares from the level
-# above for the water that converts between rain and snow, and falls back to
-# the grid mean's shares where the updraft holds no rain.
+# sources by their amounts, gives the water that converts between rain and
+# snow the other plume's shares at the same level, and falls back to the grid
+# mean's shares where the updraft holds no rain. Each conversion case has a
+# known donor, and the shares are checked against it and against the two
+# plumes' balance.
 @testset "One level of the rain and snow plumes" begin
     FT = Float64
     step = CA.PrecipPlumeStep(Val((true, true, false)))
@@ -1951,27 +1953,98 @@ end
     @test state[1][1][2] ≈ FT(2e-6) / (weight_above + FT(2e-6)) rtol = 1e-14
     @test state[1][1][3] == 0
 
-    # Rain formed from snow carries the snow plume's shares from above, and
-    # snow formed from rain the rain plume's. Here the rain from above is all
-    # tag 1, the snow above all tag 2, and each converts into the other.
+    # Each plume's balance at a level with conversion: its shares times its
+    # supply are the other sources' amounts plus the converted water, at the
+    # other plume's shares at the same level.
+    function balanced(state, sources_R, sources_S, cross_SR, cross_RS)
+        (x_R, x_S) = (state[1][1], state[2][1])
+        supply_R = sum(sources_R) + cross_SR
+        supply_S = sum(sources_S) + cross_RS
+        return all(
+            i ->
+                isapprox(
+                    x_R[i] * supply_R,
+                    sources_R[i] + cross_SR * x_S[i];
+                    rtol = 1e-14,
+                    atol = 1e-30,
+                ) && isapprox(
+                    x_S[i] * supply_S,
+                    sources_S[i] + cross_RS * x_R[i];
+                    rtol = 1e-14,
+                    atol = 1e-30,
+                ),
+            1:3,
+        )
+    end
     snow_level = plume_level(map(c -> c * ρq / ρ, composition), FT(0), qʲ)
-    above = (plume_above(tag_1, zero(FT)), plume_above(tag_2, zero(FT)), a₊)
     (cross_SR, cross_RS) = (FT(1e-6), FT(4e-7))
+
+    # Both conversions in one cell. The rain from above is all tag 1 and the
+    # snow above all tag 2. Each plume then holds the other's tag in the
+    # proportion that the two-equation balance gives.
+    above = (plume_above(tag_1, zero(FT)), plume_above(tag_2, zero(FT)), a₊)
     state = step(
         above,
         level(plume_level(ε̄, FT(0), qʲ), snow_level, εᴺ, cross_SR, cross_RS),
     )
-    @test state[1][1][1] ≈ weight_above / (weight_above + cross_SR) rtol = 1e-14
-    @test state[1][1][2] ≈ cross_SR / (weight_above + cross_SR) rtol = 1e-14
-    @test state[2][1][1] ≈ cross_RS / (weight_above + cross_RS) rtol = 1e-14
-    @test state[2][1][2] ≈ weight_above / (weight_above + cross_RS) rtol = 1e-14
-    # Without a snow plume above, the rain formed from snow is dropped.
+    total = weight_above + cross_SR + cross_RS
+    @test state[1][1][1] ≈ (weight_above + cross_RS) / total rtol = 1e-14
+    @test state[1][1][2] ≈ cross_SR / total rtol = 1e-14
+    @test state[2][1][1] ≈ cross_RS / total rtol = 1e-14
+    @test state[2][1][2] ≈ (weight_above + cross_SR) / total rtol = 1e-14
+    @test balanced(
+        state,
+        map(x -> weight_above * x, tag_1),
+        map(x -> weight_above * x, tag_2),
+        cross_SR,
+        cross_RS,
+    )
+
+    # A local donor with no snow plume above. The rain from above is all
+    # tag 1, the snow forms at the level from water of tag 2, and as much
+    # snow turns into rain as rain falls in. The rain is half of each tag.
     above = (plume_above(tag_1, zero(FT)), empty_above, a₊)
+    snow_formed = plume_level(map(c -> c * ρq / ρ, composition), FT(2e-6), qʲ)
+    state = step(
+        above,
+        level(plume_level(ε̄, FT(0), qʲ), snow_formed, εᴺ_2, weight_above, 0),
+    )
+    @test close(state[2][1], tag_2)
+    @test close(state[1][1], (FT(0.5), FT(0.5), FT(0)))
+    @test balanced(
+        state,
+        map(x -> weight_above * x, tag_1),
+        map(x -> FT(2e-6) * x, tag_2),
+        weight_above,
+        FT(0),
+    )
+
+    # No snow plume above and no snow formed: the snow plume has no supply,
+    # so the rain formed from snow takes the grid mean's snow shares.
     state = step(
         above,
         level(plume_level(ε̄, FT(0), qʲ), snow_level, εᴺ, cross_SR, 0),
     )
-    @test close(state[1][1], tag_1)
+    rain_supply = weight_above + cross_SR
+    @test close(
+        state[1][1],
+        map(
+            (x, c) -> (weight_above * x + cross_SR * c) / rain_supply,
+            tag_1,
+            composition,
+        ),
+    )
+    @test close(state[2][1], composition)
+
+    # Rain and snow fed only by each other: neither has a mix, and both take
+    # the grid mean's shares.
+    above = (empty_above, empty_above, a₊)
+    state = step(
+        above,
+        level(plume_level(ε̄, FT(0), qʲ), snow_level, εᴺ, cross_SR, cross_RS),
+    )
+    @test close(state[1][1], composition)
+    @test close(state[2][1], composition)
 
     # No rain in the updraft: the grid mean's shares, and no values.
     above = (plume_above(tag_1, zero(FT)), empty_above, a₊)

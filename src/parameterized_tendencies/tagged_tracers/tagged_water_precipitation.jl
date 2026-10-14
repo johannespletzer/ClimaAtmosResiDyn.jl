@@ -678,18 +678,18 @@ The rain and snow parts whose rows take their species' cross blocks: every
 part under prognostic EDMF with the SGS mass flux and the key, none otherwise.
 """
 water_precip_part_cross_names(Y, atmos) =
-    atmos.turbconv_model isa PrognosticEDMFX && atmos.edmfx_model.sgs_mass_flux &&
-    has_water_tag_precipitation(atmos.water_tagging_model) ?
-    water_precip_part_names(Y) : ()
+    _has_part_cross_blocks(Y, atmos) ? water_precip_part_names(Y) : ()
 
 # Whether the parts' rows take their species' cross blocks, as a `Bool`. The
 # names above are a tuple or `()` by a flag the type does not carry, so the
-# Jacobian update tests this instead of their emptiness.
+# Jacobian update tests this instead of their emptiness. The state's parts are
+# tested first. A state without them needs nothing of the model, so the unit
+# tests' stand-ins, `NamedTuple`s without EDMF fields, pass through.
 _has_part_cross_blocks(Y, atmos) =
-    atmos.turbconv_model isa PrognosticEDMFX &&
+    !isempty(water_precip_part_names(Y)) &&
+    _water_tag_turbconv_model(atmos) isa PrognosticEDMFX &&
     atmos.edmfx_model.sgs_mass_flux &&
-    has_water_tag_precipitation(atmos.water_tagging_model) &&
-    !isempty(water_precip_part_names(Y))
+    has_water_tag_precipitation(atmos.water_tagging_model)
 
 # The cross blocks of the rain and snow parts, under the split solver
 # (`water_tag_cross_flag`): to the updraft's species and to `f.u₃`, as the
