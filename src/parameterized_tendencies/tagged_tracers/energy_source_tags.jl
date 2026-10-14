@@ -449,9 +449,11 @@ function _check_exchange_partition(
         its value over the sum of the region tags without sources. These \
         tags have none, so the exchange would do nothing. $advice",
     )
+    # Summing the mask fields, not their parent arrays, keeps the sum a field,
+    # so `maximum` reduces across the processes.
     mask_sum = reduce(
         (a, b) -> a .+ b,
-        map(name -> parent(getproperty(cache.ᶜenergy_source_masks, name)), names),
+        map(name -> getproperty(cache.ᶜenergy_source_masks, name), names),
     )
     deviation = maximum(abs.(mask_sum .- 1))
     deviation > 0.01 && error(
