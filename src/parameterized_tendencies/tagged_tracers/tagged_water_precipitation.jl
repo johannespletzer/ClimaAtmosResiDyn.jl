@@ -796,10 +796,11 @@ and a test holds it to that.
 The returned tendencies are those of the model's call only up to rounding that
 CloudMicrophysics' limiters can magnify. Its substep has `muladd`s, which the
 compiler fuses or not depending on where the code is inlined, so the same state
-can round differently here and in the model's call. Where the limiters cancel
-nearly all of a source, that difference grows by orders of magnitude. The
-attribution takes the model's tendencies, and the net-flow rule moves the
-difference ([`water_tag_microphysics_change`](@ref)).
+can round differently here and in the model's call, and the limiters can
+magnify the difference. The attribution takes the model's tendencies, and the
+net-flow rule moves the difference ([`water_tag_microphysics_change`](@ref)).
+A test holds that remainder below `cbrt(eps)` of the gross flows, or below
+`√eps` of the water over the step where the flows are near zero.
 
 These are the gross flows. Each flow is later attributed with the composition of
 the compartment it leaves ([`water_tag_microphysics_change`](@ref)).
@@ -1255,10 +1256,13 @@ it leaves over the step ([`water_tag_pool_shares`](@ref), [`water_tag_gross_flow
 plus the net-flow rule ([`water_tag_net_flow_change`](@ref)) on what the
 flows' net misses of the model's own tendencies, `dq_rai_dt` and `dq_sno_dt`.
 Where the flows are available, that remainder is rounding of the replay against
-the model's call, which CloudMicrophysics' limiters can magnify to about 1e-10 of
-the step's flows in Float64 and 5e-5 in Float32, so the gross flows set the
-attribution. Where they are not, `F` is zero, and the net-flow rule is
-the fallback. `qN`, `qR` and `qS` are the compartments' water per unit mass,
+the model's call, which CloudMicrophysics' limiters can magnify. On 60,000
+random states per float type it stayed below 8e-9 of the gross flows in
+Float64 and 5e-4 in Float32, and where the flows were near zero below 2e-16
+and 3e-7 of the water over the step. So the gross flows set the attribution.
+The remainder moves with the compartments' shares, not the donors' history.
+Where the flows are not available, `F` is zero, and the net-flow rule is the
+fallback. `qN`, `qR` and `qS` are the compartments' water per unit mass,
 and `φN`, `φR`, `φS` the tag's shares of them. Returns `(ΔN, ΔR, ΔS)`.
 
 In a cell where a compartment is flagged negative (`negN`, `negR`, `negS`, the

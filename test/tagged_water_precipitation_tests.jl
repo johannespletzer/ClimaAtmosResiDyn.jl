@@ -482,7 +482,12 @@ end
         end
         @test w_dependent > 10
         two_way = 0
-        for s in states, nsub in (1, 3)
+        limited = 0
+        # The remainder the net-flow rule moves, at most, relative to the
+        # gross flows and, where those are near zero, to the water.
+        (largest_over_gross, largest_over_water) = (zero(FT), zero(FT))
+        # The model's step and a long one, where the limiters act more often.
+        for s in states, (dt, nsub) in ((FT(60), 1), (FT(60), 3), (FT(600), 5))
             reference = BMT.bulk_microphysics_tendencies(
                 BMT.LinearizedAverage(),
                 BMT.Microphysics1Moment(),
@@ -510,11 +515,34 @@ end
             # The replay runs CloudMicrophysics' own substeps, but not bit for
             # bit. Its substep has `muladd`s, which the compiler fuses or not
             # depending on where the code is inlined, and its limiters can
-            # magnify the difference by orders of magnitude. The attribution
-            # takes the model's tendencies and moves the difference by the
-            # net-flow rule, so this bounds that share by √eps.
-            @test abs(flows.dq_rai_dt - reference.dq_rai_dt) <= sqrt(eps(FT)) * scale
-            @test abs(flows.dq_sno_dt - reference.dq_sno_dt) <= sqrt(eps(FT)) * scale
+            # magnify the difference. The attribution takes the model's
+            # tendencies, and the net-flow rule moves what the flows' net
+            # misses of them, with the compartments' shares. So the gross flows
+            # set the attribution only if that remainder is small against them.
+            # Where they are not near zero it must be below `cbrt(eps)` of
+            # them. Where they are, it must be below `√eps` of the water over
+            # the step, which bounds its effect on any tag's parts. On 60,000
+            # random states per float type the largest ratios were 8e-9 and
+            # 5e-4 of the gross flows, and 2e-16 and 3e-7 of the water.
+            remainder = max(
+                abs(reference.dq_rai_dt - (flows.NR + flows.SR - flows.RN - flows.RS)),
+                abs(reference.dq_sno_dt - (flows.NS + flows.RS - flows.SN - flows.SR)),
+            )
+            if gross > sqrt(eps(FT)) * water / dt
+                @test remainder <= cbrt(eps(FT)) * gross
+                largest_over_gross = max(largest_over_gross, remainder / gross)
+            else
+                @test remainder <= sqrt(eps(FT)) * water / dt
+                water > 0 &&
+                    (largest_over_water = max(largest_over_water, remainder * dt / water))
+            end
+            # Whether the first substep's limiters act: the vapour, the
+            # latent heating or the uniform scale.
+            factors = BMT._linearized_implicit_step_factors(
+                BMT.Microphysics1Moment(), mp, tps, s.ρ, s.T, s.w, s.q_tot,
+                s.q_lcl, s.q_icl, s.q_rai, s.q_sno, dt / nsub,
+            )
+            limited += min(factors.α_cap, factors.f_lim, factors.g_uniform) < 1
             # Each flow runs from its donor, and none is negative.
             @test all(
                 f -> f >= 0,
@@ -523,8 +551,10 @@ end
             two_way += (flows.NR > 0 && flows.RN > 0)
         end
         # The states hold rain that forms and evaporates at once, which the
-        # net-flow rule cannot tell apart.
+        # net-flow rule cannot tell apart, and states where the limiters act.
         @test two_way > 10
+        @test limited > 10
+        @info "The net-flow remainder of the 1-moment flows, $FT" largest_over_gross largest_over_water limited
 
         # Each process of CloudMicrophysics' substep goes to the flow its
         # term's type gives: a transfer between compartments to the flow from
@@ -583,19 +613,16 @@ end
         reference = CA.microphysics_tendencies_1m(BMT.Microphysics1Moment(), args...)
         flows = CA.microphysics_tendencies_1m(CA.WaterTagFlows1M(), args...)
         @test keys(flows) == CA.WATER_TAG_FLOW_NAMES
-        # The two calls are separate kernels, so they round apart as above.
-        tolerance =
-            sqrt(eps(FT)) *
-            (
-                (s.q_lcl + s.q_icl + s.q_rai + s.q_sno) / dt +
-                sum(abs, values(flows))
-            )
-        @test abs(
-            (flows.NR + flows.SR - flows.RN - flows.RS) - reference.dq_rai_dt,
-        ) <= tolerance
-        @test abs(
-            (flows.NS + flows.RS - flows.SN - flows.SR) - reference.dq_sno_dt,
-        ) <= tolerance
+        # The two calls are separate kernels, so they round apart as above,
+        # and the remainder obeys the same bounds.
+        gross = sum(abs, values(flows))
+        water = s.q_lcl + s.q_icl + s.q_rai + s.q_sno
+        remainder = max(
+            abs((flows.NR + flows.SR - flows.RN - flows.RS) - reference.dq_rai_dt),
+            abs((flows.NS + flows.RS - flows.SN - flows.SR) - reference.dq_sno_dt),
+        )
+        @test gross > sqrt(eps(FT)) * water / dt
+        @test remainder <= cbrt(eps(FT)) * gross
     end
 
     # The attribution rules, on random flows, pools and shares.
