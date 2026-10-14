@@ -234,13 +234,17 @@ compositions at a level are solved together. Per tag `i`, with `A_R[i]` the
 rain plume's other three sources weighted by their shares and `a_R` their
 total amount, and `A_S[i]` and `a_S` the snow plume's:
 
-    x_R[i] = (A_R[i] + c_R x_S[i]) / (a_R + c_R)
-    x_S[i] = (A_S[i] + c_S x_R[i]) / (a_S + c_S)
+```text
+x_R[i] = (A_R[i] + c_R x_S[i]) / (a_R + c_R)
+x_S[i] = (A_S[i] + c_S x_R[i]) / (a_S + c_S)
+```
 
 In closed form, with `det = a_R a_S + a_R c_S + c_R a_S`:
 
-    x_R[i] = (A_R[i] (a_S + c_S) + c_R A_S[i]) / det
-    x_S[i] = (A_S[i] (a_R + c_R) + c_S A_R[i]) / det
+```text
+x_R[i] = (A_R[i] (a_S + c_S) + c_R A_S[i]) / det
+x_S[i] = (A_S[i] (a_R + c_R) + c_S A_R[i]) / det
+```
 
 `det` is not negative. It is zero only where a plume has no supply at all, or
 where both plumes' supplies are pure conversion. Where a plume has no supply
