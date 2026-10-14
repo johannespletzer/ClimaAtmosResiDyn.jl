@@ -21,10 +21,11 @@ event was measured: the parts' missing cross block to the updraft's rain
 where a Newton stage holds negative rain. The share rule is corrected
 (2026-10-12). The second, smaller mismatch at the same cell is stage 1's
 rule for a negative compartment in the parts' microphysics, deferred to its
-own item. The code PR against `main` opens after the group reruns.
+own item. The code PR against `main` is #175.
 The review of the design (2026-10-12) moved H10 from the signed closing
 ledger to each correction role's gross, judged per role, with the per-tag
-and per-compartment part *incomplete*. It narrowed the long runs' parity to
+and per-compartment part *incomplete*. The owner accepted that rule on
+2026-10-14. It narrowed the long runs' parity to
 their exported diagnostics and replaced the plumes' cross-flow rule with a
 local solve (design section 14, 2026-10-14).
 

@@ -312,6 +312,19 @@ The list as it stood before this classification, kept as written:
 >     and the copies under first-order upwinding (W25). **Waiting.**
 >     [FINDINGS W25](FINDINGS.md)
 
+## 2026-10-14, from the review of #172
+
+  - **H10 is judged per correction role, by gross activity.** **In force.**
+    The owner accepted the revised rule of the WP4b EDMF design on
+    2026-10-14. The signed column integral of `q_tag_led_close` is a balance
+    diagnostic only. Each role (close, rescale, empty and the negative
+    precipitation ledger) is judged on its own, by `|ΔL|` per cell and
+    accepted step against the accumulated precipitation `P`. The per-tag and
+    per-compartment part of each verdict is *incomplete*, since no ledger
+    records it. The deferred mechanisms stay known failures, and their
+    deferral does not make H10 pass.
+    [PART9_WP4B_EDMF.md](design/PART9_WP4B_EDMF.md), sections 1, 7 and 14.
+
 ## 2026-10-12, from issue #173
 
 The owner decided these on 2026-10-12, from the external review of steps 6 to

@@ -745,7 +745,7 @@ is answered above.
     accepted applications does not exist, so that part of each verdict is
     *incomplete*. The `on` configs gain the gross and attempted outputs, and
     all four configs gain `pr` averaged over 30 min, so that `P` is measured.
-    The revised rule is for the owner to confirm.
+    The owner accepted the revised rule on 2026-10-14.
  2. **The long runs cannot show full-state parity.** They save no native
     state. Section 4 narrows their claim to the exported diagnostics, names
     the roster and the bitwise comparison, and keeps full-state parity over
