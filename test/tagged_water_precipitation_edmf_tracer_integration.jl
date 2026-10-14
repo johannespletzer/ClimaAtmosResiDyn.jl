@@ -50,19 +50,14 @@ include("tagged_water_precipitation_edmf_common.jl")
     end
     # Without the follow nothing restores a part that the microphysics or the
     # advection takes below zero. Each part is checked on its own, so a new
-    # negative part fails here. The source tag's non-precipitating part goes
-    # negative, -2.07e-5 kg m⁻³ at its minimum. The candidate source is the
-    # stage 1 rule for a negative compartment in the parts' microphysics,
-    # deferred to its own part 9 item (design PART9_WP4B_EDMF.md, section 13).
-    # Its non-negativity stays marked broken, and its size is bounded at five
-    # times the measured value, so that the known failure cannot grow
-    # unnoticed. The source tag's rain part reaches -9.1e-60 kg m⁻³, far
-    # below rounding against rain of order 1e-7 kg m⁻³. It is held to that
-    # order.
-    known_negative = (; ρq_tag_evap = -1e-4, ρq_rtag_evap = -1e-20)
+    # negative part fails here. The source tag's rain part reaches
+    # -1.3e-70 kg m⁻³, far below rounding against rain of order 1e-7 kg m⁻³.
+    # It is held to that order. Its non-precipitating part stays non-negative
+    # in this regime. With the default fixed rain speed it reaches
+    # -5.1e-5 kg m⁻³.
+    known_negative = (; ρq_rtag_evap = -1e-20)
     for (part, value) in minima
         if haskey(known_negative, part)
-            part == :ρq_tag_evap && @test_broken value >= 0
             @test value >= known_negative[part]
         else
             @test value >= 0
