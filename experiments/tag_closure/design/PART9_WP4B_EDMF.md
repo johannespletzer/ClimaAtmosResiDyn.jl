@@ -426,7 +426,8 @@ The first group checks:
     the key, with the new texts, and `prognostic_edmfx` with two updrafts.
 10. a checkpoint restores the parts bit for bit, and one continued step
     keeps the closing ledger at rounding.
-11. the new kernels allocate nothing on a second call.
+11. the new kernels' allocations on a second call, each bounded by what it
+    allocated (section 13, the allocation note of 2026-10-14).
 
 The second group checks that the partition stays bounded under `tracer`, with
 the audit switched off, and prints the closing ledger. The unit tests in
@@ -645,10 +646,20 @@ cross flows as further sources, the rain plume `ρaʲ Fʲ_SR Δz` with the snow
 plume's shares and the snow plume `ρaʲ Fʲ_RS Δz` with the rain plume's,
 both marched together in one downward pass with the other plume's shares
 from the level above. That rule is replaced by the local solve of section 3.2
-(2026-10-14). The microphysics inputs under EDMF allocate 560 bytes
-per cell, which blocks GPU and sphere runs and not the column jobs. One
-bounded attempt at the cause, otherwise the allocation test stays broken and
-BACKLOG names it. The budget rose to 1.5M. The stage 2 record
+(2026-10-14). On 2026-10-11 the microphysics inputs under EDMF allocated
+560 bytes per cell, which would block GPU and sphere runs and not the column
+jobs. The decision then was one bounded attempt at the cause, otherwise a
+broken allocation test and a BACKLOG entry. The budget rose to 1.5M.
+
+**The allocation note of 2026-10-14.** At #175's head `3e8ed76c4`, on the
+30-level column on Julia 1.11, the second calls allocate: the microphysics
+inputs (`water_tag_microphysics_inputs!`) nothing, the flows 32 bytes, the
+SGS flux 120 bytes, the rest of the microphysics hook 26,736 bytes and the
+Jacobian update 3,552 bytes, per call. The integration test asserts zero for
+the inputs and bounds the others by these values. So the 560 bytes per cell
+of 2026-10-11 no longer hold for the inputs. The hook's and the Jacobian
+update's allocations stay, with their cause not measured, and they still
+bear on GPU and sphere runs. The stage 2 record
 (`analysis/evidence/PART9_WP4B.md`) carries the measured numbers.
 
 **The fix did not fire (2026-10-12).** The patched commit (`ca2dfb407`)
