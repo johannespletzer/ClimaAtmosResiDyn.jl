@@ -43,8 +43,9 @@ readonly UPSTREAM_ONLY='["dynamics","dynamics_tracers","dynamics_edmfx","restart
 # The fork groups too large for the 16 GB runner on 1.10. They run on 1.11 only,
 # except in a manual run that names them. The applications groups build six
 # simulations with three tags each, and 1.10's compile peak passed the limit on
-# 2026-10-10.
-readonly HEAVY_ON_1_10='["tagging_water_applications","tagging_water_applications_parity","tagging_water_applications_float32"]'
+# 2026-10-10. The EDMF rain and snow groups pass it on 1.11 too, where
+# `ALLOW_FAIL` in ci.yml quarantines them.
+readonly HEAVY_ON_1_10='["tagging_water_applications","tagging_water_applications_parity","tagging_water_applications_float32","tagging_water_precipitation_edmf","tagging_water_precipitation_edmf_tracer"]'
 # The groups of the quick tier.
 readonly QUICK='["infrastructure"]'
 
