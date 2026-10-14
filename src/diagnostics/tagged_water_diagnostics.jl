@@ -368,6 +368,7 @@ function register_water_tagging_diagnostics!(::Nothing)
 end
 function register_water_tagging_diagnostics!(model::WaterTaggingModel)
     precipitation = has_water_tag_precipitation(model)
+    audit = has_water_tag_precipitation_audit(model)
     for tag in model.tags
         name = tag_name(tag)
         ρq_tag_name = Symbol(:ρq_tag_, name)
@@ -465,7 +466,9 @@ function register_water_tagging_diagnostics!(model::WaterTaggingModel)
             ),
         )
             delete!(ALL_DIAGNOSTICS, short_name)
-            precipitation || continue
+            # The audit's fields are in the state only under its own key.
+            (is_water_tag_audit_name(field_name) ? audit : precipitation) ||
+                continue
             add_diagnostic_variable!(;
                 short_name,
                 units = "kg kg^-1",

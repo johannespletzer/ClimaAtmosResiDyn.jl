@@ -284,7 +284,7 @@ implicit tendency is evaluated with `ForwardDiff.Dual` numbers when an
 automatic-differentiation Jacobian is used, and only `p.precomputed` and
 `p.scratch` are converted to dual-typed fields.
 """
-function tagging_cache(Y, atmos::AtmosModel)
+function tagging_cache(Y, atmos::AtmosModel; water_applications = nothing)
     energy = _tagging_cache(Y, atmos.tagging_model)
     water = _water_tagging_cache(Y, atmos.water_tagging_model)
     sources = _energy_source_tagging_cache(Y, atmos.energy_source_tagging_model)
@@ -304,8 +304,13 @@ function tagging_cache(Y, atmos::AtmosModel)
         tag_ledger_step_cache(Y, atmos)...,
         closure_void = tag_closure_void_flags(atmos),
         negative_water_void = negative_water_void_flags(atmos),
+        # The producer's meter joins only when it is on, so the cache keeps
+        # its type without it.
+        _water_application_entry(water_applications)...,
     )
 end
+_water_application_entry(::Nothing) = (;)
+_water_application_entry(meter) = (; water_applications = meter)
 _or_empty(::Nothing) = (;)
 _or_empty(nt) = nt
 

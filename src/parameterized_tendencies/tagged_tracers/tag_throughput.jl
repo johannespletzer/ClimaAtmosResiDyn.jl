@@ -137,6 +137,17 @@ const WATER_TAG_ALL_MECHANISM_NAMES =
     (WATER_TAG_MECHANISM_NAMES..., WATER_TAG_COPY_MECHANISM_NAMES...)
 
 """
+    WATER_TAG_PRECIP_MECHANISM_NAMES
+
+The water tags' state ledger of the closing step under
+`water_tag_precipitation: true`: `q_tag_led_close`, what the closing step after
+each follow added to the partition's rain and snow parts, or took from them
+(`follow_water_tag_precipitation!`). Only with the key, so the state of other
+runs keeps its layout. The key and updraft copies are never on together.
+"""
+const WATER_TAG_PRECIP_MECHANISM_NAMES = (:q_tag_led_close,)
+
+"""
     WATER_TAG_LEAK_MECHANISM_NAMES
 
 The water tags' state ledgers of the diffusion leak's correction, under
@@ -200,10 +211,15 @@ The names of the water tags' state ledgers per mechanism, in state order, or
 `()` without water tags.
 """
 water_tag_mechanism_names(::Nothing) = ()
-water_tag_mechanism_names(model::WaterTaggingModel) =
-    _water_tag_mechanism_names(Val(has_water_tag_updraft_copies(model)))
-_water_tag_mechanism_names(::Val{false}) = WATER_TAG_MECHANISM_NAMES
-_water_tag_mechanism_names(::Val{true}) = WATER_TAG_ALL_MECHANISM_NAMES
+water_tag_mechanism_names(model::WaterTaggingModel) = _water_tag_mechanism_names(
+    Val(has_water_tag_updraft_copies(model)),
+    Val(has_water_tag_precipitation(model)),
+)
+_water_tag_mechanism_names(::Val{false}, ::Val{false}) = WATER_TAG_MECHANISM_NAMES
+_water_tag_mechanism_names(::Val{true}, ::Val{false}) =
+    WATER_TAG_ALL_MECHANISM_NAMES
+_water_tag_mechanism_names(::Val{false}, ::Val{true}) =
+    (WATER_TAG_MECHANISM_NAMES..., WATER_TAG_PRECIP_MECHANISM_NAMES...)
 
 """
     energy_source_mechanism_names(model)
@@ -228,7 +244,12 @@ water_tag_mechanism_variables(value, ::Nothing) = (;)
 water_tag_mechanism_variables(value, model::WaterTaggingModel) =
     _mechanism_zeros(
         value,
-        Val(_water_tag_mechanism_names(Val(has_water_tag_updraft_copies(model)))),
+        Val(
+            _water_tag_mechanism_names(
+                Val(has_water_tag_updraft_copies(model)),
+                Val(has_water_tag_precipitation(model)),
+            ),
+        ),
     )
 energy_source_mechanism_variables(value, ::Nothing) = (;)
 energy_source_mechanism_variables(value, ::EnergySourceTaggingModel) =
@@ -244,6 +265,7 @@ Whether `name` is a state ledger per mechanism of either family.
 is_tag_mechanism_ledger_name(name::Symbol) =
     name in WATER_TAG_MECHANISM_NAMES ||
     name in WATER_TAG_COPY_MECHANISM_NAMES ||
+    name in WATER_TAG_PRECIP_MECHANISM_NAMES ||
     name in ENERGY_SOURCE_MECHANISM_NAMES
 
 """
@@ -1203,6 +1225,7 @@ function tag_ledger_checkpoint_fields(tagging)
         push!(fields, "tag_ledger.attempted.$name" => ᶜattempted)
     end
     append!(fields, negative_water_checkpoint_fields(steps.negative_water))
+    append!(fields, water_application_checkpoint_fields(_water_meter(tagging)))
     return fields
 end
 
@@ -1255,11 +1278,24 @@ The other accumulators are read as above.
 function restore_tag_ledger_checkpoint!(tagging, restart_file, context)
     all_fields = tag_ledger_checkpoint_fields(tagging)
     isempty(all_fields) && return nothing
-    fields = filter(f -> !is_negative_water_checkpoint_field(first(f)), all_fields)
+    applications =
+        filter(f -> is_water_application_checkpoint_field(first(f)), all_fields)
+    fields = filter(
+        f ->
+            !is_negative_water_checkpoint_field(first(f)) &&
+            !is_water_application_checkpoint_field(first(f)),
+        all_fields,
+    )
     later = filter(f -> is_negative_water_checkpoint_field(first(f)), all_fields)
     reader = InputOutput.HDF5Reader(restart_file, context)
     try
         restore_negative_water_accumulator!(reader, later, restart_file)
+        restore_water_application_ledgers!(
+            _water_meter(tagging),
+            reader,
+            applications,
+            restart_file,
+        )
         isempty(fields) && return nothing
         present = map(fields) do (name, _)
             haskey(reader.file, "fields/$name")
@@ -1291,6 +1327,35 @@ function restore_tag_ledger_checkpoint!(tagging, restart_file, context)
     finally
         Base.close(reader)
     end
+    return nothing
+end
+
+# Read the water tag producer's cumulative ledgers. Where the checkpoint has none
+# of them, warn and keep the zeros: the receipt's header then says the ledgers
+# start at zero in this segment. Some but not all is refused.
+restore_water_application_ledgers!(::Nothing, reader, fields, restart_file) =
+    nothing
+function restore_water_application_ledgers!(meter, reader, fields, restart_file)
+    present = map(((name, _),) -> haskey(reader.file, "fields/$name"), fields)
+    if !any(present)
+        @warn(
+            "The restart file $restart_file carries none of the water tag \
+            producer's ledgers. They start at zero, and the receipt marks this \
+            segment's start.",
+        )
+        meter.ledger_start = "zero_at_restart"
+        return nothing
+    end
+    all(present) || error(
+        "The restart file $restart_file carries only part of the water tag \
+        producer's ledgers. It was written with another roster. Restart with \
+        the same configuration, or start a new run.",
+    )
+    for (name, field) in fields
+        restored = InputOutput.read_field(reader, name)
+        parent(field) .= parent(restored)
+    end
+    meter.ledger_start = "checkpoint"
     return nothing
 end
 

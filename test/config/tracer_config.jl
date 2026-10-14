@@ -469,7 +469,7 @@ end
     @test_throws r"needs `energy_source_tag_offset`" CA.AtmosTagging(
         without_offset,
     )
-    @test_throws r"110495 J/kg" CA.AtmosTagging(without_offset)
+    @test_throws r"166764 J/kg" CA.AtmosTagging(without_offset)
     no_offset = source_config("zero_offset", "energy_source_tag_offset" => 0)
     @test isnothing(CA.AtmosTagging(no_offset).energy_source_tagging_model.offset)
     # An offset without tags is still refused.
@@ -2069,7 +2069,7 @@ end
     )
     source_model = CA.AtmosTagging(source).energy_source_tagging_model
     @test length(source_model.tags) == 7
-    @test source_model.offset == eltype(source)(110495)
+    @test source_model.offset == eltype(source)(166764)
     @test CA.closure_checks_from_config(source).energy_source.spin_up == "1hours"
 end
 

@@ -317,6 +317,9 @@ entry point for simulations written as scripts; configuration-driven runs go thr
     `BudgetTolerance`. Without one the parent budget takes the tolerances from the
     committed calibration table for this backend, float type and rank count.
     With no table row every numeric verdict is `blocked`, naming the tolerance.
+  - `water_tag_applications = false`: Whether the run writes the water tags'
+    accepted applications, `water_tag_applications` in the configuration. See
+    `docs/src/tagged_water.md`.
 
 # Returns
 
@@ -375,6 +378,7 @@ function AtmosSimulation(
     parent_budget_mode = "off",
     parent_budget_attribution = "net",
     parent_budget_tolerances = nothing,
+    water_tag_applications = false,
     log_to_file = false,
     verbose = false,
 )
@@ -447,9 +451,15 @@ function AtmosSimulation(
     # With the parent budget on, a custom callback must declare itself read-only.
     callbacks = Internals.ParentBudget.declared_callbacks(parent_budget, callbacks)
 
+    # The water tags' application producer, when on. It reads the writers
+    # and the stepper's hooks, and writes only its own fields and files.
+    water_applications = build_water_tag_application_meter(
+        water_tag_applications, model, Y, context;
+        cadence = update_constrain_state_every, output_dir, t_start,
+    )
     p = @timed_log verbose "Built cache" build_cache(
         Y, model, params, dt, start_date, resolved_steady_state_velocity;
-        parent_budget,
+        parent_budget, water_applications,
     )
     # The tags' ledgers: the cadence their audit reports, and, on a restart,
     # the accumulators the checkpoint carried. Both write only the tags' own
@@ -489,6 +499,9 @@ function AtmosSimulation(
     end
     discrete_callbacks = (
         Internals.ParentBudget.parent_budget_callbacks(parent_budget)...,
+        # Before the checkpoint, so a checkpoint carries the producer's
+        # ledgers with the step they close.
+        water_tag_application_callbacks(water_applications)...,
         discrete_callbacks...,
     )
     callback_set = CTS.CallbackSet(discrete_callbacks...)

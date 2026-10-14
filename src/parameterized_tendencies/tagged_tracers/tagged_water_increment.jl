@@ -574,6 +574,39 @@ function correct_water_tag_increment!(dY, U, p)
         dtγ,
         model.tags,
     )
+    # The producer's applications: each writer of the tags' tendency once
+    # more, into the meter's slots alone.
+    meter = water_meter(p)
+    if !isnothing(meter)
+        _follower_water_tag_fluxes!(
+            water_application_view(meter, :inc, U.c.ρq_tot),
+            U.c,
+            ᶜnorm,
+            ᶜpos,
+            ᶠq_tag_increment_flux,
+            model.tags,
+            ᶜparent,
+        )
+        _give_water_tags!(
+            water_application_view(meter, :negative, U.c.ρq_tot),
+            U.c,
+            ᶜnorm,
+            ᶜpos,
+            ᶜq_tag_negative_weight,
+            q_tag_negative_total,
+            dtγ,
+            model.tags,
+            ᶜparent,
+        )
+        _give_crossing_by_mask!(
+            water_application_view(meter, :negative, U.c.ρq_tot),
+            p.tagging.ᶜwater_masks,
+            ᶜg,
+            ᶜδL,
+            dtγ,
+            model.tags,
+        )
+    end
     add_attempted_per_tag!(p, dY, dtγ, ledger_view, model.tags)
     # The ledger. What is left out stays out of the tags, what they take for
     # the negative part is its own entry, and the rest is what the flux

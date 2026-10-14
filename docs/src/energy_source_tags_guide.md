@@ -34,7 +34,7 @@ energy_source_tags:
   - name: rad
     source: radiation
 # The offset c the tags add before they split. Required.
-energy_source_tag_offset: 110495.0
+energy_source_tag_offset: 166764.0
 # How the tags move. `tracer` is the default transport.
 energy_source_tag_transport: "tracer"
 # Watch the closure once a day, and write the audit table.
@@ -68,7 +68,7 @@ Add the tags to a `diagnostics` block the same way as any other short name.
 
 | Key                                                       | Default        | Set it to                                                                                                                                                                                                                                                               |
 |:--------------------------------------------------------- |:-------------- |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `energy_source_tag_offset`                                | none, required | 110495.0 unless you have a reason. It makes the partitioned total positive, which the loss rule needs. It is a convention, and the tags depend on it                                                                                                                    |
+| `energy_source_tag_offset`                                | none, required | 166764.0 unless you have a reason, the dry internal energy counted from 150 K. It makes the partitioned total positive, which the loss rule needs. It is a convention, and the tags depend on it                                                                        |
 | `energy_source_tag_transport`                             | `tracer`       | `tracer` for the plain tracer path. `enthalpy_increment`, a prototype, also follows the parent's implicit diffusion, which EDMF has. `enthalpy` is a comparison mode                                                                                                    |
 | `energy_source_tag_repair`                                | `true`         | leave on, unless you want to see what the attribution rule alone produces                                                                                                                                                                                               |
 | `energy_source_tag_updraft_copy`                          | `false`        | leave off. `true` is a comparison mode: a copy of each tag in the updraft, moved by the model's own tracer machinery                                                                                                                                                    |

@@ -51,9 +51,9 @@ values are those of a partition that sums to its parent, bit for bit.
 
 The hyperdiffusion takes the parent as a perturbation from the reference
 profile `q_tot_r`, and the tags not. So its leak also holds the reference
-profile's hyperdiffusion: `q_tot_r` without the key, and `(1 - Σφ) q_tot_r`
-under the key, with `Σφ` the partition's shares of the water that is neither
-rain nor snow.
+profile's hyperdiffusion: that of `q_tot_r` without the key, and `1 - Σφ`
+times it under the key, with `Σφ` the partition's shares of the water that is
+neither rain nor snow.
 
 For the updrafts' paths, the tendency is the copies' `Σᵢ χᵢʲ` minus `q_totʲ`,
 times `ρaʲ / ρ`, summed over the updrafts. `diffusion_up` gives each copy its
@@ -82,12 +82,13 @@ function water_tag_leak!(ᶜleak, Y, p, path::Val)
     return ᶜleak
 end
 
-# Under `water_tag_precipitation: true`. The tags hyperdiffuse on
-# `∇²(N_tag/ρ - φ q_tot_r)` and the parent on `∇²(N/ρ - q_tot_r)`, with `φ` the
-# tag's share of `N`. A closed partition's parts sum to `max(N, 0)`.
-# So their difference is `∇²((1 - Σφ) q_tot_r - min(N, 0)/ρ)`, with `Σφ` summed
-# over the partition's tags. `Σφ` is one, to rounding, where the partition holds
-# water, and zero where it holds none.
+# Under `water_tag_precipitation: true`. Each tag hyperdiffuses `N_tag/ρ` as a
+# passive tracer and takes its share `φ` of the reference profile's term,
+# `φ H(q_tot_r)` (`apply_water_tag_hyperdiffusion!`). The parent hyperdiffuses
+# `N/ρ - q_tot_r`. A closed partition's parts sum to `max(N, 0)`. So their
+# difference is `-H(-min(N, 0)/ρ) - (1 - Σφ) H(q_tot_r)`, with `H` the
+# operator and `Σφ` summed over the partition's tags. `Σφ` is one, to rounding,
+# where the partition holds water, and zero where it holds none.
 _water_tag_parts_leak!(ᶜleak, Y, p, path) = nothing
 function _water_tag_parts_leak!(ᶜleak, Y, p, ::Val{:hyperdiff})
     hyperdiff = p.atmos.hyperdiff
@@ -97,21 +98,24 @@ function _water_tag_parts_leak!(ᶜleak, Y, p, ::Val{:hyperdiff})
     (; ν₄_scalar) = ν₄(hyperdiff, Y)
     (; ᶜp) = p.precomputed
     water_tag_share_norm!(p, Y)
-    # `ᶜleak` first holds `(1 - Σφ) q_tot_r - min(N, 0)/ρ`, then the rate.
-    @. ᶜleak = q_tot_r(thermo_params, ᶜp)
+    (ᶜ∇², ᶜfield) = (p.scratch.ᶜtemp_scalar, p.scratch.ᶜtemp_scalar_2)
+    # The reference profile's rate, per unit mass, times `1 - Σφ`.
+    @. ᶜ∇² = wdivₕ(gradₕ(q_tot_r(thermo_params, ᶜp)))
+    do_dss(axes(Y.c)) && Spaces.weighted_dss!(ᶜ∇²)
+    @. ᶜfield = 1
     MatrixFields.unrolled_foreach(model.tags) do tag
         _is_partition_tag(tag) || return nothing
         ᶜshare =
             water_tag_part_share(Y.c, p.scratch, tag, NonPrecipitatingPart())
-        @. ᶜleak -= ᶜshare * q_tot_r(thermo_params, ᶜp)
+        @. ᶜfield -= ᶜshare
         return nothing
     end
-    ᶜN = water_tag_part_parent(Y.c, NonPrecipitatingPart())
-    @. ᶜleak -= water_tag_negative_part(ᶜN) / Y.c.ρ
-    ᶜ∇² = p.scratch.ᶜtemp_scalar
-    @. ᶜ∇² = wdivₕ(gradₕ(ᶜleak))
+    @. ᶜleak = -(ᶜfield) * ν₄_scalar * wdivₕ(Y.c.ρ * gradₕ(ᶜ∇²)) / Y.c.ρ
+    # The negative part of `N`, which the parts do not hold.
+    ᶜfield .= _negative_nonprecipitating_water(Y)
+    @. ᶜ∇² = wdivₕ(gradₕ(ᶜfield))
     do_dss(axes(Y.c)) && Spaces.weighted_dss!(ᶜ∇²)
-    @. ᶜleak = -ν₄_scalar * wdivₕ(Y.c.ρ * gradₕ(ᶜ∇²)) / Y.c.ρ
+    @. ᶜleak -= ν₄_scalar * wdivₕ(Y.c.ρ * gradₕ(ᶜ∇²)) / Y.c.ρ
     return nothing
 end
 

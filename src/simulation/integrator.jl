@@ -245,6 +245,12 @@ function args_integrator(Y, p, tspan, ode_algo, callback,
         # each call and never write it. Off, these are the plain functions.
         parent_budget = p.parent_budget
         PB = Internals.ParentBudget
+        # With the water tags' application producer on, the hooks whose
+        # firings hold its writers are counted, so each application gets its
+        # role. Off, these are the plain functions.
+        meter = water_meter(p)
+        isnothing(meter) || PB.check_algorithm(ode_algo)
+        T_post_imp! = water_application_hook(meter, :T_post_imp!, T_post_imp!)
         tendency_function = CTS.ClimaODEFunction(;
             T_exp_T_lim! = PB.meter_explicit(parent_budget, T_exp_T_lim!),
             T_imp!,
@@ -254,12 +260,16 @@ function args_integrator(Y, p, tspan, ode_algo, callback,
                 implicit_tendency!,
             ),
             cache! = set_precomputed_quantities!, cache_imp!,
-            lim! = PB.meter_hook(parent_budget, :lim!, limiters_func!),
+            lim! = PB.meter_hook(
+                parent_budget,
+                :lim!,
+                water_application_hook(meter, :lim!, limiters_func!),
+            ),
             dss! = PB.meter_hook(parent_budget, :dss!, dss!),
             constrain_state! = PB.meter_hook(
                 parent_budget,
                 :constrain_state!,
-                constrain_state!,
+                water_application_hook(meter, :constrain_state!, constrain_state!),
             ),
             update_cache = update_cache_signal_handler(update_cache_every),
             update_constrain_state = update_constrain_state_signal_handler(

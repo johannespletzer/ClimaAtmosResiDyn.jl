@@ -23,8 +23,9 @@ t_end: "1days"
 
 # Required with the tags. The tags partition `ρe_tot + c·ρ`, which this offset
 # makes positive everywhere, so each tag's share is defined everywhere. The model
-# never sees it.
-energy_source_tag_offset: 110495.0
+# never sees it. 166764 J/kg is the dry internal energy counted from 150 K, cp_d*T0 - cv_d*150 K
+# at the default parameters.
+energy_source_tag_offset: 166764.0
 energy_source_tags:
   - name: tropics
     region: tropics

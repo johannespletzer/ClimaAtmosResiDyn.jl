@@ -7,6 +7,7 @@
 # from an earlier model in this process is dropped.
 const _ALL_TAG_STATE_LEDGER_NAMES = (
     WATER_TAG_ALL_MECHANISM_NAMES...,
+    WATER_TAG_PRECIP_MECHANISM_NAMES...,
     WATER_TAG_LEAK_MECHANISM_NAMES...,
     WATER_TAG_COPY_LEAK_MECHANISM_NAMES...,
     :q_tag_inc_left,
@@ -27,6 +28,11 @@ const _TAG_MECHANISM_TEXT = (;
                         "water (rescale_water_tags!)",
     q_tag_led_empty = "the partition's water removed where the parent held " *
                       "none (rescale_water_tags!)",
+    q_tag_led_close = "the water the closing step after each follow added " *
+                      "to the partition's rain and snow parts, or took " *
+                      "from them, to bring each compartment's parts to its " *
+                      "non-negative part (follow_water_tag_precipitation!). " *
+                      "Only under water_tag_precipitation: true",
     q_tag_led_repair = "the water the partition repair moved between the " *
                        "tags, half the sum of the tags' changes less their " *
                        "net (repair_water_tag_partition!)",

@@ -198,7 +198,7 @@ function check_water_tag_checkpoint(restart_file, model, Y, context)
         water_tag_mechanism_names(water_model),
         "water",
         "q_tag_",
-        "water_tag_updraft_copy",
+        "water_tag_updraft_copy` or `water_tag_precipitation",
     )
     # The leak correction's ledgers are in the file or are not, so a changed
     # `water_tag_leak_correction` fails here.
@@ -232,7 +232,7 @@ function check_water_tag_checkpoint(restart_file, model, Y, context)
         is_water_tag_audit_name,
         water_tag_audit_state_names(water_model),
         "records of the water tags' microphysics audit",
-        "water_tag_precipitation",
+        "water_tag_precipitation` and `water_tag_precipitation_audit",
         "q_",
     )
     isnothing(water_model) && return nothing

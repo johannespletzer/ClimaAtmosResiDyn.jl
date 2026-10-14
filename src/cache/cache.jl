@@ -168,6 +168,8 @@ gravity waves, radiation, tracers).
   - `parent_budget`: The parent-budget adapter, or `nothing`. Built before
     the cache by `Internals.ParentBudget.build_parent_budget`, so that the
     schema is fixed before anything is collected.
+  - `water_applications`: The water tags' application meter
+    (`water_tag_applications`), or `nothing`. It joins `p.tagging`.
 
 # Returns
 
@@ -181,6 +183,7 @@ function build_cache(
     start_date,
     steady_state_velocity;
     parent_budget = nothing,
+    water_applications = nothing,
 )
     FT = eltype(params)
     dt = FT(dt)
@@ -293,7 +296,7 @@ function build_cache(
     orographic_gravity_wave = orographic_gravity_wave_cache(Y, atmos)
     radiation = radiation_model_cache(Y, atmos, radiation_args...)
     tracers = tracer_cache(Y, aerosol_names, time_varying_trace_gas_names, start_date)
-    tagging = tagging_cache(Y, atmos)
+    tagging = tagging_cache(Y, atmos; water_applications)
 
     args = (
         dt,

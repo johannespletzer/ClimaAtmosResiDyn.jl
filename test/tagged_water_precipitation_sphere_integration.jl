@@ -79,12 +79,23 @@ sphere_part_sum(x, prefix) =
         type = "float"
         """,
     )
-    sphere = run!(
-        build(
-            merge(sphere_config(sponge_toml), sphere_tag_config()),
-            "water_tags_precipitation_sphere",
-        ),
+    sphere = build(
+        merge(sphere_config(sponge_toml), sphere_tag_config()),
+        "water_tags_precipitation_sphere",
     )
+    # As in `tagged_water_precipitation_integration.jl`: the follow and the
+    # rescale are compiled before the first step. On Julia 1.10, a first step
+    # that also infers the follow's call tree needs more than the 16 GB of a
+    # GitHub runner, and the runner shut the sphere down. Neither call runs
+    # the code, so no result changes.
+    let Y = sphere.integrator.u, p = sphere.integrator.p
+        @test precompile(CA.follow_water_tag_precipitation!, (typeof(Y), typeof(p)))
+        @test precompile(
+            CA.rescale_water_tags!,
+            (typeof(Y), typeof(p), typeof(p.scratch.ᶜtemp_scalar_2)),
+        )
+    end
+    run!(sphere)
     sphere_plain = run!(
         build(sphere_config(sponge_toml), "water_tags_precipitation_sphere_plain"),
     )
@@ -319,5 +330,63 @@ sphere_part_sum(x, prefix) =
             @info "The $path leak against the model's" largest =
                 maximum(abs, expected) mismatch
         end
+    end
+    # The tags' hyperdiffusion adds one Laplacian and its DSS, from buffers
+    # built with the cache. Without tags a call allocates about 17 kB, from
+    # the model's own operators. The parts add a few small objects per call,
+    # not per point: 736 to 1088 bytes here, against 2464 on `main` at
+    # d3c5e42f, on Julia 1.11.
+    @testset "The hyperdiffusion allocates about as much as without tags" begin
+        function allocations(Y, p)
+            (Yₜ, Yₜ_lim) = (zero(Y), zero(Y))
+            CA.hyperdiffusion_tendency!(Yₜ, Yₜ_lim, Y, p, t)
+            return @allocated CA.hyperdiffusion_tendency!(Yₜ, Yₜ_lim, Y, p, t)
+        end
+        tagged = allocations(Y_test, p)
+        plain = allocations(Y_plain_test, p_plain)
+        @info "Allocations of the hyperdiffusion" tagged plain
+        @test tagged <= plain + 2048
+    end
+
+    # transport-1 of the WP4b stage-1 review (2026-09-30). Each tag's
+    # non-precipitating part hyperdiffuses as a passive tracer and takes its
+    # share of the reference profile's term outside the operator. The state
+    # here is flat: `ρ` and the pressure depend on height only, and `q` is
+    # uniform on each level at 0.3 of the reference profile `q_tot_r`. The tags
+    # are their masked shares, so each has a sharp front at its band's edge.
+    # Hyperdiffusion then has to lower each tag's variance, `∫ χ (ρχ)ₜ < 0`
+    # with `χ` the tag's `N/ρ`. The form with the share inside the operator,
+    # `∇²(N_tag/ρ - φ q_tot_r)`, is `(1 - q_tot_r/q) = -2.33` times the passive
+    # one on this state, so it would raise the variance.
+    @testset "The tags' composition mixes down its gradient" begin
+        thermo_params = CA.Parameters.thermodynamics_params(p.params)
+        Y_flat = copy(Y_test)
+        ᶜz = CA.Fields.coordinate_field(Y_flat.c).z
+        ᶜp_flat = @. 1e5 * exp(-(ᶜz) / 8000)
+        ᶜq = @. 0.3 * CA.q_tot_r(thermo_params, ᶜp_flat)
+        @. Y_flat.c.ρ = 1.2 * exp(-(ᶜz) / 8000)
+        @. Y_flat.c.ρq_tot = Y_flat.c.ρ * ᶜq
+        for name in (:ρq_lcl, :ρq_icl, :ρq_rai, :ρq_sno)
+            parent(getproperty(Y_flat.c, name)) .= 0
+        end
+        CA.rebuild_tags_from_state!(Y_flat, p.atmos)
+        p.precomputed.ᶜp .= ᶜp_flat
+        Yₜ = hyperdiffusion(Y_flat, p)
+        CA.dss!(Yₜ, p, t)
+        for name in (:tropics, :extratropics)
+            ᶜρq_tag = getproperty(Y_flat.c, Symbol(:ρq_tag_, name))
+            ᶜρq_tagₜ = getproperty(Yₜ.c, Symbol(:ρq_tag_, name))
+            @test maximum(abs, parent(ᶜρq_tagₜ)) > 0
+            variance_rate = sum(@. ᶜρq_tag / Y_flat.c.ρ * ᶜρq_tagₜ)
+            @test variance_rate < 0
+            @info "The variance rate of $name on the flat state" variance_rate
+        end
+        # The parts' sum follows the parent, whose `q` is uniform on each
+        # level, so both are rounding here.
+        parentₜ = compartments(Yₜ).ρq_tag_
+        partsₜ = sphere_part_sum(Yₜ, :ρq_tag_)
+        scale = maximum(abs, parent(Yₜ.c.ρq_tag_tropics))
+        @test maximum(abs, partsₜ .- parentₜ) <= 1e-10 * scale
+        CA.set_precomputed_quantities!(Y_test, p, t)
     end
 end

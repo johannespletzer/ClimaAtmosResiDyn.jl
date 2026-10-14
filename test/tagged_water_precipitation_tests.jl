@@ -132,6 +132,35 @@ precipitation_tags(FT = Float64) = (
         [Dict{String, Any}("name" => "aud_x", "source" => "surface_flux")],
         Float64,
     )
+
+    # The audit's own key, on by default.
+    @test CA.water_tag_precipitation_audit_from_config(nothing) == true
+    @test CA.water_tag_precipitation_audit_from_config(true) == true
+    @test CA.water_tag_precipitation_audit_from_config(false) == false
+    @test_throws r"must be `true` or `false`" CA.water_tag_precipitation_audit_from_config(
+        "false",
+    )
+    @test CA.has_water_tag_precipitation_audit(tagging.water_tagging_model)
+    without_audit = CA.AtmosTagging(
+        config(
+            Dict{String, Any}(
+                "water_tracers" => tags,
+                "water_tag_precipitation" => true,
+                "water_tag_precipitation_audit" => false,
+            ),
+        ),
+    )
+    @test CA.has_water_tag_precipitation(without_audit.water_tagging_model)
+    @test !CA.has_water_tag_precipitation_audit(without_audit.water_tagging_model)
+    # Off without the parts would do nothing, so it is refused.
+    @test_throws r"`water_tag_precipitation_audit: false` is set but" CA.AtmosTagging(
+        config(
+            Dict{String, Any}(
+                "water_tracers" => tags,
+                "water_tag_precipitation_audit" => false,
+            ),
+        ),
+    )
 end
 
 @testset "Which code sees which part" begin
@@ -1375,6 +1404,7 @@ function correction_setup(FT, rng, n; ledger_per_tag = false)
         q_tag_led_empty = zeros(FT, n),
         q_tag_led_repair = zeros(FT, n),
         q_tag_led_repairnet = zeros(FT, n),
+        q_tag_led_close = zeros(FT, n),
     )
     if ledger_per_tag
         ᶜY = merge(
@@ -1492,6 +1522,378 @@ nonprecip_parent(ᶜY) = ᶜY.ρq_tot .- ᶜY.ρq_rai .- ᶜY.ρq_sno
         @test minimum(ᶜY.ρq_rtag_low) >= 0
         @test partition_sum(ᶜY, :ρq_rtag_) ≈ rain_sum rtol = 8 * eps(FT)
         @test ᶜY.q_tag_led_repair[5] > 0
+    end
+end
+
+# One cell of `correction_setup`, with the compartments `(ρq_tot, ρq_rai,
+# ρq_sno)` and each kind of part as `(low, high, evap)`. The snapshots hold the
+# compartments, so a follow sees no change since them.
+function one_cell_setup(FT, compartments, N, R, S)
+    (; Y, p, model) = correction_setup(FT, Random.MersenneTwister(1), 1)
+    ᶜY = Y.c
+    (ᶜY.ρq_tot[1], ᶜY.ρq_rai[1], ᶜY.ρq_sno[1]) = FT.(compartments)
+    for (k, name) in enumerate((:low, :high, :evap))
+        getproperty(ᶜY, Symbol(:ρq_tag_, name))[1] = FT(N[k])
+        getproperty(ᶜY, Symbol(:ρq_rtag_, name))[1] = FT(R[k])
+        getproperty(ᶜY, Symbol(:ρq_stag_, name))[1] = FT(S[k])
+    end
+    p.tagging.ᶜwater_rai_before .= ᶜY.ρq_rai
+    p.tagging.ᶜwater_sno_before .= ᶜY.ρq_sno
+    return (; Y, p, model)
+end
+
+# State-1 of the WP4b stage-1 review (2026-09-30). The rescale moves three
+# changes: rain, snow and `ρq_tot`. Taken in a fixed order, the water that is
+# neither rain nor snow, `N`, could pass below zero in between, although it is
+# positive before and after. Its parts then emptied, and the water ended in no
+# tag. The changes that raise `N` now go first. Both cells are the review's.
+@testset "The rescale raises the non-precipitating water first" begin
+    for FT in (Float32, Float64)
+        near(a, b) = abs(a - b) <= 64 * eps(FT) * abs(b)
+        # 1. A dry, snowy cell, as a SEM limiter can leave it: `ρq_tot` from
+        # 3e-5 to 4e-5 and snow from 2.5e-5 to 3.5e-5. `N` is 5e-6 before and
+        # after. Snow first would take `N` to -5e-6.
+        (; Y, p, model) = one_cell_setup(
+            FT,
+            (3e-5, 0, 2.5e-5),
+            (2e-6, 3e-6, 0),
+            (0, 0, 0),
+            (0.75e-5, 1.75e-5, 0),
+        )
+        ᶜY = Y.c
+        ᶜρq_tot_before = copy(ᶜY.ρq_tot)
+        ᶜY.ρq_tot[1] = FT(4e-5)
+        ᶜY.ρq_sno[1] = FT(3.5e-5)
+        CA._rescale_water_tags!(Y, p, ᶜρq_tot_before, model)
+        @test near(partition_sum(ᶜY, :ρq_tag_)[1], FT(5e-6))
+        @test near(partition_sum(ᶜY, :ρq_stag_)[1], FT(3.5e-5))
+        @test iszero(partition_sum(ᶜY, :ρq_rtag_)[1])
+        # The water stays in the tags: they hold all of `ρq_tot`.
+        all_parts =
+            partition_sum(ᶜY, :ρq_tag_) .+ partition_sum(ᶜY, :ρq_rtag_) .+
+            partition_sum(ᶜY, :ρq_stag_)
+        @test near(all_parts[1], FT(4e-5))
+        # The gain of `ρq_tot` went to the tags by `N`'s composition.
+        @test near(ᶜY.ρq_tag_low[1] / partition_sum(ᶜY, :ρq_tag_)[1], FT(0.4))
+
+        # 2. `ρq_tot` fixed at 3e-5, rain from 5e-6 to 1.5e-5 and snow from
+        # 2e-5 to 1e-5. Rain first would take `N` to -5e-6. The follow alone,
+        # without the closing step, keeps each compartment.
+        (; Y, p, model) = one_cell_setup(
+            FT,
+            (3e-5, 5e-6, 2e-5),
+            (2e-6, 3e-6, 0),
+            (1.5e-6, 3.5e-6, 0),
+            (1e-5, 1e-5, 0),
+        )
+        ᶜY = Y.c
+        totals = map(name -> tag_total(ᶜY, name)[1], (:low, :high))
+        ᶜY.ρq_rai[1] = FT(1.5e-5)
+        ᶜY.ρq_sno[1] = FT(1e-5)
+        CA._rescale_water_tag_parts!(Y, p, copy(ᶜY.ρq_tot), model, Val(false))
+        @test near(partition_sum(ᶜY, :ρq_tag_)[1], FT(5e-6))
+        @test near(partition_sum(ᶜY, :ρq_rtag_)[1], FT(1.5e-5))
+        @test near(partition_sum(ᶜY, :ρq_stag_)[1], FT(1e-5))
+        # The moves are within each tag.
+        for (name, total) in zip((:low, :high), totals)
+            @test near(tag_total(ᶜY, name)[1], total)
+        end
+
+        # 3. `N` below zero before and above it after: `ρq_tot` from 2e-5 to
+        # 3e-5 and rain from 2.5e-5 to 1.5e-5. `N` goes from -5e-6 to 1.5e-5.
+        # Its parts hold nothing at the start, its target being zero. The
+        # fall of rain goes first and gives them water, so the rise of
+        # `ρq_tot` finds parts to go to. Taken the other way round, the rise
+        # would find none, and 5e-6 would end in no tag.
+        (; Y, p, model) = one_cell_setup(
+            FT,
+            (2e-5, 2.5e-5, 0),
+            (0, 0, 0),
+            (0.75e-5, 1.75e-5, 0),
+            (0, 0, 0),
+        )
+        ᶜY = Y.c
+        ᶜρq_tot_before = copy(ᶜY.ρq_tot)
+        ᶜY.ρq_tot[1] = FT(3e-5)
+        ᶜY.ρq_rai[1] = FT(1.5e-5)
+        CA._rescale_water_tags!(Y, p, ᶜρq_tot_before, model)
+        @test near(partition_sum(ᶜY, :ρq_tag_)[1], FT(1.5e-5))
+        @test near(partition_sum(ᶜY, :ρq_rtag_)[1], FT(1.5e-5))
+        @test iszero(partition_sum(ᶜY, :ρq_stag_)[1])
+    end
+end
+
+# Micro-1 of the WP4b stage-1 review. Where rain or snow is negative, other
+# paths can leave the partition's rain or snow parts apart from the
+# compartment's non-negative part: the microphysics, the sedimentation and the
+# advection. The closing step after the follow brings each back, and books the
+# water in a ledger of its own. The cells are the review's one-cell case and
+# its snow twin: one Euler step of the 1-moment microphysics from a compartment
+# at -1e-6, with two tags that split `N` 0.3 to 0.7 and hold no rain or snow.
+@testset "The closing step after the follow" begin
+    for FT in (Float32, Float64)
+        params = CA.ClimaAtmosParameters(FT)
+        mp = CA.Parameters.microphysics_1m_params(params)
+        tps = CA.Parameters.thermodynamics_params(params)
+        Δt = FT(60)
+        cases = (
+            rain = (T = 285, q_lcl = 1.5e-3, q_icl = 0, q_rai = -1e-6, q_sno = 0),
+            snow = (T = 260, q_lcl = 0, q_icl = 1e-3, q_rai = 0, q_sno = -1e-6),
+        )
+        for (label, case) in pairs(cases)
+            (ρ, T) = (FT(1), FT(case.T))
+            (q_lcl, q_icl, q_rai, q_sno) =
+                FT.((case.q_lcl, case.q_icl, case.q_rai, case.q_sno))
+            q_tot = CA.TD.q_vap_saturation(tps, T, ρ) + q_lcl + q_icl + q_rai + q_sno
+            F = CA.water_tag_1m_flows(
+                mp, tps, ρ, T, FT(0), q_tot, q_lcl, q_icl, q_rai, q_sno, Δt, 1,
+            )
+            qN = q_tot - q_rai - q_sno
+            negative = (qN < 0, q_rai < 0, q_sno < 0)
+            pools = max.((qN, q_rai, q_sno), 0)
+            # The tags' parts after the step, as the model moves them, with
+            # #137's rule for a negative compartment.
+            shares = ((FT(0.3), FT(0), FT(0)), (FT(0.7), FT(0), FT(0)))
+            after = map(shares) do φ
+                change = CA.water_tag_microphysics_change(
+                    F, F.dq_rai_dt, F.dq_sno_dt, pools..., Δt, φ..., negative...,
+                )
+                (φ[1] * qN, FT(0), FT(0)) .+ Δt .* change
+            end
+            q_rai_after = q_rai + Δt * F.dq_rai_dt
+            q_sno_after = q_sno + Δt * F.dq_sno_dt
+            formed = label == :rain ? q_rai_after : q_sno_after
+            @test formed > 1e-6
+            # The source tag holds some of `N` and none of the compartment. So
+            # a closing step that took it in would change it.
+            N_evap = FT(0.1) * (q_tot - q_rai_after - q_sno_after)
+            (; Y, p, model) = one_cell_setup(
+                FT,
+                (q_tot, q_rai_after, q_sno_after),
+                (after[1][1], after[2][1], N_evap),
+                (after[1][2], after[2][2], 0),
+                (after[1][3], after[2][3], 0),
+            )
+            ᶜY = Y.c
+            # #137's rule leaves the negative compartment's parts as they were,
+            # so they miss what formed. It covers the microphysics' over-credit,
+            # but leaves this gap, which only the closing step closes.
+            prefix = label == :rain ? :ρq_rtag_ : :ρq_stag_
+            gap = formed - partition_sum(ᶜY, prefix)[1]
+            @info "micro-1 under #137's rule, before the closing step" label FT formed gap
+            totals = map(name -> tag_total(ᶜY, name)[1], (:low, :high, :evap))
+            CA._follow_water_tag_precipitation!(Y, p, model)
+            near(a, b) = abs(a - b) <= 64 * eps(FT) * max(abs(b), formed)
+            @test near(partition_sum(ᶜY, :ρq_rtag_)[1], max(q_rai_after, 0))
+            @test near(partition_sum(ᶜY, :ρq_stag_)[1], max(q_sno_after, 0))
+            @test near(
+                partition_sum(ᶜY, :ρq_tag_)[1],
+                max(q_tot - q_rai_after - q_sno_after, 0),
+            )
+            # The water the closing step added took `N`'s composition, since the
+            # parts held none of the compartment.
+            part_low = getproperty(ᶜY, Symbol(prefix, :low))[1]
+            N_share = ᶜY.ρq_tag_low[1] / partition_sum(ᶜY, :ρq_tag_)[1]
+            @test near(part_low, N_share * formed)
+            # It is booked in the rescale's ledgers, and the source tag is left
+            # alone.
+            added = map((:low, :high)) do name
+                tag_total(ᶜY, name)[1] - totals[name == :low ? 1 : 2]
+            end
+            @test near(p.tagging.ᶜwater_fix.ρq_tag_low[1], added[1])
+            @test near(p.tagging.ᶜwater_fix.ρq_tag_high[1], added[2])
+            # The closing step has a ledger of its own. The rescale's is
+            # left alone, since the follow moved nothing here.
+            @test near(ᶜY.q_tag_led_close[1], sum(added))
+            @test iszero(ᶜY.q_tag_led_rescale[1])
+            @test tag_total(ᶜY, :evap)[1] == totals[3]
+            for name in propertynames(ᶜY)
+                CA.is_tagged_tracer_name(name) || continue
+                @test getproperty(ᶜY, name)[1] >= 0
+            end
+        end
+
+        # The closing step leaves closed parts alone, bit for bit, and takes an
+        # excess out by the parts' own composition, floored at what they hold.
+        @test CA.water_tag_part_closing_shift(FT(1), FT(2), FT(3), FT(3), FT(0), FT(5)) ===
+              -zero(FT)
+        @test CA.water_tag_part_closing_shift(FT(1), FT(2), FT(2), FT(4), FT(0), FT(5)) ==
+              FT(-0.5)
+        @test CA.water_tag_part_closing_shift(FT(1), FT(2), FT(0), FT(4), FT(-1), FT(5)) ==
+              FT(-0.75)
+        @test CA.water_tag_part_closing_shift(FT(1), FT(2), FT(0), FT(4), FT(0), FT(5)) ==
+              FT(-1)
+        # Parts that hold nothing take a gain by `N`'s composition. Their sum
+        # is then not above zero, so the rest is never a loss.
+        @test CA.water_tag_part_closing_shift(FT(0), FT(2), FT(1), FT(0), FT(0), FT(4)) ==
+              FT(0.5)
+        @test CA.water_tag_part_closing_shift(FT(0), FT(2), FT(0), FT(0), FT(-1), FT(4)) ==
+              FT(0.5)
+        @test CA.water_tag_part_closing_shift(FT(0), FT(0), FT(1), FT(0), FT(0), FT(0)) ===
+              -zero(FT)
+        # A compartment at zero empties its parts exactly, not to a rounding
+        # unit off zero.
+        rng = Random.MersenneTwister(29)
+        for _ in 1:1000
+            parts = FT.(rand(rng, 4))
+            pos = sum(parts)
+            @test all(
+                part -> iszero(
+                    part + CA.water_tag_part_closing_shift(
+                        part, FT(1), FT(0), pos, FT(0), FT(1),
+                    ),
+                ),
+                parts,
+            )
+        end
+        # Small parts and a small rest do not underflow in Float32. The share
+        # is taken first.
+        tiny = FT(1e-25)
+        shift =
+            CA.water_tag_part_closing_shift(tiny, FT(1), FT(2e-20), 3 * tiny, FT(0), FT(1))
+        @test shift ≈ FT(2e-20) / 3 - tiny rtol = 8 * eps(FT)
+    end
+end
+
+# What the closing step attributes, against the composition of the transfer
+# that left the parts short (the owner's review of #146, point 1). The closing
+# step knows only the compartment's total. It gives the missing water the
+# composition of the parts it adds to, or, where they hold none, that of the
+# non-precipitating parts. Where the missing water came from elsewhere, that
+# is wrong for provenance, although the compartment closes. The error of each
+# tag is `rest · (φ_close - ψ_donor)`, so it is at most the closing step's own
+# ledger, `q_tag_led_close`, per cell. One cell, two origins: the region tags
+# `low` (A) and `high` (B) hold different shares of the non-precipitating water
+# (0.7 and 0.3), of rain and of snow (0.2 and 0.8). The source tag holds a
+# little non-precipitating water and nothing else.
+@testset "The closing step's attribution in a two-origin cell" begin
+    for FT in (Float32, Float64)
+        near(a, b, scale) = abs(a - b) <= 64 * eps(FT) * scale
+        (N, S, R₀, ΔR) = (1e-3, 1e-4, 2e-4, 1e-4)
+        S_parts = (0.2 * S, 0.8 * S, 0)
+        N_parts = (0.7 * N, 0.3 * N, 0.05 * N)
+        # Each case: the rain parts before, the missing rain and its donor
+        # composition (A's share), and the error the rule makes, as A's share
+        # of the missing rain under the closing rule less the donor's.
+        cases = (
+            # 1. Rain from A, missing rain from B, as falling into the cell
+            # from above. The closing step gives it all to A.
+            (label = "rain from A, missing rain from B",
+                R = (R₀, 0, 0), R_total = R₀ + ΔR, donor_A = 0.0, close_A = 1.0),
+            # 2. No rain parts, missing rain from B. The closing step takes
+            # `N`'s composition, 0.7 to A.
+            (label = "no rain parts, missing rain from B",
+                R = (0, 0, 0), R_total = ΔR, donor_A = 0.0, close_A = 0.7),
+            # 3. No rain parts, missing rain formed from the cell's own
+            # non-precipitating water, as in micro-1 under #137's rule. The
+            # closing step's composition is the donor's, so it is exact.
+            (label = "no rain parts, missing rain from the cell's N",
+                R = (0, 0, 0), R_total = ΔR, donor_A = 0.7, close_A = 0.7),
+        )
+        for case in cases
+            ρq_tot = N + case.R_total + S
+            (; Y, p, model) =
+                one_cell_setup(FT, (ρq_tot, case.R_total, S), N_parts, case.R, S_parts)
+            ᶜY = Y.c
+            totals = map(name -> tag_total(ᶜY, name)[1], (:low, :high, :evap))
+            CA._follow_water_tag_precipitation!(Y, p, model)
+            rest = FT(case.R_total - sum(case.R))
+            # The compartment closes, and the closing step's ledger holds the
+            # missing rain.
+            @test near(partition_sum(ᶜY, :ρq_rtag_)[1], FT(case.R_total), FT(case.R_total))
+            @test near(ᶜY.q_tag_led_close[1], rest, rest)
+            # The donor's attribution, written out: each tag's rain part takes
+            # the missing rain by the donor's composition.
+            donor_rain_A = FT(case.R[1] + case.donor_A * rest)
+            close_rain_A = ᶜY.ρq_rtag_low[1]
+            error_A = close_rain_A - donor_rain_A
+            @test near(error_A, FT(case.close_A - case.donor_A) * rest, rest)
+            # Bounded by the closing step's ledger.
+            @test abs(error_A) <= abs(ᶜY.q_tag_led_close[1]) * (1 + 64 * eps(FT))
+            # B takes the opposite error, so the partition's total is right.
+            close_rain_B = ᶜY.ρq_rtag_high[1]
+            donor_rain_B = FT(case.R[2] + (1 - case.donor_A) * rest)
+            @test near(close_rain_B - donor_rain_B, -error_A, rest)
+            # Per-tag inventories and the surface precipitation fraction. At
+            # the lowest level a tag's share of the rain's flux is its share
+            # of the rain, since the parts fall with rain's own velocity.
+            inventory_A = tag_total(ᶜY, :low)[1]
+            inventory_error_A = error_A / (inventory_A - error_A)
+            rain_fraction_error_A = error_A / FT(case.R_total)
+            @test near(inventory_A - totals[1], close_rain_A - case.R[1], rest)
+            @test tag_total(ᶜY, :evap)[1] == totals[3]
+            @info "The closing step's attribution error" FT case.label error_A rain_fraction_error_A inventory_error_A q_tag_led_close =
+                ᶜY.q_tag_led_close[1]
+            if case.donor_A == case.close_A
+                @test abs(error_A) <= 64 * eps(FT) * rest
+            end
+        end
+    end
+end
+
+# The audit's own key: off, the microphysics leaves the audit's fields out of
+# the state and does not compute them. Every part moves as with the audit on,
+# bit for bit.
+@testset "The microphysics without the audit" begin
+    for FT in (Float32, Float64)
+        rng = Random.MersenneTwister(23)
+        n = 40
+        tags = precipitation_tags(FT)
+        on = CA.WaterTaggingModel(tags; precipitation = true)
+        off = CA.WaterTaggingModel(tags; precipitation = true, precipitation_audit = false)
+        @test CA.has_water_tag_precipitation_audit(on)
+        @test !CA.has_water_tag_precipitation_audit(off)
+        @test !CA.has_water_tag_precipitation_audit(CA.WaterTaggingModel(tags))
+        @test !CA.has_water_tag_precipitation_audit(nothing)
+        @test CA.water_tag_audit_state_names(off) == ()
+        @test CA.water_tag_precipitation_audit_variables(FT(1), off) == (;)
+        @test CA.water_tag_precip_part_state_names(off) ==
+              CA.water_tag_precip_part_state_names(on)
+        (; Y) = correction_setup(FT, rng, n)
+        ᶜY = merge(Y.c, (; ρ = FT.(0.8 .+ 0.4 .* rand(rng, n))))
+        scratch = (;
+            ᶜtagging_q_share_norm = zeros(FT, n),
+            ᶜtagging_q_share_norm_rai = zeros(FT, n),
+            ᶜtagging_q_share_norm_sno = zeros(FT, n),
+        )
+        CA.water_tag_share_norm!(
+            (; atmos = (; water_tagging_model = on), scratch),
+            (; c = ᶜY),
+        )
+        flow() = FT.(1e-7 .* rand(rng, n))
+        (NR, NS, RN, RS, SR, SN) = ntuple(_ -> flow(), 6)
+        ᶜF = [
+            (; NR = NR[i], NS = NS[i], RN = RN[i], RS = RS[i], SR = SR[i], SN = SN[i])
+            for i in 1:n
+        ]
+        ᶜmp = (; dq_rai_dt = (NR .+ SR) .- (RN .+ RS), dq_sno_dt = (NS .+ RS) .- (SN .+ SR))
+        ᶜpools = (;
+            N = max.(nonprecip_parent(ᶜY) ./ ᶜY.ρ, 0),
+            R = max.(ᶜY.ρq_rai ./ ᶜY.ρ, 0),
+            S = max.(ᶜY.ρq_sno ./ ᶜY.ρ, 0),
+        )
+        # Rain is negative in a few cells, so #137's gates are on there too.
+        ᶜnegative = (falses(n), (1:n) .<= 5, falses(n))
+        parts = (
+            CA.water_tag_precip_part_state_names(on)...,
+            :ρq_tag_low,
+            :ρq_tag_high,
+            :ρq_tag_evap,
+        )
+        tendencies(names) = NamedTuple{names}(ntuple(_ -> zeros(FT, n), length(names)))
+        ᶜYₜ_on = tendencies((parts..., CA.water_tag_audit_state_names(on)...))
+        ᶜYₜ_off = tendencies(parts)
+        for (ᶜYₜ, model) in ((ᶜYₜ_on, on), (ᶜYₜ_off, off))
+            CA._microphysics_of_water_tag_parts!(
+                ᶜYₜ, ᶜY, scratch, ᶜF, ᶜmp, ᶜpools, ᶜnegative, FT(60),
+                Val(CA.has_water_tag_precipitation_audit(model)), model.tags,
+            )
+        end
+        for name in parts
+            @test isequal(getproperty(ᶜYₜ_on, name), getproperty(ᶜYₜ_off, name))
+        end
+        @test maximum(abs, ᶜYₜ_on.ρq_rtag_low) > 0
+        @test maximum(abs, ᶜYₜ_on.q_rtag_aud_low) > 0
     end
 end
 
@@ -2604,13 +3006,19 @@ end
             _ -> 0.0,
             NamedTuple{CA.WATER_TAG_MECHANISM_NAMES}(CA.WATER_TAG_MECHANISM_NAMES),
         )
+    # The key adds the closing step's ledger to the ledgers per mechanism.
+    @test CA.water_tag_mechanism_names(keyed) ==
+          (CA.WATER_TAG_MECHANISM_NAMES..., :q_tag_led_close)
+    @test CA.water_tag_mechanism_names(plain) == CA.WATER_TAG_MECHANISM_NAMES
+    @test CA.is_tag_mechanism_ledger_name(:q_tag_led_close)
+    keyed_ledgers = (; ledgers..., q_tag_led_close = 0.0)
     # A state written with the ledger of the withheld gain holds one ledger
     # without the key and two with it.
-    state(names; exp = (:q_tag_exp_negative,)) = (;
+    state(names; exp = (:q_tag_exp_negative,), mechanisms = ledgers) = (;
         c = (;
             NamedTuple{(:ρ, :ρq_tot, names...)}(Tuple(zeros(2 + length(names))))...,
             NamedTuple{exp}(Tuple(zeros(length(exp))))...,
-            ledgers...,
+            mechanisms...,
         ),
     )
     tag_names = CA.water_tag_state_names(keyed)
@@ -2619,7 +3027,7 @@ end
     @test keyed_exp == (:q_tag_exp_negative, :q_tag_exp_negative_precip)
     keyed_state = (;
         c = (;
-            state(keyed_names; exp = keyed_exp).c...,
+            state(keyed_names; exp = keyed_exp, mechanisms = keyed_ledgers).c...,
             map(
                 _ -> 0.0,
                 NamedTuple{CA.water_tag_audit_state_names(keyed)}(
@@ -2657,11 +3065,20 @@ end
         plain_state,
     )
     # The audit's records come with the parts.
-    no_audit = state(keyed_names; exp = keyed_exp)
+    no_audit = state(keyed_names; exp = keyed_exp, mechanisms = keyed_ledgers)
     @test_throws r"microphysics audit.*`water_tag_precipitation`" check(
         written,
         keyed,
         no_audit,
+    )
+    # So does the closing step's ledger. A checkpoint from before it is refused.
+    no_close = (;
+        c = Base.structdiff(keyed_state.c, NamedTuple{(:q_tag_led_close,)}),
+    )
+    @test_throws r"ledgers per mechanism.*`water_tag_precipitation`" check(
+        written,
+        keyed,
+        no_close,
     )
     # The attribute is checked too.
     flipped = checkpoint(
@@ -2699,7 +3116,9 @@ end
             CA.water_tag_audit_state_names(keyed),
         ),
     )
-    with_exp(exp) = (; c = (; state(keyed_names; exp).c..., audit_records...))
+    with_exp(exp) = (;
+        c = (; state(keyed_names; exp, mechanisms = keyed_ledgers).c..., audit_records...)
+    )
     @test_throws r"before the water tags kept the ledger of the withheld gain \(q_tag_exp_negative, q_tag_exp_negative_precip\)" check(
         written,
         keyed,

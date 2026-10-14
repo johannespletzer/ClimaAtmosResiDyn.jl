@@ -29,7 +29,7 @@ from the [Tagged Energy Tracers](tagged_tracers.md) and the
 ## Enabling tags
 
 ```yaml
-energy_source_tag_offset: 110495.0
+energy_source_tag_offset: 166764.0
 energy_source_tags:
   - name: tropics
     region: tropics
@@ -45,7 +45,9 @@ region and no `source` is a region tag, and a tag with a `source` is a source ta
 
 `energy_source_tag_offset` is the energy per kilogram of air, in J kg⁻¹, that the tags add
 before they split. It is required. The shipped `baroclinic_wave_energy_source_tags.yml` uses
-110495.0, and `0` keeps the tags on ``\rho e_\mathrm{tot}`` itself. See
+166764.0, the dry internal energy counted from 150 K, ``c_{p,d} T_0 - c_{v,d}\,150\,\mathrm{K}``
+at the default parameters. It keeps the total positive for dry, still air at or above sea level.
+`0` keeps the tags on ``\rho e_\mathrm{tot}`` itself. See
 [The energy reference and the offset](@ref).
 
 !!! note "One partition at a time"
@@ -384,7 +386,7 @@ with a warning. It is an override for development runs, and it concerns only the
 
 ```yaml
 # Runs as it is: 1M stepped explicitly, with the manual Jacobian.
-energy_source_tag_offset: 110495.0
+energy_source_tag_offset: 166764.0
 energy_source_tag_transport: enthalpy_increment
 microphysics_model: 1M
 implicit_microphysics: false
