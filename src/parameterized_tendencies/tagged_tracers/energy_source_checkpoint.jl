@@ -211,11 +211,8 @@ function check_energy_source_checkpoint(restart_file, model, Y, context)
     isnothing(source_model) && return nothing
 
     K = ENERGY_SOURCE_CHECKPOINT_KEYS
-    reader = InputOutput.HDF5Reader(restart_file, context)
-    recorded = try
+    recorded = with_restart_reader(restart_file, context) do reader
         read_energy_source_checkpoint(reader.file, source_model.tags)
-    finally
-        Base.close(reader)
     end
     if isnothing(recorded)
         @warn "The restart file $restart_file was written before the energy \

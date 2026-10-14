@@ -1287,8 +1287,7 @@ function restore_tag_ledger_checkpoint!(tagging, restart_file, context)
         all_fields,
     )
     later = filter(f -> is_negative_water_checkpoint_field(first(f)), all_fields)
-    reader = InputOutput.HDF5Reader(restart_file, context)
-    try
+    with_restart_reader(restart_file, context) do reader
         restore_negative_water_accumulator!(reader, later, restart_file)
         restore_water_application_ledgers!(
             _water_meter(tagging),
@@ -1297,10 +1296,8 @@ function restore_tag_ledger_checkpoint!(tagging, restart_file, context)
             restart_file,
         )
         isempty(fields) && return nothing
-        present = map(fields) do (name, _)
-            haskey(reader.file, "fields/$name")
-        end
-        if !any(present)
+        missing_names = missing_checkpoint_fields(reader, fields)
+        if length(missing_names) == length(fields)
             @warn(
                 "The restart file $restart_file carries none of the tags' \
                 accumulators: their cache ledgers, gross twins, counts, \
@@ -1311,8 +1308,7 @@ function restore_tag_ledger_checkpoint!(tagging, restart_file, context)
             )
             return nothing
         end
-        if !all(present)
-            missing_names = [name for ((name, _), p) in zip(fields, present) if !p]
+        if !isempty(missing_names)
             error(
                 "The restart file $restart_file carries some of the tags' \
                 accumulators but not $(join(missing_names, ", ")). It was \
@@ -1320,12 +1316,7 @@ function restore_tag_ledger_checkpoint!(tagging, restart_file, context)
                 Restart with the same configuration, or start a new run.",
             )
         end
-        for (name, field) in fields
-            restored = InputOutput.read_field(reader, name)
-            parent(field) .= parent(restored)
-        end
-    finally
-        Base.close(reader)
+        read_checkpoint_fields!(reader, fields)
     end
     return nothing
 end
@@ -1336,8 +1327,8 @@ end
 restore_water_application_ledgers!(::Nothing, reader, fields, restart_file) =
     nothing
 function restore_water_application_ledgers!(meter, reader, fields, restart_file)
-    present = map(((name, _),) -> haskey(reader.file, "fields/$name"), fields)
-    if !any(present)
+    missing_names = missing_checkpoint_fields(reader, fields)
+    if length(missing_names) == length(fields)
         @warn(
             "The restart file $restart_file carries none of the water tag \
             producer's ledgers. They start at zero, and the receipt marks this \
@@ -1346,15 +1337,12 @@ function restore_water_application_ledgers!(meter, reader, fields, restart_file)
         meter.ledger_start = "zero_at_restart"
         return nothing
     end
-    all(present) || error(
+    isempty(missing_names) || error(
         "The restart file $restart_file carries only part of the water tag \
         producer's ledgers. It was written with another roster. Restart with \
         the same configuration, or start a new run.",
     )
-    for (name, field) in fields
-        restored = InputOutput.read_field(reader, name)
-        parent(field) .= parent(restored)
-    end
+    read_checkpoint_fields!(reader, fields)
     meter.ledger_start = "checkpoint"
     return nothing
 end
@@ -1363,8 +1351,8 @@ end
 # them, warn and keep the zeros. Some but not all is refused, as for the others.
 function restore_negative_water_accumulator!(reader, fields, restart_file)
     isempty(fields) && return nothing
-    present = map(((name, _),) -> haskey(reader.file, "fields/$name"), fields)
-    if !any(present)
+    missing_names = missing_checkpoint_fields(reader, fields)
+    if length(missing_names) == length(fields)
         @warn(
             "The restart file $restart_file was written before the parent's \
             negative water accumulator was carried in a checkpoint. It starts at \
@@ -1373,14 +1361,11 @@ function restore_negative_water_accumulator!(reader, fields, restart_file)
         )
         return nothing
     end
-    all(present) || error(
+    isempty(missing_names) || error(
         "The restart file $restart_file carries only part of the parent's \
         negative water accumulator. It was written by another version of the \
         accumulator. Start a new run.",
     )
-    for (name, field) in fields
-        restored = InputOutput.read_field(reader, name)
-        parent(field) .= parent(restored)
-    end
+    read_checkpoint_fields!(reader, fields)
     return nothing
 end

@@ -1573,6 +1573,53 @@ end
     @test isnothing(CA.restore_tag_closure_void!(nothing, checkpoint, context))
 end
 
+@testset "The restart reading helpers" begin
+    CC = CA.ClimaCore
+    space = CC.CommonSpaces.ColumnSpace(
+        FT;
+        z_min = 0,
+        z_max = 1000,
+        z_elem = 4,
+        staggering = CC.CommonSpaces.CellCenter(),
+    )
+    a_written = CC.Fields.coordinate_field(space).z
+    fa = zero(a_written)
+    fb = zero(a_written)
+    context = ClimaComms.SingletonCommsContext()
+    file = joinpath(mktempdir(), "day0.3600.hdf5")
+    CA.InputOutput.HDF5Writer(file, context) do writer
+        CA.InputOutput.write!(writer, a_written, "a")
+        CA.InputOutput.HDF5.write_attribute(writer.file, "void_x", 1)
+    end
+
+    @test CA.with_restart_reader(r -> haskey(r.file, "fields/a"), file, context)
+    flags = (; x = Ref(false), y = Ref(true))
+    unrecorded = CA.with_restart_reader(
+        r -> CA.restore_void_flags!(flags, f -> "void_$f", r),
+        file,
+        context,
+    )
+    @test flags.x[] && !flags.y[] && unrecorded == ["y"]
+    @test CA.with_restart_reader(
+        r -> CA.missing_checkpoint_fields(r, ("a" => fa, "b" => fb)),
+        file,
+        context,
+    ) == ["b"]
+    CA.with_restart_reader(
+        r -> CA.read_checkpoint_fields!(r, ("a" => fa,)),
+        file,
+        context,
+    )
+    @test parent(fa) == parent(a_written)
+
+    # The reader is closed when `f` throws, so the file opens for writing.
+    @test_throws ErrorException CA.with_restart_reader(r -> error("x"), file, context)
+    CA.InputOutput.HDF5Writer(file, context) do writer
+        CA.InputOutput.HDF5.write_attribute(writer.file, "void_x", 0)
+    end
+    @test !CA.with_restart_reader(r -> haskey(r.file, "fields/a"), file, context)
+end
+
 # Known issue 7, rev. 2's contract row "Parent validity: negative water": the
 # water check reads the parent's own negative water from the raw `ρq_tot`, and
 # marks its rows `negative_water_void` past the level. The accumulator adds it up

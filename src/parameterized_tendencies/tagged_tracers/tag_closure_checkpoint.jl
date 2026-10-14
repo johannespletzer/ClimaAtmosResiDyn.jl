@@ -74,22 +74,8 @@ the level again.
 """
 restore_tag_closure_void!(::Nothing, restart_file, context) = nothing
 function restore_tag_closure_void!(tagging, restart_file, context)
-    unrecorded = String[]
-    reader = InputOutput.HDF5Reader(restart_file, context)
-    try
-        recorded = keys(InputOutput.HDF5.attrs(reader.file))
-        for (family, voided) in pairs(tagging.closure_void)
-            key = tag_closure_void_key(family)
-            if key in recorded
-                value = InputOutput.HDF5.read_attribute(reader.file, key)
-                voided[] = !iszero(value)
-            else
-                voided[] = false
-                push!(unrecorded, string(family))
-            end
-        end
-    finally
-        Base.close(reader)
+    unrecorded = with_restart_reader(restart_file, context) do reader
+        restore_void_flags!(tagging.closure_void, tag_closure_void_key, reader)
     end
     restored = [string(f) for (f, voided) in pairs(tagging.closure_void) if voided[]]
     isempty(restored) || @warn(
@@ -180,22 +166,8 @@ restore_negative_water_void!(::Nothing, restart_file, context) = nothing
 function restore_negative_water_void!(tagging, restart_file, context)
     flags = tagging.negative_water_void
     isempty(flags) && return nothing
-    unrecorded = String[]
-    reader = InputOutput.HDF5Reader(restart_file, context)
-    try
-        recorded = keys(InputOutput.HDF5.attrs(reader.file))
-        for (family, voided) in pairs(flags)
-            key = negative_water_void_key(family)
-            if key in recorded
-                value = InputOutput.HDF5.read_attribute(reader.file, key)
-                voided[] = !iszero(value)
-            else
-                voided[] = false
-                push!(unrecorded, string(family))
-            end
-        end
-    finally
-        Base.close(reader)
+    unrecorded = with_restart_reader(restart_file, context) do reader
+        restore_void_flags!(flags, negative_water_void_key, reader)
     end
     restored = [string(f) for (f, voided) in pairs(flags) if voided[]]
     isempty(restored) || @warn(
