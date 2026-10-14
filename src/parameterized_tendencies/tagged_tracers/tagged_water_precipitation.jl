@@ -619,7 +619,6 @@ function BMT.bulk_microphysics_tendencies(
         map(name -> getproperty(flows, name), WATER_TAG_FLOW_NAMES),
     )
 end
-
 """
     water_tag_1m_flows(mp, tps, ρ, T, w, q_tot, q_lcl, q_icl, q_rai, q_sno, Δt, nsub)
 
@@ -630,17 +629,12 @@ over `Δt`, and the net tendencies of rain and snow, `dq_rai_dt` and
 `dq_sno_dt`. `w` is the air's vertical velocity, which the rain
 autoconversion may depend on.
 
-It repeats `BMT.bulk_microphysics_tendencies(BMT.LinearizedAverage(), ...)` of
-CloudMicrophysics 0.43, substep for substep, with the same arithmetic. Each
-substep solves the linearized system `(q* - q)/Δt = M q* + e`. A sink is linear
-in the content of the species it takes from, `D q_from*`, so each process's
-transfer over the substep is its coefficient times the solved content of that
-species. The transfers that cross between compartments are summed into the six
-flows. Transfers inside `N`, such as condensation or ice melt, do not move a
-tag's water between its parts, so they are left out. The net tendencies it returns
-are the model's, and the flows' net is the tendency's net, both to the rounding
-of the step's water over the step: the compiler may fuse a `muladd` in one and
-not in the other. A test holds them to that.
+It runs the substeps of `BMT.bulk_microphysics_tendencies(BMT.LinearizedAverage(), ...)`
+with CloudMicrophysics' own substep, `BMT._substep_1m`, which also returns each
+process's transfer over the substep. `_water_tag_1m_substep` sums the
+transfers that cross between compartments into the six flows. The net tendencies
+it returns are the model's. The flows' net is the tendencies' net to the rounding
+of the step's water over the step, and a test holds it to that.
 
 These are the gross flows. Each flow is later attributed with the composition of
 the compartment it leaves ([`water_tag_microphysics_change`](@ref)).
@@ -660,45 +654,23 @@ the compartment it leaves ([`water_tag_microphysics_change`](@ref)).
     nsub,
 )
     FT = typeof(q_tot)
-    q_rai_0 = q_rai
-    q_sno_0 = q_sno
+    q₀ = BMT.Condensates1M(q_lcl, q_icl, q_rai, q_sno)
+    q = q₀
     Δt_sub = Δt / FT(nsub)
-    Lv_over_cp =
-        BMT.TDI.TD.Parameters.LH_v0(tps) / BMT.TDI.TD.Parameters.cp_d(tps)
-    Ls_over_cp =
-        BMT.TDI.TD.Parameters.LH_s0(tps) / BMT.TDI.TD.Parameters.cp_d(tps)
     NR = NS = RN = RS = SR = SN = zero(FT)
     for _ in 1:nsub
-        (; rates, flows) = _water_tag_1m_substep(
-            mp,
-            tps,
-            ρ,
-            T,
-            w,
-            q_tot,
-            q_lcl,
-            q_icl,
-            q_rai,
-            q_sno,
-            Δt_sub,
-        )
-        # The state update of `BMT.bulk_microphysics_tendencies`.
-        q_lcl += rates.dq_lcl_dt * Δt_sub
-        q_icl += rates.dq_icl_dt * Δt_sub
-        q_rai += rates.dq_rai_dt * Δt_sub
-        q_sno += rates.dq_sno_dt * Δt_sub
-        T +=
-            (
-                Lv_over_cp * (rates.dq_lcl_dt + rates.dq_rai_dt) +
-                Ls_over_cp * (rates.dq_icl_dt + rates.dq_sno_dt)
-            ) * Δt_sub
-        NR += flows.NR * Δt_sub
-        NS += flows.NS * Δt_sub
-        RN += flows.RN * Δt_sub
-        RS += flows.RS * Δt_sub
-        SR += flows.SR * Δt_sub
-        SN += flows.SN * Δt_sub
+        substep = _water_tag_1m_substep(mp, tps, ρ, T, w, q_tot, q, Δt_sub)
+        (; q, T) = substep
+        (; flows) = substep
+        NR += flows.NR
+        NS += flows.NS
+        RN += flows.RN
+        RS += flows.RS
+        SR += flows.SR
+        SN += flows.SN
     end
+    # The tendencies as `BMT.bulk_microphysics_tendencies` forms them.
+    dq_dt = (q - q₀) / Δt
     return (;
         NR = NR / Δt,
         NS = NS / Δt,
@@ -706,106 +678,70 @@ the compartment it leaves ([`water_tag_microphysics_change`](@ref)).
         RS = RS / Δt,
         SR = SR / Δt,
         SN = SN / Δt,
-        dq_rai_dt = (q_rai - q_rai_0) / Δt,
-        dq_sno_dt = (q_sno - q_sno_0) / Δt,
+        dq_rai_dt = dq_dt.q_rai,
+        dq_sno_dt = dq_dt.q_sno,
     )
 end
 
-# One substep of `BMT._linearized_implicit_step`, CloudMicrophysics 0.43, line
-# for line, and the flows it implies. The rain row of the solved
-# system is `(q_rai* - q_rai)/Δt = M31 q_lcl* + M33 q_rai* + M34 q_sno*`, and
-# the snow row `M41 q_lcl* + M42 q_icl* + M43 q_rai* + M44 q_sno* + α e4`.
-# `M31` holds the transfers from cloud liquid into rain, `M41` and `M42` those
-# from cloud liquid and ice into snow, `α e4` vapour deposition on snow, `M43`
-# rain's transfers into snow and `M34` snow's into rain. What rain loses beyond
-# `M43` is evaporation, `-(M33 + M43)`, and what snow loses beyond `M34` is
-# sublimation, `-(M44 + M34)`.
-@inline function _water_tag_1m_substep(
-    mp,
-    tps,
-    ρ,
-    T,
-    w,
-    q_tot,
-    q_lcl,
-    q_icl,
-    q_rai,
-    q_sno,
-    Δt,
+"""
+    WATER_TAG_1M_PROCESSES
+
+The processes of `BMT._substep_1m` that `_water_tag_1m_substep` reads.
+The rest move water inside the non-precipitating water `N`: the phase changes
+of cloud liquid and ice, ice melt and liquid freezing. A test checks that this
+list and those four are every process CloudMicrophysics returns, so a new
+process cannot be missed.
+"""
+const WATER_TAG_1M_PROCESSES = (
+    :S_acnv_lcl_rai,
+    :S_accr_lcl_rai,
+    :S_accr_lcl_sno_warm,
+    :S_acnv_icl_sno,
+    :S_accr_lcl_sno_cold,
+    :S_accr_icl_rai,
+    :S_accr_icl_sno,
+    :S_accr_freeze_icl_rai,
+    :S_accr_rai_sno_cold,
+    :S_accr_melt_lcl_sno,
+    :S_accr_rai_sno_warm,
+    :S_accr_melt_rai_sno,
+    :S_melt_sno_rai,
+    :S_phase_change_vap_rai,
+    :S_phase_change_vap_sno,
 )
-    FT = typeof(q_tot)
-    src = BMT._microphysics_source_terms(
-        BMT.Microphysics1Moment(),
-        mp,
-        tps,
-        ρ,
-        T,
-        w,
-        q_tot,
-        q_lcl,
-        q_icl,
-        q_rai,
-        q_sno,
-    )
-    q_min = BMT.TDI.TD.Parameters.q_min(tps)
-    lin = BMT._linearize(src, q_lcl, q_icl, q_rai, q_sno, q_min, Δt)
 
-    invΔt = one(FT) / Δt
+"""
+    _water_tag_1m_substep(mp, tps, ρ, T, w, q_tot, q, Δt)
 
-    q_sat_min = min(
-        BMT.TDI.saturation_vapor_specific_content_over_liquid(tps, T, ρ),
-        BMT.TDI.saturation_vapor_specific_content_over_ice(tps, T, ρ),
-    )
-    q_v = q_tot - q_lcl - q_icl - q_rai - q_sno
-    α = min(
-        one(FT),
-        max(zero(FT), q_v - q_sat_min) * invΔt /
-        max(lin.e1 + lin.e2 + lin.e4, eps(FT)),
-    )
+One substep of the 1-moment microphysics, `BMT._substep_1m`, and the flows
+between the compartments over it. Returns the new species `q` (a
+`BMT.Condensates1M`), the new temperature `T` and the six `flows` [kg/kg].
 
-    a11 = invΔt - lin.M11
-    a12 = -lin.M12
-    a21 = -lin.M21
-    a22 = invΔt - lin.M22
-    a31 = -lin.M31
-    a33 = invΔt - lin.M33
-    a34 = -lin.M34
-    a41 = -lin.M41
-    a42 = -lin.M42
-    a43 = -lin.M43
-    a44 = invΔt - lin.M44
-
-    b1 = α * lin.e1 + invΔt * q_lcl
-    b2 = α * lin.e2 + invΔt * q_icl
-    b3 = invΔt * q_rai
-    b4 = α * lin.e4 + invΔt * q_sno
-
-    det12 = muladd(-a12, a21, a11 * a22)
-    q_lcl_new = (b1 * a22 - a12 * b2) / det12
-    q_icl_new = (a11 * b2 - a21 * b1) / det12
-
-    r3 = muladd(-a31, q_lcl_new, b3)
-    r4 = muladd(-a41, q_lcl_new, muladd(-a42, q_icl_new, b4))
-
-    det = muladd(-a34, a43, a33 * a44)
-    q_rai_new = (r3 * a44 - a34 * r4) / det
-    q_sno_new = (a33 * r4 - r3 * a43) / det
-
-    rates = (;
-        dq_lcl_dt = (q_lcl_new - q_lcl) * invΔt,
-        dq_icl_dt = (q_icl_new - q_icl) * invΔt,
-        dq_rai_dt = (q_rai_new - q_rai) * invΔt,
-        dq_sno_dt = (q_sno_new - q_sno) * invΔt,
-    )
+`BMT._substep_1m` returns each process's transfer. The type of each process
+term gives its donor and receiver. Cloud liquid and ice belong to `N`. The
+vapour exchange of rain and of snow goes either way, positive from the vapour
+to the condensate, so its sign decides the flow: condensation and deposition
+go into `NR` and `NS`, evaporation and sublimation into `RN` and `SN`. Each
+substep's sign is read separately, so a step in which rain both forms and
+evaporates keeps both flows.
+"""
+@inline function _water_tag_1m_substep(mp, tps, ρ, T, w, q_tot, q, Δt)
+    (; q, T, increments) = BMT._substep_1m(mp, tps, ρ, T, w, q_tot, q, Δt)
+    Δ = increments
+    vap_rai = Δ.S_phase_change_vap_rai
+    vap_sno = Δ.S_phase_change_vap_sno
     flows = (;
-        NR = lin.M31 * q_lcl_new,
-        NS = lin.M41 * q_lcl_new + lin.M42 * q_icl_new + α * lin.e4,
-        RN = -(lin.M33 + lin.M43) * q_rai_new,
-        RS = lin.M43 * q_rai_new,
-        SR = lin.M34 * q_sno_new,
-        SN = -(lin.M44 + lin.M34) * q_sno_new,
+        NR = Δ.S_acnv_lcl_rai + Δ.S_accr_lcl_rai + Δ.S_accr_lcl_sno_warm +
+             max(vap_rai, zero(vap_rai)),
+        NS = Δ.S_acnv_icl_sno + Δ.S_accr_lcl_sno_cold + Δ.S_accr_icl_rai +
+             Δ.S_accr_icl_sno + max(vap_sno, zero(vap_sno)),
+        RN = max(-vap_rai, zero(vap_rai)),
+        RS = Δ.S_accr_freeze_icl_rai + Δ.S_accr_rai_sno_cold,
+        SR = Δ.S_accr_melt_lcl_sno + Δ.S_accr_rai_sno_warm +
+             Δ.S_accr_melt_rai_sno + Δ.S_melt_sno_rai,
+        SN = max(-vap_sno, zero(vap_sno)),
     )
-    return (; rates, flows)
+    return (; q, T, flows)
 end
 
 """

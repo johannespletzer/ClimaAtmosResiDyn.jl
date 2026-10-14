@@ -503,6 +503,29 @@ end
         # net-flow rule cannot tell apart.
         @test two_way > 10
 
+        # The flows read every process of CloudMicrophysics' substep that
+        # moves water between compartments, and no other, so a new process
+        # cannot be missed. Each term's type gives its species.
+        s = first(states)
+        q = BMT.Condensates1M(s.q_lcl, s.q_icl, s.q_rai, s.q_sno)
+        (; increments) =
+            BMT._substep_1m(mp, tps, s.ρ, s.T, s.w, s.q_tot, q, dt)
+        terms = BMT._microphysics_source_terms(
+            BMT.Microphysics1Moment(), mp, tps, s.ρ, s.T, s.w, s.q_tot,
+            s.q_lcl, s.q_icl, s.q_rai, s.q_sno,
+        )
+        @test keys(increments) == keys(terms)
+        compartment(species) =
+            species in (:q_lcl, :q_icl) ? :N : species == :q_rai ? :R : :S
+        for (name, term) in pairs(terms)
+            species = typeof(term).parameters
+            crosses =
+                term isa BMT.Transfer ?
+                compartment(species[1]) != compartment(species[2]) :
+                compartment(species[1]) != :N
+            @test (name in CA.WATER_TAG_1M_PROCESSES) == crosses
+        end
+
         # The scheme tag goes through the model's quadrature evaluator, over
         # the same points and weights as the tendencies.
         quad = CA.SGSQuadrature(FT; quadrature_order = 3)
@@ -1104,43 +1127,35 @@ end
 
 # The reference for the model's 1-moment microphysics over `Δt` in `nsub`
 # substeps. It moves the state on as `water_tag_1m_flows` does, with each
-# substep's flows and tendencies from `_water_tag_1m_substep`. Returns what
+# substep's flows and state from `_water_tag_1m_substep`. Returns what
 # `synthetic_substeps` returns.
 function microphysics_substeps(mp, tps, state, parts, Δt, nsub)
     FT = typeof(Δt)
-    cp_d = BMT.TDI.TD.Parameters.cp_d(tps)
-    Lv_over_cp = BMT.TDI.TD.Parameters.LH_v0(tps) / cp_d
-    Ls_over_cp = BMT.TDI.TD.Parameters.LH_s0(tps) / cp_d
     (; ρ, w, q_tot) = state
-    (T, q_lcl, q_icl, q_rai, q_sno) =
-        (state.T, state.q_lcl, state.q_icl, state.q_rai, state.q_sno)
+    T = state.T
+    q = BMT.Condensates1M(state.q_lcl, state.q_icl, state.q_rai, state.q_sno)
     Δt_sub = Δt / FT(nsub)
     sums = ntuple(_ -> zero(FT), 6)
     for _ in 1:nsub
-        (; rates, flows) = CA._water_tag_1m_substep(
-            mp, tps, ρ, T, w, q_tot, q_lcl, q_icl, q_rai, q_sno, Δt_sub,
+        substep = CA._water_tag_1m_substep(mp, tps, ρ, T, w, q_tot, q, Δt_sub)
+        # The flows over the substep as rates, and the tendencies they leave.
+        flows = map(f -> f / Δt_sub, substep.flows)
+        F = (;
+            flows...,
+            dq_rai_dt = (substep.q.q_rai - q.q_rai) / Δt_sub,
+            dq_sno_dt = (substep.q.q_sno - q.q_sno) / Δt_sub,
         )
-        F = (; flows..., dq_rai_dt = rates.dq_rai_dt, dq_sno_dt = rates.dq_sno_dt)
-        compartments = (q_tot - q_rai - q_sno, q_rai, q_sno)
+        compartments = (q_tot - q.q_rai - q.q_sno, q.q_rai, q.q_sno)
         parts = attribute_microphysics(parts, compartments, F, Δt_sub)
-        sums = sums .+ flow_values(flows) .* Δt_sub
-        # The state update of `water_tag_1m_flows`.
-        q_lcl += rates.dq_lcl_dt * Δt_sub
-        q_icl += rates.dq_icl_dt * Δt_sub
-        q_rai += rates.dq_rai_dt * Δt_sub
-        q_sno += rates.dq_sno_dt * Δt_sub
-        T +=
-            (
-                Lv_over_cp * (rates.dq_lcl_dt + rates.dq_rai_dt) +
-                Ls_over_cp * (rates.dq_icl_dt + rates.dq_sno_dt)
-            ) * Δt_sub
+        sums = sums .+ flow_values(substep.flows)
+        (; q, T) = substep
     end
     step = (;
         NamedTuple{CA.WATER_TAG_FLOW_NAMES}(sums ./ Δt)...,
-        dq_rai_dt = (q_rai - state.q_rai) / Δt,
-        dq_sno_dt = (q_sno - state.q_sno) / Δt,
+        dq_rai_dt = (q.q_rai - state.q_rai) / Δt,
+        dq_sno_dt = (q.q_sno - state.q_sno) / Δt,
     )
-    compartments = (q_tot - q_rai - q_sno, q_rai, q_sno)
+    compartments = (q_tot - q.q_rai - q.q_sno, q.q_rai, q.q_sno)
     return (; parts, compartments, step)
 end
 
