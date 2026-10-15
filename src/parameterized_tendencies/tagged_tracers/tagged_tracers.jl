@@ -1166,10 +1166,10 @@ end
 # initialization so the number is read correctly.
 function _check_region_partition(ᶜmasks, names, residual_name, tag_prefix)
     isempty(names) && return nothing
-    mask_sum = reduce(
-        (a, b) -> a .+ b,
-        map(name -> parent(getproperty(ᶜmasks, name)), names),
-    )
+    # Summing the mask fields, not their parent arrays, keeps the sum a field,
+    # so `maximum` reduces across the processes.
+    mask_sum =
+        reduce((a, b) -> a .+ b, map(name -> getproperty(ᶜmasks, name), names))
     deviation = maximum(abs.(mask_sum .- 1))
     if deviation > 0.01
         @warn(
