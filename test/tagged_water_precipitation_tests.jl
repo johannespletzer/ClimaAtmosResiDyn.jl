@@ -1128,7 +1128,7 @@ end
     @test Yₜ.c.ρq_stag_high[1] ≈ 0.2 * ρ * Fv rtol = 1e-10
     @test Yₜ.c.ρq_tag_low[1] + Yₜ.c.ρq_tag_high[1] ≈ ρ * Fv rtol = 1e-10
     @test Yₜ.c.q_tag_exp_negative_precip[1] == 0
-    # The vapour bracket's lift of rain whose parts follow it: the rain parts
+    # The vapour tendency's lift of rain whose parts follow it: the rain parts
     # take it with the non-precipitating composition, and no ledger takes it.
     Yₜ = zero_tendency()
     Yₜ.c.ρq_rai[1] = 1e-6
