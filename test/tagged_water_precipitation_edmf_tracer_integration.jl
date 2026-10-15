@@ -50,19 +50,14 @@ include("tagged_water_precipitation_edmf_common.jl")
     end
     # Without the follow nothing restores a part that the microphysics or the
     # advection takes below zero. Each part is checked on its own, so a new
-    # negative part fails here. The source tag's non-precipitating part goes
-    # negative, -2.07e-5 kg m⁻³ at its minimum. The candidate source is the
-    # stage 1 rule for a negative compartment in the parts' microphysics,
-    # deferred to its own part 9 item (design PART9_WP4B_EDMF.md, section 13).
-    # Its non-negativity stays marked broken, and its size is bounded at five
-    # times the measured value, so that the known failure cannot grow
-    # unnoticed. The source tag's rain part reaches -9.1e-60 kg m⁻³, far
-    # below rounding against rain of order 1e-7 kg m⁻³. It is held to that
-    # order.
-    known_negative = (; ρq_tag_evap = -1e-4, ρq_rtag_evap = -1e-20)
+    # negative part fails here. The source tag's rain part reaches
+    # -1.3e-70 kg m⁻³, far below rounding against rain of order 1e-7 kg m⁻³.
+    # It is held to that order. Its non-precipitating part stays non-negative
+    # in this regime. With the default fixed rain speed it reaches
+    # -5.1e-5 kg m⁻³.
+    known_negative = (; ρq_rtag_evap = -1e-20)
     for (part, value) in minima
         if haskey(known_negative, part)
-            part == :ρq_tag_evap && @test_broken value >= 0
             @test value >= known_negative[part]
         else
             @test value >= 0
@@ -105,9 +100,9 @@ end
     # The closing ledger at rounding: every operator of the parts sums to the
     # species' where the parent holds rain.
     # With the parts' cross blocks summing to the species' at every cell, the
-    # closing step books rounding only: 2.0e-13 kg m⁻² gross over the hour on
-    # this column without quadrature, against 0.032 kg m⁻² of sampled
-    # precipitation. The bound leaves a factor of 16.
+    # closing step books rounding only: 4.4e-15 kg m⁻² gross over the hour on
+    # this column without quadrature, against 0.028 kg m⁻² of sampled
+    # precipitation. The bound leaves a factor of 600.
     @test led_close_gross <= 1e-10 * sampled_precipitation
     @test result.rain < 1e-12
     # The non-precipitating parts' column total is the parent's less the

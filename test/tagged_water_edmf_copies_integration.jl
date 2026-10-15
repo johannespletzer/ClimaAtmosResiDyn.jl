@@ -182,7 +182,9 @@ end
             ᶜwater_upfix.ρq_tag_tropo .+ ᶜwater_upfix.ρq_tag_strat,
         )
         @test maximum(abs, parent(Y.c.q_tag_led_uprepair)) > 0
-        @test maximum(abs, parent(Y.c.q_tag_led_upfilter)) > 0
+        # The run need not make the updraft filter act. "The filter's ledger
+        # and the kernels' allocation" below forces a negative copy and checks
+        # the filter's ledger there.
         # The gross per step is at least what the ledger holds, per cell and
         # per column, since each ledger starts at zero.
         (; ledgers) = p.tagging.tag_ledger_steps
@@ -629,6 +631,7 @@ end
         CA.update_jacobian!(alg, cache, integrator.u, p, 60.0, integrator.t)
         sgs(name) = CA.sgs_state_name(CA.MatrixFields.FieldName(name))
         partition_copies = (:q_tag_tropo, :q_tag_strat)
+        scales = Dict{String, Float64}()
         for species in CA.sedimenting_sgs_mass_names(integrator.u)
             ᶜblock = cache.matrix[sgs(:q_tot), CA.sgs_state_name(species)]
             ᶜsum = copy(ᶜblock)
@@ -638,9 +641,15 @@ end
                 @. ᶜsum = ᶜsum + ᶜcopy_block
             end
             scale = maximum(abs, parent(ᶜblock))
-            @test scale > 0
+            scales[string(species)] = scale
+            # A species with no fall speed in the updraft anywhere has zero
+            # blocks, and so must the copies' blocks.
             @test maximum(abs, parent(ᶜsum) .- parent(ᶜblock)) <=
                   100 * eps(Float64) * scale
         end
+        @info "The updraft water's sedimentation blocks, largest entry per species" scales
+        # Rain falls at its fixed speed by default, so its block is never zero
+        # and the check above is not vacuous.
+        @test any(((name, scale),) -> occursin("q_rai", name) && scale > 0, scales)
     end
 end

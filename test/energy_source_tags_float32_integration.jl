@@ -99,7 +99,7 @@ import ClimaAtmos as CA
         # Cloud liquid falls at a fixed speed by default. The diagnostic
         # speed is nonzero wherever there is cloud, which is what gives
         # sedimentation something to move.
-        "fixed_terminal_velocity_liquid" => false,
+        "cloud_liquid_terminal_velocity" => "Stokes",
         "dt" => "10secs",
         # Long enough for cloud to form and fall under 1M, as the
         # sedimentation item of `energy_source_tags_integration.jl` uses.
