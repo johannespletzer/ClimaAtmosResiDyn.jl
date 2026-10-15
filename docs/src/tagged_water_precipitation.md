@@ -214,17 +214,18 @@ Negative rain or snow whose partition's sum is negative too, not mostly by
 cancellation, is the exception, under the microphysics and the vapour
 nonnegativity tendency. Its parts follow it. Its share is each tag's signed
 share, the part over the partition's sum
-([`ClimaAtmos.water_tag_follows_negative`](@ref)). The partition's shares sum
-to one, so the parts' sum changes as the compartment does. The compartment
+([`ClimaAtmos.water_tag_follows_negative`](@ref)). In such a cell the
+microphysics moves the parts by the net-flow rule alone, since the pools are
+empty there. The partition's shares sum to one, so the parts' sum changes as
+the compartment does. The compartment
 takes no target's treatment, and the ledgers take nothing of it. A Newton
 stage can hold such rain at the rain top. With rain at a fixed speed, the IMEX
 stages can drain the top cell below zero before the solve, and the
 microphysics then changes that negative rain. Parts that took no change would
 leave the partition apart from it, the implicit sedimentation would carry the
-difference down the column, and the closing step would book it. Where negative
-snow keeps the target's treatment beside rain whose parts follow it, what that
-snow gives beyond its inflow carries no tag's water, and the rain parts miss
-it.
+difference down the column, and the closing step would book it. Negative snow
+that keeps the target's treatment beside rain whose parts follow it takes no
+gain, and `q_tag_exp_negative_precip` takes that gain.
 
 ## Under EDMF
 

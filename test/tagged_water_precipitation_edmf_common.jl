@@ -87,12 +87,16 @@ end
 # Steps the simulation to its end by hand and sums the surface rain and snow
 # fluxes, sampled after each step, times the step, in kg m⁻². The model
 # applies the fluxes at every stage, so the sum samples the run's accumulated
-# precipitation once per step. It is not its discrete applications.
-function run_sampling_precipitation!(simulation)
+# precipitation once per step. It is not its discrete applications. With
+# `ledger`, a function of the state that returns a ledger field, it also sums
+# the column norm of that field's change over each step, and returns both.
+function run_sampling_precipitation!(simulation; ledger = nothing)
     (; integrator, output_writers) = simulation
     p = integrator.p
     t_end = last(integrator.sol.prob.tspan)
     sampled = 0.0
+    step_gross = 0.0
+    previous = isnothing(ledger) ? nothing : copy(ledger(integrator.u))
     while integrator.t < t_end
         t_before = Float64(integrator.t)
         CA.CTS.step!(integrator)
@@ -100,9 +104,14 @@ function run_sampling_precipitation!(simulation)
             only(parent(p.precomputed.surface_rain_flux)) +
             only(parent(p.precomputed.surface_snow_flux))
         sampled += abs(flux) * (Float64(integrator.t) - t_before)
+        if !isnothing(ledger)
+            current = ledger(integrator.u)
+            step_gross += sum(abs.(current .- previous))
+            previous .= current
+        end
     end
     isnothing(output_writers) || foreach(close, output_writers)
-    return sampled
+    return isnothing(ledger) ? sampled : (sampled, step_gross)
 end
 
 # The weighted nets at an iterate whose areas differ from the precomputed

@@ -1253,7 +1253,7 @@ one, bit for bit.
 end
 
 """
-    water_tag_microphysics_change(F, dq_rai_dt, dq_sno_dt, qN, qR, qS, Δt, φN, φR, φS, negN = false, negR = false, negS = false)
+    water_tag_microphysics_change(F, dq_rai_dt, dq_sno_dt, qN, qR, qS, Δt, φN, φR, φS, negN = false, negR = false, negS = false, follow = false)
 
 The change of one tag's parts by the microphysics, per unit mass and time: the
 gross flows `F` over the step `Δt`, each with the composition of the compartment
@@ -1281,6 +1281,16 @@ no tag's water and lands in `q_tag_res`. See
 set, every number is the old one, bit for bit. The tendency leaves a negative
 rain or snow compartment unflagged where its parts follow it
 ([`water_tag_follows_negative`](@ref)).
+
+In a cell where rain or snow follows (`follow`), the change is the net-flow
+rule on the model's tendencies alone, with the flags of the compartments that
+do not follow. A followed compartment's pool is empty, so pool shares there
+would rest on the flows between empty pools. Opposing transfers between rain
+and snow make the 3×3 solve cancel, and its shares then need not sum to one.
+The net-flow rule weighs the tags' shares by the compartments' losses, all
+non-negative, so the partition's change sums to the parent's, and each tag
+keeps its total, to rounding. Where `follow` is `false`, every number is the
+one above, bit for bit.
 """
 @inline function water_tag_microphysics_change(
     F,
@@ -1296,6 +1306,7 @@ rain or snow compartment unflagged where its parts follow it
     negN = false,
     negR = false,
     negS = false,
+    follow = false,
 )
     (ψN, ψR, ψS) = water_tag_pool_shares(F, qN, qR, qS, Δt, φN, φR, φS)
     (gN, gR, gS) = water_tag_gross_flow_change(F, ψN, ψR, ψS)
@@ -1331,7 +1342,18 @@ rain or snow compartment unflagged where its parts follow it
         negS,
     )
     new = (hN + mN, hR + mR, hS + mS)
-    return ifelse(negN | negR | negS, new, old)
+    followed = water_tag_net_flow_change(
+        -(dq_rai_dt + dq_sno_dt),
+        dq_rai_dt,
+        dq_sno_dt,
+        φN,
+        φR,
+        φS,
+        negN,
+        negR,
+        negS,
+    )
+    return ifelse(follow, followed, ifelse(negN | negR | negS, new, old))
 end
 
 """
@@ -1439,7 +1461,7 @@ end
 end
 
 """
-    water_tag_microphysics_withheld(F, dq_rai_dt, dq_sno_dt, negN, negR, negS)
+    water_tag_microphysics_withheld(F, dq_rai_dt, dq_sno_dt, negN, negR, negS, follow = false)
 
 What the microphysics gives a negative compartment and no tag takes, per unit
 mass and time, parent-side: for each compartment flagged negative, its net
@@ -1448,7 +1470,9 @@ inflow over the flows in their actual direction
 what the flows' net misses. Returns `(wN, wP)`: the non-precipitating water's,
 which the ledger `q_tag_exp_negative` takes, and the sum of rain's and snow's,
 which `q_tag_exp_negative_precip` takes. Zero where no flag is set. It does not
-read the tags.
+read the tags. Where rain or snow follows (`follow`), the change is the
+net-flow rule alone ([`water_tag_microphysics_change`](@ref)), and a flagged
+compartment keeps its net gain.
 """
 @inline function water_tag_microphysics_withheld(
     F,
@@ -1457,6 +1481,7 @@ read the tags.
     negN,
     negR,
     negS,
+    follow = false,
 )
     (; NR, NS, RN, RS, SR, SN) = water_tag_oriented_flows(F, negN, negR, negS)
     δR = dq_rai_dt - ((F.NR + F.SR) - (F.RN + F.RS))
@@ -1465,7 +1490,11 @@ read the tags.
     wN = _water_tag_kept(negN, RN + SN, NR + NS, δN)
     wR = _water_tag_kept(negR, NR + SR, RN + RS, δR)
     wS = _water_tag_kept(negS, NS + RS, SN + SR, δS)
-    return (wN, wR + wS)
+    FT = typeof(dq_rai_dt)
+    fN = _water_tag_kept(negN, zero(FT), zero(FT), -(dq_rai_dt + dq_sno_dt))
+    fR = _water_tag_kept(negR, zero(FT), zero(FT), dq_rai_dt)
+    fS = _water_tag_kept(negS, zero(FT), zero(FT), dq_sno_dt)
+    return ifelse(follow, (fN, fR + fS), (wN, wR + wS))
 end
 # What a negative compartment keeps of its inflow, and its gain in the net-flow
 # rule. Zero for a compartment that is not negative.
@@ -1473,7 +1502,7 @@ end
     ifelse(neg, max(in - out, zero(in)) + max(δ, zero(δ)), zero(in))
 
 """
-    water_tag_microphysics_audit(F, dq_rai_dt, dq_sno_dt, qN, qR, qS, Δt, φN, φR, φS, negN = false, negR = false, negS = false)
+    water_tag_microphysics_audit(F, dq_rai_dt, dq_sno_dt, qN, qR, qS, Δt, φN, φR, φS, negN = false, negR = false, negS = false, follow = false)
 
 The audit for one tag: the net-flow rule's
 change of the tag's rain and snow parts, minus the change the model applies
@@ -1483,7 +1512,8 @@ two rules for its own compartment. Where no compartment is negative, both rules
 keep each tag's total, and the non-precipitating part's difference is minus the
 sum of the two. Where one is, a gated part does not change, so the rules need
 not keep the total. The non-precipitating part's difference is then not minus
-their sum, and no record holds it.
+their sum, and no record holds it. Where rain or snow follows (`follow`), the
+applied change is the net-flow rule itself, and the audit is zero.
 """
 @inline function water_tag_microphysics_audit(
     F,
@@ -1499,6 +1529,7 @@ their sum, and no record holds it.
     negN = false,
     negR = false,
     negS = false,
+    follow = false,
 )
     (_, aR, aS) = water_tag_net_flow_change(
         -(dq_rai_dt + dq_sno_dt),
@@ -1525,6 +1556,7 @@ their sum, and no record holds it.
         negN,
         negR,
         negS,
+        follow,
     )
     return (aR - cR, aS - cS)
 end
@@ -1556,16 +1588,15 @@ Negative rain or snow whose partition's sum is negative too, not mostly by
 cancellation, is the exception ([`water_tag_follows_negative`](@ref)). Its
 parts follow it: the compartment is not flagged negative, and its share is
 each tag's signed share, its part over the partition's sum
-([`water_tag_negative_share`](@ref)). Its pool is empty, as the microphysics
-takes it, so the signed shares carry what it gives where it takes nothing in,
-and the net-flow rule's loss. Where it takes something in, it passes that on
-with its composition. Either way the partition's shares sum to one, so the
-parts' sum changes as the compartment does, and the ledgers take nothing of
-it. The parts' rows of the Jacobian are the species' own, so they follow it in
-the Newton solve too. Elsewhere a negative compartment keeps the target's
-treatment. Where negative snow keeps it beside rain whose parts follow it,
-what that snow gives beyond its inflow carries no tag's water, as above, and
-the rain parts miss it.
+([`water_tag_negative_share`](@ref)). In such a cell the parts take the
+net-flow rule on the model's tendencies alone, not the pools, which are empty
+there ([`water_tag_microphysics_change`](@ref)). The partition's shares sum to
+one, and the rule weighs them by the compartments' losses, so the parts' sum
+changes as the compartment does, each tag keeps its total, and the ledgers take
+nothing of it. The parts' rows of the Jacobian are the species' own, so they
+follow it in the Newton solve too. Elsewhere a negative compartment keeps the
+target's treatment. Negative snow that keeps it beside rain whose parts follow
+it takes no gain, and the ledger takes that gain.
 
 Called beside `microphysics_tendency!`, on the implicit path or the explicit
 one, whichever the model uses. The microphysics keeps `ρq_tot`, so the
@@ -1605,11 +1636,11 @@ function _water_tag_precipitation_microphysics_tendency!(
     ᶜwithheld_precipₜ = Yₜ.c.q_tag_exp_negative_precip
     @. ᶜwithheldₜ +=
         Y.c.ρ * _mp_withheld_n(
-            ᶜF, ᶜmp.dq_rai_dt, ᶜmp.dq_sno_dt, ᶜnegN, ᶜnegR, ᶜnegS,
+            ᶜF, ᶜmp.dq_rai_dt, ᶜmp.dq_sno_dt, ᶜnegN, ᶜnegR, ᶜnegS, ᶜfollow.any,
         )
     @. ᶜwithheld_precipₜ +=
         Y.c.ρ * _mp_withheld_p(
-            ᶜF, ᶜmp.dq_rai_dt, ᶜmp.dq_sno_dt, ᶜnegN, ᶜnegR, ᶜnegS,
+            ᶜF, ᶜmp.dq_rai_dt, ᶜmp.dq_sno_dt, ᶜnegN, ᶜnegR, ᶜnegS, ᶜfollow.any,
         )
     _microphysics_of_water_tag_parts!(
         Yₜ.c,
@@ -1722,6 +1753,7 @@ function _water_tag_negative_and_follow!(scratch, ᶜY, model)
     ᶜfollow = (;
         R = ᶜfollowR,
         S = ᶜfollowS,
+        any = (@. lazy(ᶜfollowR | ᶜfollowS)),
         sum_R = (@. lazy(ᶜtagging_q_pos_rai + ᶜtagging_q_neg_rai)),
         sum_S = (@. lazy(ᶜtagging_q_pos_sno + ᶜtagging_q_neg_sno)),
     )
@@ -1796,17 +1828,17 @@ function _microphysics_of_water_tag_parts!(
     @. ᶜNₜ +=
         ᶜY.ρ * _mp_change_n(
             ᶜF, ᶜdq_rai_dt, ᶜdq_sno_dt, ᶜqN, ᶜqR, ᶜqS, Δt, ᶜφN, ᶜφR, ᶜφS,
-            ᶜnegN, ᶜnegR, ᶜnegS,
+            ᶜnegN, ᶜnegR, ᶜnegS, ᶜfollow.any,
         )
     @. ᶜRₜ +=
         ᶜY.ρ * _mp_change_r(
             ᶜF, ᶜdq_rai_dt, ᶜdq_sno_dt, ᶜqN, ᶜqR, ᶜqS, Δt, ᶜφN, ᶜφR, ᶜφS,
-            ᶜnegN, ᶜnegR, ᶜnegS,
+            ᶜnegN, ᶜnegR, ᶜnegS, ᶜfollow.any,
         )
     @. ᶜSₜ +=
         ᶜY.ρ * _mp_change_s(
             ᶜF, ᶜdq_rai_dt, ᶜdq_sno_dt, ᶜqN, ᶜqR, ᶜqS, Δt, ᶜφN, ᶜφR, ᶜφS,
-            ᶜnegN, ᶜnegR, ᶜnegS,
+            ᶜnegN, ᶜnegR, ᶜnegS, ᶜfollow.any,
         )
     # The audit recomputes the change twice per tag, so its own key can
     # leave it out. Nothing else reads it.
@@ -1816,12 +1848,12 @@ function _microphysics_of_water_tag_parts!(
         @. ᶜrain_auditₜ +=
             ᶜY.ρ * _mp_audit_r(
                 ᶜF, ᶜdq_rai_dt, ᶜdq_sno_dt, ᶜqN, ᶜqR, ᶜqS, Δt, ᶜφN, ᶜφR, ᶜφS,
-                ᶜnegN, ᶜnegR, ᶜnegS,
+                ᶜnegN, ᶜnegR, ᶜnegS, ᶜfollow.any,
             )
         @. ᶜsnow_auditₜ +=
             ᶜY.ρ * _mp_audit_s(
                 ᶜF, ᶜdq_rai_dt, ᶜdq_sno_dt, ᶜqN, ᶜqR, ᶜqS, Δt, ᶜφN, ᶜφR, ᶜφS,
-                ᶜnegN, ᶜnegR, ᶜnegS,
+                ᶜnegN, ᶜnegR, ᶜnegS, ᶜfollow.any,
             )
     end
     return _microphysics_of_water_tag_parts!(

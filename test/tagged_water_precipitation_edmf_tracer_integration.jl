@@ -85,12 +85,18 @@ end
     simulation = build(config, "water_tags_precipitation_edmf_first_order")
     p = simulation.integrator.p
     @test CA.not_quadrature(p.atmos.sgs_quadrature)
-    sampled_precipitation = run_sampling_precipitation!(simulation)
+    (sampled_precipitation, led_close_step_gross) = run_sampling_precipitation!(
+        simulation;
+        ledger = Y -> Y.c.q_tag_led_close,
+    )
     Y = simulation.integrator.u
     # Column integrals (`sum` of a field integrates it), in kg m⁻². The
     # precipitation is the hour's surface rain and snow, sampled once per step.
+    # The ledger is signed and cumulative, so its column norm can hide closing
+    # work that cancels over the hour. The norm of each step's change adds up
+    # the work that cancels between steps.
     led_close = abs(sum(Y.c.q_tag_led_close))
-    led_close_gross = sum(abs.(Y.c.q_tag_led_close))
+    led_close_norm = sum(abs.(Y.c.q_tag_led_close))
     column_precipitation = sum(Y.c.ρq_rai) + sum(Y.c.ρq_sno)
     result = closure(Y)
     ᶜN_gap = @. Y.c.ρq_tag_tropo + Y.c.ρq_tag_strat -
@@ -98,15 +104,18 @@ end
     N_gap = sum(ᶜN_gap)
     N_gross = sum(abs.(ᶜN_gap))
     left = sum(Y.c.q_tag_inc_left)
-    @info "The parts under EDMF with first-order upwinding after an hour" led_close led_close_gross sampled_precipitation column_precipitation result N_gap N_gross left
+    @info "The parts under EDMF with first-order upwinding after an hour" led_close led_close_norm led_close_step_gross sampled_precipitation column_precipitation result N_gap N_gross left
     # The closing ledger at rounding: every operator of the parts sums to the
     # species' where the parent holds rain, and where a Newton stage holds
     # negative rain the parts follow it. The rain falls at the default fixed
     # speed. The IMEX stages then drain the rain's top cell below zero twice in
-    # the hour, and the implicit microphysics changes that negative rain. The
-    # closing step books 6.5e-18 kg m⁻² gross over the hour on this column
-    # without quadrature, against 0.030 kg m⁻² of sampled precipitation.
-    @test led_close_gross <= 1e-10 * sampled_precipitation
+    # the hour, and the implicit microphysics changes that negative rain. On
+    # this column without quadrature the closing step's work, summed over
+    # every application and every tag, is GROSSWORK kg m⁻² over the hour. The
+    # ledger's column norm is NORMVAL and the steps' changes add up to
+    # STEPVAL, against 0.030 kg m⁻² of sampled precipitation.
+    @test led_close_norm <= 1e-10 * sampled_precipitation
+    @test led_close_step_gross <= 1e-10 * sampled_precipitation
     @test result.rain < 1e-12
     # The non-precipitating parts' column total is the parent's less the
     # follower's left part, as without the key. Here both are at the rounding

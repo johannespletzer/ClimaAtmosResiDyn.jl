@@ -1182,7 +1182,7 @@ end
     )
     φ = ((0.3, σR[1], 0.5), (0.7, σR[2], 0.5))
     follow(i) = CA.water_tag_microphysics_change(
-        F, dq_rai_dt, dq_sno_dt, q..., Δt, φ[i]..., false, false, false,
+        F, dq_rai_dt, dq_sno_dt, q..., Δt, φ[i]..., false, false, false, true,
     )
     gated(i) = CA.water_tag_microphysics_change(
         F, dq_rai_dt, dq_sno_dt, q..., Δt, φ[i][1], 0.0, φ[i][3], false, true, false,
@@ -1207,6 +1207,42 @@ end
         false,
     ) ==
           (0.0, 0.0)
+
+    # Rain and snow both followed: empty pools, opposing transfers between
+    # them and tiny inflows from `N`. The pool solve cancels there, and its
+    # shares need not sum to one. The change in a followed cell is the
+    # net-flow rule, so the partition closes, each tag keeps its total, the
+    # withheld ledgers and the audit are zero, and every number is finite.
+    for FT in (Float32, Float64)
+        F = map(FT, (; NR = 1e-14, NS = 1e-14, RN = 1e-9, RS = 1e-8, SR = 1e-8, SN = 1e-9))
+        dR = (F.NR + F.SR) - (F.RN + F.RS)
+        dS = (F.NS + F.RS) - (F.SN + F.SR)
+        q = FT.((0.01, 0, 0))
+        φ = (FT.((0.4, 1.2, -0.2)), FT.((0.6, -0.2, 1.2)))
+        change(i, follow) = CA.water_tag_microphysics_change(
+            F, dR, dS, q..., FT(60), φ[i]..., false, false, false, follow,
+        )
+        c = (change(1, true), change(2, true))
+        scale = F.RN + F.RS + F.SR + F.SN
+        @test all(isfinite, (c[1]..., c[2]...))
+        @test abs(c[1][1] + c[2][1] + (dR + dS)) <= 10 * eps(FT) * scale
+        @test abs(c[1][2] + c[2][2] - dR) <= 10 * eps(FT) * scale
+        @test abs(c[1][3] + c[2][3] - dS) <= 10 * eps(FT) * scale
+        for i in 1:2
+            @test abs(sum(c[i])) <= 10 * eps(FT) * scale
+        end
+        @test CA.water_tag_microphysics_withheld(F, dR, dS, false, false, false, true) ==
+              (zero(FT), zero(FT))
+        @test all(
+            iszero,
+            CA.water_tag_microphysics_audit(
+                F, dR, dS, q..., FT(60), φ[1]..., false, false, false, true,
+            ),
+        )
+        # Only rain followed, snow gated: negative snow keeps its gain.
+        cs = CA.water_tag_microphysics_withheld(F, dR, -dS, false, false, true, true)
+        @test cs == (zero(FT), max(-dS, zero(FT)))
+    end
 end
 
 # The ordering error of the microphysics' attribution.
@@ -2421,8 +2457,13 @@ end
         # Rain is negative in a few cells, so #137's gates are on there too.
         ᶜnegative = (falses(n), (1:n) .<= 5, falses(n))
         # No compartment's parts follow it here.
-        ᶜfollow =
-            (; R = falses(n), S = falses(n), sum_R = zeros(FT, n), sum_S = zeros(FT, n))
+        ᶜfollow = (;
+            R = falses(n),
+            S = falses(n),
+            any = falses(n),
+            sum_R = zeros(FT, n),
+            sum_S = zeros(FT, n),
+        )
         parts = (
             CA.water_tag_precip_part_state_names(on)...,
             :ρq_tag_low,
