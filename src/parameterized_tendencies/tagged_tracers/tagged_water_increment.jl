@@ -154,9 +154,8 @@ function _check_water_increment_partition(ᶜmasks, names, model)
     follows_water_increment(model) || return nothing
     isempty(names) && return nothing
     masks = map(name -> getproperty(ᶜmasks, name), names)
-    mask_sum = reduce((a, b) -> a .+ b, map(parent, masks))
-    deviation =
-        _collective_maximum(maximum(abs.(mask_sum .- 1)), first(masks))
+    mask_sum = reduce((a, b) -> a .+ b, masks)
+    deviation = maximum(abs.(mask_sum .- 1))
     deviation > water_increment_partition_tolerance(eltype(mask_sum)) && error(
         "`water_tag_transport: increment` needs region tags that partition \
         the domain, and the masks of these sum to 1 only to within \

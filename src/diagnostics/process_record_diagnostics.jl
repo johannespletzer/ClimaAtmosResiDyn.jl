@@ -83,8 +83,7 @@ function _register_process_record_diagnostics!(
         field_name = Symbol(state_prefix, name)
 
         short_name = "$(prefix)_$name"
-        haskey(ALL_DIAGNOSTICS, short_name) && continue
-        add_diagnostic_variable!(;
+        replace_diagnostic_variable!(;
             short_name,
             units,
             long_name = "Cumulative $label Change by $name",
