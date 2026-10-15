@@ -109,8 +109,11 @@ end
     @test led_close_gross <= 1e-10 * sampled_precipitation
     @test result.rain < 1e-12
     # The non-precipitating parts' column total is the parent's less the
-    # follower's left part, as without the key.
-    @test abs(N_gap + left) < 0.05 * N_gross
+    # follower's left part, as without the key. Here both are at the rounding
+    # of the column's water, -1.3e-15 and -3.8e-16 kg m⁻², so the bound has
+    # that floor.
+    rounding = 10 * eps(FT) * sum(Y.c.ρq_tot)
+    @test abs(N_gap + left) < max(0.05 * N_gross, rounding)
     @testset "The weighted nets without SGS quadrature" begin
         CA.set_precomputed_quantities!(Y, p, simulation.integrator.t)
         test_weighted_nets(Y, p, simulation.integrator.t, p.atmos.turbconv_model)
