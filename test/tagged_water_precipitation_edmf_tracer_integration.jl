@@ -13,8 +13,8 @@ fixed speed, another model type. There each part's explicit advection is
 linear, and the parts follow the negative rain that the stages leave at the
 rain's top, so the closing ledger is at rounding, and the non-precipitating
 parts' column total is the parent's less the follower's left part. The flows'
-nets are checked against the model's on the branch without quadrature. The rest, with quadrature, is in
-`tagged_water_precipitation_edmf_integration.jl`.
+nets are checked against the model's on the branch without quadrature. The
+rest, with quadrature, is in `tagged_water_precipitation_edmf_integration.jl`.
 =#
 using Test
 import ClimaComms
@@ -111,15 +111,15 @@ end
     # speed. The IMEX stages then drain the rain's top cell below zero twice in
     # the hour, and the implicit microphysics changes that negative rain. On
     # this column without quadrature the closing step's work, summed over
-    # every application and every tag, is GROSSWORK kg m⁻² over the hour. The
-    # ledger's column norm is NORMVAL and the steps' changes add up to
-    # STEPVAL, against 0.030 kg m⁻² of sampled precipitation.
+    # every application and every tag, is 1.9e-17 kg m⁻² over the hour. The
+    # ledger's column norm is 7.8e-18 and the steps' changes add up to
+    # 1.4e-17, against 0.030 kg m⁻² of sampled precipitation.
     @test led_close_norm <= 1e-10 * sampled_precipitation
     @test led_close_step_gross <= 1e-10 * sampled_precipitation
     @test result.rain < 1e-12
     # The non-precipitating parts' column total is the parent's less the
     # follower's left part, as without the key. Here both are at the rounding
-    # of the column's water, -1.3e-15 and -3.8e-16 kg m⁻², so the bound has
+    # of the column's water, -3.7e-15 and -3.4e-16 kg m⁻², so the bound has
     # that floor.
     rounding = 10 * eps(FT) * sum(Y.c.ρq_tot)
     @test abs(N_gap + left) < max(0.05 * N_gross, rounding)
