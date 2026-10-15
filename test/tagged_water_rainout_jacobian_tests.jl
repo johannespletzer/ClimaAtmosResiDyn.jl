@@ -316,11 +316,12 @@ end
 end
 
 @testset "The key and its refusals" begin
-    @test CA.tag_ledger_per_tag_from_config(true, "water_tag_rainout_jacobian")
-    @test !CA.tag_ledger_per_tag_from_config(false, "water_tag_rainout_jacobian")
-    @test_throws r"`water_tag_rainout_jacobian` must be `true` or `false`" CA.tag_ledger_per_tag_from_config(
+    @test CA.bool_from_config(true, "water_tag_rainout_jacobian"; default = false)
+    @test !CA.bool_from_config(false, "water_tag_rainout_jacobian"; default = false)
+    @test_throws r"`water_tag_rainout_jacobian` must be `true` or `false`" CA.bool_from_config(
         "yes",
-        "water_tag_rainout_jacobian",
+        "water_tag_rainout_jacobian";
+        default = false,
     )
     check = CA.check_water_tag_rainout_jacobian_supported
     @test isnothing(check(Dict{String, Any}()))

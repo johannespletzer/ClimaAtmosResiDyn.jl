@@ -2579,14 +2579,8 @@ per water tag; `true` splits each tag into its non-precipitating, rain and snow
 parts. Anything else is an error, so that a quoted `"true"` cannot read as
 off.
 """
-function water_tag_precipitation_from_config(value)
-    isnothing(value) && return false
-    value isa Bool || error(
-        "`water_tag_precipitation` must be `true` or `false`, got \
-        $(repr(value)).",
-    )
-    return value
-end
+water_tag_precipitation_from_config(value) =
+    bool_from_config(value, "water_tag_precipitation"; default = false)
 
 """
     water_tag_precipitation_audit_from_config(value)
@@ -2595,14 +2589,8 @@ Parse `water_tag_precipitation_audit`. `true`, the default, and `~` keep the
 microphysics audit of the rain and snow parts as state fields. `false` leaves
 them out. Anything else is an error.
 """
-function water_tag_precipitation_audit_from_config(value)
-    isnothing(value) && return true
-    value isa Bool || error(
-        "`water_tag_precipitation_audit` must be `true` or `false`, got \
-        $(repr(value)).",
-    )
-    return value
-end
+water_tag_precipitation_audit_from_config(value) =
+    bool_from_config(value, "water_tag_precipitation_audit"; default = true)
 
 """
     check_water_tag_precipitation_supported(microphysics_model, turbconv, unsplit_jacobian = false)
