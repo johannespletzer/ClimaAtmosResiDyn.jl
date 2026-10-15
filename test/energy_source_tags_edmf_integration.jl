@@ -425,16 +425,21 @@ end
     # rather than from scratch, it allocated 17 kB per call here. The parent's
     # `edmfx_sgs_mass_flux_tendency!` allocated 62,928 bytes per call on this
     # column. The sedimentation check includes the parent's own corrections,
-    # which run with or without tags.
+    # which run with or without tags. On ClimaCore 1.0.3, the lowest version
+    # the compat allows, each read of `mse` through `ᶜspecific_env_mse` adds
+    # 1024 bytes where `ᶜenv_value` builds its broadcast, on Julia 1.10 and
+    # 1.11 alike and at 30 and 60 levels alike. The flux reads it twice, 2072
+    # bytes in all. On 1.0.4 the flux allocates the three `Ref`s, 24 bytes.
     @testset "The tags do not allocate" begin
         Yₜ = zero(Y)
+        climacore_extra = pkgversion(CA.ClimaCore) == v"1.0.3" ? 2 * 1024 : 0
         @test second_call_allocations(
             CA.sgs_mass_flux_of_energy_source_tags!,
             Yₜ,
             Y,
             p,
             turbconv_model,
-        ) <= 24
+        ) <= 24 + climacore_extra
         @test second_call_allocations(
             CA.vertical_advection_of_water_tendency!,
             Yₜ,

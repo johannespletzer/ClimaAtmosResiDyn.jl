@@ -429,10 +429,14 @@ tags = [
         @test all(iszero, parent(dY.f))
         # It reads the environment's `mse` through the parent's helper, whose
         # closure Julia wraps in a `Ref`, 8 bytes. That is all it allocates,
-        # on ClimaCore 0.16.0, 1.0.0 and 1.0.1 alike. Its kernel reads the
-        # environment's density and two ratios from scratch. When it read them
-        # lazily, ClimaCore boxed the kernel's broadcast on every call, 17 kB
-        # here with each of those versions.
+        # on ClimaCore 0.16.0, 1.0.0, 1.0.1 and 1.0.4 alike. On 1.0.3, the
+        # lowest version the compat allows, the read adds 1024 bytes where
+        # `ᶜenv_value` builds its broadcast, on Julia 1.10 and 1.11 alike and
+        # at 30 and 60 levels alike. Its kernel reads the environment's density
+        # and two ratios from scratch. When it read them lazily, ClimaCore
+        # boxed the kernel's broadcast on every call, 17 kB here with 0.16.0,
+        # 1.0.0 and 1.0.1.
+        climacore_extra = pkgversion(CA.ClimaCore) == v"1.0.3" ? 1024 : 0
         @test second_call_allocations(
             exchange!,
             dY,
@@ -440,6 +444,6 @@ tags = [
             p,
             p.atmos.turbconv_model,
             model,
-        ) <= 8
+        ) <= 8 + climacore_extra
     end
 end
