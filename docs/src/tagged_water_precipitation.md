@@ -210,6 +210,17 @@ no gain. The ledgers `q_tag_exp_negative` and `q_tag_exp_negative_precip`
 record what the negative non-precipitating water and the negative rain and
 snow keep.
 
+Negative rain or snow whose partition's sum is negative too, not mostly by
+cancellation, is the exception. Its parts follow it under the microphysics,
+each by its signed share of the compartment, the part over the partition's sum
+([`ClimaAtmos.water_tag_follows_negative`](@ref)). The compartment then takes
+no target's treatment, and the ledgers take nothing of it. A Newton stage can
+hold such rain at the rain top. With rain at a fixed speed, the IMEX stages
+can drain the top cell below zero before the solve. The microphysics then
+changes that negative rain, and parts that took no change would leave the
+partition apart from it. The implicit sedimentation would carry the difference
+down the column, and the closing step would book it.
+
 ## Under EDMF
 
 Under `turbconv: prognostic_edmfx` the parts have no updraft state. The
@@ -353,6 +364,9 @@ ClimaAtmos.water_tag_microphysics_change
 ClimaAtmos.water_tag_oriented_flows
 ClimaAtmos.water_tag_microphysics_withheld
 ClimaAtmos.water_tag_negative_compartments
+ClimaAtmos.water_tag_follows_negative
+ClimaAtmos.water_tag_negative_share
+ClimaAtmos.water_tag_source_negative_share
 ClimaAtmos.water_tag_microphysics_audit
 ClimaAtmos.water_tag_precipitation_microphysics_tendency!
 ClimaAtmos.snapshot_water_tag_precipitation_tendency!

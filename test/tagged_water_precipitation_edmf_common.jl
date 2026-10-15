@@ -10,12 +10,9 @@
 # quadrature is set here, as the default configuration has it, so that a test
 # names the branch it runs. A build without it overrides the key. The rain
 # falls by the 1-moment power law and the snow at a fixed speed, the regime the
-# tests' bounds were measured in. With the default fixed rain speed the
-# first-order closing ledger is 1.1e-8 kg m⁻² over the hour instead of 4e-15.
-# The tendencies of the parts and of `ρq_rai` agree to rounding at the start
-# of every step. The closing step books the rest in two steps, from the top of
-# the rain down, where the rain parts above the rain's top are negative and
-# `ρq_rai` is zero.
+# tests' bounds were measured in. The first-order case overrides the rain's key
+# with the default, a fixed speed, under which Newton stages hold negative rain
+# at the rain's top.
 function edmf_column_config()
     return Dict{String, Any}(
         "config" => "column",

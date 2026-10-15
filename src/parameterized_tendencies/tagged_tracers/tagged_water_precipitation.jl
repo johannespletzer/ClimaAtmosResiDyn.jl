@@ -401,9 +401,10 @@ function _water_tag_precipitation_cache(Y, model)
     )
 end
 
-# The scratch under the key: the rain and snow parts' share denominators, and
-# the snapshots of the applied-update event around the vapour nonnegativity
-# tendency. They
+# The scratch under the key: the rain and snow parts' share denominators, the
+# sums of the partition's non-negative and negative parts of rain and snow that
+# the microphysics reads, and the snapshots of the applied-update event around
+# the vapour nonnegativity tendency. They
 # live in `p.scratch` because the microphysics may be evaluated with dual
 # numbers, as the tags' own share denominator does.
 _water_tag_precipitation_scratch(Y, ::Nothing, atmos) = (;)
@@ -412,6 +413,10 @@ _water_tag_precipitation_scratch(Y, model, atmos) =
     (;
         ᶜtagging_q_share_norm_rai = similar(Y.c.ρ),
         ᶜtagging_q_share_norm_sno = similar(Y.c.ρ),
+        ᶜtagging_q_pos_rai = similar(Y.c.ρ),
+        ᶜtagging_q_neg_rai = similar(Y.c.ρ),
+        ᶜtagging_q_pos_sno = similar(Y.c.ρ),
+        ᶜtagging_q_neg_sno = similar(Y.c.ρ),
         ᶜtagging_q_rai_snapshot = similar(Y.c.ρ),
         ᶜtagging_q_sno_snapshot = similar(Y.c.ρ),
         _water_tag_precipitation_edmf_scratch(Y, atmos.turbconv_model)...,
@@ -1273,7 +1278,9 @@ empty, so it passes on only what came in, with that water's composition: what
 it keeps fills its negative part, and what it gives beyond its inflow carries
 no tag's water and lands in `q_tag_res`. See
 [`water_tag_microphysics_withheld`](@ref) for the ledger. Where no flag is
-set, every number is the old one, bit for bit.
+set, every number is the old one, bit for bit. The tendency leaves a negative
+rain or snow compartment unflagged where its parts follow it
+([`water_tag_follows_negative`](@ref)).
 """
 @inline function water_tag_microphysics_change(
     F,
@@ -1545,6 +1552,17 @@ default, it also adds the audit's difference to the audit fields
 negative, the transfers into it take the target's treatment, and the ledgers
 `q_tag_exp_negative` and `q_tag_exp_negative_precip` take what it keeps.
 
+Negative rain or snow whose partition's sum is negative too, not mostly by
+cancellation, is the exception ([`water_tag_follows_negative`](@ref)). Its
+parts follow it: the compartment is not flagged negative, and each tag takes
+its signed share of it, its part over the partition's sum
+([`water_tag_negative_share`](@ref)). The partition's shares sum to one, so
+the parts' sum changes as the compartment does, and the ledgers take nothing
+of it. The 1-moment tendencies are linear in the content of the compartment a
+flow leaves, and the parts' rows of the Jacobian are the species' own, so the
+parts also follow it in the Newton solve. Elsewhere a negative compartment
+keeps the target's treatment.
+
 Called beside `microphysics_tendency!`, on the implicit path or the explicit
 one, whichever the model uses. The microphysics keeps `ρq_tot`, so the
 applied-update event around it moves nothing. A no-op without the key.
@@ -1573,12 +1591,54 @@ function _water_tag_precipitation_microphysics_tendency!(
     ᶜqR = @. lazy(max(specific(Y.c.ρq_rai, Y.c.ρ), 0))
     ᶜqS = @. lazy(max(specific(Y.c.ρq_sno, Y.c.ρ), 0))
     ᶜpools = (; N = ᶜqN, R = ᶜqR, S = ᶜqS)
-    # Which compartments are negative at this state, `±0` not.
-    ᶜnegative = water_tag_negative_compartments(Y.c)
+    # Where rain or snow is negative and so is the partition's sum of it, not
+    # mostly by cancellation, the parts follow it. The compartment is then not
+    # flagged negative, and each tag takes its signed share of it.
+    (; ᶜtagging_q_pos_rai, ᶜtagging_q_neg_rai) = p.scratch
+    (; ᶜtagging_q_pos_sno, ᶜtagging_q_neg_sno) = p.scratch
+    _fill_water_tag_part_sums!(
+        ᶜtagging_q_pos_rai,
+        ᶜtagging_q_neg_rai,
+        Y.c,
+        model.tags,
+        RainPart(),
+    )
+    _fill_water_tag_part_sums!(
+        ᶜtagging_q_pos_sno,
+        ᶜtagging_q_neg_sno,
+        Y.c,
+        model.tags,
+        SnowPart(),
+    )
+    ᶜfollowR = @. lazy(
+        water_tag_follows_negative(
+            Y.c.ρq_rai,
+            ᶜtagging_q_pos_rai,
+            ᶜtagging_q_neg_rai,
+        ),
+    )
+    ᶜfollowS = @. lazy(
+        water_tag_follows_negative(
+            Y.c.ρq_sno,
+            ᶜtagging_q_pos_sno,
+            ᶜtagging_q_neg_sno,
+        ),
+    )
+    # Which compartments are negative at this state, `±0` not, less those
+    # whose parts follow them.
+    (ᶜnegN, ᶜnegR_any, ᶜnegS_any) = water_tag_negative_compartments(Y.c)
+    ᶜnegR = @. lazy(ᶜnegR_any & !ᶜfollowR)
+    ᶜnegS = @. lazy(ᶜnegS_any & !ᶜfollowS)
+    ᶜnegative = (ᶜnegN, ᶜnegR, ᶜnegS)
+    ᶜfollow = (;
+        R = ᶜfollowR,
+        S = ᶜfollowS,
+        sum_R = (@. lazy(ᶜtagging_q_pos_rai + ᶜtagging_q_neg_rai)),
+        sum_S = (@. lazy(ᶜtagging_q_pos_sno + ᶜtagging_q_neg_sno)),
+    )
     (ᶜF, ᶜmp) =
         water_tag_microphysics_inputs!(Y, p, _water_tag_turbconv_model(p.atmos))
     # The ledgers take what a negative compartment keeps, once per cell.
-    (ᶜnegN, ᶜnegR, ᶜnegS) = ᶜnegative
     ᶜwithheldₜ = Yₜ.c.q_tag_exp_negative
     ᶜwithheld_precipₜ = Yₜ.c.q_tag_exp_negative_precip
     @. ᶜwithheldₜ +=
@@ -1597,6 +1657,7 @@ function _water_tag_precipitation_microphysics_tendency!(
         ᶜmp,
         ᶜpools,
         ᶜnegative,
+        ᶜfollow,
         eltype(Y.c.ρ)(float(p.dt)),
         Val(has_water_tag_precipitation_audit(model)),
         model.tags,
@@ -1616,6 +1677,65 @@ water_tag_negative_compartments(ᶜY) = (
     (@. lazy(ᶜY.ρq_sno < 0)),
 )
 
+"""
+    water_tag_follows_negative(ρq_parent, pos, neg)
+
+Whether the parts of a negative rain or snow compartment follow it under the
+microphysics ([`water_tag_precipitation_microphysics_tendency!`](@ref)). `pos`
+and `neg` are the sums of the partition's non-negative and negative parts of
+it. The compartment `ρq_parent` is below zero, and so is the partition's sum,
+`pos + neg`, with at least half the parts' absolute sum, `pos - neg`: `pos` is
+at most `-neg / 3`. The partition's signed shares
+([`water_tag_negative_share`](@ref)) then sum to one, and none lies outside
+`[-1, 2]`.
+"""
+@inline water_tag_follows_negative(ρq_parent, pos, neg) =
+    (ρq_parent < zero(ρq_parent)) & (pos + neg < zero(pos)) & (3 * pos <= -neg)
+
+"""
+    water_tag_negative_share(ρq_part, sum)
+
+A region tag's signed share of a negative compartment whose parts follow it:
+its part over the partition's sum `sum`. Where `sum` partitions the
+compartment, each part's change is then the compartment's change times the
+part over the compartment, as the operator's would be. Zero where `sum` is not
+below zero.
+"""
+@inline water_tag_negative_share(ρq_part, sum) =
+    sum < zero(sum) ? ρq_part / sum : zero(ρq_part)
+
+"""
+    water_tag_source_negative_share(ρq_part, ρq_parent)
+
+A source tag's share of a negative compartment: its part over the compartment,
+clamped to `[0, 1]`. Zero where the compartment is not below zero.
+"""
+@inline water_tag_source_negative_share(ρq_part, ρq_parent) =
+    water_tag_fraction(-ρq_part, -ρq_parent)
+
+# The sums of the partition's non-negative and negative parts of a compartment.
+function _fill_water_tag_part_sums!(ᶜpos, ᶜneg, ᶜY, tags, part)
+    ᶜpos .= zero(eltype(ᶜpos))
+    ᶜneg .= zero(eltype(ᶜneg))
+    _accumulate_part_pos!(ᶜpos, ᶜY, tags, part)
+    _accumulate_part_neg!(ᶜneg, ᶜY, tags, part)
+    return nothing
+end
+
+# A tag's share of rain or snow for the microphysics: its signed share where
+# the compartment's parts follow it, and its share of the compartment
+# elsewhere. `ᶜsum` is the partition's sum of the compartment.
+function _water_tag_microphysics_share(ᶜY, scratch, tag, part, ᶜfollow, ᶜsum)
+    ᶜshare = water_tag_part_share(ᶜY, scratch, tag, part)
+    ᶜρq_part = water_tag_part_field(ᶜY, tag, part)
+    ᶜparent = water_tag_part_parent(ᶜY, part)
+    ᶜnegative_share =
+        _is_partition_tag(tag) ?
+        (@. lazy(water_tag_negative_share(ᶜρq_part, ᶜsum))) :
+        (@. lazy(water_tag_source_negative_share(ᶜρq_part, ᶜparent)))
+    return @. lazy(ifelse(ᶜfollow, ᶜnegative_share, ᶜshare))
+end
+
 _microphysics_of_water_tag_parts!(
     ᶜYₜ,
     ᶜY,
@@ -1624,6 +1744,7 @@ _microphysics_of_water_tag_parts!(
     ᶜmp,
     ᶜpools,
     ᶜnegative,
+    ᶜfollow,
     Δt,
     audit::Val,
     ::Tuple{},
@@ -1636,6 +1757,7 @@ function _microphysics_of_water_tag_parts!(
     ᶜmp,
     ᶜpools,
     ᶜnegative,
+    ᶜfollow,
     Δt,
     audit::Val{with_audit},
     tags::Tuple,
@@ -1643,8 +1765,22 @@ function _microphysics_of_water_tag_parts!(
     tag = first(tags)
     (ᶜnegN, ᶜnegR, ᶜnegS) = ᶜnegative
     ᶜφN = water_tag_part_share(ᶜY, scratch, tag, NonPrecipitatingPart())
-    ᶜφR = water_tag_part_share(ᶜY, scratch, tag, RainPart())
-    ᶜφS = water_tag_part_share(ᶜY, scratch, tag, SnowPart())
+    ᶜφR = _water_tag_microphysics_share(
+        ᶜY,
+        scratch,
+        tag,
+        RainPart(),
+        ᶜfollow.R,
+        ᶜfollow.sum_R,
+    )
+    ᶜφS = _water_tag_microphysics_share(
+        ᶜY,
+        scratch,
+        tag,
+        SnowPart(),
+        ᶜfollow.S,
+        ᶜfollow.sum_S,
+    )
     ᶜdq_rai_dt = ᶜmp.dq_rai_dt
     ᶜdq_sno_dt = ᶜmp.dq_sno_dt
     (ᶜqN, ᶜqR, ᶜqS) = (ᶜpools.N, ᶜpools.R, ᶜpools.S)
@@ -1690,6 +1826,7 @@ function _microphysics_of_water_tag_parts!(
         ᶜmp,
         ᶜpools,
         ᶜnegative,
+        ᶜfollow,
         Δt,
         audit,
         Base.tail(tags),

@@ -8,11 +8,12 @@ own. It checks that the partition stays bounded over the hour on the DYCOMS
 RF02 EDMF column, and prints the closing ledger.
 
 The file also builds the column with the parts following the increment,
-`tracer_upwinding: first_order` and no SGS quadrature, another model type.
-There each part's explicit advection is linear, so the closing ledger is at
-rounding, and the non-precipitating parts' column total is the parent's less
-the follower's left part. The flows' nets are checked against the model's on
-the branch without quadrature. The rest, with quadrature, is in
+`tracer_upwinding: first_order`, no SGS quadrature and rain at the default
+fixed speed, another model type. There each part's explicit advection is
+linear, and the parts follow the negative rain that the stages leave at the
+rain's top, so the closing ledger is at rounding, and the non-precipitating
+parts' column total is the parent's less the follower's left part. The flows'
+nets are checked against the model's on the branch without quadrature. The rest, with quadrature, is in
 `tagged_water_precipitation_edmf_integration.jl`.
 =#
 using Test
@@ -78,6 +79,7 @@ end
         Dict{String, Any}(
             "tracer_upwinding" => "first_order",
             "use_sgs_quadrature" => false,
+            "rain_terminal_velocity" => "Fixed",
         ),
     )
     simulation = build(config, "water_tags_precipitation_edmf_first_order")
@@ -98,11 +100,12 @@ end
     left = sum(Y.c.q_tag_inc_left)
     @info "The parts under EDMF with first-order upwinding after an hour" led_close led_close_gross sampled_precipitation column_precipitation result N_gap N_gross left
     # The closing ledger at rounding: every operator of the parts sums to the
-    # species' where the parent holds rain.
-    # With the parts' cross blocks summing to the species' at every cell, the
-    # closing step books rounding only: 4.4e-15 kg m⁻² gross over the hour on
-    # this column without quadrature, against 0.028 kg m⁻² of sampled
-    # precipitation. The bound leaves a factor of 600.
+    # species' where the parent holds rain, and where a Newton stage holds
+    # negative rain the parts follow it. The rain falls at the default fixed
+    # speed. The IMEX stages then drain the rain's top cell below zero twice in
+    # the hour, and the implicit microphysics changes that negative rain. The
+    # closing step books 6.5e-18 kg m⁻² gross over the hour on this column
+    # without quadrature, against 0.030 kg m⁻² of sampled precipitation.
     @test led_close_gross <= 1e-10 * sampled_precipitation
     @test result.rain < 1e-12
     # The non-precipitating parts' column total is the parent's less the
