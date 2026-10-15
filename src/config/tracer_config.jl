@@ -137,6 +137,48 @@ function parse_smoothing_width(spec, context, ::Type{FT}) where {FT}
 end
 
 # ============================================================================
+# Flags and levels
+# ============================================================================
+
+"""
+    bool_from_config(value, key; default::Bool)
+
+Read the flag `key` as a `Bool`. `~` gives `default`. Anything other than
+`true` or `false` is an error, so that a quoted `"true"` cannot silently read as
+`false`, nor a quoted `"false"` as `true`.
+"""
+function bool_from_config(value, key; default::Bool)
+    isnothing(value) && return default
+    value isa Bool ||
+        error("`$key` must be `true` or `false`, got $(repr(value)).")
+    return value
+end
+
+"""
+    nonnegative_from_config(value, context, key, FT; hint)
+
+Read the level `key` as an `FT`, erroring if it is negative. `context` names
+the block, and `hint` ends the error message with what to do instead.
+"""
+function nonnegative_from_config(value, context, key, ::Type{FT}; hint) where {FT}
+    x = FT(value)
+    x >= 0 || error("$context `$key` must not be negative, got $x. $hint")
+    return x
+end
+
+"""
+    positive_from_config(value, context, key, FT; hint)
+
+Read the level `key` as an `FT`, erroring unless it is positive. `context` names
+the block, and `hint` ends the error message with what to do instead.
+"""
+function positive_from_config(value, context, key, ::Type{FT}; hint) where {FT}
+    x = FT(value)
+    x > 0 || error("$context `$key` must be positive, got $x. $hint")
+    return x
+end
+
+# ============================================================================
 # Tag regions
 # ============================================================================
 
@@ -1103,18 +1145,14 @@ negative.
 """
 negative_water_void_above_from_config(::Nothing, context, ::Type{FT}) where {FT} =
     nothing
-function negative_water_void_above_from_config(
-    value,
-    context,
-    ::Type{FT},
-) where {FT}
-    level = FT(value)
-    level >= 0 || error(
-        "$context `negative_water_void_above` must not be negative, got \
-        $level. Use `~` to switch the flag off.",
+negative_water_void_above_from_config(value, context, ::Type{FT}) where {FT} =
+    nonnegative_from_config(
+        value,
+        context,
+        "negative_water_void_above",
+        FT;
+        hint = "Use `~` to switch the flag off.",
     )
-    return level
-end
 
 """
     closure_tolerance_from_config(value, context, FT)
@@ -1125,14 +1163,15 @@ Read the `tolerance` entry of a closure-check block, as an `FT` or `nothing`.
 closure_tolerance_from_config(::Nothing, context, ::Type{FT}) where {FT} =
     nothing
 
-function closure_tolerance_from_config(value, context, ::Type{FT}) where {FT}
-    tolerance = FT(value)
-    tolerance >= 0 || error(
-        "$context `tolerance` must not be negative, got $tolerance. It is \
-        compared against the absolute value of the relative residual.",
+closure_tolerance_from_config(value, context, ::Type{FT}) where {FT} =
+    nonnegative_from_config(
+        value,
+        context,
+        "tolerance",
+        FT;
+        hint = "It is compared against the absolute value of the relative \
+        residual.",
     )
-    return tolerance
-end
 
 """
     energy_source_closure_check_from_config(value, entries, FT)
@@ -1214,10 +1253,12 @@ function closure_throughput_tolerance_from_config(
     ::Type{FT},
     ledger_per_tag,
 ) where {FT}
-    level = FT(value)
-    level > 0 || error(
-        "$context `throughput_tolerance` must be positive, got $level. Use `~` \
-        for no level.",
+    level = positive_from_config(
+        value,
+        context,
+        "throughput_tolerance",
+        FT;
+        hint = "Use `~` for no level.",
     )
     ledger_per_tag || error(
         "$context `throughput_tolerance` compares the gross residual with the \
@@ -1255,14 +1296,14 @@ configured that way would die at the first check whatever its residual was, and
 closure_abort_above_from_config(::Nothing, context, ::Type{FT}) where {FT} =
     nothing
 
-function closure_abort_above_from_config(value, context, ::Type{FT}) where {FT}
-    abort_above = FT(value)
-    abort_above > 0 || error(
-        "$context `abort_above` must be positive, got $abort_above. Use `~` to \
-        keep warning without ever ending the run.",
+closure_abort_above_from_config(value, context, ::Type{FT}) where {FT} =
+    positive_from_config(
+        value,
+        context,
+        "abort_above",
+        FT;
+        hint = "Use `~` to keep warning without ever ending the run.",
     )
-    return abort_above
-end
 
 """
     closure_void_above_from_config(value, context, FT)
@@ -1274,14 +1315,14 @@ Read the `void_above` entry of a closure-check block, as an `FT` or `nothing`.
 closure_void_above_from_config(::Nothing, context, ::Type{FT}) where {FT} =
     nothing
 
-function closure_void_above_from_config(value, context, ::Type{FT}) where {FT}
-    void_above = FT(value)
-    void_above > 0 || error(
-        "$context `void_above` must be positive, got $void_above. Use `~` for \
-        no void level.",
+closure_void_above_from_config(value, context, ::Type{FT}) where {FT} =
+    positive_from_config(
+        value,
+        context,
+        "void_above",
+        FT;
+        hint = "Use `~` for no void level.",
     )
-    return void_above
-end
 
 """
     closure_checks_from_config(config::AtmosConfig)
@@ -1466,14 +1507,8 @@ source tags non-negative where their total is positive; `false` leaves them as
 the attribution rule and their transport make them. Anything else is an error,
 so that a quoted `"false"` cannot silently read as on.
 """
-function energy_source_repair_from_config(value)
-    isnothing(value) && return true
-    value isa Bool || error(
-        "`energy_source_tag_repair` must be `true` or `false`, got \
-        $(repr(value)).",
-    )
-    return value
-end
+energy_source_repair_from_config(value) =
+    bool_from_config(value, "energy_source_tag_repair"; default = true)
 
 """
     energy_source_transport_from_config(value)
@@ -1504,14 +1539,8 @@ Parse `energy_source_tag_updraft_copy`. `false`, the default, and `~` give the
 energy source tags no copy in the updrafts; `true` gives them one. Anything
 else is an error, so that a quoted `"true"` cannot silently read as off.
 """
-function energy_source_updraft_copy_from_config(value)
-    isnothing(value) && return false
-    value isa Bool || error(
-        "`energy_source_tag_updraft_copy` must be `true` or `false`, got \
-        $(repr(value)).",
-    )
-    return value
-end
+energy_source_updraft_copy_from_config(value) =
+    bool_from_config(value, "energy_source_tag_updraft_copy"; default = false)
 
 """
     check_energy_source_updraft_copy_supported(turbconv)
@@ -1538,14 +1567,12 @@ the tags close. That is 2M and P3, and 1M under `use_auto_jacobian: true`.
 quoted `"true"` cannot silently read as off. See
 `check_energy_source_increment_microphysics_supported`.
 """
-function energy_source_increment_explicit_microphysics_from_config(value)
-    isnothing(value) && return false
-    value isa Bool || error(
-        "`energy_source_tag_increment_allow_explicit_microphysics` must be \
-        `true` or `false`, got $(repr(value)).",
+energy_source_increment_explicit_microphysics_from_config(value) =
+    bool_from_config(
+        value,
+        "energy_source_tag_increment_allow_explicit_microphysics";
+        default = false,
     )
-    return value
-end
 
 """
     SEDIMENTING_MICROPHYSICS_MODELS
@@ -1817,14 +1844,8 @@ Parse `water_tag_updraft_copy`. `false`, the default, and `~` give the water
 tags no copy in the updrafts; `true` gives them one. Anything else is an
 error, so that a quoted `"true"` cannot silently read as off.
 """
-function water_tag_updraft_copy_from_config(value)
-    isnothing(value) && return false
-    value isa Bool || error(
-        "`water_tag_updraft_copy` must be `true` or `false`, got \
-        $(repr(value)).",
-    )
-    return value
-end
+water_tag_updraft_copy_from_config(value) =
+    bool_from_config(value, "water_tag_updraft_copy"; default = false)
 
 """
     water_tag_transport_from_config(value, default = TracerWaterTagTransport())
@@ -1918,12 +1939,8 @@ Parse `water_tag_ledger_per_tag` or `energy_source_tag_ledger_per_tag`, named by
 tag its own state ledgers of the corrections. Anything else is an
 error, so that a quoted `"true"` cannot silently read as off.
 """
-function tag_ledger_per_tag_from_config(value, key)
-    isnothing(value) && return false
-    value isa Bool ||
-        error("`$key` must be `true` or `false`, got $(repr(value)).")
-    return value
-end
+tag_ledger_per_tag_from_config(value, key) =
+    bool_from_config(value, key; default = false)
 
 """
     check_water_tag_leak_correction_supported(parsed_args, microphysics_model)
@@ -2051,13 +2068,15 @@ function AtmosTagging(config::AtmosConfig)
         get(config.parsed_args, "water_tag_ledger_per_tag", false),
         "water_tag_ledger_per_tag",
     )
-    water_leak_correction = tag_ledger_per_tag_from_config(
+    water_leak_correction = bool_from_config(
         get(config.parsed_args, "water_tag_leak_correction", false),
-        "water_tag_leak_correction",
+        "water_tag_leak_correction";
+        default = false,
     )
-    water_rainout_jacobian = tag_ledger_per_tag_from_config(
+    water_rainout_jacobian = bool_from_config(
         get(config.parsed_args, "water_tag_rainout_jacobian", false),
-        "water_tag_rainout_jacobian",
+        "water_tag_rainout_jacobian";
+        default = false,
     )
     water_tagging_model = if isnothing(water_entries) || isempty(water_entries)
         water_precipitation && error(
