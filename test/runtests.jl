@@ -80,6 +80,7 @@ if TEST_GROUP in ("infrastructure", "all")
     @safetestset "Grids" begin @time include("grids.jl") end
     @safetestset "Utilities" begin @time include("utilities.jl") end
     @safetestset "Variable manipulations" begin @time include("variable_manipulations_tests.jl") end
+    @safetestset "Data layout property names" begin @time include("datalayout_property_names_tests.jl") end
     @safetestset "Tracer processes" begin @time include("tracer_processes_tests.jl") end
     @safetestset "Tagged tracers" begin @time include("tagged_tracers_tests.jl") end
     @safetestset "Tagged water" begin @time include("tagged_water_tests.jl") end

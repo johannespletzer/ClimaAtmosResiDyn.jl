@@ -39,10 +39,14 @@ end
     # before Julia 1.9, so naming the missing packages one by one does not end.
     # 0.8.16 resolved the environment through Pkg instead, and 0.8.18 skips such a
     # weak dependency (Aqua #400). The bound is upstream's since v0.42.11.
+    # The fork gives `propertynames` a method for ClimaCore's data layouts with
+    # a `NamedTuple` element type (src/utils/datalayout_property_names.jl).
+    # It is piracy by design, so the data layout type is treated as owned.
     Aqua.test_all(
         ClimaAtmos;
         persistent_tasks = true,
         stale_deps = !in_downgrade_ci,
+        piracies = (; treat_as_own = [ClimaAtmos.DataLayouts.DataLayout]),
     )
 end
 
