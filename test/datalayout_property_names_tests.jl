@@ -80,11 +80,19 @@ const name_walks = (
     CA.advected_sgs_scalar_names,
 )
 
-const field_counts = (31, 38, 54)
+# 32 is the first count at which Julia's `filter` builds its tuple at run time.
+const field_counts = (31, 32, 38, 54)
+
+# On Julia 1.10 these walks do not infer a concrete return type at any field
+# count, 31 included, with or without the fork's method. Their answers and
+# allocation still hold. `@test_broken` reports it if 1.10 starts inferring them.
+const walks_not_inferred_on_1_10 =
+    (CA.gs_tracer_names, CA.specific_gs_tracer_names, CA.passive_gs_tracer_names)
+const float_types = (Float32, Float64)
 
 @testset "answers equal ClimaCore's rule" begin
-    for n in field_counts
-        Y = property_names_state(n)
+    for FT in float_types, n in field_counts
+        Y = property_names_state(n; FT)
         data = Fields.field_values(Y.c)
         T = eltype(data)
         @test propertynames(data) == climacore_names(data)
@@ -115,9 +123,9 @@ end
     end
 end
 
-@testset "no allocation and inferred at 31, 38 and 54 fields" begin
-    for n in field_counts
-        Y = property_names_state(n)
+@testset "no allocation and inferred at 31, 32, 38 and 54 fields" begin
+    for FT in float_types, n in field_counts
+        Y = property_names_state(n; FT)
         @test length(propertynames(Y.c)) == n - 1
         updraft = Y.c.sgsʲs.:(1)
         @test (@inferred updraft_lookups(updraft)) isa Tuple
@@ -127,7 +135,14 @@ end
             @test (@inferred lookups(state)) isa Tuple
             @test call_allocations(lookups, state) == 0
             for walk in name_walks
-                @test call_allocations(walk, state) == 0
+                @testset "$walk, $n fields, $FT, $(nameof(typeof(state)))" begin
+                    if VERSION < v"1.11" && walk in walks_not_inferred_on_1_10
+                        @test_broken (@inferred walk(state)) isa Tuple
+                    else
+                        @test (@inferred walk(state)) isa Tuple
+                    end
+                    @test call_allocations(walk, state) == 0
+                end
             end
         end
     end

@@ -41,13 +41,24 @@ end
     # weak dependency (Aqua #400). The bound is upstream's since v0.42.11.
     # The fork gives `propertynames` a method for ClimaCore's data layouts with
     # a `NamedTuple` element type (src/utils/datalayout_property_names.jl).
-    # It is piracy by design, so the data layout type is treated as owned.
+    # It is piracy by design, so the data layout type is treated as owned. The
+    # testset below holds the exception to that one method.
     Aqua.test_all(
         ClimaAtmos;
         persistent_tasks = true,
         stale_deps = !in_downgrade_ci,
         piracies = (; treat_as_own = [ClimaAtmos.DataLayouts.DataLayout]),
     )
+end
+
+# Aqua exempts the whole data layout type, so another method on it would pass
+# `test_all` unseen. Without the exemption, the only piracy must be the fork's
+# `propertynames` method. `Aqua.Piracy.hunt` is what `test_piracies` calls.
+@testset "Aqua: the one intended piracy" begin
+    pirates = Aqua.Piracy.hunt(ClimaAtmos)
+    @test length(pirates) == 1
+    @test only(pirates).name === :propertynames
+    @test endswith(string(only(pirates).file), "datalayout_property_names.jl")
 end
 
 nothing
