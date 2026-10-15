@@ -1067,6 +1067,76 @@ end
     @test Yₜ.c.ρq_tag_low[1] + Yₜ.c.ρq_tag_high[1] ≈ -1e-6 rtol = 1e-12
     @test Yₜ.c.q_tag_exp_negative_precip[1] == 1e-6
     @test Yₜ.c.q_tag_exp_negative[1] == 0
+
+    # (i) Negative rain or snow whose parts follow it, through the entry
+    # points: held as 1.2 and -0.2 times the compartment by the region tags,
+    # and 0.3 times it by the source tag.
+    function following_cell(ρq_rai, ρq_sno)
+        Y = one_cell(ρq_rai)
+        Y.c.ρq_sno[1] = ρq_sno
+        Y.c.ρq_tag_low[1] = 0.4 * (Y.c.ρq_tot[1] - ρq_rai - ρq_sno)
+        Y.c.ρq_tag_high[1] = 0.6 * (Y.c.ρq_tot[1] - ρq_rai - ρq_sno)
+        for (prefix, ρq) in ((:ρq_rtag_, ρq_rai), (:ρq_stag_, ρq_sno))
+            getproperty(Y.c, Symbol(prefix, :low))[1] = 1.2 * ρq
+            getproperty(Y.c, Symbol(prefix, :high))[1] = -0.2 * ρq
+            getproperty(Y.c, Symbol(prefix, :evap))[1] = 0.3 * ρq
+        end
+        return Y
+    end
+    with_flows(F, dq_rai_dt, dq_sno_dt) = merge(
+        p,
+        (;
+            tagging = (; ᶜwater_mp_flows = [F]),
+            precomputed = (;
+                ᶜmp_tendency = (; dq_rai_dt = [dq_rai_dt], dq_sno_dt = [dq_sno_dt])
+            ),
+        ),
+    )
+    # Negative rain gives `N` water, and takes nothing in. Each part takes
+    # its signed share of the loss, the source tag its clamped share.
+    Yₜ = zero_tendency()
+    CA.water_tag_precipitation_microphysics_tendency!(
+        Yₜ,
+        following_cell(-1e-6, 1e-4),
+        with_flows(flows(RN = Fv), -Fv, 0.0),
+    )
+    @test Yₜ.c.ρq_rtag_low[1] ≈ -1.2 * ρ * Fv rtol = 1e-10
+    @test Yₜ.c.ρq_rtag_high[1] ≈ 0.2 * ρ * Fv rtol = 1e-10
+    @test Yₜ.c.ρq_rtag_evap[1] ≈ -0.3 * ρ * Fv rtol = 1e-10
+    @test Yₜ.c.ρq_tag_low[1] + Yₜ.c.ρq_tag_high[1] ≈ ρ * Fv rtol = 1e-10
+    @test Yₜ.c.q_tag_exp_negative_precip[1] == 0
+    @test Yₜ.c.q_tag_exp_negative[1] == 0
+    # Negative rain takes water in from `N`: the parts take it with its
+    # composition, and the rain parts' sum the whole gain.
+    Yₜ = zero_tendency()
+    CA.water_tag_precipitation_microphysics_tendency!(
+        Yₜ,
+        following_cell(-1e-6, 1e-4),
+        with_flows(flows(NR = Fv), Fv, 0.0),
+    )
+    @test Yₜ.c.ρq_rtag_low[1] + Yₜ.c.ρq_rtag_high[1] ≈ ρ * Fv rtol = 1e-10
+    @test Yₜ.c.ρq_tag_low[1] + Yₜ.c.ρq_tag_high[1] ≈ -ρ * Fv rtol = 1e-10
+    @test Yₜ.c.q_tag_exp_negative_precip[1] == 0
+    # Negative snow the same, beside positive rain.
+    Yₜ = zero_tendency()
+    CA.water_tag_precipitation_microphysics_tendency!(
+        Yₜ,
+        following_cell(1e-4, -1e-6),
+        with_flows(flows(SN = Fv), 0.0, -Fv),
+    )
+    @test Yₜ.c.ρq_stag_low[1] ≈ -1.2 * ρ * Fv rtol = 1e-10
+    @test Yₜ.c.ρq_stag_high[1] ≈ 0.2 * ρ * Fv rtol = 1e-10
+    @test Yₜ.c.ρq_tag_low[1] + Yₜ.c.ρq_tag_high[1] ≈ ρ * Fv rtol = 1e-10
+    @test Yₜ.c.q_tag_exp_negative_precip[1] == 0
+    # The vapour bracket's lift of rain whose parts follow it: the rain parts
+    # take it with the non-precipitating composition, and no ledger takes it.
+    Yₜ = zero_tendency()
+    Yₜ.c.ρq_rai[1] = 1e-6
+    CA.attribute_water_tag_precipitation_tendency!(Yₜ, following_cell(-1e-6, 1e-4), p)
+    @test Yₜ.c.ρq_rtag_low[1] ≈ 0.4e-6 rtol = 1e-10
+    @test Yₜ.c.ρq_rtag_high[1] ≈ 0.6e-6 rtol = 1e-10
+    @test Yₜ.c.ρq_tag_low[1] + Yₜ.c.ρq_tag_high[1] ≈ -1e-6 rtol = 1e-10
+    @test Yₜ.c.q_tag_exp_negative_precip[1] == 0
 end
 
 # Negative rain or snow whose partition's sum is negative too, not mostly by
@@ -1090,6 +1160,12 @@ end
     @test CA.water_tag_source_negative_share(0.1, -1.0) == 0
     @test CA.water_tag_source_negative_share(-2.0, -1.0) == 1
     @test CA.water_tag_source_negative_share(-0.2, 1.0) == 0
+    # The guard bounds the shares to [-1/2, 3/2], also at Float32's subnormal
+    # scale.
+    u = nextfloat(0.0f0)
+    @test CA.water_tag_follows_negative(-u, u, -3u)
+    @test CA.water_tag_negative_share(u, -2u) == -0.5f0
+    @test CA.water_tag_negative_share(-3u, -2u) == 1.5f0
 
     # Rain at -1e-9 per unit mass, held by two tags as -1.2e-9 and 0.2e-9.
     # The microphysics takes the pool at zero. The negative rain gives `N` a
