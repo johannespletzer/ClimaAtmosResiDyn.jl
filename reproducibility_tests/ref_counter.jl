@@ -1,4 +1,4 @@
-419
+432
 
 # **README**
 #
@@ -32,8 +32,51 @@
 # 3) (optional) leave a link to the buildkite run that prompted this ref counter bump.
 
 #=
+432
+- Combine the geometric vertical-displacement SGS variance with the turbulent block as a maximum
+  instead of their sum.
+
+431
+- Fix sgs variance fidelity: estimate qc_eq by using the Gaussian approximation of eq condensate
+- Restore per-subdomain QuadratureCloud: env condensate + EDMF updraft weighting.
+
+430
+- Snow falls at the Chen et al. (2022) speed by default; snow_apparent_density 300
+
+429
+- Local SGS variance fidelity α(TKE, l_mix, τ_mp, q_c/q_c^eq).
+
+428
+- Geometric SGS variance as a conditional parcel displacement on the
+  θ_li surface
+- Update to CloudMicrophysics v0.45 (joint relaxation of the vapor-driven phase changes is the default)
+
+427
+- Change the horizontal geometric SGS variance term to the isentropic form
+
+426
+- Update to CloudMicrophysics v0.44 from v0.43
+
+425
+- Add SGS T–q correlation closure and resolved vertical-gradient variance block.
+
+424
+- Van Leer-limited centered vertical gradients for θ_li and q_tot
+
+423
+- Update to SurfaceFluxes from 1.2.1 to 1.3.0
+
+422
+- Use LumpedRestriction for some horizontal gradients
+
+421
+- Change cloud fraction formulation and default ice depostion scheme
+
+420
+- Remove interface_effective_N² and interface_entrainment_diffusivity (fix GABLS)
+
 419
-- TKE budget fixes; EDMF interface entrainment fix; break local balance in l_TKE
+- Add empirical l_TKE
 
 418
 - Compute the EDMF surface scalar coefficient and other constants in `FT`

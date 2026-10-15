@@ -70,9 +70,9 @@ Under `water_tag_precipitation: true` only `hyperdiff`, `vdiff` and `sponge`
 can be nonzero. There the target is `max(N, 0)`, for
 `N = ρq_tot - ρq_rai - ρq_sno`. See `docs/src/tagged_water_precipitation.md`.
 The copies are refused with the key. Under prognostic EDMF the parts diffuse
-as their compartments, `N` at `K_h + K_e` and rain and snow at `K_e` only,
-which sums to the parent's `K_h q_tot_eff + K_e q_tot`. So `vdiff` reads the
-boundary layer's term only, and `hdiff` reads zero.
+as their compartments, `N` at `K_h` and rain and snow not at all, which sums
+to the parent's `K_h q_tot_eff`. So `vdiff` reads the boundary layer's term
+only, and `hdiff` reads zero.
 """
 function water_tag_leak!(ᶜleak, Y, p, path::Val)
     @. ᶜleak = 0
@@ -160,9 +160,6 @@ function _precipitating_water(Y, p)
     return @. lazy(specific(Y.c.ρq_tot, Y.c.ρ) - ᶜq_tot_eff)
 end
 
-# The closed partition's excess over the parent, `-min(ρq_tot, 0)/ρ`.
-_negative_water(Y) = @. lazy(-water_tag_negative_part(Y.c.ρq_tot) / Y.c.ρ)
-
 # The updraft's counterpart, `q_raiʲ + q_snoʲ - min(q_totʲ, 0)`. The copies'
 # repair aims at `max(q_totʲ, 0)`. Where `q_totʲ` is not negative,
 # `water_tag_negative_part` returns `+0.0`, and subtracting it changes no bit.
@@ -181,22 +178,13 @@ _edmf_diffuses_horizontally(Y, p, ::Union{EDOnlyEDMFX, PrognosticEDMFX}) =
     !iscolumn(axes(Y.c))
 _edmf_diffuses_horizontally(Y, p, turbconv_model) = false
 
-# The EDMF vertical flux diffuses the tags at `K_h + K_e` and the parent at
-# `K_h` on `q_tot_eff` plus `K_e` on `q_tot` (`edmfx_sgs_diffusive_flux_tendency!`).
-# At the target the tags' sum departs from `q_tot_eff` by `_leaking_water` and
-# from `q_tot` by `_negative_water`. The `K_e` term is added only where it is
-# not zero, so where the parent is never negative no bit changes.
+# The EDMF vertical flux diffuses the tags at `K_h` and the parent at `K_h` on
+# `q_tot_eff` (`edmfx_sgs_diffusive_flux_tendency!`). At the target the tags'
+# sum departs from `q_tot_eff` by `_leaking_water`.
 function _add_edmf_vertical_leak!(ᶜleak, Y, p)
     ᶠρK_h = @. lazy(ᶠinterp(Y.c.ρ) * p.precomputed.ᶠK_h)
     ᶜdivergence = ᶜdiffusive_flux_divergenceᵥ(ᶠρK_h, _leaking_water(Y, p))
     @. ᶜleak -= ᶜdivergence / Y.c.ρ
-    ᶠρK_e = @. lazy(ᶠinterp(Y.c.ρ) * p.precomputed.ᶠK_entr)
-    ᶜentrainment = ᶜdiffusive_flux_divergenceᵥ(ᶠρK_e, _negative_water(Y))
-    @. ᶜleak = ifelse(
-        iszero(ᶜentrainment),
-        ᶜleak,
-        ᶜleak - ᶜentrainment / Y.c.ρ,
-    )
     return nothing
 end
 
@@ -352,9 +340,8 @@ _has_water_tag_copies(p, turbconv_model) = false
 Under `water_tag_leak_correction: true`, add to each water tag's tendency
 `∇·(ρK_h ∇(ψᵢ q_p))`, the EDMF vertical diffusion of its share `ψᵢ` of the rain
 and snow `q_p = q_tot - q_tot_eff`. The tags diffuse their whole value at
-`K_h + K_e`, and the parent diffuses `q_tot_eff` at `K_h` and `q_tot` at `K_e`.
-So without the correction the partition gains `-∇·(ρK_h ∇q_p)` that the parent
-does not. Where the parent is never negative, that is the leak
+`K_h`, and the parent diffuses only `q_tot_eff`. So without the correction the
+partition gains `-∇·(ρK_h ∇q_p)` that the parent does not. Where the parent is never negative, that is the leak
 `q_tag_leak_vdiff`. Where it is negative, the leak also holds the diffusion of
 the parent's negative part, which the correction does not take back.
 

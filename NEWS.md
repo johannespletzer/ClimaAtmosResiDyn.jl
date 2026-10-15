@@ -3,6 +3,7 @@ ClimaAtmos.jl Release Notes
 
 main
 ----
+- [#178](https://github.com/johannespletzer/ClimaAtmosResiDyn.jl/pull/178) ![][badge-🔥behavioralΔ] Merge upstream CliMA/ClimaAtmos.jl `main` at `5af1766c` (v0.42.14 plus 11 commits). It brings the geometric SGS variance's isentropic horizontal term, conditional displacement and bounded along-surface depth (#4822, #4887, #4898), the SGS variance fidelity `α` as a cached local field (#4885, #4897), the diagnosed T–q correlation `tq_correlation_model` (#4874), Van Leer-limited vertical gradients of `θ_li` and `q_tot` (#4865), one terminal-velocity key per 1M species with rain at a fixed speed and snow at the Chen et al. (2022) speed by default (#4889), the single-domain cloud cover and the restored per-subdomain closure under EDMF (#4869, #4897), ClimaCore's `LumpedRestriction` for horizontal gradients (#4868), the removal of the interface entrainment diffusivity `K_e` (#4860) and CloudMicrophysics 0.45 with joint relaxation of the vapour-driven phase changes. Compat is now ClimaCore `1.0.3`, ClimaComms `0.6.12`, ClimaDiagnostics `0.3.11`, CloudMicrophysics `0.45`, ClimaParams `1.3`, ClimaUtilities `0.1.33` and UnrolledUtilities `0.1.11`. The ClimaCore v1.0.1 cap below is lifted: upstream requires v1.0.3, and the three allocation checks it guarded pass with v1.0.4 on Julia 1.11 and 1.10. With v1.0.3, the lowest version the compat allows and the one the Downgrade jobs resolve, each read of the environment's `mse` through `ᶜspecific_env_mse` allocates 1024 bytes more, on Julia 1.10 and 1.11 alike, so the energy tags' exchange and sub-grid flux checks allow that on v1.0.3. Model output is bit for bit with upstream at `5af1766c`. It differs from the fork's previous `main`, since the physics changed. The water tags' 1-moment replay takes each process's transfer from CloudMicrophysics' own substep (`BMT._substep_1m`) instead of copying its solver, and reads `ᶜcorr_Tq` and `ᶜα` from the cache. The water tags' leak correction drops its `K_e` term. The fork's tests set `cloud_liquid_terminal_velocity: Stokes` in place of the removed `fixed_terminal_velocity_liquid`. The EDMF precipitation tests set `rain_terminal_velocity: Blk1M` and `snow_terminal_velocity: Fixed`, the regime their bounds were measured in. With the default fixed rain speed the first-order EDMF case's closing ledger is 1.1e-8 kg m⁻² over the hour instead of 4e-15. The parts' tendencies agree with those of `ρq_rai` to rounding, and the closing step books the rest from the rain's top down, where the rain parts above the top are negative and `ρq_rai` is zero.
 - ![][badge-🐛bugfix] Two setup checks of the tag masks now take the largest deviation of the masks' sum from 1 over every process, not over each process's own part of the domain. The energy source tags' check of the exchange at the sub-grid mass flux under `turbconv: prognostic_edmfx` refused only on the processes whose part held the gap, and the others went on and waited for them. The closure diagnostic's partition warning of the energy, water and energy source tags appeared only on some processes. Both now sum the mask fields, so `maximum` reduces across the processes, and every process errors or warns with the same value. Setup checks only: the model's fields are unchanged.
 - ![][badge-✨feature/enhancement] Fork helpers that several files repeated are now one helper each. `src/utils/fork_restart.jl` opens a restart file, restores the void flags and reads a set of checkpoint fields for the tag families and the parent budget. `bool_from_config`, `nonnegative_from_config` and `positive_from_config` parse the tag families' flags and levels. `replace_diagnostic_variable!` registers a diagnostic of the tag families, the process records or the stratospheric tracers in place of an older entry of the same name. The energy source tags' report and four mask partition checks take the largest and smallest value with ClimaCore's `maximum` and `minimum` on a field, which reduce across processes as the removed helpers did. The unused `component_magnitude` is removed. No model field, error or warning text, checkpoint key or config key changes. One thing changes for a user: a second model built in the same process replaces the first model's per-tag and per-process diagnostic entries, where nine registrations kept the first model's entries before.
 - ![][badge-✨feature/enhancement] The rain and snow tags (`water_tag_precipitation: true`) run under `turbconv: prognostic_edmfx` with one updraft and the manual Jacobian's split solver. The microphysics flows are evaluated on each subdomain's state and weighted with the Newton iterate's areas. Each part takes its share of its compartment's SGS mass flux. The rain and snow parts get an exchange of their own from a downward rain and snow plume, diffuse at `K_e` only, and copy their species' Jacobian row with its cross blocks. The diagnostic `q_tag_aud_up_<name>` measures the grid composition the updraft's rain formation takes. The model's fields are unchanged. `edonly_edmfx`, updraft copies and `use_auto_jacobian` or `use_dense_jacobian` under EDMF stay refused. Where the partition holds none of a compartment, whatever the parent's sign at that Newton stage, the parts take the SGS flux and the cross blocks by the non-precipitating composition. The rain and snow plumes carry the updraft's conversions between rain and snow, each at the other plume's composition at the same level. The closing ledger `q_tag_led_close` is not at rounding under EDMF, and the non-precipitating parts carry the van Leer limiter's per-part drift of the rain and snow parts' advection. The feature stays experimental: the plumes and the updraft's microphysics on the grid's composition are approximate donor models, and no test compares the parts with an independent origin solution. Two test groups, `tagging_water_precipitation_edmf` and `tagging_water_precipitation_edmf_tracer`. Their builds pass a GitHub runner's 16 GB, so `ALLOW_FAIL` quarantines them on 1.11, they skip the 1.10 nightly, and a pull request that changes the feature runs them on terrabyte (docs/clima_atmos_specific.md, "Which jobs run when"). See docs/src/tagged_water_precipitation.md.
@@ -136,6 +137,88 @@ main
 - ![][badge-✨feature/enhancement] Add `post_processing/plot_tracer_burdens.jl`, which plots every tracer's burden against time in one panel at 300 dpi. Colour encodes the height box and dash pattern the latitude box, so the legend has `n_latitude + n_height` entries rather than their product — the default configuration carries 48 tracers, which no categorical palette can distinguish. Written automatically by the experiment script and the CI job.
 - ![][badge-✨feature/enhancement] Register the stratospheric passive tracer diagnostics from the model at simulation setup instead of statically at package load. The source-region grid previously had to fit a fixed set of variables registered when ClimaAtmos loaded, which capped it at 12 latitude by 12 height bands; it is now unbounded, and a run that carries no passive tracers no longer pays for their diagnostics. Mirrors how the tagged tracers already register theirs.
 - ![][badge-✨feature/enhancement] Diagnose the WMO lapse-rate (thermal) tropopause online from the model temperature, as the new `ztrop` diagnostic and as the lower boundary of the stratospheric passive tracers. Two column sweeps, so it is GPU-compatible; columns where no tropopause exists fall back to a latitude-dependent climatology.
+- ![][badge-🔥behavioralΔ] The part of the geometric SGS variance block that
+  needs a vertical displacement (the along-surface variance beyond its
+  along-contour part, plus the across-surface uniform-box terms) and the
+  turbulent block's vertical-displacement variance are combined as the larger
+  of the two instead of their sum.
+- ![][badge-🔥behavioralΔ] Cloud fraction: restore the per-subdomain closure
+  for `PrognosticEDMFX`. The `QuadratureCloud` cover is again evaluated with
+  the environment condensate (`_get_condensate_means`, consistent with the
+  env-mean `(T⁰, ρ⁰, q⁰)` used throughout the SGS pipeline), weighted by the
+  environment area fraction, and binary updraft contributions are added
+  (`_apply_edmf_cloud_weighting!`).
+- ![][badge-🔥behavioralΔ] One config key per species selects the sedimentation velocity of the
+  1M microphysics tracers. `DiagnosticTerminalVelocity` is replaced by the closure-named modes
+  `StokesTerminalVelocity`, `Blk1MTerminalVelocity` and `Chen2022TerminalVelocity`.
+- ![][badge-✨feature/enhancement] Adding Chen et al. (2022) fall speeds for rain and snow
+- ![][badge-🔥behavioralΔ] Snow falls at the Chen et al. (2022) speed by default
+  `toml/prognostic_edmfx_1M.toml` sets `snow_apparent_density` to 300 kg/m³.
+   Rain falls at fixed terminal velocity.
+- ![][badge-🔥behavioralΔ] The along-surface depth of the geometric SGS
+  variance block is bounded by the height above the surface,
+  `ℓ_a = min(H, z − z_sfc)`: in a neutral layer the along-surface
+  displacement is the vertical eddy displacement, which cannot reach below
+  the ground.
+- ![][badge-🔥behavioralΔ] Make the SGS variance fidelity `α` a cached
+  per-cell field `α = α_Da · α_eq`, refreshed inside `set_covariance_cache!`:
+  Damköhler factor `α_Da = 1 / (1 + A · τ_mp · c_d · √TKE / max(l_mix, 1 m))`
+  (quiescent → 1, well-mixed → 0) and equilibrium-ratio modulator
+  `α_eq = r / (w + (1−w) r)` with `r = (q_c + q_min)/(q_c^eq + q_min)` and
+  new provisional parameter `sgs_fidelity_equilibrium_weight` (default 0.5).
+  CF uses `σ_aug = sqrt((α σ_S)² + σ_S_floor²)` — α scales only the
+  equilibrium part. Microphysics timescales reuse the ClimaParams
+  `condensation_evaporation_timescale` / `sublimation_deposition_timescale`.
+- ![][badge-🔥behavioralΔ] The resolved-gradient (geometric) SGS variance block
+  is the variance from a Gaussian subgrid parcel displacement with covariance
+  `c_g diag(ℓ_h², ℓ_h², ℓ_v²)`, `ℓ_h = c_Δx Δx_h`, `ℓ_v = H`, split into
+  the part along the local `θ_li` surface (q′q′ only, the conditional variance
+  `gᵀDg − (gᵀDn)²/(nᵀDn)` with `g = ∇q_tot`, `n = ∇θ_li`) and the part across
+  it (the vertical uniform-box terms, with the q gradient taken across the
+  surface).
+- ![][badge-🔥behavioralΔ] Update to CloudMicrophysics v0.45 and use joint
+  relaxation of the vapor-driven phase changes.
+- ![][badge-✨feature/enhancement] Add back CloudMicrophysics v0.43 to the
+  compat.
+- ![][badge-🔥behavioralΔ] The horizontal resolved-gradient (geometric) SGS variance
+  term is now the isentropic form: `q′q′` carries `|∇_h q_tot − r ∇_h θ_li|²`, the
+  gradient of `q_tot` along the `θ_li` surface with `r = (∂q_tot/∂z)/(∂θ_li/∂z)`, the
+  stratification floored at the provisional `sgs_variance_isentropic_min_dtheta_dz`,
+  there is no horizontal `θ′θ′` (or `θ′q′`) term, and the displacement along the surface
+  is bounded by the cell, `ℓ² = Δx² / (1 + (s Δx / Δz)²)` with the surface slope
+  `s = |∇_h θ_li| / ∂_z θ_li`. The `q′q′` and `θ′q′` terms of the vertical uniform-box block are
+  scaled by the same factor, the share of the cell's vertical excursion not already
+  sampled along the surface.
+
+0.42.14
+-------
+- ![][badge-🔥behavioralΔ] Add a resolved vertical-gradient block
+  `c_g (c_Δz Δz)² (∂_z ψ)²` to `σ_T²`, `σ_q²` (uniform-box exact with the
+  defaults `c_g = 1/12`, `c_Δz = 1`; independent of `l_mix`), so the
+  microphysics quadrature sees non-zero variability where the turbulent
+  closure collapses. Set `sgs_variance_vertical_scale_factor = 0` to disable.
+- ![][badge-✨feature/enhancement] New `tq_correlation_model`. `constant`
+  (default) keeps the prescribed `Tq_correlation_coefficient`. `diagnosed`
+  builds `T′q′ = ρ_turb σ_T,turb σ_q,turb + c_g (c_Δx Δx_h)² ∇_h θ · ∇_h q
+  + c_g (c_Δz Δz)² ∂_z θ · ∂_z q` and forms
+  `ρ = clamp(T′q′ / √(T′T′ q′q′), -1, 1)`, falling back to the prescribed
+  value where the variances vanish. Reported via the existing
+  `env_q_tot_temperature_{covariance,correlation}` diagnostics.
+- ![][badge-🔥behavioralΔ] Remove the Richardson-number weight on the
+  horizontal geometric SGS variance term: The
+  `sgs_variance_geometric_Ri_factor` parameter is removed.
+- ![][badge-🔥behavioralΔ] Update to ClimaParams with
+  `sgs_variance_horizontal_scale_factor` default `3.0 → 1.0`.
+- ![][badge-🔥behavioralΔ] Update to CloudMicrophysics v0.44 in compat and manifest.
+
+0.42.13
+-------
+- ![][badge-🔥behavioralΔ] The horizontal-gradient invariants of the geometric SGS
+  variance term (`hgrad_invariant!`) and the TKE shear production from horizontal
+  gradients now use ClimaCore's `LumpedRestriction`: within each element the
+  invariant of the nodal spectral-element gradient is replaced by its lumped GLL{2}
+  restriction, which removes the systematic excess at element-boundary nodes
+  while conserving each element's integral of the invariant.
 - ![][badge-🔥behavioralΔ] Add empirical mixing length `l_TKE = l_0·sqrt(x)·(1+x)·exp(−x)`,
   `x = TKE/(l_inf/tau_eps)^2`, to the mixing-length closure.
 - ![][badge-🔥behavioralΔ] Update to ClimaParams 1.1.16, which provides the

@@ -71,6 +71,8 @@ the valid choices. Each option string names the `CM.Parameters` type it maps to:
   - `cloud_ice_rain_accretion`: `"CloudIceRainAccretion"`.
   - `cloud_ice_snow_accretion`: `"CloudIceSnowAccretion"`.
   - `rain_snow_accretion`: `"RainSnowAccretion"`.
+  - `vapor_relaxation`: `"Joint"` (default) or `"PerProcess"`, the coupling of the
+    vapor-driven phase changes in the `LinearizedAverage` substep solver (not a process; cannot be `~`).
 """
 function get_microphysics_1m_options(parsed_args)
     CMP = CM.Parameters
@@ -195,6 +197,14 @@ function get_microphysics_1m_options(parsed_args)
         "rain_snow_accretion",
     )
 
+    vapor_relaxation = parse_option(
+        parsed_args["vapor_relaxation"],
+        Dict(
+            "Joint" => CMP.JointVaporRelaxation(),
+            "PerProcess" => CMP.PerProcessVaporRelaxation(),
+        ),
+        "vapor_relaxation",
+    )
     return (;
         n_substeps,
         n_substeps_quad,
@@ -212,6 +222,7 @@ function get_microphysics_1m_options(parsed_args)
         cloud_ice_rain_accretion,
         cloud_ice_snow_accretion,
         rain_snow_accretion,
+        vapor_relaxation,
     )
 end
 
@@ -1109,21 +1120,42 @@ end
 # Each consolidates the YAML→typed-object translation for one group.
 
 """
+    get_tq_correlation_model(parsed_args)
+
+Return the `AbstractTqCorrelationModel` selected by the `tq_correlation_model` config
+key: `"constant"` → `ConstantTqCorrelation()` (default), `"diagnosed"` → `DiagnosedTqCorrelation()`.
+"""
+function get_tq_correlation_model(parsed_args)
+    return parse_option(
+        get(parsed_args, "tq_correlation_model", "constant"),
+        Dict(
+            "constant" => ConstantTqCorrelation(),
+            "diagnosed" => DiagnosedTqCorrelation(),
+        ),
+        "tq_correlation_model",
+    )
+end
+
+"""
     AtmosWater(config::AtmosConfig, params, ::Type{FT}) where {FT}
 
 Assemble the `AtmosWater` group from a configuration.
 
 Combines `get_microphysics_model`, `get_cloud_model`, `get_sgs_quadrature`, and
 `get_tracer_nonnegativity_method`, and reads `implicit_microphysics` (which selects
-`Implicit` or `Explicit` microphysics timestepping) and `fixed_terminal_velocity`
-(which selects `FixedTerminalVelocity` with the four fixed fall speeds from `params`,
-or `DiagnosticTerminalVelocity`). Errors when 0-moment microphysics is requested
-without `use_sgs_quadrature`, and warns when the run is dry.
+`Implicit` or `Explicit` microphysics timestepping) and the four terminal velocity
+keys, each mapped to its `AbstractTerminalVelocityMode` with `parse_option`:
+`cloud_liquid_terminal_velocity` (`Fixed`, `Stokes`), `cloud_ice_terminal_velocity`
+(`Fixed`, `Chen2022`), `rain_terminal_velocity` and `snow_terminal_velocity` (`Fixed`,
+`Blk1M`, `Chen2022`); `Fixed` uses the fixed fall speed of the species from `params`.
+Errors when 0-moment microphysics is requested without `use_sgs_quadrature`, and
+warns when the run is dry.
 """
 function AtmosWater(config::AtmosConfig, params, ::Type{FT}) where {FT}
     pa = config.parsed_args
     microphysics_model = get_microphysics_model(pa)
     sgs_quadrature = get_sgs_quadrature(pa, params)
+    tq_correlation_model = get_tq_correlation_model(pa)
 
     if microphysics_model isa DryModel
         @warn "Running simulations without any moisture present."
@@ -1137,18 +1169,25 @@ function AtmosWater(config::AtmosConfig, params, ::Type{FT}) where {FT}
 
     cloud_model = get_cloud_model(pa, params)
 
-    terminal_velocity_liquid =
-        pa["fixed_terminal_velocity_liquid"] ?
-        FixedTerminalVelocity() : DiagnosticTerminalVelocity()
-    terminal_velocity_ice =
-        pa["fixed_terminal_velocity_ice"] ?
-        FixedTerminalVelocity() : DiagnosticTerminalVelocity()
+    terminal_velocity_liquid = parse_option(
+        pa["cloud_liquid_terminal_velocity"],
+        Dict("Fixed" => FixedTerminalVelocity(), "Stokes" => StokesTerminalVelocity()),
+        "cloud_liquid_terminal_velocity",
+    )
+    terminal_velocity_ice = parse_option(
+        pa["cloud_ice_terminal_velocity"],
+        Dict("Fixed" => FixedTerminalVelocity(), "Chen2022" => Chen2022TerminalVelocity()),
+        "cloud_ice_terminal_velocity",
+    )
+    precip_modes = Dict(
+        "Fixed" => FixedTerminalVelocity(),
+        "Blk1M" => Blk1MTerminalVelocity(),
+        "Chen2022" => Chen2022TerminalVelocity(),
+    )
     terminal_velocity_rain =
-        pa["fixed_terminal_velocity_rain"] ?
-        FixedTerminalVelocity() : DiagnosticTerminalVelocity()
+        parse_option(pa["rain_terminal_velocity"], precip_modes, "rain_terminal_velocity")
     terminal_velocity_snow =
-        pa["fixed_terminal_velocity_snow"] ?
-        FixedTerminalVelocity() : DiagnosticTerminalVelocity()
+        parse_option(pa["snow_terminal_velocity"], precip_modes, "snow_terminal_velocity")
 
     implicit_microphysics = pa["implicit_microphysics"]
 
@@ -1159,6 +1198,7 @@ function AtmosWater(config::AtmosConfig, params, ::Type{FT}) where {FT}
                                              Explicit(),
         tracer_nonnegativity_method = get_tracer_nonnegativity_method(pa),
         sgs_quadrature,
+        tq_correlation_model,
         terminal_velocity_liquid,
         terminal_velocity_ice,
         terminal_velocity_rain,

@@ -176,8 +176,6 @@ parameters are in `SGSQuadratureParameters`. `FT` is the float type; `VFT1`, `VF
     detrainment [1/s].
   - `max_area_limiter_power`: Exponent of the maximum-area limiter [-].
   - `cloud_fraction_param_vec`: Data-driven cloud-fraction parameter vector [-].
-  - `interface_entr_efficiency`: Entrainment efficiency `A` in the interfacial
-    entrainment diffusivity `K_e = γ w_e Δz` [-].
   - `sfc_mass_flux_ustar_coeff`: Coefficient `c_u` weighting the
     friction-velocity contribution in the surface mass-flux blend [-].
   - `convective_zi`: Prescribed convective boundary-layer depth `z_i` used in the
@@ -224,7 +222,6 @@ Base.@kwdef struct TurbulenceConvectionParameters{FT, VFT1, VFT2, VTF3} <: ATCP
     max_area_limiter_scale::FT
     max_area_limiter_power::FT
     cloud_fraction_param_vec::VTF3
-    interface_entr_efficiency::FT
     # Surface mass flux closure (`set_edmfx_surface_conditions!`).
     sfc_mass_flux_ustar_coeff::FT
     convective_zi::FT
@@ -248,32 +245,45 @@ not yet define.
 
   - `diagnostic_covariance_coeff`: Prefactor of the turbulent production term in
     the diagnostic covariance closure [-].
-  - `sgs_variance_geometric_coeff`: Coefficient `c_g` of the horizontal
-    resolved-gradient SGS variance term, `variance += c_g (c_Δx Δx_h)^2 |∇_h ψ|^2`,
-    added to the diagnostic `θ′θ′` and `q′q′` that feed the SGS quadrature.
+  - `sgs_variance_geometric_coeff`: Coefficient `c_g` of the resolved-gradient
+    SGS variance block, the variance from a subgrid parcel displacement with
+    covariance `c_g diag(ℓ_h², ℓ_h², ℓ_v²)` on the local `θ_li` surface, added
+    to the diagnostic `θ′θ′`, `q′q′` and `θ′q′` that feed the SGS quadrature.
     `1/12` is the variance of a linear field over a uniform cell [-].
-  - `sgs_variance_horizontal_scale_factor`: Multiplier `c_Δx` on the horizontal grid
-    scale `Δx_h` in the geometric variance term; the effective horizontal
-    coefficient is `c_g c_Δx^2`. `0` disables the term [-].
+  - `sgs_variance_horizontal_scale_factor`: Multiplier `c_Δx` on the horizontal
+    grid scale, `ℓ_h = c_Δx Δx_h`. `0` turns the horizontal displacement
+    off [-].
+  - `sgs_variance_vertical_scale_factor`: Multiplier `c_Δz` on the vertical grid
+    scale, `ℓ_v = c_Δz Δz`. `1` gives the uniform-box result
+    `(Δz · ∂_z ψ)^2 / 12` for a flat surface; `0` turns the vertical
+    displacement off [-].
+  - `sgs_variance_isentropic_depth`: Depth `H` of the unresolved slantwise
+    motion, the vertical scale of the displacement along the `θ_li` surface in
+    the geometric variance block (`along_surface_q_variance`); must be
+    positive [m].
   - `sgs_variance_max_rel_std`: Upper bound on the SGS total-water standard
     deviation relative to the grid-mean total water, `σ_q ≤ sgs_variance_max_rel_std * q_tot`,
     applied to the diagnosed `q′q′` whatever closure produced it. A wider variance puts a quadrature node
     at negative total water; `0.5` keeps all nodes non-negative [-].
-  - `sgs_variance_geometric_Ri_factor`: Factor `k` in `Ri₀ = k Ri_crit`, the scale of the
-    Richardson-number weight `w = Ri₊² / (Ri₊² + Ri₀²)` on the geometric variance term
-    (`sgs_geometric_stability_weight`), with `Ri₊ = max(N²_sat, 0) / max(2 SᵢⱼSᵢⱼ, ε)`
-    on the saturated moist buoyancy gradient. `0` makes the weight exactly 1 [-].
   - `sgs_liquid_uniform_fraction`, `sgs_ice_uniform_fraction`: Fractions `ξ` of
     cloud liquid and cloud ice that are uniform over the SGS quadrature nodes in
     the 1-moment microphysics, in `[0, 1]`: at each node a species is
     `(1 − ξ)` times its liquid-fraction share of the reconstructed saturation
     excess plus `ξ` times its subdomain mean (`sgs_local_condensate`). `0`
     is the excess reconstruction; `1` treats the species uniform at every node [-].
-  - `Tq_correlation_coefficient`: Default correlation between `T'` and `q_tot'`
-    in the SGS quadrature, in `[-1, 1]` [-].
+  - `Tq_correlation_coefficient`: Correlation between `T'` and `q_tot'` in the
+    SGS quadrature, in `[-1, 1]`. Used verbatim by `tq_correlation_model: constant`;
+    used as the turbulent-block cross `ρ_turb` (and the fallback where all variance
+    blocks vanish) by `tq_correlation_model: diagnosed` [-].
   - `cloud_fraction_steepness_scale`: Steepness scale `α` of the
     cloud-fraction/condensate relationship; 1 for exact Gaussian or lognormal SGS
     distributions [-].
+  - `condensation_evaporation_timescale`, `sublimation_deposition_timescale`:
+    Shared ClimaParams/CloudMicrophysics 1M relaxation timescales
+    `τ_cond`, `τ_sub` used by `sgs_microphysics_timescale` [s].
+  - `sgs_fidelity_equilibrium_weight`: Weight `w_eq ∈ (0, 1)` on the
+    equilibrium prediction in the SGS variance-fidelity modulator; default
+    `0.5` (see `sgs_variance_fidelity`) [-].
   - `cloud_fraction_eps_rel`: Residual fractional saturation variability
     `ε_rel` in the augmented-`σ` floor of the cloud-fraction closure [-].
   - `cloud_fraction_sigma_abs`: Absolute floor `σ_abs` on the augmented
@@ -285,18 +295,22 @@ not yet define.
   - `cloud_fraction_floor_release_sharpness`: Exponent `s` of the release
     transition; larger values approach a switch [-].
   - `cloud_fraction_floor_residual`: Fraction `D_min` of the relative floor
-    retained deep inside a saturated deck [-].
+    retained deep inside a saturated deck; 1 (default) disables the release [-].
 """
 Base.@kwdef struct SGSQuadratureParameters{FT} <: ASQP
     diagnostic_covariance_coeff::FT
     sgs_variance_geometric_coeff::FT
     sgs_variance_horizontal_scale_factor::FT
+    sgs_variance_vertical_scale_factor::FT
+    sgs_variance_isentropic_depth::FT
     sgs_variance_max_rel_std::FT
-    sgs_variance_geometric_Ri_factor::FT
     sgs_liquid_uniform_fraction::FT
     sgs_ice_uniform_fraction::FT
     Tq_correlation_coefficient::FT
     cloud_fraction_steepness_scale::FT
+    condensation_evaporation_timescale::FT
+    sublimation_deposition_timescale::FT
+    sgs_fidelity_equilibrium_weight::FT
     cloud_fraction_eps_rel::FT
     cloud_fraction_sigma_abs::FT
     cloud_fraction_floor_release_margin::FT

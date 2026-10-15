@@ -78,21 +78,6 @@ end
     # `config/model_configs/prognostic_edmfx_dycoms_rf02_column.yml` as a
     # single column with 1-moment microphysics, for an hour. It drizzles, so
     # the diffusion's leak is not zero.
-    #
-    # Test 4b needs the entrainment diffusivity `K_e`. ClimaParams 1.1.15 sets
-    # its efficiency `EDMF_interface_entr_efficiency` to 0, which switches
-    # `K_e` off. The other versions checked, 1.1.6, 1.1.9, 1.1.11, 1.1.13
-    # and 1.1.17, set 0.4. So this file sets 0.4 itself, and `K_e` acts under
-    # each of them.
-    entrainment_toml = joinpath(mktempdir(pwd()), "interface_entrainment.toml")
-    write(
-        entrainment_toml,
-        """
-        [EDMF_interface_entr_efficiency]
-        value = 0.4
-        type = "float"
-        """,
-    )
     edmf_dict = Dict{String, Any}(
         "config" => "column",
         "initial_condition" => "DYCOMS_RF02",
@@ -108,16 +93,13 @@ end
         "edmfx_filter" => true,
         "prognostic_tke" => true,
         "microphysics_model" => "1M",
-        "fixed_terminal_velocity_liquid" => false,
+        "cloud_liquid_terminal_velocity" => "Stokes",
         "z_elem" => 30,
         "z_max" => 1500.0,
         "z_stretch" => false,
         "perturb_initstate" => false,
         "rad" => "DYCOMS",
-        "toml" => [
-            joinpath(pkgdir(CA), "toml", "prognostic_edmfx_1M.toml"),
-            entrainment_toml,
-        ],
+        "toml" => [joinpath(pkgdir(CA), "toml", "prognostic_edmfx_1M.toml")],
         "ode_algo" => "ARS222",
         "dt" => "120secs",
         "t_end" => "1hours",
@@ -273,7 +255,7 @@ end
         @test plume[3] > φ̄[3] * q_totʲ * (1 + f / 2)
     end
 
-    # 4. The diffusion moves the tags at `K_h + K_e` on their whole value, and
+    # 4. The diffusion moves the tags at `K_h` on their whole value, and
     # the parent at `K_h` on the water without rain and snow. The closed form
     # is that difference.
     @testset "The vertical diffusion's leak in closed form" begin
@@ -307,8 +289,8 @@ end
     # `max(ρq_tot, 0)`. Where the parent is never negative, that is `ρq_tot`
     # itself, and the leak is the diffusion of the rain and snow at `K_h`, as
     # before, bit for bit. Where it is negative, the partition exceeds the
-    # parent by `-min(ρq_tot, 0)`. The tags diffuse that at `K_h + K_e` and the
-    # parent not, and the leak includes it.
+    # parent by `-min(ρq_tot, 0)`. The tags diffuse that at `K_h` and the parent
+    # not, and the leak includes it.
     @testset "The vertical diffusion's leak at option C's target" begin
         @test all(>=(0), parent(Y_uniform.c.ρq_tot))
         ᶜleak = similar(Y.c.ρ)
@@ -319,11 +301,8 @@ end
             parent(vertical_leak_at_K_h(Y_uniform, p, ᶜrain_and_snow)),
         )
 
-        # The parent negative across the inversion, where `K_e` acts, and the
-        # partition closed to its target there. The checks below need `K_e`,
-        # so a `K_e` of zero everywhere fails here first.
-        @test CA.Parameters.interface_entr_efficiency(p.params) == 0.4
-        @test maximum(abs, parent(p.precomputed.ᶠK_entr)) > 0
+        # The parent negative across the inversion, and the partition closed
+        # to its target there.
         ᶜz = CA.Fields.coordinate_field(Y.c).z
         Y_negative = copy(Y_uniform)
         @. Y_negative.c.ρq_tot =
@@ -342,24 +321,18 @@ end
             ᶜleak .* Y.c.ρ,
         )
         @test relative_difference(ᶜρgap, ᶜleak .* Y.c.ρ) < 1e-8
-        # Without the negative part, or without its `K_e` diffusion, the closed
-        # form would miss the model's difference.
+        # Without the negative part the closed form would miss the model's
+        # difference.
         ᶜwithout_negative_part = vertical_leak_at_K_h(
             Y_negative,
             p,
             CA._precipitating_water(Y_negative, p),
         )
-        ᶜwithout_K_e = vertical_leak_at_K_h(
-            Y_negative,
-            p,
-            CA._leaking_water(Y_negative, p),
-        )
-        @info "Relative errors without the negative part and without its K_e term" relative_difference(
+        @info "Relative error without the negative part" relative_difference(
             ᶜρgap,
             ᶜwithout_negative_part .* Y.c.ρ,
-        ) relative_difference(ᶜρgap, ᶜwithout_K_e .* Y.c.ρ)
+        )
         @test relative_difference(ᶜρgap, ᶜwithout_negative_part .* Y.c.ρ) > 1e-6
-        @test relative_difference(ᶜρgap, ᶜwithout_K_e .* Y.c.ρ) > 1e-6
     end
 
     # 5. The audit's own columns.
