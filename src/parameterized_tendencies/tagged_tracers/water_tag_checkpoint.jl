@@ -237,11 +237,8 @@ function check_water_tag_checkpoint(restart_file, model, Y, context)
     )
     isnothing(water_model) && return nothing
 
-    reader = InputOutput.HDF5Reader(restart_file, context)
-    recorded = try
+    recorded = with_restart_reader(restart_file, context) do reader
         read_water_tag_checkpoint(reader.file, water_model.tags)
-    finally
-        Base.close(reader)
     end
     if isnothing(recorded)
         @warn "The restart file $restart_file was written before the water tags \

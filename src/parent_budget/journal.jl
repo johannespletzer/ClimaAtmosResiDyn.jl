@@ -272,14 +272,6 @@ Return the precision and reduction path the amount travelled.
 component_route(c::BudgetComponent) = c.evidence.route
 
 """
-    component_magnitude(component) -> FT
-
-Return the arithmetic magnitude of the sum the amount came from. See
-`BudgetComponent`.
-"""
-component_magnitude(c::BudgetComponent) = c.magnitude
-
-"""
     measured(amount; method, source = :unspecified, route = :unspecified,
              magnitude = abs(amount))
 

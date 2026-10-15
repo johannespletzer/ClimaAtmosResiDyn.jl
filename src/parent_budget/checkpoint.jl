@@ -80,8 +80,7 @@ Read the endpoints a checkpoint carries, or return `nothing` when the
 checkpoint was written without a parent budget.
 """
 function read_checkpoint_endpoints(restart_file, context)
-    reader = InputOutput.HDF5Reader(restart_file, context)
-    try
+    return with_restart_reader(restart_file, context) do reader
         attributes = InputOutput.HDF5.attrs(reader.file)
         CHECKPOINT_STEP_KEY in keys(attributes) || return nothing
         step = Int(InputOutput.HDF5.read_attribute(reader.file, CHECKPOINT_STEP_KEY))
@@ -104,8 +103,6 @@ function read_checkpoint_endpoints(restart_file, context)
                 (BUDGET_ACCOUNTING_TYPE(amount), Symbol(status))
         end
         return CheckpointEndpoints(step, components)
-    finally
-        Base.close(reader)
     end
 end
 

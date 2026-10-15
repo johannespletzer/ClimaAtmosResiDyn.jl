@@ -10,22 +10,13 @@
 ##### writes only scratch fields. Each reduction is collective, so every process
 ##### calls it.
 
-# The largest and smallest value of a field over the whole domain, reduced
-# across processes. `Base.maximum` on a `Field` does not reduce across them.
-function _global_extremum(ᶜfield, op)
-    local_value = op === max ? maximum(parent(ᶜfield)) : minimum(parent(ᶜfield))
-    buffer = [local_value]
-    ClimaComms.allreduce!(ClimaComms.context(ᶜfield), buffer, op)
-    return buffer[1]
-end
-
 # The height of a cell where `ᶜvalue` equals `target`, the highest where several
 # do, or `NaN` where none does. `ᶜvalue` is overwritten.
 function _height_of!(ᶜvalue, target, Y)
     FT = eltype(ᶜvalue)
     ᶜz = Fields.coordinate_field(Y.c).z
     @. ᶜvalue = ifelse(ᶜvalue == target, ᶜz, typemin(FT))
-    z = _global_extremum(ᶜvalue, max)
+    z = maximum(ᶜvalue)
     return isfinite(z) ? z : FT(NaN)
 end
 
@@ -57,7 +48,7 @@ function energy_source_headroom(Y, p, model::EnergySourceTaggingModel)
     ᶜtmp = p.scratch.ᶜtemp_scalar_2
     ᶜparent = _energy_source_parent_field(Y, model.offset)
     @. ᶜtmp = ᶜparent / Y.c.ρ
-    headroom_min = _global_extremum(ᶜtmp, min)
+    headroom_min = minimum(ᶜtmp)
     headroom_min_z = _height_of!(ᶜtmp, headroom_min, Y)
     return (; headroom_min, headroom_min_z)
 end
@@ -212,7 +203,7 @@ function energy_source_residual_report(
     # The local maximum per unit mass, and where it is. A zero residual has
     # its maximum in every cell, so it has no height.
     @. ᶜtmp = abs(ᶜR) / Y.c.ρ
-    residual_max = _global_extremum(ᶜtmp, max)
+    residual_max = maximum(ᶜtmp)
     residual_max_z =
         residual_max > 0 ? _height_of!(ᶜtmp, residual_max, Y) : FT(NaN)
 

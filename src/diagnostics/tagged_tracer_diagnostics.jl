@@ -7,6 +7,20 @@
 # `register_tagging_diagnostics!(model)` runs during simulation setup, from
 # `setup_diagnostics_and_writers` in `simulation/AtmosSimulations.jl`.
 
+"""
+    replace_diagnostic_variable!(; short_name, kwargs...)
+
+Register a diagnostic as `add_diagnostic_variable!` does, but drop any entry
+named `short_name` first, so there is no overwrite warning. The diagnostics
+catalog is global, and each simulation registers the entries of its own model.
+So an entry of the same name from an earlier model is replaced, since its
+compute function or metadata may belong to that model.
+"""
+function replace_diagnostic_variable!(; short_name, kwargs...)
+    delete!(ALL_DIAGNOSTICS, short_name)
+    return add_diagnostic_variable!(; short_name, kwargs...)
+end
+
 function compute_e_tag!(out, state, cache, time, ρe_tag_name)
     ρe_tag_name in propertynames(state.c) ||
         error("$ρe_tag_name does not exist in the model")
@@ -41,10 +55,10 @@ called during simulation setup rather than at package load time:
   - `e_tag_res`: closure residual `(ρe_tot - Σᵢ ρe_tag_i) / ρ`, where the sum
     runs over the pure region tags (only registered when at least one exists).
 
-A no-op when tagging is disabled. Per-tag entries that already exist in the
-diagnostics catalog are kept (their compute function only depends on the tag
-name); the `e_tag_res` entry is replaced, because the set of region tags it
-sums over can differ between setups.
+A no-op when tagging is disabled. Entries that already exist in the
+diagnostics catalog are replaced. The `e_tag_res` entry is dropped even when
+this model has no region tags, because the set of region tags it sums over can
+differ between setups.
 """
 register_tagging_diagnostics!(model::AtmosModel) =
     register_tagging_diagnostics!(model.tagging_model)
@@ -62,9 +76,8 @@ function register_tagging_diagnostics!(tagging_model::TaggingModel)
     for tag in tagging_model.tags
         name = tag_name(tag)
         short_name = "e_tag_$name"
-        haskey(ALL_DIAGNOSTICS, short_name) && continue
         ρe_tag_name = Symbol(:ρe_tag_, name)
-        add_diagnostic_variable!(;
+        replace_diagnostic_variable!(;
             short_name,
             units = "J kg^-1",
             long_name = "Tagged Specific Total Energy ($name)",

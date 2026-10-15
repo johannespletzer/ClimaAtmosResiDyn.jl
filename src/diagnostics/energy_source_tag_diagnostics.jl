@@ -33,10 +33,10 @@ Register the diagnostics of the energy source tags:
     ledger per unit mass, cumulative since the start of the run.
     See `energy_source_increment_ledger_variables`.
 
-A no-op when energy source tagging is disabled. Per-tag entries already in the
-catalog are kept, since their compute function depends only on the tag name. The
-`e_src_res` entry is replaced, because the set of region tags it sums over can
-differ between setups.
+A no-op when energy source tagging is disabled. Entries already in the catalog
+are replaced. The `e_src_res` entry is dropped even when this model has no
+region tags, because the set of region tags it sums over can differ between
+setups.
 """
 register_energy_source_tagging_diagnostics!(model::AtmosModel) =
     register_energy_source_tagging_diagnostics!(
@@ -57,61 +57,55 @@ function register_energy_source_tagging_diagnostics!(
         name = tag_name(tag)
         ρe_src_name = Symbol(:ρe_src_, name)
         short_name = "e_src_$name"
-        if !haskey(ALL_DIAGNOSTICS, short_name)
-            add_diagnostic_variable!(;
-                short_name,
-                units = "J kg^-1",
-                long_name = "Source-Tagged Moist Energy ($name)",
-                comments = "Moist energy attributed to the tag `$name`, per " *
-                           "unit mass of moist air. Reads as energy present " *
-                           "now traced back to that tag only where the " *
-                           "partitioned total is positive and this field is " *
-                           "non-negative; that total is `ρe_tot`, or " *
-                           "`ρe_tot + c*ρ` under an " *
-                           "`energy_source_tag_offset`. Elsewhere it is a " *
-                           "signed attribution with no amount " *
-                           "interpretation. Distinct from `e_tag_$name`, " *
-                           "which is a signed total of what a process did " *
-                           "rather than an amount present. Moist total " *
-                           "energy has no physical zero, so this value and " *
-                           "its share of the total both depend on the " *
-                           "chosen energy reference.",
-                compute! = (out, u, p, t) ->
-                    compute_e_tag!(out, u, p, t, ρe_src_name),
-            )
-        end
-        fix_name = "e_src_fix_$name"
-        if !haskey(ALL_DIAGNOSTICS, fix_name)
-            add_diagnostic_variable!(;
-                short_name = fix_name,
-                units = "J kg^-1",
-                long_name = "Cumulative Energy Source Tag Repair ($name)",
-                comments = "Energy moved into (positive) or out of " *
-                           "(negative) the tag `$name` by the repair that " *
-                           "keeps the energy source tags non-negative where " *
-                           "their total is positive, per unit mass of moist " *
-                           "air. Cumulative since the start of the run and " *
-                           "carried through a restart, so the change over an " *
-                           "interval is the difference of two outputs, and a " *
-                           "time average is not meaningful. Zero when " *
-                           "energy_source_tag_repair is false. Each increment " *
-                           "is accumulated at its own step's density and " *
-                           "divided by the current density here. Exact only " *
-                           "at the default update_constrain_state_every: " *
-                           "step. At stage or dss the stepper rescales or " *
-                           "discards what the repair changes inside a step.",
-                compute! = (out, u, p, t) ->
-                    compute_e_src_fix!(out, u, p, t, ρe_src_name),
-            )
-        end
+        replace_diagnostic_variable!(;
+            short_name,
+            units = "J kg^-1",
+            long_name = "Source-Tagged Moist Energy ($name)",
+            comments = "Moist energy attributed to the tag `$name`, per " *
+                       "unit mass of moist air. Reads as energy present " *
+                       "now traced back to that tag only where the " *
+                       "partitioned total is positive and this field is " *
+                       "non-negative; that total is `ρe_tot`, or " *
+                       "`ρe_tot + c*ρ` under an " *
+                       "`energy_source_tag_offset`. Elsewhere it is a " *
+                       "signed attribution with no amount " *
+                       "interpretation. Distinct from `e_tag_$name`, " *
+                       "which is a signed total of what a process did " *
+                       "rather than an amount present. Moist total " *
+                       "energy has no physical zero, so this value and " *
+                       "its share of the total both depend on the " *
+                       "chosen energy reference.",
+            compute! = (out, u, p, t) ->
+                compute_e_tag!(out, u, p, t, ρe_src_name),
+        )
+        replace_diagnostic_variable!(;
+            short_name = "e_src_fix_$name",
+            units = "J kg^-1",
+            long_name = "Cumulative Energy Source Tag Repair ($name)",
+            comments = "Energy moved into (positive) or out of " *
+                       "(negative) the tag `$name` by the repair that " *
+                       "keeps the energy source tags non-negative where " *
+                       "their total is positive, per unit mass of moist " *
+                       "air. Cumulative since the start of the run and " *
+                       "carried through a restart, so the change over an " *
+                       "interval is the difference of two outputs, and a " *
+                       "time average is not meaningful. Zero when " *
+                       "energy_source_tag_repair is false. Each increment " *
+                       "is accumulated at its own step's density and " *
+                       "divided by the current density here. Exact only " *
+                       "at the default update_constrain_state_every: " *
+                       "step. At stage or dss the stepper rescales or " *
+                       "discards what the repair changes inside a step.",
+            compute! = (out, u, p, t) ->
+                compute_e_src_fix!(out, u, p, t, ρe_src_name),
+        )
         # The gross and the count of the fix ledger, keyed by the tag name
         # alone, as the ledger is.
         for (short_name, per_mass, units) in (
             ("e_src_fixgross_$name", true, "J kg^-1"),
             ("e_src_fixcount_$name", false, "1"),
         )
-            haskey(ALL_DIAGNOSTICS, short_name) && continue
-            add_diagnostic_variable!(;
+            replace_diagnostic_variable!(;
                 short_name,
                 units,
                 long_name = "Gross Energy Source Tag Repair ($name)",
@@ -187,47 +181,42 @@ function register_energy_source_tagging_diagnostics!(
     return nothing
 end
 
-# The increment ledger. Its entries are keyed by field name alone,
-# so an entry already in the catalog is kept.
+# The increment ledger.
 function register_energy_source_ledger_diagnostics!(model)
     follows_implicit_increment(model) || return nothing
-    if !haskey(ALL_DIAGNOSTICS, "e_src_inc_left")
-        add_diagnostic_variable!(;
-            short_name = "e_src_inc_left",
-            units = "J kg^-1",
-            long_name = "Energy Left Out of the Energy Source Tags by the Increment Correction",
-            comments = "The energy that the energy source tags' increment " *
-                       "correction left out of the tags, per unit mass of " *
-                       "moist air, cumulative since the start of the run. In " *
-                       "each column it sums to the part of the parent's " *
-                       "implicit increment that changes the column's total " *
-                       "and that the tags' own implicit tendencies did not " *
-                       "take. It lands in e_src_res. Only under " *
-                       "energy_source_tag_transport: enthalpy_increment. " *
-                       "Each increment is kept at its own step's density and " *
-                       "divided by the current density here.",
-            compute! = (out, u, p, t) ->
-                compute_e_src_ledger!(out, u, p, t, :e_src_inc_left),
-        )
-    end
-    if !haskey(ALL_DIAGNOSTICS, "e_src_inc_moved")
-        add_diagnostic_variable!(;
-            short_name = "e_src_inc_moved",
-            units = "J kg^-1",
-            long_name = "Energy Moved Among the Energy Source Tags by the Increment Correction",
-            comments = "The energy that the energy source tags' increment " *
-                       "correction moved between levels, per unit mass of " *
-                       "moist air, cumulative since the start of the run. It " *
-                       "sums to zero in each column. It is mostly the " *
-                       "vertical transport the tags' own implicit tendencies " *
-                       "did not take. Only under " *
-                       "energy_source_tag_transport: enthalpy_increment. " *
-                       "Each increment is kept at its own step's density and " *
-                       "divided by the current density here.",
-            compute! = (out, u, p, t) ->
-                compute_e_src_ledger!(out, u, p, t, :e_src_inc_moved),
-        )
-    end
+    replace_diagnostic_variable!(;
+        short_name = "e_src_inc_left",
+        units = "J kg^-1",
+        long_name = "Energy Left Out of the Energy Source Tags by the Increment Correction",
+        comments = "The energy that the energy source tags' increment " *
+                   "correction left out of the tags, per unit mass of " *
+                   "moist air, cumulative since the start of the run. In " *
+                   "each column it sums to the part of the parent's " *
+                   "implicit increment that changes the column's total " *
+                   "and that the tags' own implicit tendencies did not " *
+                   "take. It lands in e_src_res. Only under " *
+                   "energy_source_tag_transport: enthalpy_increment. " *
+                   "Each increment is kept at its own step's density and " *
+                   "divided by the current density here.",
+        compute! = (out, u, p, t) ->
+            compute_e_src_ledger!(out, u, p, t, :e_src_inc_left),
+    )
+    replace_diagnostic_variable!(;
+        short_name = "e_src_inc_moved",
+        units = "J kg^-1",
+        long_name = "Energy Moved Among the Energy Source Tags by the Increment Correction",
+        comments = "The energy that the energy source tags' increment " *
+                   "correction moved between levels, per unit mass of " *
+                   "moist air, cumulative since the start of the run. It " *
+                   "sums to zero in each column. It is mostly the " *
+                   "vertical transport the tags' own implicit tendencies " *
+                   "did not take. Only under " *
+                   "energy_source_tag_transport: enthalpy_increment. " *
+                   "Each increment is kept at its own step's density and " *
+                   "divided by the current density here.",
+        compute! = (out, u, p, t) ->
+            compute_e_src_ledger!(out, u, p, t, :e_src_inc_moved),
+    )
     return nothing
 end
 
