@@ -87,7 +87,7 @@ if ("${STACK}" == "gpu") then
     echo
     echo "The pieces are identified but unverified. See the commented GPU keys"
     echo "in ${STACKS_ENV}: nvhpc/24.9 carries a CUDA-aware Open MPI 4.1.5, and"
-    echo "the site has GPU partitions."
+    echo "the GPU partitions are named in your site file (see runscripts/README.md)."
     echo
     echo "Finishing it means measuring the driver's CUDA version on a GPU node"
     echo "and pinning CUDA_Runtime_jll with runscripts/select-cuda-runtime.jl,"
