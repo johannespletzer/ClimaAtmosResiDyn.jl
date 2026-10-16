@@ -1280,7 +1280,10 @@ without_uncoupled_names(alg::MatrixFields.BlockArrowheadSolve, uncoupled_chains)
         coupled_names(alg.names₁, uncoupled_chains),
         without_uncoupled_names(alg.alg₂, uncoupled_chains),
     )
+# A group that is empty already, as the model's is without sedimenting
+# species, passes through. A group that the split would empty is refused.
 function coupled_names(names, uncoupled_chains)
+    isempty(names) && return names
     kept = Tuple(
         name for name in names if !(jacobian_name_chain(name) in uncoupled_chains)
     )

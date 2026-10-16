@@ -1724,6 +1724,23 @@ end
               (c(:ρq_tag_c), c(:ρq_tag_b), c(:ρq_tag_a))
     end
 
+    # The model's algorithm can hold a group with no names, as without
+    # sedimenting species. It passes through. Only a group that the split
+    # would empty is refused.
+    @testset "An empty group of the model's algorithm passes through" begin
+        uncoupled_chains = [CA.jacobian_name_chain(sgs(:q_tag_upper))]
+        with_empty = MF.BlockLowerTriangularSolve(;
+            alg₂ = MF.BlockLowerTriangularSolve(c(:ρ)),
+        )
+        kept = CA.without_uncoupled_names(with_empty, uncoupled_chains)
+        @test kept.names₁ == ()
+        @test kept.alg₂.names₁ == (c(:ρ),)
+        @test_throws ErrorException CA.without_uncoupled_names(
+            MF.BlockLowerTriangularSolve(sgs(:q_tag_upper)),
+            uncoupled_chains,
+        )
+    end
+
     for FT in (Float32, Float64)
         column(staggering) = CC.CommonSpaces.ColumnSpace(
             FT;
@@ -1917,6 +1934,16 @@ end
                 @test same_bits(split, nested)
                 @test all(isfinite, parent(split.c))
             end
+            # A chain that starts with an empty group, as the model's does
+            # without sedimenting species, solves the same.
+            empty_first = MF.ApproximateBlockArrowheadIterativeSolve(
+                scalar_names...;
+                alg₁ = MF.BlockLowerTriangularSolve(; alg₂ = scalar_alg),
+                alg₂ = velocity_alg,
+                P_alg₁ = MF.MainDiagonalPreconditioner(),
+                n_iters = 2,
+            )
+            @test same_bits(increments(empty_first, true), increments(empty_first, false))
         end
 
         # The data tell the two ways of forming a copy's right-hand side apart:
