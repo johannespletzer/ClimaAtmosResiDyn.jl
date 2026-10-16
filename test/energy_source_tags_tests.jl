@@ -2013,13 +2013,45 @@ end
                 many_alg,
                 many_uncoupled,
             )
+            # Each field solves its own row against its original blocks, from
+            # one solve into a fresh state, apart from the allocation check: a
+            # grid tag `D Δtag = R`, a copy `D Δcopy + Σ C Δspecies = R`, the
+            # species' increments being the coupled solve's. The diagonal
+            # blocks are near `-I`, so the residuals are a few roundings of
+            # values of size one.
+            ΔY_fresh = zero(Y_many)
+            CA.LinearAlgebra.ldiv!(ΔY_fresh, many_split, R_many)
+            @test all(isfinite, parent(ΔY_fresh.c))
+            block = Dict(pair.first => pair.second for pair in many_pairs)
+            tolerance = 100 * eps(FT)
+            for symbol in tag_symbols
+                D = block[(c(symbol), c(symbol))]
+                Δtag = getproperty(ΔY_fresh.c, symbol)
+                ᶜR = getproperty(R_many.c, symbol)
+                residual = @. D * Δtag - ᶜR
+                @test maximum(abs, parent(residual)) <=
+                      tolerance * maximum(abs, parent(ᶜR))
+            end
+            ᶜsgs_Δ = ΔY_fresh.c.sgsʲs.:(1)
+            Δspecies = map(s -> getproperty(ᶜsgs_Δ, s), species)
+            for symbol in copy_symbols
+                D = block[(sgs(symbol), sgs(symbol))]
+                C = map(s -> block[(sgs(symbol), sgs(s))], species)
+                Δcopy = getproperty(ᶜsgs_Δ, symbol)
+                ᶜR = getproperty(R_many.c.sgsʲs.:(1), symbol)
+                residual = @. D * Δcopy +
+                   C[1] * Δspecies[1] +
+                   C[2] * Δspecies[2] +
+                   C[3] * Δspecies[3] - ᶜR
+                @test maximum(abs, parent(residual)) <=
+                      tolerance * maximum(abs, parent(ᶜR))
+            end
+
             function second_call_allocations(ΔY, solver, R)
                 CA.LinearAlgebra.ldiv!(ΔY, solver, R)
                 return @allocated CA.LinearAlgebra.ldiv!(ΔY, solver, R)
             end
-            ΔY_many = zero(Y_many)
-            @test second_call_allocations(ΔY_many, many_split, R_many) == 0
-            @test all(isfinite, parent(ΔY_many.c))
+            @test second_call_allocations(zero(Y_many), many_split, R_many) == 0
         end
     end
 end

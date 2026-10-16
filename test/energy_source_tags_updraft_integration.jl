@@ -139,6 +139,27 @@ altitude_region(above) = Dict{String, Any}(
         @test all(isfinite, parent(Y.c.sgsʲs))
     end
 
+    # The split solver takes the copies apart. The parent updraft fields stay
+    # in the coupled solve, whose name tree leaves the copies out.
+    @testset "The split solver solves the copies apart" begin
+        MF = CA.MatrixFields
+        jacobian = copies.integrator.sol.prob.f.T_imp!.jac_prototype
+        solver = jacobian.cache.solver
+        @test solver isa CA.SplitJacobianSolver
+        uncoupled = Set(map(field -> field.name, solver.uncoupled))
+        tree = solver.keys.name_tree
+        for name in CA.energy_source_updraft_copy_names(model)
+            copy_name = MF.FieldName(:c, :sgsʲs, 1, name)
+            @test copy_name in uncoupled
+            @test !MF.is_valid_name(copy_name, tree)
+        end
+        for name in (:ρa, :mse, :q_tot)
+            parent_name = MF.FieldName(:c, :sgsʲs, 1, name)
+            @test !(parent_name in uncoupled)
+            @test MF.is_valid_name(parent_name, tree)
+        end
+    end
+
     # 2. The donor-share flux and the exchange do nothing, and the model's own
     # SGS tracer flux moves the tags.
     @testset "The model's SGS tracer flux moves the tags" begin
