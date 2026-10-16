@@ -1162,12 +1162,17 @@ function LinearAlgebra.ldiv!(
     return ΔY
 end
 
-# Solve the uncoupled fields one by one, by recursion over the tuple. The
-# recursion compiles one method per element and captures nothing. A field with
-# blocks to coupled columns is solved on `R − Σ C ΔY`, after the coupled fields.
-solve_uncoupled_fields!(::Tuple{}, ΔY, R) = nothing
-function solve_uncoupled_fields!(uncoupled::Tuple, ΔY, R)
-    (; name, alg, cache, keys, matrix, lower, rhs) = first(uncoupled)
+# Solve the uncoupled fields one by one, in tuple order. `unrolled_foreach`
+# unrolls the tuple at any length. A `foreach` allocates on Julia 1.10, since
+# the elements differ in type. A recursion over `Base.tail` allocates past 32
+# fields, where Julia no longer infers the tail. A field with blocks to coupled
+# columns is solved on `R − Σ C ΔY`, after the coupled fields.
+solve_uncoupled_fields!(uncoupled, ΔY, R) =
+    unrolled_foreach(uncoupled) do field_solve
+        solve_uncoupled_field!(field_solve, ΔY, R)
+    end
+function solve_uncoupled_field!(field_solve, ΔY, R)
+    (; name, alg, cache, keys, matrix, lower, rhs) = field_solve
     b = uncoupled_right_hand_side!(rhs, lower, ΔY, MatrixFields.get_field(R, name))
     MatrixFields.run_field_matrix_solver!(
         alg,
@@ -1176,7 +1181,7 @@ function solve_uncoupled_fields!(uncoupled::Tuple, ΔY, R)
         matrix,
         MatrixFields.FieldNameDict(keys, (b,)),
     )
-    return solve_uncoupled_fields!(Base.tail(uncoupled), ΔY, R)
+    return nothing
 end
 
 # The right-hand side of one uncoupled field: `R` itself, or `R − Σ C ΔY` over
