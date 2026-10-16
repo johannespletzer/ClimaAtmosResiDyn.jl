@@ -362,7 +362,10 @@ if ("${STACK}" == "gpu") then
             echo "ERROR: set LEVANTE_GPU_PARTITION in your site file, for the probe job."
             exit 1
         endif
-        if (! $?SLURM_ACCOUNT) setenv SLURM_ACCOUNT "${SBATCH_ACCOUNT}"
+        # A one-line if expands SBATCH_ACCOUNT even when SLURM_ACCOUNT is set.
+        if (! $?SLURM_ACCOUNT) then
+            setenv SLURM_ACCOUNT "${SBATCH_ACCOUNT}"
+        endif
         set PROBE_PARTITION = "${LEVANTE_GPU_PARTITION}"
         echo "No CUDA version on record; probing a GPU node (this queues a short job):"
         set CUDA_VERSION = "`srun --partition=${PROBE_PARTITION} --constraint=${PROBE_CONSTRAINT} --nodes=1 --ntasks=1 --gpus-per-task=1 --cpus-per-task=1 --mem=4G --time=00:02:00 nvidia-smi -q |& grep -m1 -i 'CUDA Version' | sed 's/.*: *//' | tr -d '[:space:]'`"
