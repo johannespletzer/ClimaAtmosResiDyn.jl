@@ -105,6 +105,12 @@ Always read the ClimaAtmos-specific guide before working in this repository:
 - Restarts and existing simulation output do not constrain renames yet. The
   runs so far were tests and can be redone, so a fork-owned checkpoint key,
   output name or config key may change when a naming rule calls for it.
+- Loop over tuples that grow with the tag count with `unrolled_foreach`. A
+  recursion over `Base.tail` allocates past 32 elements. A `foreach` over a
+  tuple of mixed types allocates on Julia 1.10.
+- Compare the split solver with ClimaCore's nested `FieldMatrixWithSolver`
+  only at a few fields. The nested solver over about 40 fields takes over an
+  hour to compile. Test the large sizes on the split solver alone.
 
 ## Self-correction
 
