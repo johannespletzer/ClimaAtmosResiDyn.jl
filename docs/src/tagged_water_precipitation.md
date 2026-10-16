@@ -218,7 +218,9 @@ share, the part over the partition's sum
 microphysics moves the parts by the net-flow rule alone, since the pools are
 empty there. The partition's shares sum to one, so the parts' sum changes as
 the compartment does. The compartment
-takes no target's treatment, and the ledgers take nothing of it. A Newton
+takes no target's treatment, and the ledgers take nothing of it. The signed
+parts are a numerical continuation through the stage. They are not amounts of
+water from an origin, and a negative part is no negative water of that tag. A Newton
 stage can hold such rain at the rain top. With rain at a fixed speed, the IMEX
 stages can drain the top cell below zero before the solve, and the
 microphysics then changes that negative rain. Parts that took no change would
