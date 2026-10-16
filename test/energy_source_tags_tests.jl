@@ -1429,11 +1429,14 @@ column_atmos_model(; kwargs...) =
             name(:c, :prc_e_radiation),
             name(:c, :ρq_tag_snow),
         )
-        # Not when its own row names another splittable field's column.
+        # Not when its row and another splittable field's row name each
+        # other's columns. Neither can be solved before the other.
         @test isempty(
             CA.uncoupled_jacobian_names((
                 (name(:c, :ρq_tag_a), name(:c, :ρq_tag_a)) => :block,
+                (name(:c, :ρe_src_x), name(:c, :ρe_src_x)) => :block,
                 (name(:c, :ρq_tag_a), name(:c, :ρe_src_x)) => :block,
+                (name(:c, :ρe_src_x), name(:c, :ρq_tag_a)) => :block,
             )),
         )
         # A block that names a part of a tag also couples it.
@@ -1648,6 +1651,376 @@ column_atmos_model(; kwargs...) =
         @test_throws ErrorException CA.uncoupled_field_algorithm(
             MF.BlockDiagonalSolve(),
         )
+    end
+end
+
+# The tags' updraft copies live in the first updraft, `c.sgsʲs.:(1)`. The split
+# solver takes them apart too. The state here has the shape of a copies-mode
+# column: two coupled center scalars, updraft species, a grid tag, and copies
+# whose rows hold blocks to the species, as their sedimentation gives them. The
+# algorithm has the shape `jacobian_solver_algorithm` builds under prognostic
+# EDMF: the copies sit in the arrowhead's scalar group, at the end of a chain of
+# block lower triangular solves.
+@testset "The split solver takes the updraft copies apart" begin
+    CC = CA.ClimaCore
+    MF = CA.MatrixFields
+    c(symbol) = MF.FieldName(:c, symbol)
+    sgs(symbol) = MF.FieldName(:c, :sgsʲs, 1, symbol)
+    u₃ = MF.FieldName(:f, :u₃)
+
+    @testset "Which updraft fields are splittable" begin
+        @test CA.is_splittable_jacobian_field(sgs(:q_tag_upper))
+        @test CA.is_splittable_jacobian_field(sgs(:e_src_upper))
+        @test !CA.is_splittable_jacobian_field(sgs(:q_tot))
+        @test !CA.is_splittable_jacobian_field(sgs(:q_lcl))
+        @test !CA.is_splittable_jacobian_field(sgs(:ρa))
+        # Only the first updraft carries copies.
+        @test !CA.is_splittable_jacobian_field(
+            MF.FieldName(:c, :sgsʲs, 2, :q_tag_upper),
+        )
+        @test !CA.is_splittable_jacobian_field(MF.FieldName(:c, :sgsʲs))
+    end
+
+    @testset "The order among the uncoupled fields" begin
+        # A grid tag whose row names its copy's column: the copy is solved
+        # first, although the tag's diagonal comes first.
+        pairs = (
+            (c(:ρ), c(:ρ)) => :block,
+            (c(:ρq_tag_upper), c(:ρq_tag_upper)) => :block,
+            (c(:ρq_tag_upper), sgs(:q_tag_upper)) => :block,
+            (sgs(:q_tag_upper), sgs(:q_tag_upper)) => :block,
+            (sgs(:q_tag_upper), sgs(:q_lcl)) => :block,
+            (sgs(:q_lcl), sgs(:q_lcl)) => :block,
+        )
+        @test CA.uncoupled_jacobian_names(pairs) ==
+              (sgs(:q_tag_upper), c(:ρq_tag_upper))
+        # A cycle keeps both fields coupled. A field whose row names one of
+        # them is still solved apart, after the coupled fields.
+        cycle = (
+            (c(:ρ), c(:ρ)) => :block,
+            (c(:ρq_tag_a), c(:ρq_tag_a)) => :block,
+            (c(:ρq_tag_b), c(:ρq_tag_b)) => :block,
+            (c(:ρq_tag_a), c(:ρq_tag_b)) => :block,
+            (c(:ρq_tag_b), c(:ρq_tag_a)) => :block,
+            (c(:ρq_tag_c), c(:ρq_tag_c)) => :block,
+            (c(:ρq_tag_c), c(:ρq_tag_a)) => :block,
+        )
+        @test CA.uncoupled_jacobian_names(cycle) == (c(:ρq_tag_c),)
+        # A field that a coupled cycle member's row names is coupled too.
+        @test CA.uncoupled_jacobian_names((
+            cycle...,
+            (c(:ρq_tag_d), c(:ρq_tag_d)) => :block,
+            (c(:ρq_tag_a), c(:ρq_tag_d)) => :block,
+        )) == (c(:ρq_tag_c),)
+        # A chain of three is ordered from its end.
+        chain = (
+            (c(:ρq_tag_a), c(:ρq_tag_a)) => :block,
+            (c(:ρq_tag_b), c(:ρq_tag_b)) => :block,
+            (c(:ρq_tag_c), c(:ρq_tag_c)) => :block,
+            (c(:ρq_tag_a), c(:ρq_tag_b)) => :block,
+            (c(:ρq_tag_b), c(:ρq_tag_c)) => :block,
+        )
+        @test CA.uncoupled_jacobian_names(chain) ==
+              (c(:ρq_tag_c), c(:ρq_tag_b), c(:ρq_tag_a))
+    end
+
+    for FT in (Float32, Float64)
+        column(staggering) = CC.CommonSpaces.ColumnSpace(
+            FT;
+            z_min = 0,
+            z_max = 1000,
+            z_elem = 20,
+            staggering,
+        )
+        ᶜspace = column(CC.CommonSpaces.CellCenter())
+        ᶠspace = column(CC.CommonSpaces.CellFace())
+        function column_state(grid_names, updraft_names)
+            updraft_type = Tuple{
+                NamedTuple{
+                    updraft_names,
+                    NTuple{length(updraft_names), FT},
+                },
+            }
+            center_names = (grid_names..., :sgsʲs)
+            center_types = Tuple{
+                ntuple(_ -> FT, length(grid_names))...,
+                updraft_type,
+            }
+            return CC.Fields.FieldVector(;
+                c = similar(
+                    CC.Fields.coordinate_field(ᶜspace),
+                    NamedTuple{center_names, center_types},
+                ),
+                f = similar(
+                    CC.Fields.coordinate_field(ᶠspace),
+                    NamedTuple{(:u₃,), Tuple{FT}},
+                ),
+            )
+        end
+        # Values that differ from point to point and from field to field,
+        # without random numbers.
+        fill_pattern!(values, shift) =
+            values .= sin.(shift .+ 0.7 .* reshape(1:length(values), size(values)))
+        # A block of the given row type: a pattern of size 0.1 in every entry,
+        # plus `diagonal` on the main diagonal. Entries that would reach past
+        # an end of the column are zero.
+        function band_block(space, row_type, diagonal, shift)
+            block = fill(zero(row_type), space)
+            n_levels = size(parent(block), 1)
+            values = reshape(parent(block), n_levels, :)
+            fill_pattern!(values, shift)
+            values .*= FT(0.1)
+            n_entries = size(values, 2)
+            if isodd(n_entries)
+                values[:, (n_entries + 1) ÷ 2] .+= diagonal
+            end
+            if n_entries > 1
+                values[1, 1] = 0
+                values[end, end] = 0
+            end
+            return block
+        end
+        ᶜdiagonal(shift, diagonal = -1) =
+            band_block(ᶜspace, MF.DiagonalMatrixRow{FT}, diagonal, shift)
+        ᶜtridiagonal(shift, diagonal = -1) =
+            band_block(ᶜspace, MF.TridiagonalMatrixRow{FT}, diagonal, shift)
+        ᶠtridiagonal(shift) =
+            band_block(ᶠspace, MF.TridiagonalMatrixRow{FT}, -1, shift)
+        ᶜᶠbidiagonal(shift) =
+            band_block(ᶜspace, MF.BidiagonalMatrixRow{FT}, 0, shift)
+        ᶠᶜbidiagonal(shift) =
+            band_block(ᶠspace, MF.BidiagonalMatrixRow{FT}, 0, shift)
+
+        species = (:q_lcl, :q_rai, :q_sno)
+        model_pairs = (
+            (c(:ρ), c(:ρ)) => ᶜdiagonal(1),
+            (c(:ρe_tot), c(:ρe_tot)) => ᶜtridiagonal(2),
+            (c(:ρe_tot), c(:ρ)) => ᶜdiagonal(3, 0),
+            (c(:ρ), u₃) => ᶜᶠbidiagonal(4),
+            (c(:ρe_tot), u₃) => ᶜᶠbidiagonal(5),
+            (u₃, c(:ρ)) => ᶠᶜbidiagonal(6),
+            (u₃, c(:ρe_tot)) => ᶠᶜbidiagonal(7),
+            (u₃, u₃) => ᶠtridiagonal(8),
+            (sgs(:ρa), sgs(:ρa)) => ᶜtridiagonal(9),
+            (sgs(:ρa), sgs(:q_lcl)) => ᶜtridiagonal(10, 0),
+            map(
+                ((i, s),) -> (sgs(s), sgs(s)) => ᶜtridiagonal(10 + i),
+                enumerate(species),
+            )...,
+        )
+        # Each water copy's row has a block to each species, at the chain's
+        # first level. One copy also has a block to `ρ`, at its second level,
+        # so that its right-hand side has two groups. The energy copy has its
+        # diagonal only. The grid tag has its diagonal only, as in the unsplit
+        # form.
+        copy_pairs(copy, shift) = (
+            (sgs(copy), sgs(copy)) => ᶜtridiagonal(shift),
+            map(
+                ((i, s),) -> (sgs(copy), sgs(s)) => ᶜtridiagonal(shift + i, 0),
+                enumerate(species),
+            )...,
+        )
+        tag_pairs = (
+            (c(:ρq_tag_upper), c(:ρq_tag_upper)) => ᶜtridiagonal(20),
+            copy_pairs(:q_tag_upper, 30)...,
+            copy_pairs(:q_tag_lower, 40)...,
+            (sgs(:q_tag_lower), c(:ρ)) => ᶜdiagonal(45, 0),
+            (sgs(:e_src_upper), sgs(:e_src_upper)) => ᶜtridiagonal(50),
+        )
+        block_pairs = (model_pairs..., tag_pairs...)
+        updraft_names = (:ρa, species..., :q_tag_upper, :q_tag_lower, :e_src_upper)
+        Y = column_state((:ρ, :ρe_tot, :ρq_tag_upper), updraft_names)
+        R = similar(Y)
+        fill_pattern!(parent(R.c), 0)
+        fill_pattern!(parent(R.f), 1)
+
+        uncoupled_names = CA.uncoupled_jacobian_names(block_pairs)
+        @test uncoupled_names == (
+            c(:ρq_tag_upper),
+            sgs(:q_tag_upper),
+            sgs(:q_tag_lower),
+            sgs(:e_src_upper),
+        )
+
+        # The shape `jacobian_solver_algorithm` builds: the species first, then
+        # `ρ`, then the rest, which holds `ρe_tot`, `ρa` and the copies.
+        velocity_alg = MF.BlockLowerTriangularSolve(u₃)
+        scalar_alg = MF.BlockLowerTriangularSolve(
+            map(sgs, species)...;
+            alg₂ = MF.BlockLowerTriangularSolve(c(:ρ)),
+        )
+        scalar_names = (
+            c(:ρ),
+            c(:ρe_tot),
+            sgs(:ρa),
+            map(sgs, species)...,
+            sgs(:q_tag_upper),
+            sgs(:q_tag_lower),
+            sgs(:e_src_upper),
+        )
+        iterative_alg(n_iters) = MF.ApproximateBlockArrowheadIterativeSolve(
+            scalar_names...;
+            alg₁ = scalar_alg,
+            alg₂ = velocity_alg,
+            P_alg₁ = MF.MainDiagonalPreconditioner(),
+            n_iters,
+        )
+
+        @testset "Each field's algorithm follows its place ($FT)" begin
+            alg = iterative_alg(2)
+            # A copy is solved exactly, in the chain's last group.
+            @test CA.uncoupled_field_algorithm(alg, sgs(:q_tag_upper)) isa
+                  MF.BlockDiagonalSolve
+            @test CA.uncoupled_field_algorithm(alg, sgs(:e_src_upper)) isa
+                  MF.BlockDiagonalSolve
+            # A grid tag is in the iterative part.
+            @test CA.uncoupled_field_algorithm(alg, c(:ρq_tag_upper)) isa
+                  MF.StationaryIterativeSolve
+            @test CA.uncoupled_field_algorithm(alg, c(:ρq_tag_upper)).n_iters == 2
+            # A field in the direct arrowhead's diagonal group is refused.
+            direct_alg = MF.BlockArrowheadSolve(scalar_names...; alg₂ = velocity_alg)
+            @test_throws ErrorException CA.uncoupled_field_algorithm(
+                direct_alg,
+                sgs(:q_tag_upper),
+            )
+            @test CA.uncoupled_field_algorithm(direct_alg, c(:ρq_tag_upper)) isa
+                  MF.BlockDiagonalSolve
+            # So is a field whose group another kind of solve takes.
+            other_alg = MF.ApproximateBlockArrowheadIterativeSolve(
+                scalar_names...;
+                alg₁ = MF.BlockArrowheadSolve(c(:ρ)),
+                alg₂ = velocity_alg,
+                n_iters = 2,
+            )
+            @test_throws ErrorException CA.uncoupled_field_algorithm(
+                other_alg,
+                sgs(:q_tag_upper),
+            )
+        end
+
+        function increments(alg, split)
+            matrix = MF.FieldMatrix(block_pairs...)
+            solver =
+                split ? CA.split_jacobian_solver(matrix, Y, alg, uncoupled_names) :
+                MF.FieldMatrixWithSolver(matrix, Y, alg)
+            ΔY = zero(Y)
+            CA.LinearAlgebra.ldiv!(ΔY, solver, R)
+            return ΔY
+        end
+        same_bits(a, b) =
+            isequal(parent(a.c), parent(b.c)) && isequal(parent(a.f), parent(b.f))
+        @testset "The split matches the nested solve bit for bit ($FT)" begin
+            for n_iters in (1, 2)
+                alg = iterative_alg(n_iters)
+                split = increments(alg, true)
+                nested = increments(alg, false)
+                @test same_bits(split, nested)
+                @test all(isfinite, parent(split.c))
+            end
+        end
+
+        # The data tell the two ways of forming a copy's right-hand side apart:
+        # one broadcast over its blocks, as the nested solve forms it, and one
+        # subtraction per block. So a split that subtracted per block would
+        # fail the check above.
+        @testset "The data tell the right-hand side's forms apart ($FT)" begin
+            nested = increments(iterative_alg(2), false)
+            ᶜR = R.c.sgsʲs.:(1).q_tag_upper
+            blocks = map(s -> tag_pairs[1 + findfirst(==(s), species) + 1].second, species)
+            x = map(s -> getproperty(nested.c.sgsʲs.:(1), s), species)
+            fused = @. ᶜR - (blocks[1] * x[1] + blocks[2] * x[2] + blocks[3] * x[3])
+            one_at_a_time = copy(ᶜR)
+            for i in 1:3
+                @. one_at_a_time -= blocks[i] * x[i]
+            end
+            @test !isequal(parent(fused), parent(one_at_a_time))
+        end
+
+        @testset "A grid tag that names its copy is solved after it ($FT)" begin
+            cross = (c(:ρq_tag_upper), sgs(:q_tag_upper)) => ᶜtridiagonal(60, 0)
+            pairs = (block_pairs..., cross)
+            names = CA.uncoupled_jacobian_names(pairs)
+            @test names == (
+                sgs(:q_tag_upper),
+                c(:ρq_tag_upper),
+                sgs(:q_tag_lower),
+                sgs(:e_src_upper),
+            )
+            alg = iterative_alg(2)
+            solver =
+                CA.split_jacobian_solver(MF.FieldMatrix(pairs...), Y, alg, names)
+            ΔY = zero(Y)
+            CA.LinearAlgebra.ldiv!(ΔY, solver, R)
+            # The tag solves its own row with the copy's final increment:
+            # D Δtag + C Δcopy = R_tag.
+            D = tag_pairs[1].second
+            C = cross.second
+            residual = @. D * ΔY.c.ρq_tag_upper +
+               C * ΔY.c.sgsʲs.:(1).q_tag_upper - R.c.ρq_tag_upper
+            @test maximum(abs, parent(residual)) <=
+                  100 * eps(FT) * maximum(abs, parent(R.c.ρq_tag_upper))
+            # The other fields are as without the block.
+            plain = increments(alg, true)
+            @test isequal(parent(ΔY.f), parent(plain.f))
+            @test isequal(
+                parent(ΔY.c.sgsʲs.:(1).q_tag_upper),
+                parent(plain.c.sgsʲs.:(1).q_tag_upper),
+            )
+        end
+
+        # Past 32 uncoupled fields the solve must not allocate: 20 grid tags and
+        # 20 copies with blocks to the species.
+        @testset "No allocations past 32 uncoupled fields ($FT)" begin
+            n = 20
+            tag_symbols = ntuple(i -> Symbol(:ρq_tag_t, i), n)
+            copy_symbols = ntuple(i -> Symbol(:q_tag_t, i), n)
+            Y_many = column_state(
+                (:ρ, :ρe_tot, tag_symbols...),
+                (:ρa, species..., copy_symbols...),
+            )
+            R_many = similar(Y_many)
+            fill_pattern!(parent(R_many.c), 0)
+            fill_pattern!(parent(R_many.f), 1)
+            many_pairs = (
+                model_pairs...,
+                ntuple(
+                    i ->
+                        (c(tag_symbols[i]), c(tag_symbols[i])) =>
+                            ᶜtridiagonal(100 + i), n)...,
+                Iterators.flatten(
+                    ntuple(i -> copy_pairs(copy_symbols[i], 200 + 10 * i), n),
+                )...,
+            )
+            many_uncoupled = CA.uncoupled_jacobian_names(many_pairs)
+            @test length(many_uncoupled) == 2n
+            many_scalar_names = (
+                c(:ρ),
+                c(:ρe_tot),
+                sgs(:ρa),
+                map(sgs, species)...,
+                map(sgs, copy_symbols)...,
+            )
+            many_alg = MF.ApproximateBlockArrowheadIterativeSolve(
+                many_scalar_names...;
+                alg₁ = scalar_alg,
+                alg₂ = velocity_alg,
+                P_alg₁ = MF.MainDiagonalPreconditioner(),
+                n_iters = 2,
+            )
+            many_split = CA.split_jacobian_solver(
+                MF.FieldMatrix(many_pairs...),
+                Y_many,
+                many_alg,
+                many_uncoupled,
+            )
+            function second_call_allocations(ΔY, solver, R)
+                CA.LinearAlgebra.ldiv!(ΔY, solver, R)
+                return @allocated CA.LinearAlgebra.ldiv!(ΔY, solver, R)
+            end
+            ΔY_many = zero(Y_many)
+            @test second_call_allocations(ΔY_many, many_split, R_many) == 0
+            @test all(isfinite, parent(ΔY_many.c))
+        end
     end
 end
 
