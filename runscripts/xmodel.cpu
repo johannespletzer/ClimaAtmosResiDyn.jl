@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 #SBATCH --job-name=passive-tracers
+# The account and partition come from SBATCH_ACCOUNT and SBATCH_PARTITION.
+# See runscripts/README.md, "Account and partition".
 #SBATCH -o ./passive-tracers-%j.out
 #SBATCH -e ./passive-tracers-%j.err
 #SBATCH --no-requeue
 
-#SBATCH --partition=compute
 #SBATCH --ntasks-per-node=32
 #SBATCH --exclusive
 #SBATCH --mem=0
 #SBATCH --hint=nomultithread
 
 #SBATCH --nodes=1
-#SBATCH --account=bd1062
 #SBATCH --time=01:00:00
 #SBATCH --mail-type=FAIL
 

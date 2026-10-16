@@ -702,7 +702,7 @@ is part of the deliverable, not an afterthought.
     the same socket? On A100 SXM4 with NVSwitch the device-to-device bandwidth
     is pair-independent, so this affects the host side only — but it should be
     observed rather than assumed.
- 3. Is the `gpu` partition exclusive by default? If so, `--exclusive` is
+ 3. Is the GPU partition exclusive by default? If so, `--exclusive` is
     redundant but harmless; if not, it is essential for comparability.
  4. Does `experiments/passive_stratospheric_tracers.jl` at the intended
     resolution actually saturate one A100? This determines whether a 1-GPU

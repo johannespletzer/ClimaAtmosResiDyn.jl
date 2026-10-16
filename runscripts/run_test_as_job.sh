@@ -2,7 +2,7 @@
 
 # Run one ClimaAtmos test group on Levante as a batch job, on the CPU stack.
 # The test groups are long enough that a login node times out, so they go to the
-# shared partition.
+# site's shared CPU partition.
 #
 #   sbatch runscripts/run_test_as_job.sh
 #
@@ -11,8 +11,8 @@
 # instead for a quick check on a login node.
 
 #SBATCH --job-name=tracer-tests
-#SBATCH --account=bd1062
-#SBATCH --partition=shared
+# The account and partition come from SBATCH_ACCOUNT and SBATCH_PARTITION.
+# See runscripts/README.md, "Account and partition".
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
