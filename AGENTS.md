@@ -64,11 +64,14 @@ Always read the ClimaAtmos-specific guide before working in this repository:
   runner lost communication" may have run out of memory. A runner shutdown
   reads the same. Check the job's annotations and the file's measured peak
   RSS before naming memory as the cause.
-- Workflow skills exist for the recurring work: `upstream-sync` (upstream
-  merges in phases Check, Port and Validate, and dependency drift),
-  `fork-parity`, `terrabyte-test-job`, `mutation-run`, `pr-preflight` and
-  `docs-sweep`. Use them, and extend one rather than writing a new procedure.
 - Keep edits inside the owning subtree when possible; use [src/ClimaAtmos.jl](src/ClimaAtmos.jl) to trace where a feature is wired.
+- Workflow skills for the recurring work are in `.claude/skills/`:
+  `upstream-sync` (upstream merges in phases Check, Port and Validate, and
+  dependency drift), `fork-parity`, `terrabyte-test-job`, `mutation-run`,
+  `pr-preflight` and `docs-sweep`. Use them, and extend one rather than
+  writing a new procedure. Their site values (the Slurm account and
+  partitions, the Julia depot) come from a private file outside the
+  repository. `.claude/site.example.env` lists them.
 - Match existing style: explicit names, narrow imports, comments that explain why.
 - Write comments in simple sentences. Prefer a few short sentences over one long one strung together with colons, dashes and parentheses. Use few semicolons. Two clauses become two sentences.
 - Comments describe the code as it is. Never document previously existing code or what
@@ -105,9 +108,12 @@ Always read the ClimaAtmos-specific guide before working in this repository:
 - Restarts and existing simulation output do not constrain renames yet. The
   runs so far were tests and can be redone, so a fork-owned checkpoint key,
   output name or config key may change when a naming rule calls for it.
-- Loop over tuples that grow with the tag count with `unrolled_foreach`. A
-  recursion over `Base.tail` allocates past 32 elements. A `foreach` over a
-  tuple of mixed types allocates on Julia 1.10.
+- Write new loops over tuples that grow with the tag count with
+  `MatrixFields.unrolled_foreach`. A recursion over `Base.tail` allocates past
+  32 elements, and a `foreach` over a tuple of mixed types allocates on Julia
+  1.10 (see `solve_uncoupled_fields!`). The Jacobian update keeps its `for`
+  loops, where `unrolled_foreach` allocates. The existing recursions over one
+  family's tags allocate only past 32 tags in that family.
 - Compare the split solver with ClimaCore's nested `FieldMatrixWithSolver`
   only at a few fields. The nested solver over about 40 fields takes over an
   hour to compile. Test the large sizes on the split solver alone.

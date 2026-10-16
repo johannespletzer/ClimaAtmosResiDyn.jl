@@ -1,0 +1,274 @@
+# Fork code that repeats an upstream call or a dependency's arithmetic, for
+# scripts/mirror_check.jl. `parent` is "upstream" or a package name. Update an
+# entry when a port renames a function, and add one for each new mirror.
+# Built from an inventory of the fork's comments on 2026-10-14; `why` quotes them.
+
+[[mirror]]
+name = "water_1m_call"
+fork_file = "src/parameterized_tendencies/tagged_tracers/tagged_water_precipitation.jl"
+fork_functions = ["_set_water_tag_microphysics_flows!", "set_water_tag_microphysics_flows!"]
+parent = "upstream"
+parent_file = "src/cache/microphysics_cache.jl"
+parent_functions = ["set_microphysics_tendency_cache!"]
+why = "tagged_water_precipitation.jl: `As set_microphysics_tendency_cache! for 1-moment microphysics.`"
+
+[[mirror]]
+name = "water_1m_grid_mean"
+fork_file = "src/parameterized_tendencies/tagged_tracers/tagged_water_precipitation.jl"
+fork_functions = ["water_tag_1m_flows_grid_mean"]
+parent = "upstream"
+parent_file = "src/parameterized_tendencies/microphysics/microphysics_wrappers.jl"
+parent_functions = ["microphysics_tendencies_1m"]
+why = "the arguments of microphysics_tendencies_1m's grid-mean form; the quadrature branch calls it with WaterTagFlows1M"
+
+[[mirror]]
+name = "water_1m_substep"
+fork_file = "src/parameterized_tendencies/tagged_tracers/tagged_water_precipitation.jl"
+fork_functions = ["water_tag_1m_flows", "_water_tag_1m_substep", "water_tag_1m_substep_flows"]
+parent = "CloudMicrophysics"
+parent_file = "src/BulkMicrophysicsTendencies.jl"
+parent_functions = ["bulk_microphysics_tendencies", "_substep_1m", "linearized_step_1m", "_microphysics_source_terms"]
+why = "runs BMT._substep_1m and forms the tendencies as bulk_microphysics_tendencies does; the flows read the process terms' names"
+
+[[mirror]]
+name = "water_0M_rainout_split"
+fork_file = "src/parameterized_tendencies/tagged_tracers/tagged_water_rainout.jl"
+fork_functions = ["_rainout_updraft", "_rainout_environment", "add_split_rainout!", "_add_split_rainout_default!", "_add_split_rainout_copies!"]
+parent = "upstream"
+parent_file = "src/parameterized_tendencies/microphysics/tendency.jl"
+parent_functions = ["microphysics_tendency!"]
+why = "tagged_water_rainout.jl: `The rain-out of each subdomain, as the model adds it to ρq_tot`"
+
+[[mirror]]
+name = "water_0M_rainout_flux"
+fork_file = "src/parameterized_tendencies/tagged_tracers/tagged_water_rainout.jl"
+fork_functions = ["water_tag_precipitation!", "_precipitation_phase"]
+parent = "upstream"
+parent_file = "src/cache/microphysics_cache.jl"
+parent_functions = ["set_precipitation_surface_fluxes!"]
+why = "`as pr integrates ᶜρ_dq_tot_dt`; the rain/snow split at T_freeze is inferred"
+
+[[mirror]]
+name = "water_1m_surface_precip_flux"
+fork_file = "src/parameterized_tendencies/tagged_tracers/tagged_water_precipitation.jl"
+fork_functions = ["water_tag_precipitation_flux!"]
+parent = "upstream"
+parent_file = "src/cache/microphysics_cache.jl"
+parent_functions = ["set_precipitation_surface_fluxes!"]
+why = "`built as set_precipitation_surface_fluxes! builds the model's`"
+
+[[mirror]]
+name = "water_rainout_jacobian"
+fork_file = "src/prognostic_equations/implicit/manual_sparse_jacobian.jl"
+fork_functions = ["update_water_tag_rainout_blocks!"]
+parent = "upstream"
+parent_file = "src/parameterized_tendencies/microphysics/tendency.jl"
+parent_functions = ["microphysics_tendency!"]
+why = "`The loss part of the rain-out, as microphysics_tendency! computes it for 0M`"
+
+[[mirror]]
+name = "water_microphysics_beside"
+fork_file = "src/parameterized_tendencies/tagged_tracers/tagged_water_precipitation.jl"
+fork_functions = ["water_tag_precipitation_microphysics_tendency!", "_microphysics_of_water_tag_parts!"]
+parent = "upstream"
+parent_file = "src/parameterized_tendencies/microphysics/tendency.jl"
+parent_functions = ["microphysics_tendency!"]
+why = "`Called beside microphysics_tendency!`: call order and the model's dq_rai_dt, dq_sno_dt"
+
+[[mirror]]
+name = "water_nonneg_vapor_event"
+fork_file = "src/parameterized_tendencies/tagged_tracers/tagged_water_precipitation.jl"
+fork_functions = ["snapshot_water_tag_precipitation_tendency!", "attribute_water_tag_precipitation_tendency!"]
+parent = "upstream"
+parent_file = "src/parameterized_tendencies/microphysics/moisture_fixers.jl"
+parent_functions = ["tracer_nonnegativity_vapor_tendency!"]
+why = "an applied-update event around tracer_nonnegativity_vapor_tendency!; assumes its semantics"
+
+[[mirror]]
+name = "water_tag_sedimentation"
+fork_file = "src/parameterized_tendencies/tagged_tracers/tagged_water.jl"
+fork_functions = ["_sediment_water_tags!", "_sediment_water_tags_of_model!"]
+parent = "upstream"
+parent_file = "src/prognostic_equations/water_advection.jl"
+parent_functions = ["vertical_advection_of_water_tendency!"]
+why = "`-(ᶜw) is parenthesized, as in vertical_advection_of_water_tendency!`"
+
+[[mirror]]
+name = "energy_tag_sedimentation"
+fork_file = "src/parameterized_tendencies/tagged_tracers/energy_source_tags.jl"
+fork_functions = ["sediment_energy_source_tags!", "_sediment_energy_source_tags!", "_sediment_energy_source_tag_fluxes!"]
+parent = "upstream"
+parent_file = "src/prognostic_equations/water_advection.jl"
+parent_functions = ["vertical_advection_of_water_tendency!"]
+why = "`the quantities vertical_advection_of_water_tendency! builds the parent's flux from`"
+
+[[mirror]]
+name = "water_sgs_mass_flux"
+fork_file = "src/parameterized_tendencies/tagged_tracers/tagged_water_edmf.jl"
+fork_functions = ["sgs_mass_flux_of_water_tags!", "_sgs_mass_flux_of_water_tags!", "_sgs_water_tag_fluxes!"]
+parent = "upstream"
+parent_file = "src/prognostic_equations/edmfx_sgs_flux.jl"
+parent_functions = ["edmfx_sgs_mass_flux_tendency!"]
+why = "`rebuilt here face by face, each subdomain's part with the parent's own reconstruction`"
+
+[[mirror]]
+name = "energy_sgs_mass_flux"
+fork_file = "src/parameterized_tendencies/tagged_tracers/energy_source_tags.jl"
+fork_functions = ["sgs_mass_flux_of_energy_source_tags!", "_sgs_mass_flux_of_energy_source_tags!", "_sgs_energy_source_tag_fluxes!"]
+parent = "upstream"
+parent_file = "src/prognostic_equations/edmfx_sgs_flux.jl"
+parent_functions = ["edmfx_sgs_mass_flux_tendency!"]
+why = "`rebuilt here face by face, each part with the parent's own reconstruction`"
+
+[[mirror]]
+name = "face_value_flux"
+fork_file = "src/parameterized_tendencies/tagged_tracers/energy_source_tags.jl"
+fork_functions = ["_face_value_flux"]
+parent = "upstream"
+parent_file = "src/prognostic_equations/implicit/implicit_tendency.jl"
+parent_functions = ["vertical_transport"]
+why = "`as vertical_transport builds it for each upwinding scheme`"
+
+[[mirror]]
+name = "water_copies_updraft_sedimentation"
+fork_file = "src/parameterized_tendencies/tagged_tracers/tagged_water_edmf.jl"
+fork_functions = ["sediment_water_tag_copies!", "_sediment_water_tag_copies!"]
+parent = "upstream"
+parent_file = "src/prognostic_equations/advection.jl"
+parent_functions = ["edmfx_sgs_vertical_advection_tendency!", "updraft_sedimentation!"]
+why = "`ᶜinv_ρ̂ * updraft_sedimentation!(…)` as edmfx_sgs_vertical_advection_tendency!"
+
+[[mirror]]
+name = "water_copies_surface_flux"
+fork_file = "src/parameterized_tendencies/tagged_tracers/tagged_water_edmf.jl"
+fork_functions = ["water_tag_copies_surface_flux_tendency!", "_surface_flux_of_copies!"]
+parent = "upstream"
+parent_file = "src/prognostic_equations/surface_flux.jl"
+parent_functions = ["surface_flux_tendency!", "boundary_tendency_scalar"]
+why = "`The model's own tendency of q_totʲ, from the same flux and operator`"
+
+[[mirror]]
+name = "energy_copies_surface_flux"
+fork_file = "src/parameterized_tendencies/tagged_tracers/energy_source_copy_mirrors.jl"
+fork_functions = ["energy_source_copies_surface_flux_tendency!"]
+parent = "upstream"
+parent_file = "src/prognostic_equations/surface_flux.jl"
+parent_functions = ["surface_flux_tendency!", "boundary_tendency_scalar"]
+why = "`The model's own change of mseʲ, from the same flux and operator`"
+
+[[mirror]]
+name = "energy_copies_radiation"
+fork_file = "src/parameterized_tendencies/tagged_tracers/energy_source_copy_mirrors.jl"
+fork_functions = ["energy_source_copies_radiation_tendency!"]
+parent = "upstream"
+parent_file = "src/parameterized_tendencies/radiation/radiation.jl"
+parent_functions = ["radiation_tendency!"]
+why = "`the radiation that radiation_tendency! gives each updraft's mseʲ under RRTMGP`"
+
+[[mirror]]
+name = "energy_copies_0M_microphysics"
+fork_file = "src/parameterized_tendencies/tagged_tracers/energy_source_copy_mirrors.jl"
+fork_functions = ["energy_source_copies_microphysics_tendency!"]
+parent = "upstream"
+parent_file = "src/parameterized_tendencies/microphysics/tendency.jl"
+parent_functions = ["microphysics_tendency!"]
+why = "`what the 0M updraft microphysics gives mseʲ`"
+
+[[mirror]]
+name = "water_leak_edmf_diffusion"
+fork_file = "src/parameterized_tendencies/tagged_tracers/tagged_water_leaks.jl"
+fork_functions = ["_add_edmf_vertical_leak!", "_add_edmf_horizontal_leak!"]
+parent = "upstream"
+parent_file = "src/prognostic_equations/edmfx_sgs_flux.jl"
+parent_functions = ["edmfx_sgs_diffusive_flux_tendency!", "edmfx_sgs_horizontal_diffusive_flux_tendency!"]
+why = "`K_h on q_tot_eff plus K_e on q_tot (edmfx_sgs_diffusive_flux_tendency!)`"
+
+[[mirror]]
+name = "water_leak_boundary_layer"
+fork_file = "src/parameterized_tendencies/tagged_tracers/tagged_water_leaks.jl"
+fork_functions = ["_add_boundary_layer_leak!"]
+parent = "upstream"
+parent_file = "src/prognostic_equations/vertical_diffusion_boundary_layer.jl"
+parent_functions = ["vertical_diffusion_boundary_layer_tendency!"]
+why = "`As vertical_diffusion_boundary_layer_tendency!: the same harmonic-mean face diffusivity`"
+
+[[mirror]]
+name = "water_leak_hyperdiffusion"
+fork_file = "src/parameterized_tendencies/tagged_tracers/tagged_water_leaks.jl"
+fork_functions = ["_water_tag_leak!", "water_tag_leak!"]
+parent = "upstream"
+parent_file = "src/prognostic_equations/hyperdiffusion.jl"
+parent_functions = ["apply_tracer_hyperdiffusion_tendency!"]
+why = "`the parent on ∇²(q_tot_eff - q_tot_r) (apply_tracer_hyperdiffusion_tendency!)`"
+
+[[mirror]]
+name = "water_tag_hyperdiffusion_ref"
+fork_file = "src/parameterized_tendencies/tagged_tracers/tagged_water_precipitation.jl"
+fork_functions = ["prep_water_tag_hyperdiffusion!", "apply_water_tag_hyperdiffusion!"]
+parent = "upstream"
+parent_file = "src/prognostic_equations/hyperdiffusion.jl"
+parent_functions = ["apply_tracer_hyperdiffusion_tendency!"]
+why = "the reference profile the parent's water is hyperdiffused against; parent inferred"
+
+[[mirror]]
+name = "water_copies_filter_repair"
+fork_file = "src/parameterized_tendencies/tagged_tracers/tagged_water_edmf.jl"
+fork_functions = ["snapshot_water_tag_copy_water!", "record_water_tag_copy_filter!", "repair_water_tag_copies!"]
+parent = "upstream"
+parent_file = "src/prognostic_equations/mass_flux_closures.jl"
+parent_functions = ["enforce_physical_constraints!", "enforce_edmf_updraft_constraints!"]
+why = "`Around the updraft filter (enforce_physical_constraints!)`"
+
+[[mirror]]
+name = "plume_surface_fraction"
+fork_file = "src/parameterized_tendencies/tagged_tracers/tagged_water_edmf.jl"
+fork_functions = ["water_plume_surface_fraction!"]
+parent = "upstream"
+parent_file = "src/prognostic_equations/edmfx_boundary_condition.jl"
+parent_functions = ["edmfx_sfc_mass_flux_source"]
+why = "`The source is clipped at zero (edmfx_sfc_mass_flux_source)`"
+
+[[mirror]]
+name = "env_density"
+fork_file = "src/parameterized_tendencies/tagged_tracers/energy_source_tags.jl"
+fork_functions = ["_sgs_mass_flux_of_energy_source_tags!", "sgs_exchange_of_energy_source_tags!"]
+parent = "upstream"
+parent_file = "src/cache/microphysics_cache.jl"
+parent_functions = ["set_microphysics_tendency_cache!"]
+why = "`The environment's density is written once, as the parent's microphysics does`; parent inferred"
+
+[[mirror]]
+name = "budget_stepper_hooks"
+fork_file = "src/parent_budget/adapter.jl"
+fork_functions = ["hook_template", "check_algorithm", "channel_tendencies"]
+parent = "ClimaTimeSteppers"
+parent_file = "src/solvers/imex_ark.jl"
+parent_functions = ["step_u!", "evaluate_stage_tendencies!"]
+why = "`It mirrors step_u! and the stage functions it calls in imex_ark.jl`; reads the stepper cache's fields"
+
+[[mirror]]
+name = "budget_slab_flux"
+fork_file = "src/parent_budget/transfer_legs.jl"
+fork_functions = ["upward_component", "abs_upward_component"]
+parent = "upstream"
+parent_file = "src/prognostic_equations/surface_temp.jl"
+parent_functions = ["surface_temp_tendency!"]
+why = "`as surface_temp_tendency! reads it`"
+
+[[mirror]]
+name = "budget_transfer_channel"
+fork_file = "src/parent_budget/coverage_registry.jl"
+fork_functions = ["transfer_channel", "transfer_leg_channels", "implicit_microphysics"]
+parent = "upstream"
+parent_file = "src/prognostic_equations/implicit/implicit_tendency.jl"
+parent_functions = ["implicit_tendency!"]
+why = "which channel each removal is on follows where implicit_tendency! calls it"
+
+[[mirror]]
+name = "water_1m_env_call"
+fork_file = "src/parameterized_tendencies/tagged_tracers/tagged_water_precipitation.jl"
+fork_functions = ["_set_water_tag_subdomain_flows!"]
+parent = "upstream"
+parent_file = "src/cache/microphysics_cache.jl"
+parent_functions = ["set_microphysics_tendency_cache!"]
+why = "The environment's inputs, with the expressions of `set_microphysics_tendency_cache!`; the quadrature call passes λ⁰ and mu_S⁰ positionally as the parent does"

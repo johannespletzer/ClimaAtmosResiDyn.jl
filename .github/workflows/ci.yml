@@ -32,6 +32,9 @@ on:
     # Listing the types replaces the defaults, so all four are needed.
     # `ready_for_review` starts the full tier when a draft is marked ready.
     types: [opened, synchronize, reopened, ready_for_review]
+    # A pull request that changes only the agents' skills runs no tests.
+    paths-ignore:
+      - '.claude/**'
   schedule:
     # Keep the second line equal to WEEKLY_CRON in .github/ci_plan.sh.
     - cron: '0 1 * * 1-6'
