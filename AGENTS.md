@@ -44,6 +44,11 @@ Always read the ClimaAtmos-specific guide before working in this repository:
   the setup script prints when it finishes. See
   [runscripts/README.md](runscripts/README.md).
 - For package tests, prefer `Pkg.test()` over manually `include`ing `test/runtests.jl` because test-only deps are loaded through the package test path.
+- `AtmosConfig` keeps only the keys `config/default_configs/default_config.yml`
+  has. An unknown key, such as one upstream renamed, gets a warning and the
+  default. Set `strict_config: true` to make it an error.
+- `.gitignore` ignores `*.json` and `*.out`, so `git add -A` skips them
+  silently. A file with those endings that belongs in a commit needs `git add -f`.
 - A Julia test process keeps every model type it compiles, so its peak
   memory grows with each one. A GitHub runner has 16 GB. Measure a new
   tagged-simulation file's peak RSS before it goes into CI, for example with
