@@ -1585,6 +1585,65 @@ column_atmos_model(; kwargs...) =
             parent(two_iterations.c.ρe_src_upper),
         )
         @test all(isfinite, parent(two_iterations.c))
+
+        # More uncoupled fields than Julia infers a tuple's tail for, which is
+        # 32. The split solve must not allocate. Many tags of two families
+        # reach this count. The nested solver is not built here: it takes far
+        # longer to compile at this size, and the check above already
+        # compares the two.
+        n_tags = 40
+        tag_symbols = ntuple(i -> Symbol(:ρe_src_t, i), n_tags)
+        many_names = (:ρ, :ρe_tot, tag_symbols...)
+        Y_many = CC.Fields.FieldVector(;
+            c = similar(
+                CC.Fields.coordinate_field(ᶜspace),
+                NamedTuple{many_names, NTuple{length(many_names), FT}},
+            ),
+            f = similar(Y.f),
+        )
+        R_many = similar(Y_many)
+        fill_pattern!(parent(R_many.c), 0)
+        fill_pattern!(parent(R_many.f), 1)
+        tag_names = map(symbol -> MF.FieldName(:c, symbol), tag_symbols)
+        tag_blocks = ntuple(i -> ᶜtridiagonal(10 + i), n_tags)
+        many_pairs = (
+            block_pairs[1:7]...,
+            ntuple(i -> (tag_names[i], tag_names[i]) => tag_blocks[i], n_tags)...,
+        )
+        many_uncoupled = CA.uncoupled_jacobian_names(many_pairs)
+        @test many_uncoupled == tag_names
+        # Each tag's row holds only its own tridiagonal block, so its increment
+        # is that block's solve on its own residual. The reference solves each
+        # band with LinearAlgebra, from values copied before the split solver
+        # is built.
+        column_values(field) = vec(parent(field))
+        band_values(block) = copy(reshape(parent(block), size(parent(block), 1), :))
+        tag_bands = map(band_values, tag_blocks)
+        reference_increment(i) =
+            CA.LinearAlgebra.Tridiagonal(
+                tag_bands[i][2:end, 1],
+                tag_bands[i][:, 2],
+                tag_bands[i][1:(end - 1), 3],
+            ) \ column_values(getproperty(R_many.c, tag_symbols[i]))
+        many_matrix = MF.FieldMatrix(many_pairs...)
+        many_split =
+            CA.split_jacobian_solver(many_matrix, Y_many, direct_alg, many_uncoupled)
+        # The values come from one solve into a fresh state, apart from the
+        # allocation check below, so that a tag the solve skips stays zero.
+        ΔY_once = zero(Y_many)
+        CA.LinearAlgebra.ldiv!(ΔY_once, many_split, R_many)
+        for i in 1:n_tags
+            @test column_values(getproperty(ΔY_once.c, tag_symbols[i])) ≈
+                  reference_increment(i) rtol = 1e-12
+        end
+        # One call to compile, then `@allocated` on a second call, inside a
+        # function so that the test file's variables are not boxed.
+        function second_call_allocations(ΔY, solver, R)
+            CA.LinearAlgebra.ldiv!(ΔY, solver, R)
+            return @allocated CA.LinearAlgebra.ldiv!(ΔY, solver, R)
+        end
+        @test second_call_allocations(zero(Y_many), many_split, R_many) == 0
+
         # Only the arrowhead solves are supported.
         @test_throws ErrorException CA.uncoupled_field_algorithm(
             MF.BlockDiagonalSolve(),
