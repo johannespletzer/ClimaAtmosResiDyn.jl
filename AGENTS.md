@@ -64,6 +64,10 @@ Always read the ClimaAtmos-specific guide before working in this repository:
   runner lost communication" may have run out of memory. A runner shutdown
   reads the same. Check the job's annotations and the file's measured peak
   RSS before naming memory as the cause.
+- Workflow skills exist for the recurring work: `upstream-sync` (upstream
+  merges in phases Check, Port and Validate, and dependency drift),
+  `fork-parity`, `terrabyte-test-job`, `mutation-run`, `pr-preflight` and
+  `docs-sweep`. Use them, and extend one rather than writing a new procedure.
 - Keep edits inside the owning subtree when possible; use [src/ClimaAtmos.jl](src/ClimaAtmos.jl) to trace where a feature is wired.
 - Match existing style: explicit names, narrow imports, comments that explain why.
 - Write comments in simple sentences. Prefer a few short sentences over one long one strung together with colons, dashes and parentheses. Use few semicolons. Two clauses become two sentences.
