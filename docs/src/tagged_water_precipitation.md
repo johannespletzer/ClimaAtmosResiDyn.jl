@@ -210,6 +210,25 @@ no gain. The ledgers `q_tag_exp_negative` and `q_tag_exp_negative_precip`
 record what the negative non-precipitating water and the negative rain and
 snow keep.
 
+Negative rain or snow whose partition's sum is negative too, not mostly by
+cancellation, is the exception, under the microphysics and the vapour
+nonnegativity tendency. Its parts follow it. Its share is each tag's signed
+share, the part over the partition's sum
+([`ClimaAtmos.water_tag_follows_negative`](@ref)). In such a cell the
+microphysics moves the parts by the net-flow rule alone, since the pools are
+empty there. The partition's shares sum to one, so the parts' sum changes as
+the compartment does. The compartment
+takes no target's treatment, and the ledgers take nothing of it. The signed
+parts are a numerical continuation through the stage. They are not amounts of
+water from an origin, and a negative part is no negative water of that tag. A Newton
+stage can hold such rain at the rain top. With rain at a fixed speed, the IMEX
+stages can drain the top cell below zero before the solve, and the
+microphysics then changes that negative rain. Parts that took no change would
+leave the partition apart from it, the implicit sedimentation would carry the
+difference down the column, and the closing step would book it. Negative snow
+that keeps the target's treatment beside rain whose parts follow it takes no
+gain, and `q_tag_exp_negative_precip` takes that gain.
+
 ## Under EDMF
 
 Under `turbconv: prognostic_edmfx` the parts have no updraft state. The
@@ -353,6 +372,9 @@ ClimaAtmos.water_tag_microphysics_change
 ClimaAtmos.water_tag_oriented_flows
 ClimaAtmos.water_tag_microphysics_withheld
 ClimaAtmos.water_tag_negative_compartments
+ClimaAtmos.water_tag_follows_negative
+ClimaAtmos.water_tag_negative_share
+ClimaAtmos.water_tag_source_negative_share
 ClimaAtmos.water_tag_microphysics_audit
 ClimaAtmos.water_tag_precipitation_microphysics_tendency!
 ClimaAtmos.snapshot_water_tag_precipitation_tendency!

@@ -10,12 +10,9 @@
 # quadrature is set here, as the default configuration has it, so that a test
 # names the branch it runs. A build without it overrides the key. The rain
 # falls by the 1-moment power law and the snow at a fixed speed, the regime the
-# tests' bounds were measured in. With the default fixed rain speed the
-# first-order closing ledger is 1.1e-8 kg m⁻² over the hour instead of 4e-15.
-# The tendencies of the parts and of `ρq_rai` agree to rounding at the start
-# of every step. The closing step books the rest in two steps, from the top of
-# the rain down, where the rain parts above the rain's top are negative and
-# `ρq_rai` is zero.
+# tests' bounds were measured in. The first-order case overrides the rain's key
+# with the default, a fixed speed, under which Newton stages hold negative rain
+# at the rain's top.
 function edmf_column_config()
     return Dict{String, Any}(
         "config" => "column",
@@ -90,12 +87,16 @@ end
 # Steps the simulation to its end by hand and sums the surface rain and snow
 # fluxes, sampled after each step, times the step, in kg m⁻². The model
 # applies the fluxes at every stage, so the sum samples the run's accumulated
-# precipitation once per step. It is not its discrete applications.
-function run_sampling_precipitation!(simulation)
+# precipitation once per step. It is not its discrete applications. With
+# `ledger`, a function of the state that returns a ledger field, it also sums
+# the column norm of that field's change over each step, and returns both.
+function run_sampling_precipitation!(simulation; ledger = nothing)
     (; integrator, output_writers) = simulation
     p = integrator.p
     t_end = last(integrator.sol.prob.tspan)
     sampled = 0.0
+    step_gross = 0.0
+    previous = isnothing(ledger) ? nothing : copy(ledger(integrator.u))
     while integrator.t < t_end
         t_before = Float64(integrator.t)
         CA.CTS.step!(integrator)
@@ -103,9 +104,14 @@ function run_sampling_precipitation!(simulation)
             only(parent(p.precomputed.surface_rain_flux)) +
             only(parent(p.precomputed.surface_snow_flux))
         sampled += abs(flux) * (Float64(integrator.t) - t_before)
+        if !isnothing(ledger)
+            current = ledger(integrator.u)
+            step_gross += sum(abs.(current .- previous))
+            previous .= current
+        end
     end
     isnothing(output_writers) || foreach(close, output_writers)
-    return sampled
+    return isnothing(ledger) ? sampled : (sampled, step_gross)
 end
 
 # The weighted nets at an iterate whose areas differ from the precomputed

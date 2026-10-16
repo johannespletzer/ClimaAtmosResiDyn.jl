@@ -8,12 +8,13 @@ own. It checks that the partition stays bounded over the hour on the DYCOMS
 RF02 EDMF column, and prints the closing ledger.
 
 The file also builds the column with the parts following the increment,
-`tracer_upwinding: first_order` and no SGS quadrature, another model type.
-There each part's explicit advection is linear, so the closing ledger is at
-rounding, and the non-precipitating parts' column total is the parent's less
-the follower's left part. The flows' nets are checked against the model's on
-the branch without quadrature. The rest, with quadrature, is in
-`tagged_water_precipitation_edmf_integration.jl`.
+`tracer_upwinding: first_order`, no SGS quadrature and rain at the default
+fixed speed, another model type. There each part's explicit advection is
+linear, and the parts follow the negative rain that the stages leave at the
+rain's top, so the closing ledger is at rounding, and the non-precipitating
+parts' column total is the parent's less the follower's left part. The flows'
+nets are checked against the model's on the branch without quadrature. The
+rest, with quadrature, is in `tagged_water_precipitation_edmf_integration.jl`.
 =#
 using Test
 import ClimaComms
@@ -78,17 +79,24 @@ end
         Dict{String, Any}(
             "tracer_upwinding" => "first_order",
             "use_sgs_quadrature" => false,
+            "rain_terminal_velocity" => "Fixed",
         ),
     )
     simulation = build(config, "water_tags_precipitation_edmf_first_order")
     p = simulation.integrator.p
     @test CA.not_quadrature(p.atmos.sgs_quadrature)
-    sampled_precipitation = run_sampling_precipitation!(simulation)
+    (sampled_precipitation, led_close_step_gross) = run_sampling_precipitation!(
+        simulation;
+        ledger = Y -> Y.c.q_tag_led_close,
+    )
     Y = simulation.integrator.u
     # Column integrals (`sum` of a field integrates it), in kg m⁻². The
     # precipitation is the hour's surface rain and snow, sampled once per step.
+    # The ledger is signed and cumulative, so its column norm can hide closing
+    # work that cancels over the hour. The norm of each step's change adds up
+    # the work that cancels between steps.
     led_close = abs(sum(Y.c.q_tag_led_close))
-    led_close_gross = sum(abs.(Y.c.q_tag_led_close))
+    led_close_norm = sum(abs.(Y.c.q_tag_led_close))
     column_precipitation = sum(Y.c.ρq_rai) + sum(Y.c.ρq_sno)
     result = closure(Y)
     ᶜN_gap = @. Y.c.ρq_tag_tropo + Y.c.ρq_tag_strat -
@@ -96,18 +104,25 @@ end
     N_gap = sum(ᶜN_gap)
     N_gross = sum(abs.(ᶜN_gap))
     left = sum(Y.c.q_tag_inc_left)
-    @info "The parts under EDMF with first-order upwinding after an hour" led_close led_close_gross sampled_precipitation column_precipitation result N_gap N_gross left
+    @info "The parts under EDMF with first-order upwinding after an hour" led_close led_close_norm led_close_step_gross sampled_precipitation column_precipitation result N_gap N_gross left
     # The closing ledger at rounding: every operator of the parts sums to the
-    # species' where the parent holds rain.
-    # With the parts' cross blocks summing to the species' at every cell, the
-    # closing step books rounding only: 4.4e-15 kg m⁻² gross over the hour on
-    # this column without quadrature, against 0.028 kg m⁻² of sampled
-    # precipitation. The bound leaves a factor of 600.
-    @test led_close_gross <= 1e-10 * sampled_precipitation
+    # species' where the parent holds rain, and where a Newton stage holds
+    # negative rain the parts follow it. The rain falls at the default fixed
+    # speed. The IMEX stages then drain the rain's top cell below zero twice in
+    # the hour, and the implicit microphysics changes that negative rain. On
+    # this column without quadrature the closing step's work, summed over
+    # every application and every tag, is 1.9e-17 kg m⁻² over the hour. The
+    # ledger's column norm is 7.8e-18 and the steps' changes add up to
+    # 1.4e-17, against 0.030 kg m⁻² of sampled precipitation.
+    @test led_close_norm <= 1e-10 * sampled_precipitation
+    @test led_close_step_gross <= 1e-10 * sampled_precipitation
     @test result.rain < 1e-12
     # The non-precipitating parts' column total is the parent's less the
-    # follower's left part, as without the key.
-    @test abs(N_gap + left) < 0.05 * N_gross
+    # follower's left part, as without the key. Here both are at the rounding
+    # of the column's water, -3.7e-15 and -3.4e-16 kg m⁻², so the bound has
+    # that floor.
+    rounding = 10 * eps(FT) * sum(Y.c.ρq_tot)
+    @test abs(N_gap + left) < max(0.05 * N_gross, rounding)
     @testset "The weighted nets without SGS quadrature" begin
         CA.set_precomputed_quantities!(Y, p, simulation.integrator.t)
         test_weighted_nets(Y, p, simulation.integrator.t, p.atmos.turbconv_model)
