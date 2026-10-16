@@ -68,7 +68,26 @@ LEVANTE_GPU_SRUN_BIND=(
     --distribution=block:block
 )
 
+levante_gpu_check_partition() {
+    # The GPU scripts name no partition, so the submitter passes
+    # --partition="${LEVANTE_GPU_PARTITION}". Stop at once when the job runs
+    # elsewhere or without GPUs, rather than at the first GPU call.
+    if [[ -n "${LEVANTE_GPU_PARTITION:-}" &&
+        "${SLURM_JOB_PARTITION:-}" != "${LEVANTE_GPU_PARTITION}" ]]; then
+        echo "ERROR: this job runs on partition '${SLURM_JOB_PARTITION:-unknown}'," >&2
+        echo "  not on LEVANTE_GPU_PARTITION ('${LEVANTE_GPU_PARTITION}')." >&2
+        echo "  Submit with --partition=\"\${LEVANTE_GPU_PARTITION}\"." >&2
+        exit 1
+    fi
+    if [[ -z "${SLURM_GPUS_ON_NODE:-}" || "${SLURM_GPUS_ON_NODE}" == "0" ]]; then
+        echo "ERROR: this job has no GPUs (SLURM_GPUS_ON_NODE is unset or 0)." >&2
+        echo "  Submit with --partition=\"\${LEVANTE_GPU_PARTITION}\"." >&2
+        exit 1
+    fi
+}
+
 levante_gpu_init() {
+    levante_gpu_check_partition
     # Paths, stack selection, depot, Julia version check, modules, environment.
     # Paths may be overridden from the environment, e.g.
     #   SCRIPT=experiments/my_run.jl sbatch runscripts/xmodel.4gpus
