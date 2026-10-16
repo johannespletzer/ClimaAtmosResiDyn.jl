@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 #SBATCH --job-name=tracer-4gpus
-#SBATCH --account=bd1062
-#SBATCH --partition=gpu
+# The account comes from SBATCH_ACCOUNT. Submit with
+# --partition="${LEVANTE_GPU_PARTITION}", because SBATCH_PARTITION names the
+# CPU partition. See runscripts/README.md, "Account and partition".
 #SBATCH --constraint=a100_80
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=4

@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 #SBATCH --job-name=strat-tracers-amip
+# The account and partition come from SBATCH_ACCOUNT and SBATCH_PARTITION.
+# See runscripts/README.md, "Account and partition".
 #SBATCH -o ./strat-tracers-amip-%j.out
 #SBATCH -e ./strat-tracers-amip-%j.err
-#SBATCH --partition=compute
 #SBATCH --ntasks-per-node=128
 #SBATCH --exclusive
 #SBATCH --mem=0
 #SBATCH --nodes=4
-#SBATCH --account=bd1062
 #SBATCH --time=08:00:00
 
 # -----------------------------------------------------------------------------

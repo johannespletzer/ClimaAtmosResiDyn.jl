@@ -96,8 +96,8 @@ Rules for the layout:
     it reads a YAML, builds `AtmosConfig`, runs `get_simulation` and
     `solve_atmos!`, and prints the closure summary. It does not add model
     code.
-  - The runscripts follow `runscripts/run_test_as_job.sh`: account `bd1062`,
-    partition `shared`, the CPU depot `levante-cpu`, the same module lines,
+  - The runscripts follow `runscripts/run_test_as_job.sh`: the site's account
+    and shared CPU partition, the CPU depot `levante-cpu`, the same module lines,
     `julia +1.11 --project=.buildkite`. The column runs need one task and a
     few cores. The sphere runs may need `xmodel.1gpu` with `SCRIPT` set to
     the driver; that is a cost decision for the owner.
