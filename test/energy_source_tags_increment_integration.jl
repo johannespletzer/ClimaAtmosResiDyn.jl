@@ -33,6 +33,10 @@ with the tags and without them, so it has its own test group. See
 using Test
 import ClimaAtmos as CA
 
+# The columns of an uncoupled field's blocks to other fields. The split solver
+# keeps them in groups, one per broadcast that subtracts them.
+lower_columns(field) = Tuple(pair[1] for group in field.lower for pair in group)
+
 # As in `energy_source_tags_integration.jl`: one call to compile, then
 # `@allocated` on a second call, inside a function that specializes on every
 # argument.
@@ -389,7 +393,7 @@ tags = [
         for tag_name in tag_names
             fields = filter(field -> field.name == tag_name, uncoupled_fields)
             @test length(fields) == 1
-            @test issubset(Set(mass_names), Set(map(first, only(fields).lower)))
+            @test issubset(Set(mass_names), Set(lower_columns(only(fields))))
         end
 
         # The model's own fields are those of the same column without tags,
