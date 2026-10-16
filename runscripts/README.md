@@ -20,12 +20,35 @@ has the full CPU and GPU story, including the submission scripts. LRZ's
 | `xmodel.amip` | Levante: one segment of the coupled AMIP stratospheric tracer campaign, which resubmits itself. Submit with `MEMBER=a` or `MEMBER=b`. |
 | `setup-julia-amip-levante.sh` | Levante: one-time depot build of the ClimaCoupler AMIP environment on a **login node**, with this fork dev'd in. |
 | `run_strat.tcsh` | Levante login node: the short stratospheric passive tracer run (the CI configuration), to check that a change still runs end to end. |
-| `run_test_as_job.sh` | Levante: one test group as a batch job on the shared partition. Edit the group at the bottom. |
+| `run_test_as_job.sh` | Levante: one test group as a batch job on the site's shared CPU partition. Edit the group at the bottom. |
 | `run_test_dynamics.sh` | Levante login node: the `dynamics` test group on the CPU stack. Pins CloudMicrophysics and changes `Manifest.toml`. |
 | `run_test_individual.sh` | Levante login node: one test file or group, chosen by uncommenting a line. |
 | `rcemipii_box_CRM_1M.jl` | Upstream's runscript for the RCEMIP-II cloud-resolving box. |
 | `select-cuda-runtime.jl` | Pins the CUDA toolkit to what the driver supports. Called by the setup script. |
 | `gpu_runscript_plan.md` | Why all of this looks the way it does, and what is still outstanding. |
+
+## Account and partition
+
+No script names an account or a partition. Slurm reads them from the
+environment: `SBATCH_ACCOUNT` and `SBATCH_PARTITION` for `sbatch`, and
+`SLURM_ACCOUNT` and `SLURM_PARTITION` for `srun`. Set them in a private site
+file outside the repository, for example `~/.config/climaatmos-fork/site.env`
+(or the file named by `$CLIMA_SITE_ENV`), and source it before you submit. The
+file is yours to keep and is never committed. A sketch:
+
+```bash
+export SBATCH_ACCOUNT=<account>
+export SBATCH_PARTITION=<cpu partition>
+export SLURM_ACCOUNT=${SBATCH_ACCOUNT}
+export SLURM_PARTITION=${SBATCH_PARTITION}
+export LEVANTE_GPU_PARTITION=<gpu partition>              # Levante
+export TERRABYTE_DEPOT_ROOT=<scratch directory>/julia-depots  # terrabyte
+```
+
+`SBATCH_PARTITION` names the CPU partition. The Levante GPU scripts and the
+GPU CUDA probe need the GPU partition instead, so submit those with
+`sbatch --partition="${LEVANTE_GPU_PARTITION}" runscripts/xmodel.4gpus`. A
+tcsh shell needs the same variables with `setenv`.
 
 ## Running something on Levante
 
@@ -72,11 +95,10 @@ bundled one.
 
 Two things differ from Levante and are deliberate:
 
-- **The depot lives on scratch**, at
-  `/dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu`, because
-  `$HOME` on terrabyte is for code and configs. Override with
-  `TERRABYTE_DEPOT_ROOT`. Nothing on scratch is durable; a lost depot is
-  rebuilt by re-running the script.
+- **The depot lives on scratch**, at `${TERRABYTE_DEPOT_ROOT}/terrabyte-cpu`,
+  because `$HOME` on terrabyte is for code and configs. `TERRABYTE_DEPOT_ROOT`
+  is required, and the site file sets it. Nothing on scratch is durable; a
+  lost depot is rebuilt by re-running the script.
 - **`module purge` is never run.** On Levante it is load-bearing. Here it drops
   `stack/24.4.0` in a way that re-loading `stack` does not repair, so the script
   unloads only a conflicting MPI module.
@@ -86,9 +108,9 @@ same depot and modules the script prints when it finishes:
 
 ```bash
 module load gcc/13.2.0 openmpi/4.1.8-gcc13
-export JULIA_DEPOT_PATH=/dss/dsstbyfs02/scratch/0D/di38kez/julia-depots/terrabyte-cpu
+export JULIA_DEPOT_PATH=${TERRABYTE_DEPOT_ROOT}/terrabyte-cpu
 export PMIX_MCA_psec=native OMPI_MCA_pmix=ext3x
-srun --account=hpda-c --partition=hpda2_compute --mpi=pmix ... \
+srun --mpi=pmix ... \
     julia +1.11 --project=.buildkite .buildkite/ci_driver.jl --config_file ...
 ```
 
@@ -98,7 +120,7 @@ two `*_MCA_*` variables only silence PMIx startup noise.
 
 The GPU stack is not set up. `setup-julia-terrabyte.tcsh gpu` exits with a
 pointer to what is known: `nvhpc/24.9` carries a CUDA-aware Open MPI 4.1.5, and
-the GPU partitions are `hpda2_compute_gpu` and `hpda2_testgpu`. Finishing it
+the site has GPU partitions. Finishing it
 means measuring the driver's CUDA version on a GPU node and pinning
 `CUDA_Runtime_jll`, the way the Levante script does.
 

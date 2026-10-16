@@ -87,7 +87,7 @@ if ("${STACK}" == "gpu") then
     echo
     echo "The pieces are identified but unverified. See the commented GPU keys"
     echo "in ${STACKS_ENV}: nvhpc/24.9 carries a CUDA-aware Open MPI 4.1.5, and"
-    echo "the GPU partitions are hpda2_compute_gpu and hpda2_testgpu."
+    echo "the site has GPU partitions."
     echo
     echo "Finishing it means measuring the driver's CUDA version on a GPU node"
     echo "and pinning CUDA_Runtime_jll with runscripts/select-cuda-runtime.jl,"
@@ -118,16 +118,17 @@ endif
 
 # Parent directory for the per-stack depots. Each holds a full copy of the
 # packages, artifacts and precompile cache, running to several GB, which is why
-# the default is on scratch rather than under $HOME.
+# it belongs on scratch rather than under $HOME. The site file sets
+# TERRABYTE_DEPOT_ROOT. See runscripts/README.md.
 if ($?TERRABYTE_DEPOT_ROOT) then
     set DEPOT_ROOT = "${TERRABYTE_DEPOT_ROOT}"
 else
-    set DEPOT_ROOT = `sed -n 's/^TERRABYTE_DEPOT_ROOT_ABSOLUTE=//p' "${STACKS_ENV}"`
+    set DEPOT_ROOT = ""
 endif
 
 if ("${DEPOT_ROOT}" == "") then
-    echo "ERROR: no depot root. Set TERRABYTE_DEPOT_ROOT, or define"
-    echo "TERRABYTE_DEPOT_ROOT_ABSOLUTE in ${STACKS_ENV}."
+    echo "ERROR: no depot root. Set TERRABYTE_DEPOT_ROOT to a directory on"
+    echo "scratch, in your site file (see runscripts/README.md)."
     exit 1
 endif
 

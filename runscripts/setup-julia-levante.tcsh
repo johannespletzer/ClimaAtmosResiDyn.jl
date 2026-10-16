@@ -43,9 +43,13 @@
 # .buildkite/Project.toml alone.
 # ============================================================================
 
-set ROOT          = /home/b/b309159/git/ClimaAtmosResiDyn.jl
-set PROJECT       = ${ROOT}/.buildkite
-set JULIA_BIN     = /home/b/b309159/.juliaup/bin/julia
+# Locate the repository from this script, which lives in <root>/runscripts/.
+set SCRIPT_SELF = $0
+set SCRIPT_DIR  = `dirname "${SCRIPT_SELF}"`
+set SCRIPT_DIR  = `cd "${SCRIPT_DIR}" && pwd`
+set ROOT        = `dirname "${SCRIPT_DIR}"`
+set PROJECT     = ${ROOT}/.buildkite
+set JULIA_BIN     = ${HOME}/.juliaup/bin/julia
 set JULIA_CHANNEL = +1.11
 
 # OpenMPI_jll's UUID, from .buildkite/Manifest-v1.11.toml
@@ -84,9 +88,8 @@ endif
 set STACK = $argv[1]
 
 # SLURM settings for the probe job that reads the GPU driver's CUDA version
-# (gpu stack only, and only when it is not already known).
-set PROBE_ACCOUNT    = bd1062
-set PROBE_PARTITION  = gpu
+# (gpu stack only, and only when it is not already known). The account and the
+# GPU partition come from the site file, see runscripts/README.md.
 set PROBE_CONSTRAINT = a100_80
 
 if ("${STACK}" != "cpu" && "${STACK}" != "gpu") then
@@ -309,7 +312,7 @@ echo
 #   1. $CUDA_RUNTIME_VERSION, if set. A manual override, e.g. 13.0
 #   2. nvidia-smi, when this script is itself running on a GPU node
 #   3. the value recorded by the last GPU job (see levante_gpu_common.sh)
-#   4. a two-minute probe job on the gpu partition
+#   4. a two-minute probe job on the GPU partition
 #
 # Anything measured is cached in ${CUDA_VERSION_CACHE}. Delete that file to
 # force a fresh measurement.
@@ -351,8 +354,18 @@ if ("${STACK}" == "gpu") then
     endif
 
     if ("${CUDA_VERSION}" == "") then
+        if (! $?SLURM_ACCOUNT && ! $?SBATCH_ACCOUNT) then
+            echo "ERROR: set SBATCH_ACCOUNT (or SLURM_ACCOUNT) in your site file, for the probe job."
+            exit 1
+        endif
+        if (! $?LEVANTE_GPU_PARTITION) then
+            echo "ERROR: set LEVANTE_GPU_PARTITION in your site file, for the probe job."
+            exit 1
+        endif
+        if (! $?SLURM_ACCOUNT) setenv SLURM_ACCOUNT "${SBATCH_ACCOUNT}"
+        set PROBE_PARTITION = "${LEVANTE_GPU_PARTITION}"
         echo "No CUDA version on record; probing a GPU node (this queues a short job):"
-        set CUDA_VERSION = "`srun --account=${PROBE_ACCOUNT} --partition=${PROBE_PARTITION} --constraint=${PROBE_CONSTRAINT} --nodes=1 --ntasks=1 --gpus-per-task=1 --cpus-per-task=1 --mem=4G --time=00:02:00 nvidia-smi -q |& grep -m1 -i 'CUDA Version' | sed 's/.*: *//' | tr -d '[:space:]'`"
+        set CUDA_VERSION = "`srun --partition=${PROBE_PARTITION} --constraint=${PROBE_CONSTRAINT} --nodes=1 --ntasks=1 --gpus-per-task=1 --cpus-per-task=1 --mem=4G --time=00:02:00 nvidia-smi -q |& grep -m1 -i 'CUDA Version' | sed 's/.*: *//' | tr -d '[:space:]'`"
         if ("${CUDA_VERSION}" != "") then
             set CUDA_VERSION_SRC = "a probe job on the ${PROBE_PARTITION} partition"
             set CUDA_VERSION_NEW = 1

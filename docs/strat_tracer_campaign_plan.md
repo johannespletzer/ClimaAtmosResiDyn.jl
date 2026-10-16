@@ -564,7 +564,7 @@ job as the first real test.
 
  1. **Point the runscripts at the coupler checkout.** `COUPLER` in
     `runscripts/xmodel.amip` and `runscripts/setup-julia-amip-levante.sh` is a
-    placeholder; the local clone is at `/home/b/b309159/git/ClimaCoupler.jl`.
+    placeholder. Point it at your local clone of ClimaCoupler.jl.
  2. **Reconcile `xmodel.amip` with `xmodel.cpu`.** The AMIP chaining script was
     derived from `xmodel.cpu` before that file was rewritten, so the two have
     diverged and the differences have not been reviewed.
