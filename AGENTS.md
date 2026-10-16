@@ -117,6 +117,16 @@ Always read the ClimaAtmos-specific guide before working in this repository:
 - Compare the split solver with ClimaCore's nested `FieldMatrixWithSolver`
   only at a few fields. The nested solver over about 40 fields takes over an
   hour to compile. Test the large sizes on the split solver alone.
+- Keep site identifiers out of tracked files: user IDs, Slurm accounts and
+  partitions, home, scratch and depot paths, node names. Scripts read them
+  from the environment, set in a private site file (see
+  `.claude/site.example.env` and `runscripts/README.md`). Cluster names may
+  stay.
+- The tag-closure record lives on a private remote, not on `origin`. Never
+  push a record branch to `origin`.
+- The pinned formatter also rewrites Markdown files, padding tables and
+  reformatting code blocks. Run `.dev/preflight.sh --fix` after editing a
+  `.md` file.
 
 ## Self-correction
 
