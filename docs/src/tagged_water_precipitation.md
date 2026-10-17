@@ -164,13 +164,16 @@ alone would give an empty compartment no composition to pass on.
     default. `water_tag_precipitation_audit: false` leaves them and their two
     extra solves per tag out. The parts are the same either way.
 
-With first-order tracer upwinding the rain and snow parts' transport is linear,
-and each compartment closes to rounding under `increment` on a column. The
-default `vanleer_limiter` is nonlinear per field, so the parts drift from
-their species as the tags drift from ``\rho q_\mathrm{tot}``. The closing
-step brings the rain and snow parts back each time the state is constrained.
-The non-precipitating parts keep their drift, which `q_ntag_res` reports. The
-repair only removes negative parts.
+Each rain and snow part's explicit vertical advection is its share of its
+species' face flux, taken in the upwind cell. The flux is the species' own,
+with the configured `tracer_upwinding`. So the parts' advection sums to the
+species' at every face under every scheme. Under the default
+`vanleer_limiter` that would not hold for parts limited on their own, since
+the limiter is not additive. Composition moves between cells as under
+first-order upwinding. The closing step brings the rain and snow parts back
+each time the state is constrained. The non-precipitating parts keep their
+drift from the parent, which `q_ntag_res` reports. The repair only removes
+negative parts.
 
 ## Negative water
 
@@ -292,18 +295,12 @@ mean's.
 The parts have no follower under `water_tag_transport: increment`, as without
 EDMF. The closing step after each follow sets the parts to their compartments,
 and books what it moves in `q_tag_led_close`, so that ledger measures what the
-operators above miss. It is not at rounding:
-
-  - Where a cell holds rain but the partition holds none of it, no part
-    sediments any of it, and the closing step gives the partition that rain
-    by the non-precipitating composition. The SGS flux and the cross blocks
-    there take the same composition, so the Newton increments of the parts
-    sum to the species' also where a stage holds negative rain.
-  - Under the default `tracer_upwinding: vanleer_limiter` each rain and snow
-    part's explicit advection is limited on its own, so the parts' sum moves
-    apart from the species' by water that sums to zero over the column. The
-    closing step takes it out of the rain and snow parts. The
-    non-precipitating parts hand the parts' advection back, so they keep it.
+operators above miss. It is not at rounding where a cell holds rain but the
+partition holds none of it. There no part sediments any of it, and the closing
+step gives the partition that rain by the non-precipitating composition. The
+explicit advection, the SGS flux and the cross blocks there take the same
+composition, so the parts' advection and Newton increments sum to the
+species' also where a stage holds negative rain.
 
 Under `water_tag_transport: increment` the non-precipitating parts' column
 total departs from the parent's by the follower's left part,
@@ -314,18 +311,15 @@ total departs from the parent's by the follower's left part,
   - Under EDMF only `prognostic_edmfx` with one updraft and the split solver.
     Updraft copies are refused.
   - Only 1-moment microphysics.
-  - Under EDMF and van Leer the closing step is not at rounding. After an
-    hour of DYCOMS RF02 its column integral is 5.1e-9 kg m⁻² signed and
-    3.2e-8 kg m⁻² gross. The test's bound is 3.2e-10 kg m⁻², 1e-8 of the
-    hour's surface rain and snow sampled once per step. The signed integral
-    is a balance check only, since opposite corrections cancel in it. The
-    design judges each correction role by its gross, which the tests do not
-    do. Under `tracer` a part can go below zero, since nothing restores it:
-    the source tag's non-precipitating part reaches -2.1e-5 kg m⁻³. Both are
-    measured in the tests and marked broken. The candidate source is the
-    parts' microphysics rule for a negative compartment, which keeps a part
-    frozen while the cached rates evaporate it. That rule is a separate part
-    9 item.
+  - Under EDMF and van Leer the closing step is at rounding. After an hour
+    of DYCOMS RF02 its column integral is at most 1.5e-18 kg m⁻² signed and
+    3.1e-18 kg m⁻² gross, against 0.043 kg m⁻² of surface rain and snow
+    sampled once per step. The tests hold both to 1e-14 of that. Under
+    `tracer` a part can go below zero, since nothing restores it: the source
+    tag's non-precipitating part reaches -2.1e-5 kg m⁻³. The tests measure
+    it. The candidate source is the parts' microphysics rule for a negative
+    compartment, which keeps a part frozen while the cached rates evaporate
+    it.
   - Under EDMF the tests run on a warm column, so the snow parts and the
     snow flows are checked only to stay zero. Parity without SGS quadrature
     is not tested under EDMF.
@@ -387,8 +381,9 @@ ClimaAtmos.follow_water_tag_precipitation!
 ClimaAtmos.water_tag_part_follow_shift
 ClimaAtmos.water_tag_source_part_follow_shift
 ClimaAtmos.water_tag_part_closing_shift
+ClimaAtmos.water_tag_takes_species_flux
 ClimaAtmos.water_tag_moves_precip_advection
-ClimaAtmos.water_tag_precip_advection!
+ClimaAtmos.water_tag_precip_part_vertical_advection!
 ClimaAtmos.water_tag_hyperdiffusion_quantities
 ClimaAtmos.prep_water_tag_hyperdiffusion!
 ClimaAtmos.apply_water_tag_hyperdiffusion!
