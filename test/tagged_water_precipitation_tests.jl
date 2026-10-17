@@ -2185,7 +2185,9 @@ net_flows(dq_rai_dt, dq_sno_dt = 0.0) = (;
 
     @test !CA.water_tag_follows_negative(ρq_rai, pos, neg)
     @test CA.water_tag_follows_negative(ρq_rai, pos, neg, dq_rai_dt)
-    @test CA.water_tag_follows_negative(ρq_rai, pos, neg, 0.0)
+    # A zero rate keeps the gate.
+    @test !CA.water_tag_follows_negative(ρq_rai, pos, neg, 0.0)
+    @test !CA.water_tag_follows_negative(ρq_rai, pos, neg, -0.0)
     # A loss keeps the clause. An empty partition, a partition whose sum is
     # not below zero and a compartment that is not negative do not follow.
     @test !CA.water_tag_follows_negative(ρq_rai, pos, neg, -dq_rai_dt)
@@ -2233,6 +2235,31 @@ net_flows(dq_rai_dt, dq_sno_dt = 0.0) = (;
     CA.water_tag_precipitation_microphysics_tendency!(Yₜ, Y, p)
     @test Yₜ.c.ρq_rtag_low[1] == 0 && Yₜ.c.ρq_rtag_high[1] == 0
     @test Yₜ.c.q_tag_exp_negative_precip[1] == 0
+
+    # A zero rate of the same rain keeps the gate, beside snow that takes
+    # water from `N` and gives some back. So the cell keeps the gross flows
+    # and its audit. Snow is 1e-6 per unit mass, held 0.9 by the low tag.
+    sno = 1e-6 * ρ
+    (; Y, Yₜ, p) = microphysics_cells(
+        [ρ], [nonprecip + ρq_rai + sno], [ρq_rai], [sno], N, cancelling,
+        ([0.9sno], [0.1sno], [0.0]),
+        [merge(net_flows(0.0), (; NS = 2e-8, SN = 1e-8))], [0.0], [1e-8],
+    )
+    CA.water_tag_precipitation_microphysics_tendency!(Yₜ, Y, p)
+    c = Yₜ.c
+    @test c.ρq_rtag_low[1] == 0 && c.ρq_rtag_high[1] == 0
+    @test c.ρq_stag_low[1] ≈ ρ * 2.53e-9 rtol = 2e-3
+    @test c.q_stag_aud_low[1] ≈ ρ * 1.47e-9 rtol = 3e-3
+    @test c.q_tag_exp_negative_precip[1] == 0
+
+    # The vapour tendency's lift of the same rain keeps the gate, rate or
+    # not: the rain parts take nothing, and the ledger takes the lift.
+    (; Y, Yₜ, p) = rain_cell(cancelling, 0.0)
+    lift = -ρq_rai
+    Yₜ.c.ρq_rai[1] = lift
+    CA.attribute_water_tag_precipitation_tendency!(Yₜ, Y, p)
+    @test Yₜ.c.ρq_rtag_low[1] == 0 && Yₜ.c.ρq_rtag_high[1] == 0
+    @test Yₜ.c.q_tag_exp_negative_precip[1] == lift
 
     # Snow the same, beside rain at zero.
     (; Y, Yₜ, p) = microphysics_cells(

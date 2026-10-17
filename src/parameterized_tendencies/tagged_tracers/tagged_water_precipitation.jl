@@ -1693,18 +1693,19 @@ sum, `pos - neg`: `pos` is at most `-neg / 3`. The partition's signed shares
 `[-1/2, 3/2]`.
 
 With the compartment's net rate `rate`, the parts also follow where the rate
-is not below zero, whatever the cancellation. A compartment that gains takes
+is above zero, whatever the cancellation. A compartment that gains takes
 the losers' composition in the net-flow rule
 ([`water_tag_net_flow_change`](@ref)), so its signed shares do not enter. An
 empty partition does not follow, since its sum is zero, and its gain goes to
-the ledger.
+the ledger. A zero rate, `-0.0` included, keeps the gate, so the cell keeps its
+gross flows and its audit.
 """
 @inline water_tag_follows_negative(ρq_parent, pos, neg) =
     (ρq_parent < zero(ρq_parent)) & (pos + neg < zero(pos)) & (3 * pos <= -neg)
 @inline water_tag_follows_negative(ρq_parent, pos, neg, rate) =
     water_tag_follows_negative(ρq_parent, pos, neg) | (
         (ρq_parent < zero(ρq_parent)) & (pos + neg < zero(pos)) &
-        (rate >= zero(rate))
+        (rate > zero(rate))
     )
 
 """
