@@ -11,7 +11,7 @@ set -u
 CHECKOUT=${1:-.}
 UP=${2:-upstream/main}
 FORK=${3:-origin/main}
-SCRIPTS=${SCRIPTS:-${CLIMA_SKILLS:?set CLIMA_SKILLS to the .claude/skills of the checkout}/}
+SCRIPTS=${SCRIPTS:-${CLIMA_SKILLS:?set CLIMA_SKILLS to the .claude/skills of the checkout}/upstream-sync/scripts}
 cd "$CHECKOUT" || exit 1
 section() { printf '\n## %s\n' "$*"; }
 changed() { grep -E '^[+-][^+-]' || true; }
