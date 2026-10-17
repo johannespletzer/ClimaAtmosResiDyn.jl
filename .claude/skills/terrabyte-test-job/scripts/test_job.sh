@@ -45,6 +45,12 @@ if [ -n "${ENV_DIR:-}" ] && [ -f "$ENV_DIR/PROVENANCE" ]; then
     built_for=$(sed -n 's/^checkout //p' "$ENV_DIR/PROVENANCE")
     [ "$(realpath -m "$built_for")" = "$(realpath -m "$CODE")" ] ||
         echo "WARNING: $ENV_DIR was built for $built_for, not $CODE"
+elif [ -n "${ENV_DIR:-}" ]; then
+    # A copied environment keeps the package paths of the checkout it was
+    # built for. A path that no longer holds the package fails the
+    # precompile step with "Missing source file".
+    echo "WARNING: $ENV_DIR has no PROVENANCE, so make_ci_env.jl did not build it."
+    echo "  Its package paths may point at another checkout. Build a fresh one with make_ci_env.jl."
 fi
 
 # Each run's wall time in seconds and its peak resident memory in GiB. A peak
