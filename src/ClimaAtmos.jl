@@ -224,6 +224,8 @@ import .Diagnostics as CAD
 import .Diagnostics: DiagnosticsConfig
 
 include(joinpath("callbacks", "get_callbacks.jl"))
+# The fork's callbacks for the stratospheric tracers and the tags.
+include(joinpath("callbacks", "tagging_callbacks.jl"))
 
 include(joinpath("parameters", "create_parameters.jl"))
 
