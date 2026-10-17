@@ -234,6 +234,8 @@ include(joinpath("simulation", "restart.jl"))
 include(joinpath("simulation", "integrator.jl"))
 include(joinpath("simulation", "AtmosSimulations.jl"))
 include(joinpath("simulation", "solve.jl"))
+# The fork's steps in the checkpoint, restart and solve functions above.
+include(joinpath("simulation", "fork_seams.jl"))
 
 include("presets.jl")
 
