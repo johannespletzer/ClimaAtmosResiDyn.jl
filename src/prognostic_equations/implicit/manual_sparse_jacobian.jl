@@ -764,14 +764,16 @@ The nonzero blocks are collected from the per-process builders, de-duplicated
 with `merge_jacobian_blocks`, and completed with `fallback_identity_blocks`;
 the solver comes from `jacobian_solver_algorithm`.
 
-When the state holds tags or process records that enter no other variable's
-equation, and `split_uncoupled_fields` is `true`, they are solved apart from the
-rest by a [`SplitJacobianSolver`](@ref). That keeps the build time of the solver
-from growing with the number of tags and records. `AutoSparseJacobian` asks for
+When the state holds tags, their updraft copies or process records that enter
+no other variable's equation, and `split_uncoupled_fields` is `true`, they are
+solved apart from the rest by a [`SplitJacobianSolver`](@ref). That keeps the
+build time of the solver from growing with the number of tags, copies and
+records. `AutoSparseJacobian` asks for
 the unsplit form, because it builds on the `FieldMatrixWithSolver` itself.
 
 The two forms give the same increments for the coupled fields. For a field with
-only its diagonal block, they give the same increment too. The water tags'
+only its diagonal block, and for an updraft copy, they give the same increment
+too. The water tags'
 sedimentation cross blocks are carried only with the split (`_derivative_flags`),
 so under 1-moment microphysics the tags' increments differ between the forms.
 
@@ -906,14 +908,34 @@ function jacobian_name_chains_overlap(a::Vector{Any}, b::Vector{Any})
     return a[1:n] == b[1:n]
 end
 
+# Whether a name chain is among the given names, or a part of one of them.
+jacobian_name_chain_in(chain, names) =
+    any(name -> jacobian_name_chains_overlap(jacobian_name_chain(name), chain), names)
+
+# Whether a name chain is a tag's copy in the first updraft, `c.sgsʲs.:(1)`:
+# a water tag's `q_tag_<name>` or an energy source tag's `e_src_<name>`. The
+# model carries one updraft when there are copies.
+is_updraft_copy_chain(chain) =
+    length(chain) == 4 &&
+    chain[1] === :c &&
+    chain[2] === :sgsʲs &&
+    chain[3] == 1 &&
+    chain[4] isa Symbol &&
+    (
+        is_water_tag_copy_name(chain[4]) ||
+        startswith(string(chain[4]), "e_src_")
+    )
+
 # Whether a state variable is one the split may solve apart: a tag of any of the
-# three families, the water tags' rain and snow parts among them, a process
-# record, the increment ledger of the energy source tags or the water tags, a
-# ledger per mechanism of either family, a ledger of the water tags' leak
-# correction, a ledger of the withheld gain, a tag's own ledger, or a field of
-# the water tags' microphysics audit. All live directly in `Y.c`.
+# three families, the water tags' rain and snow parts among them, a tag's copy
+# in the first updraft, a process record, the increment ledger of the energy
+# source tags or the water tags, a ledger per mechanism of either family, a
+# ledger of the water tags' leak correction, a ledger of the withheld gain, a
+# tag's own ledger, or a field of the water tags' microphysics audit. All but
+# the copies live directly in `Y.c`.
 function is_splittable_jacobian_field(name::MatrixFields.FieldName)
     chain = jacobian_name_chain(name)
+    is_updraft_copy_chain(chain) && return true
     (length(chain) == 2 && chain[1] === :c && chain[2] isa Symbol) ||
         return false
     return is_tagged_tracer_name(chain[2]) ||
@@ -931,78 +953,170 @@ end
     uncoupled_jacobian_names(block_pairs)
 
 The fields among the Jacobian's `block_pairs` that a [`SplitJacobianSolver`](@ref)
-solves apart from the rest, as a `Tuple` of `FieldName`s.
+solves apart from the rest, as a `Tuple` of `FieldName`s, in the order the
+solver solves them.
 
-A field qualifies when it is a tag, a process record or a field of an increment
-ledger, it has its own diagonal block, and no block names it
-except in its own row: not as a column, and not as a part of another row or
-column. Such a field enters no other variable's equation.
+The candidates are the splittable fields (`is_splittable_jacobian_field`) with
+their own diagonal block. A candidate is taken when no block names it except
+from a taken field's row: not as a column of another row, and not as a part of
+any row or column name. Such a field enters no model variable's equation.
 
-Its own row may hold blocks to the columns of other fields, the coupled ones,
-as a water tag's sedimentation cross blocks do. Then other variables enter its
-equation one way, and the split solves it after them, by back-substitution. A
-block to another splittable field's column would need an order among the
-uncoupled fields, so such a field is not taken. This runs once, when the
-Jacobian is built, on plain vectors.
+Its own row may hold blocks to the columns of the coupled fields, as a water
+tag's sedimentation cross blocks do. Then the coupled fields enter its equation
+one way, and the split solves it after them, by back-substitution. Its row may
+also hold a block to another taken field's column. Then that field is solved
+first. The taken fields are put in an order in which every such block points to
+an earlier field. Among the fields that are free to go next, the one whose
+diagonal block comes first goes first, so the order is fixed. Fields on a cycle
+of such blocks cannot be ordered: they stay coupled, and the rest is checked
+again.
+
+This runs once, when the Jacobian is built, on plain vectors.
 """
 function uncoupled_jacobian_names(block_pairs)
     block_keys = Any[pair.first for pair in block_pairs]
     rows = [jacobian_name_chain(key[1]) for key in block_keys]
     columns = [jacobian_name_chain(key[2]) for key in block_keys]
-    uncoupled = Any[]
+    # The candidates, in the order of their diagonal blocks.
+    candidates = Vector{Any}[]
+    candidate_names = Any[]
     for (i, key) in enumerate(block_keys)
-        (rows[i] == columns[i] && is_splittable_jacobian_field(key[1])) ||
-            continue
-        acceptable = all(eachindex(block_keys)) do j
-            j == i && return true
-            if rows[j] == rows[i]
-                # A block in the field's own row, to a coupled field's column.
-                # A column that contains the field, such as `@name(c)`, names
-                # it too.
-                return !jacobian_name_chains_overlap(rows[i], columns[j]) &&
-                       !is_splittable_jacobian_field(block_keys[j][2])
-            end
-            return !jacobian_name_chains_overlap(rows[i], rows[j]) &&
-                   !jacobian_name_chains_overlap(rows[i], columns[j])
-        end
-        acceptable && push!(uncoupled, key[1])
+        rows[i] == columns[i] && is_splittable_jacobian_field(key[1]) || continue
+        rows[i] in candidates && continue
+        push!(candidates, rows[i])
+        push!(candidate_names, key[1])
     end
-    return Tuple(uncoupled)
+    taken = trues(length(candidates))
+    while true
+        drop_named_candidates!(taken, candidates, rows, columns)
+        (order, on_cycle) = order_uncoupled_candidates(taken, candidates, rows, columns)
+        if isempty(on_cycle)
+            return Tuple(candidate_names[order])
+        end
+        taken[on_cycle] .= false
+    end
+end
+
+# Drop, until nothing changes, every taken candidate that a block names other
+# than from its own row or as a column of another taken candidate's row.
+function drop_named_candidates!(taken, candidates, rows, columns)
+    is_taken_row(chain) =
+        any(k -> taken[k] && candidates[k] == chain, eachindex(candidates))
+    changed = true
+    while changed
+        changed = false
+        for (k, chain) in enumerate(candidates)
+            taken[k] || continue
+            named = any(eachindex(rows)) do j
+                if rows[j] == chain
+                    # Its own row may name its own column and the columns of
+                    # other fields. A column that contains the field, such as
+                    # `@name(c)`, names it too.
+                    return columns[j] != chain &&
+                           jacobian_name_chains_overlap(chain, columns[j])
+                end
+                # Another taken candidate's row may name it as a whole column.
+                is_taken_row(rows[j]) && columns[j] == chain && return false
+                return jacobian_name_chains_overlap(chain, rows[j]) ||
+                       jacobian_name_chains_overlap(chain, columns[j])
+            end
+            if named
+                taken[k] = false
+                changed = true
+            end
+        end
+    end
+    return taken
+end
+
+# The taken candidates' solve order, as indices, and the indices of the
+# candidates on a cycle of blocks between taken candidates. A candidate goes
+# when every taken candidate its row names has gone.
+function order_uncoupled_candidates(taken, candidates, rows, columns)
+    n = length(candidates)
+    depends = [
+        [
+            m for m in 1:n if m != k && taken[m] &&
+                any(
+                    j -> rows[j] == candidates[k] && columns[j] == candidates[m],
+                    eachindex(rows),
+                )
+        ] for k in 1:n
+    ]
+    order = Int[]
+    placed = falses(n)
+    while true
+        next = findfirst(
+            k -> taken[k] && !placed[k] && all(m -> placed[m], depends[k]),
+            1:n,
+        )
+        isnothing(next) && break
+        push!(order, next)
+        placed[next] = true
+    end
+    left = [k for k in 1:n if taken[k] && !placed[k]]
+    # Of the candidates left, those that reach themselves are on a cycle.
+    function reaches(start, target)
+        seen = falses(n)
+        stack = copy(depends[start])
+        while !isempty(stack)
+            m = pop!(stack)
+            m == target && return true
+            seen[m] && continue
+            seen[m] = true
+            append!(stack, depends[m])
+        end
+        return false
+    end
+    on_cycle = [k for k in left if reaches(k, k)]
+    return (order, on_cycle)
 end
 
 """
     SplitJacobianSolver
 
-The linear solver of a [`ManualSparseJacobian`](@ref) when the state holds tags
-or process records that couple to nothing.
+The linear solver of a [`ManualSparseJacobian`](@ref) when the state holds tags,
+their updraft copies or process records that couple to nothing.
 
 ClimaCore's nested block solvers work out, at compile time, which blocks each
 of their nested solves touches. They do it over the names of every field in the
 state, so that work grows faster than the number of fields, and each tag or
-record added makes the build slower by more than the last. The tags and records
-never act on the model: no other row names them. So this solves them one field
-at a time, and the other fields with the model's own nested solver, built over
-a name tree that leaves the tags and records out.
+record added makes the build slower by more than the last. The tags, copies and
+records never act on the model: no model row names them. So this solves them
+one field at a time, and the other fields with the model's own nested solver,
+built over a name tree that leaves them out. The model's algorithm names the
+copies among its scalars, so the coupled solve uses it with the uncoupled names
+taken out (`without_uncoupled_names`).
 
-A field whose row holds blocks to coupled fields' columns, such as a water
-tag's sedimentation cross blocks, is solved after the coupled fields:
-`R − Σ C ΔY` goes into a scratch field, and the field's own block is solved on
-it. The coupled system's rows, name tree and solver do not change, so the
-coupled fields' `ΔY` does not either. The unsplit form does not carry these
-blocks (`_derivative_flags`): inside the nested solve, a tag's row would join
-the Schur complement and gain blocks the solve cannot take.
+A field whose row holds blocks to other fields' columns, such as a water tag's
+sedimentation cross blocks or a copy's blocks to the updraft species, is solved
+after those fields: `R − Σ C ΔY` goes into a scratch field, and the field's own
+block is solved on it. The coupled system's rows and blocks do not change, so
+the coupled fields' `ΔY` does not either. ClimaCore evaluates each row of a
+nested solve on its own, so leaving rows out changes no other row's arithmetic.
+The unsplit form does not carry the grid tags' cross blocks
+(`_derivative_flags`): inside the nested solve, a tag's row would join the
+Schur complement and gain blocks the solve cannot take.
 
-A field with only its diagonal block is solved as the nested solver solves it in
-the whole system, so the result does not change. There, such a field falls into
-the group that the arrowhead solve leaves to its second algorithm, whose block
-diagonal part inverts the field's block exactly:
+Each field is solved as the nested solver solves it in the whole system, where
+that solver can take it (`uncoupled_field_algorithm`):
 
-  - under `ApproximateBlockArrowheadIterativeSolve`, that inverse is repeated
-    `n_iters` times from zero, which a `StationaryIterativeSolve` with a
-    `BlockDiagonalPreconditioner` and the same `n_iters` does for the field
-    alone;
-  - under `BlockArrowheadSolve`, it is taken once, which `BlockDiagonalSolve`
-    does.
+  - A grid tag, a record or a ledger falls into the group that the arrowhead
+    solve leaves to its second algorithm, whose block diagonal part inverts the
+    field's block exactly. Under `ApproximateBlockArrowheadIterativeSolve`
+    that inverse is repeated `n_iters` times from zero, which a
+    `StationaryIterativeSolve` with a `BlockDiagonalPreconditioner` and the
+    same `n_iters` does for the field alone. Under `BlockArrowheadSolve` it is
+    taken once, which `BlockDiagonalSolve` does.
+  - A copy is among the arrowhead's scalars. Their chain of block lower
+    triangular solves ends in a `BlockDiagonalSolve`, which solves the copy
+    exactly, once, as `BlockDiagonalSolve` does for the copy alone.
+
+A copy's sum `Σ C ΔY` is formed as the nested solve forms it: one broadcast
+over the blocks, in the matrix's order, for each step of the nested solve that
+subtracts some of them. So a copy's increment is the nested solve's, bit for
+bit. A grid tag's blocks are subtracted one at a time, as the split always
+did, so its increment does not change either (`lower_block_groups`).
 
 Every solve reuses the state's own fields, and every uncoupled field is solved
 under one name, `@name(field)`, so the fields of one kind share one compiled
@@ -1013,10 +1127,11 @@ solve however many there are.
   - `alg`, `cache`, `keys`, `matrix`: the nested solver of the coupled fields,
     its cache, the keys `(@name(c), @name(f), ...)` over the coupled fields'
     name tree, and their blocks over the same tree;
-  - `uncoupled`: one `NamedTuple` per uncoupled field, holding its `name`, its
-    solver `alg` and `cache`, its `keys`, its one-block `matrix`, its `lower`
-    blocks as `(column name, block)` pairs, and the `rhs` scratch field that
-    the back-substitution writes when `lower` is not empty.
+  - `uncoupled`: one `NamedTuple` per uncoupled field, in solve order, holding
+    its `name`, its solver `alg` and `cache`, its `keys`, its one-block
+    `matrix`, its `lower` blocks as groups of `(column name, block)` pairs, and
+    the `rhs` scratch field that the back-substitution writes when `lower` is
+    not empty.
 """
 struct SplitJacobianSolver{A, C, K, M, U}
     alg::A
@@ -1033,21 +1148,15 @@ function split_jacobian_solver(matrix, Y, alg, uncoupled_names)
     is_uncoupled(name) = jacobian_name_chain(name) in uncoupled_chains
 
     # The coupled fields' name tree comes from a template of the state without
-    # the uncoupled fields. Only its structure is used.
-    coupled_center_names = Tuple(
-        name for name in propertynames(Y.c) if
-        !is_uncoupled(MatrixFields.FieldName(:c, name))
-    )
-    coupled_center_types = Tuple{
-        map(name -> eltype(getproperty(Y.c, name)), coupled_center_names)...,
-    }
+    # the uncoupled fields, the copies inside the updrafts among them. Only its
+    # structure is used.
     template = Fields.FieldVector(;
         (
             name =>
                 name === :c ?
                 similar(
                     Y.c,
-                    NamedTuple{coupled_center_names, coupled_center_types},
+                    coupled_template_type(eltype(Y.c), Any[:c], uncoupled_chains),
                 ) : getproperty(Y, name) for name in propertynames(Y)
         )...,
     )
@@ -1062,23 +1171,22 @@ function split_jacobian_solver(matrix, Y, alg, uncoupled_names)
         MatrixFields.FieldMatrix(coupled_pairs...),
         tree,
     )
+    coupled_alg = without_uncoupled_names(alg, uncoupled_chains)
+    check_coupled_diagonal_solves(coupled_pairs, alg, uncoupled_names)
     b = split_solver_view(coupled_keys, Y)
-    cache = MatrixFields.field_matrix_solver_cache(alg, coupled_matrix, b)
-    MatrixFields.check_field_matrix_solver(alg, cache, coupled_matrix, b)
+    cache = MatrixFields.field_matrix_solver_cache(coupled_alg, coupled_matrix, b)
+    MatrixFields.check_field_matrix_solver(coupled_alg, cache, coupled_matrix, b)
 
-    uncoupled_alg = uncoupled_field_algorithm(alg)
     # One scratch field for the back-substitution, shared by every uncoupled
-    # field with blocks to coupled columns; they are solved one after another.
-    lower_of(name) = Tuple(
-        (name_pair[2], matrix[name_pair]) for name_pair in keys(matrix) if
-        jacobian_name_chain(name_pair[1]) == jacobian_name_chain(name) &&
-            jacobian_name_chain(name_pair[2]) != jacobian_name_chain(name)
-    )
+    # field with blocks to other columns; they are solved one after another.
+    lower_of(name) =
+        lower_block_groups(matrix, alg, name, uncoupled_chains)
     rhs =
         any(name -> !isempty(lower_of(name)), uncoupled_names) ?
         similar(MatrixFields.get_field(Y, first(uncoupled_names))) : nothing
     uncoupled = map(uncoupled_names) do name
         field = MatrixFields.get_field(Y, name)
+        field_alg = uncoupled_field_algorithm(alg, name)
         field_tree = MatrixFields.FieldNameTree(Fields.FieldVector(; field))
         field_keys = MatrixFields.FieldVectorKeys((@name(field),), field_tree)
         field_matrix = MatrixFields.replace_name_tree(
@@ -1089,12 +1197,12 @@ function split_jacobian_solver(matrix, Y, alg, uncoupled_names)
         )
         field_b = MatrixFields.FieldNameDict(field_keys, (field,))
         field_cache = MatrixFields.field_matrix_solver_cache(
-            uncoupled_alg,
+            field_alg,
             field_matrix,
             field_b,
         )
         MatrixFields.check_field_matrix_solver(
-            uncoupled_alg,
+            field_alg,
             field_cache,
             field_matrix,
             field_b,
@@ -1102,7 +1210,7 @@ function split_jacobian_solver(matrix, Y, alg, uncoupled_names)
         lower = lower_of(name)
         (;
             name,
-            alg = uncoupled_alg,
+            alg = field_alg,
             cache = field_cache,
             keys = field_keys,
             matrix = field_matrix,
@@ -1110,14 +1218,161 @@ function split_jacobian_solver(matrix, Y, alg, uncoupled_names)
             rhs = isempty(lower) ? nothing : rhs,
         )
     end
-    return SplitJacobianSolver(alg, cache, coupled_keys, coupled_matrix, uncoupled)
+    return SplitJacobianSolver(
+        coupled_alg,
+        cache,
+        coupled_keys,
+        coupled_matrix,
+        uncoupled,
+    )
 end
 
-# The algorithm that solves one uncoupled field as `alg` solves it in the whole
-# system. There the field falls into the group that `alg` leaves to its second
-# algorithm, whose block diagonal part inverts the field's block exactly. The
-# iterative arrowhead solve repeats that inverse as often as its own iterative
-# second algorithm does, so the count and the start are read from it.
+# The element type of a template of the state without the uncoupled fields.
+# `chain` is the name chain of the value whose type `T` is. A named tuple keeps
+# its other fields, and a tuple, such as the updrafts', keeps every element.
+# Both are taken apart down to the fields, so that a copy inside an updraft is
+# left out too.
+function coupled_template_type(T::Type{<:NamedTuple}, chain, uncoupled_chains)
+    names = Tuple(
+        name for name in fieldnames(T) if
+                 !(Any[chain..., name] in uncoupled_chains)
+    )
+    types = map(
+        name -> coupled_template_type(
+            fieldtype(T, name),
+            Any[chain..., name],
+            uncoupled_chains,
+        ),
+        names,
+    )
+    return NamedTuple{names, Tuple{types...}}
+end
+coupled_template_type(T::Type{<:Tuple}, chain, uncoupled_chains) = Tuple{
+    ntuple(
+        i -> coupled_template_type(fieldtype(T, i), Any[chain..., i], uncoupled_chains),
+        fieldcount(T),
+    )...,
+}
+coupled_template_type(T, chain, uncoupled_chains) = T
+
+# The model's nested algorithm without the uncoupled names. ClimaCore refuses a
+# name that the coupled fields' name tree lacks. The names are taken out of the
+# groups that name them, and nothing else changes.
+without_uncoupled_names(alg, uncoupled_chains) = alg
+without_uncoupled_names(
+    alg::MatrixFields.SchurComplementReductionSolve,
+    uncoupled_chains,
+) = MatrixFields.SchurComplementReductionSolve(
+    coupled_names(alg.names₁, uncoupled_chains),
+    without_uncoupled_names(alg.alg₁, uncoupled_chains),
+    without_uncoupled_names(alg.alg₂, uncoupled_chains),
+)
+without_uncoupled_names(
+    alg::MatrixFields.BlockLowerTriangularSolve,
+    uncoupled_chains,
+) = MatrixFields.BlockLowerTriangularSolve(
+    coupled_names(alg.names₁, uncoupled_chains),
+    without_uncoupled_names(alg.alg₁, uncoupled_chains),
+    without_uncoupled_names(alg.alg₂, uncoupled_chains),
+)
+without_uncoupled_names(alg::MatrixFields.BlockArrowheadSolve, uncoupled_chains) =
+    MatrixFields.BlockArrowheadSolve(
+        coupled_names(alg.names₁, uncoupled_chains),
+        without_uncoupled_names(alg.alg₂, uncoupled_chains),
+    )
+# A group that is empty already, as the model's is without sedimenting
+# species, passes through. A group that the split would empty is refused.
+function coupled_names(names, uncoupled_chains)
+    isempty(names) && return names
+    kept = Tuple(
+        name for name in names if !(jacobian_name_chain(name) in uncoupled_chains)
+    )
+    isempty(kept) && error(
+        "The split solver would leave a group of the nested solve empty: \
+        $names are all solved apart.",
+    )
+    return kept
+end
+
+# ClimaCore's `BlockDiagonalSolve` solves its fields one at a time when any of
+# them has a diagonal, tridiagonal or scaling block, and all at once otherwise.
+# With the copies left out, a group could change from the one to the other.
+# Every model block on the diagonal is of those kinds, so the solve does not
+# change. This checks it once, when the solver is built.
+function check_coupled_diagonal_solves(coupled_pairs, alg, uncoupled_names)
+    any(name -> in_scalar_group(alg, name), uncoupled_names) || return nothing
+    for (name_pair, block) in coupled_pairs
+        name_pair[1] == name_pair[2] || continue
+        block isa Fields.Field || continue
+        eltype(block) <: Union{
+            MatrixFields.DiagonalMatrixRow,
+            MatrixFields.TridiagonalMatrixRow,
+        } && continue
+        error(
+            "The block $name_pair is neither diagonal nor tridiagonal. With \
+            the copies solved apart, the nested solve could take its group \
+            in another way, and the coupled fields' increments could change.",
+        )
+    end
+    return nothing
+end
+
+# Whether a field is among the scalars of the model's arrowhead solve.
+in_scalar_group(alg, name) = false
+in_scalar_group(
+    alg::Union{
+        MatrixFields.SchurComplementReductionSolve,
+        MatrixFields.BlockArrowheadSolve,
+    },
+    name,
+) = jacobian_name_chain_in(jacobian_name_chain(name), alg.names₁)
+
+"""
+    uncoupled_field_algorithm(alg, name)
+
+The algorithm that solves the uncoupled field `name` as `alg` solves it in the
+whole system.
+
+  - A field outside the arrowhead's scalars, such as a grid tag, falls into the
+    group that `alg` leaves to its second algorithm, whose block diagonal part
+    inverts the field's block exactly. The iterative arrowhead solve repeats
+    that inverse as often as its own iterative second algorithm does, so the
+    count and the start are read from it (`uncoupled_field_algorithm(alg)`).
+  - A field among the scalars, such as a copy, is solved by the chain of
+    block lower triangular solves of the iterative arrowhead solve. The level
+    whose group holds the field gives its algorithm. A `BlockDiagonalSolve`
+    there gives a `BlockDiagonalSolve` for the field alone. Any other is
+    refused, and so is a field among the direct arrowhead solve's scalars,
+    which that solve inverts as a diagonal.
+"""
+uncoupled_field_algorithm(alg, name) = uncoupled_field_algorithm(alg)
+function uncoupled_field_algorithm(
+    alg::MatrixFields.SchurComplementReductionSolve,
+    name,
+)
+    in_scalar_group(alg, name) || return uncoupled_field_algorithm(alg)
+    return scalar_field_algorithm(alg.alg₁, name)
+end
+function uncoupled_field_algorithm(alg::MatrixFields.BlockArrowheadSolve, name)
+    in_scalar_group(alg, name) && error(
+        "The field $name is among the scalars of a BlockArrowheadSolve, which \
+        inverts them as a diagonal. The split solver cannot solve it apart.",
+    )
+    return uncoupled_field_algorithm(alg)
+end
+scalar_field_algorithm(alg::MatrixFields.BlockLowerTriangularSolve, name) =
+    jacobian_name_chain_in(jacobian_name_chain(name), alg.names₁) ?
+    scalar_field_algorithm(alg.alg₁, name) :
+    scalar_field_algorithm(alg.alg₂, name)
+scalar_field_algorithm(::MatrixFields.BlockDiagonalSolve, name) =
+    MatrixFields.BlockDiagonalSolve()
+scalar_field_algorithm(alg, name) = error(
+    "The field $name is solved by a $(nameof(typeof(alg))) in the nested \
+    solve. The split solver can take a field apart only where a \
+    BlockDiagonalSolve takes it.",
+)
+
+# The algorithm for a field outside the arrowhead's scalars.
 uncoupled_field_algorithm(::MatrixFields.BlockArrowheadSolve) =
     MatrixFields.BlockDiagonalSolve()
 function uncoupled_field_algorithm(
@@ -1138,6 +1393,57 @@ uncoupled_field_algorithm(alg) = error(
     $(nameof(typeof(alg))). Only the block arrowhead solves that \
     `jacobian_solver_algorithm` builds are supported.",
 )
+
+# The blocks of a field's row to other columns, as groups of
+# `(column name, block)` pairs. `uncoupled_right_hand_side!` subtracts each
+# group in one broadcast. Within a group the blocks keep the matrix's order, and
+# blocks to uncoupled columns, solved earlier in the split, come last.
+#
+# A field among the arrowhead's scalars, such as a copy, has its blocks
+# subtracted inside the nested solve too. There each step of the nested solve
+# subtracts its blocks in one broadcast: first those to the arrowhead's other
+# group, then those to each level of the chain of block lower triangular
+# solves. The groups follow those steps, so the split forms the same sums and
+# the field's increment is the nested solve's, bit for bit.
+#
+# Any other field, such as a grid tag, has each block in a group of its own.
+# The nested solve does not carry these blocks, so the split itself is their
+# reference, and its blocks are subtracted one at a time, as they always were.
+function lower_block_groups(matrix, alg, name, uncoupled_chains)
+    chain = jacobian_name_chain(name)
+    lower = [
+        (name_pair[2], matrix[name_pair]) for name_pair in keys(matrix) if
+        jacobian_name_chain(name_pair[1]) == chain &&
+            jacobian_name_chain(name_pair[2]) != chain
+    ]
+    for (column, block) in lower
+        block isa Fields.Field || error(
+            "The block ($name, $column) is not a field of matrix rows. The \
+            split solver back-substitutes only such blocks.",
+        )
+    end
+    in_scalars = in_scalar_group(alg, name)
+    steps = map(enumerate(lower)) do (i, (column, _))
+        column_chain = jacobian_name_chain(column)
+        is_uncoupled = column_chain in uncoupled_chains
+        in_scalars || return (Int(is_uncoupled), i)
+        is_uncoupled && return (typemax(Int), 0)
+        jacobian_name_chain_in(column_chain, alg.names₁) || return (0, 0)
+        return (scalar_level(alg.alg₁, column_chain, 1), 0)
+    end
+    return Tuple(
+        Tuple(lower[i] for i in eachindex(lower) if steps[i] == step) for
+        step in sort(unique(steps))
+    )
+end
+
+# The level of the chain of block lower triangular solves whose group holds a
+# column, counting from one. A column in the chain's last group is at the level
+# after the last.
+scalar_level(alg::MatrixFields.BlockLowerTriangularSolve, chain, level) =
+    jacobian_name_chain_in(chain, alg.names₁) ? level :
+    scalar_level(alg.alg₂, chain, level + 1)
+scalar_level(alg, chain, level) = level
 
 # The view of a state-like `FieldVector` under the given keys, whose name tree
 # decides which fields a solve can see.
@@ -1165,8 +1471,8 @@ end
 # Solve the uncoupled fields one by one, in tuple order. `unrolled_foreach`
 # unrolls the tuple at any length. A `foreach` allocates on Julia 1.10, since
 # the elements differ in type. A recursion over `Base.tail` allocates past 32
-# fields, where Julia no longer infers the tail. A field with blocks to coupled
-# columns is solved on `R − Σ C ΔY`, after the coupled fields.
+# fields, where Julia no longer infers the tail. A field with blocks to other
+# columns is solved on `R − Σ C ΔY`, after the fields of those columns.
 solve_uncoupled_fields!(uncoupled, ΔY, R) =
     unrolled_foreach(uncoupled) do field_solve
         solve_uncoupled_field!(field_solve, ΔY, R)
@@ -1185,20 +1491,32 @@ function solve_uncoupled_field!(field_solve, ΔY, R)
 end
 
 # The right-hand side of one uncoupled field: `R` itself, or `R − Σ C ΔY` over
-# its blocks to coupled columns, written into the shared scratch field.
+# its groups of blocks, written into the shared scratch field. The first group
+# reads `R`, and each later one the result of the one before.
 uncoupled_right_hand_side!(::Nothing, ::Tuple{}, ΔY, ᶜR) = ᶜR
-function uncoupled_right_hand_side!(rhs, lower::Tuple, ΔY, ᶜR)
-    rhs .= ᶜR
-    subtract_lower_blocks!(rhs, lower, ΔY)
+function uncoupled_right_hand_side!(rhs, groups::Tuple, ΔY, ᶜR)
+    subtract_lower_group!(rhs, ᶜR, first(groups), ΔY)
+    unrolled_foreach(Base.tail(groups)) do group
+        subtract_lower_group!(rhs, rhs, group, ΔY)
+    end
     return rhs
 end
-subtract_lower_blocks!(rhs, ::Tuple{}, ΔY) = nothing
-function subtract_lower_blocks!(rhs, lower::Tuple, ΔY)
-    (column, block) = first(lower)
-    ᶜΔY_column = MatrixFields.get_field(ΔY, column)
-    @. rhs -= block * ᶜΔY_column
-    return subtract_lower_blocks!(rhs, Base.tail(lower), ΔY)
+
+# `rhs = ᶜb − (C₁ ΔY₁ + C₂ ΔY₂ + …)` in one broadcast, the sum folded from the
+# left, as ClimaCore's nested solves form `b₂ - A₂₁ * x₁` for one row. A single
+# block is not wrapped in a sum, as there.
+function subtract_lower_group!(rhs, ᶜb, group, ΔY)
+    products = unrolled_map(group) do (column, block)
+        Base.Broadcast.broadcasted(*, block, MatrixFields.get_field(ΔY, column))
+    end
+    Base.Broadcast.materialize!(
+        rhs,
+        Base.Broadcast.broadcasted(-, ᶜb, sum_of_products(products)),
+    )
+    return nothing
 end
+sum_of_products(products::Tuple{Any}) = first(products)
+sum_of_products(products::Tuple) = Base.Broadcast.broadcasted(+, products...)
 
 # ============================================================================
 # Jacobian matrix entries

@@ -49,6 +49,11 @@ import LinearAlgebra
 import ClimaComms
 ClimaComms.@import_required_backends
 import ClimaAtmos as CA
+
+# The columns of an uncoupled field's blocks to other fields. The split solver
+# keeps them in groups, one per broadcast that subtracts them.
+lower_columns(field) = Tuple(pair[1] for group in field.lower for pair in group)
+
 include("tagged_water_precipitation_common.jl")
 include("tagged_water_precipitation_edmf_common.jl")
 
@@ -223,7 +228,7 @@ end
                     collect(cache.solver.uncoupled),
                 ),
             )
-            @test CA.@name(f.u₃) in map(first, field.lower)
+            @test CA.@name(f.u₃) in lower_columns(field)
         end
         CA.update_jacobian!(alg, cache, Y, p, FT(60), t)
         matrix = cache.matrix

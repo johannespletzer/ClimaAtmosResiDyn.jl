@@ -22,6 +22,10 @@ has its own test group. See `docs/src/tagged_water.md`.
 using Test
 import ClimaAtmos as CA
 
+# The columns of an uncoupled field's blocks to other fields. The split solver
+# keeps them in groups, one per broadcast that subtracts them.
+lower_columns(field) = Tuple(pair[1] for group in field.lower for pair in group)
+
 function run_simulation(config_dict, job_id)
     simulation = CA.get_simulation(
         CA.AtmosConfig(
@@ -121,7 +125,7 @@ altitude_region(above) = Dict{String, Any}(
         mass_names = map(CA.center_state_name, CA.sedimenting_mass_names(Y))
         @test length(mass_names) == 4
         for field in tag_solves
-            @test Set(map(first, field.lower)) == Set(mass_names)
+            @test Set(lower_columns(field)) == Set(mass_names)
         end
         # The sedimentation update sets the parent's cross blocks and the
         # tags', and no other update adds to the tags', so here the

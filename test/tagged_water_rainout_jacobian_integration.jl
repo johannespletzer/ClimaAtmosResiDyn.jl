@@ -30,6 +30,10 @@ import ClimaComms
 ClimaComms.@import_required_backends
 import ClimaAtmos as CA
 
+# The columns of an uncoupled field's blocks to other fields. The split solver
+# keeps them in groups, one per broadcast that subtracts them.
+lower_columns(field) = Tuple(pair[1] for group in field.lower for pair in group)
+
 const MF = CA.MatrixFields
 
 tanh_region(above) = Dict{String, Any}(
@@ -157,7 +161,7 @@ simulation(extra, job_id) =
         uncoupled = Dict(field.name => field for field in cache.solver.uncoupled)
         for name in tag_names
             field = uncoupled[c(name)]
-            @test map(first, field.lower) == (c(:ρq_tot),)
+            @test lower_columns(field) == (c(:ρq_tot),)
         end
         ΔY = zero(Y)
         ΔY_off = zero(Y)

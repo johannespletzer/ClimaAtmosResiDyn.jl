@@ -200,6 +200,30 @@ end
     @test hasproperty(ᶜsgsʲ, :q_gas_A)
     @test all(isfinite, parent(Y.c))
 
+    # The split solver takes the copies apart. The parent updraft fields and
+    # the passive tracer stay in the coupled solve, whose name tree leaves the
+    # copies out.
+    @testset "The split solver solves the copies apart" begin
+        MF = CA.MatrixFields
+        jacobian = copies.integrator.sol.prob.f.T_imp!.jac_prototype
+        solver = jacobian.cache.solver
+        @test solver isa CA.SplitJacobianSolver
+        uncoupled = Set(map(field -> field.name, solver.uncoupled))
+        tree = solver.keys.name_tree
+        copy_names = CA.water_tag_updraft_copy_names(p.atmos.water_tagging_model)
+        @test !isempty(copy_names)
+        for name in copy_names
+            copy_name = MF.FieldName(:c, :sgsʲs, 1, name)
+            @test copy_name in uncoupled
+            @test !MF.is_valid_name(copy_name, tree)
+        end
+        for name in (:ρa, :mse, :q_tot, :q_gas_A)
+            parent_name = MF.FieldName(:c, :sgsʲs, 1, name)
+            @test !(parent_name in uncoupled)
+            @test MF.is_valid_name(parent_name, tree)
+        end
+    end
+
     # 1. The tracer set to what `tropo` and its copy hold, in the grid mean and
     # in the updraft. The tracer machinery then gives both the same tendency,
     # and the copy has its mirrors on top: the rain-out, the relaxation at the

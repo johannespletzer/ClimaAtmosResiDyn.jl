@@ -37,6 +37,11 @@ using Test
 import ClimaComms
 ClimaComms.@import_required_backends
 import ClimaAtmos as CA
+
+# The columns of an uncoupled field's blocks to other fields. The split solver
+# keeps them in groups, one per broadcast that subtracts them.
+lower_columns(field) = Tuple(pair[1] for group in field.lower for pair in group)
+
 include("tagged_water_precipitation_common.jl")
 
 function second_call_allocations(f::F, args::Vararg{Any, N}) where {F, N}
@@ -339,7 +344,7 @@ end
                 collect(cache.solver.uncoupled),
             ),
         )
-        @test Set(map(first, tag_field.lower)) ==
+        @test Set(lower_columns(tag_field)) ==
               Set((CA.@name(c.ρq_lcl), CA.@name(c.ρq_icl)))
         # The audit: the net-flow rule and the gross flows differ here.
         audit =
