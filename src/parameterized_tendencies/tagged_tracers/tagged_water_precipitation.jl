@@ -419,6 +419,7 @@ _water_tag_precipitation_scratch(Y, model, atmos) =
         ᶜtagging_q_neg_sno = similar(Y.c.ρ),
         ᶜtagging_q_rai_snapshot = similar(Y.c.ρ),
         ᶜtagging_q_sno_snapshot = similar(Y.c.ρ),
+        ᶜtagging_precip_vtt = similar(Y.c.ρ),
         _water_tag_precipitation_edmf_scratch(Y, atmos.turbconv_model)...,
     ) : (;)
 
@@ -2572,8 +2573,20 @@ function _repair_water_tag_precip_parts!(Y, p, ledger, model)
 end
 
 # ============================================================================
-# Advection under increment transport
+# Explicit vertical advection of the rain and snow parts
 # ============================================================================
+
+"""
+    water_tag_takes_species_flux(p, name)
+
+Whether `name` is a rain or snow part under `water_tag_precipitation: true`,
+under either transport. The tracer loop of the explicit vertical advection then
+skips it, and the part takes its share of its species' flux instead
+([`water_tag_precip_part_vertical_advection!`](@ref)).
+"""
+water_tag_takes_species_flux(p, name) =
+    has_water_tag_precipitation(p.atmos.water_tagging_model) &&
+    _is_water_precip_part_field(name)
 
 """
     water_tag_moves_precip_advection(p, name)
@@ -2590,27 +2603,100 @@ water_tag_moves_precip_advection(p, name) =
     follows_water_increment(p.atmos.water_tagging_model) &&
     _is_water_precip_part_field(name)
 
-# The non-precipitating part of the tag whose rain or snow part is `name`.
-@generated function _nonprecip_part_name(
-    ::MatrixFields.FieldName{chain},
-) where {chain}
-    name = string(first(chain))
-    suffix = name[(ncodeunits("ρq_rtag_") + 1):end]
-    return :(MatrixFields.FieldName($(QuoteNode(Symbol(:ρq_tag_, suffix)))))
+"""
+    water_tag_precip_part_vertical_advection!(Yₜ, Y, p)
+
+Add the explicit vertical advection by `ᶠu³` to the rain and snow parts. Each
+part takes its share of its species' face flux. The flux is the one the
+species' own `vertical_transport` takes, with the configured
+`tracer_upwinding`. The share is
+[`water_tag_part_flux_share`](@ref) in the upwind cell, chosen by the sign of
+`u³`. So the partition's parts sum to their species at every face, for every
+scheme and either sign of the species. A part limited on its own would not,
+because the van Leer limiter is not additive. Where
+[`water_tag_moves_precip_advection`](@ref) says so, the tag's
+non-precipitating part gives back what its rain and snow parts take. A no-op
+without the key.
+"""
+water_tag_precip_part_vertical_advection!(Yₜ, Y, p) =
+    has_water_tag_precipitation(p.atmos.water_tagging_model) ?
+    _precip_part_vertical_advection!(Yₜ, Y, p, p.atmos.water_tagging_model) :
+    nothing
+function _precip_part_vertical_advection!(Yₜ, Y, p, model)
+    water_tag_share_norm!(p, Y)
+    (; ᶠu³) = p.precomputed
+    (; tracer_upwinding) = p.atmos.numerics
+    ᶜJ = Fields.local_geometry_field(axes(Y.c.ρ)).J
+    ᶠJ = Fields.local_geometry_field(axes(ᶠu³)).J
+    ᶠρ = @. lazy(ᶠinterp(Y.c.ρ * ᶜJ) / ᶠJ)
+    # Every part hands back under increment transport, as
+    # `water_tag_moves_precip_advection` says.
+    hand_back = follows_water_increment(model)
+    ᶜχ_rai = @. lazy(specific(Y.c.ρq_rai, Y.c.ρ))
+    ᶠflux_rai = _face_value_flux(ᶠu³, ᶜχ_rai, p.dt, tracer_upwinding)
+    _precip_part_species_fluxes!(
+        Yₜ.c,
+        Y.c,
+        p.scratch,
+        ᶠρ,
+        ᶠu³,
+        ᶠflux_rai,
+        model.tags,
+        RainPart(),
+        hand_back,
+    )
+    ᶜχ_sno = @. lazy(specific(Y.c.ρq_sno, Y.c.ρ))
+    ᶠflux_sno = _face_value_flux(ᶠu³, ᶜχ_sno, p.dt, tracer_upwinding)
+    _precip_part_species_fluxes!(
+        Yₜ.c,
+        Y.c,
+        p.scratch,
+        ᶠρ,
+        ᶠu³,
+        ᶠflux_sno,
+        model.tags,
+        SnowPart(),
+        hand_back,
+    )
+    return nothing
 end
 
-"""
-    water_tag_precip_advection!(Yₜ, p, name, vtt)
-
-Take the explicit vertical advection `vtt` of the rain or snow part `name` out
-of the tag's non-precipitating part, where
-[`water_tag_moves_precip_advection`](@ref) says so. Called from the tracer
-loop of the explicit vertical advection, after the part took `vtt`.
-"""
-function water_tag_precip_advection!(Yₜ, p, name, vtt)
-    water_tag_moves_precip_advection(p, name) || return nothing
-    ᶜρq_nonprecipₜ = MatrixFields.get_field(Yₜ.c, _nonprecip_part_name(name))
-    @. ᶜρq_nonprecipₜ -= vtt
+# Each tag's `part` takes `ᶠρ ᶠflux` times its share in the upwind cell. The
+# upwind cell follows `u³`, on which the reconstruction is based, not the
+# flux, whose sign is the species' too. `ᶠflux` is the species' face flux per
+# unit density. The tendency goes through `ᶜtagging_precip_vtt`, so that the
+# hand-back takes the same values.
+function _precip_part_species_fluxes!(
+    ᶜYₜ,
+    ᶜY,
+    scratch,
+    ᶠρ,
+    ᶠu³,
+    ᶠflux,
+    tags,
+    part,
+    hand_back,
+)
+    ᶜvtt = scratch.ᶜtagging_precip_vtt
+    MatrixFields.unrolled_foreach(tags) do tag
+        ᶜshare = water_tag_part_flux_share(ᶜY, scratch, tag, part)
+        @. ᶜvtt = -(ᶜadvdivᵥ(
+            ᶠρ *
+            ᶠflux *
+            ifelse(
+                _is_upward(ᶠu³),
+                ᶠbottom_bias_zero(ᶜshare),
+                ᶠtop_bias_zero(ᶜshare),
+            ),
+        ))
+        ᶜpartₜ = water_tag_part_field(ᶜYₜ, tag, part)
+        @. ᶜpartₜ += ᶜvtt
+        if hand_back
+            ᶜnonprecipₜ =
+                water_tag_part_field(ᶜYₜ, tag, NonPrecipitatingPart())
+            @. ᶜnonprecipₜ -= ᶜvtt
+        end
+    end
     return nothing
 end
 

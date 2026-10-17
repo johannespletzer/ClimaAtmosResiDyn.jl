@@ -209,9 +209,6 @@ end
     # The explicit vertical advection skips only `N` under the increment.
     @test CA._is_water_tag_field(@name(ρq_tag_low))
     @test !CA._is_water_tag_field(@name(ρq_rtag_low))
-    # `N` gets its rain's advection back from the part's name.
-    @test CA._nonprecip_part_name(@name(ρq_rtag_low)) == @name(ρq_tag_low)
-    @test CA._nonprecip_part_name(@name(ρq_stag_low)) == @name(ρq_tag_low)
 
     model = CA.WaterTaggingModel(precipitation_tags(); precipitation = true)
     @test CA.water_tag_precip_part_state_names(model) == (
@@ -3837,6 +3834,270 @@ end
         for other in (:ρq_tag_, :ρq_rtag_, :ρq_stag_)
             other == prefix && continue
             @test all(iszero, parent(getproperty(Yₜ.c, Symbol(other, :low))))
+        end
+    end
+end
+
+@testset "The parts take shares of their species' limited flux" begin
+    # The explicit vertical advection of the rain and snow parts on a
+    # hand-built column. Each part takes its share of the species' face flux,
+    # from the upwind cell. The rain profile has extrema, so the van Leer
+    # limiter acts on it.
+    CC = CA.ClimaCore
+    Geometry = CC.Geometry
+    FT = Float64
+    column(staggering) = CC.CommonSpaces.ColumnSpace(
+        FT;
+        z_min = 0,
+        z_max = 2000,
+        z_elem = 16,
+        staggering,
+    )
+    ᶜspace = column(CC.CommonSpaces.CellCenter())
+    ᶠspace = column(CC.CommonSpaces.CellFace())
+    ᶜz = CC.Fields.coordinate_field(ᶜspace).z
+    ᶠz = CC.Fields.coordinate_field(ᶠspace).z
+    ᶜJ = CC.Fields.local_geometry_field(ᶜspace).J
+    ᶠJ = CC.Fields.local_geometry_field(ᶠspace).J
+    ᶠlg = CC.Fields.local_geometry_field(ᶠspace)
+    tags = precipitation_tags(FT)
+    model = CA.WaterTaggingModel(tags; precipitation = true)
+    ᶜnames = (
+        :ρ,
+        :ρq_tot,
+        :ρq_rai,
+        :ρq_sno,
+        :ρq_tag_low,
+        :ρq_tag_high,
+        :ρq_tag_evap,
+        CA.water_tag_precip_part_state_names(model)...,
+    )
+    Y = CC.Fields.FieldVector(;
+        c = similar(
+            CC.Fields.coordinate_field(ᶜspace),
+            NamedTuple{ᶜnames, NTuple{length(ᶜnames), FT}},
+        ),
+    )
+    cells(field) = vec(parent(field))
+    at(z) = @. abs(ᶜz - z) < 1
+    # Cell 4 holds rain but none of it in the partition. Cell 12 holds
+    # negative rain. Above 1 km the non-precipitating composition differs
+    # from rain's, so a share from the wrong cell shows there.
+    ᶜempty = at(437.5)
+    ᶜnegative = at(1437.5)
+    ᶜbelow = @. (1 - tanh((ᶜz - 750) / 100)) / 2
+    function set_state!(Y; special_cells = true)
+        @. Y.c.ρ = FT(1.2) * exp(-(ᶜz) / 8000)
+        @. Y.c.ρq_tot = Y.c.ρ * FT(0.012)
+        @. Y.c.ρq_rai = Y.c.ρ * FT(3e-4) * (1 + sin(ᶜz / 200 + 1))
+        @. Y.c.ρq_sno = Y.c.ρ * FT(1e-4) * (1 + cos(ᶜz / 250 + 2))
+        ᶜnonprecip = @. Y.c.ρq_tot - Y.c.ρq_rai - Y.c.ρq_sno
+        @. Y.c.ρq_tag_low = FT(0.7) * ᶜnonprecip
+        @. Y.c.ρq_tag_high = FT(0.3) * ᶜnonprecip
+        @. Y.c.ρq_tag_evap = FT(0.3) * ᶜnonprecip
+        for (ᶜρq, prefix) in ((Y.c.ρq_rai, :ρq_rtag_), (Y.c.ρq_sno, :ρq_stag_))
+            ᶜlow = getproperty(Y.c, Symbol(prefix, :low))
+            ᶜhigh = getproperty(Y.c, Symbol(prefix, :high))
+            ᶜevap = getproperty(Y.c, Symbol(prefix, :evap))
+            @. ᶜlow = ᶜbelow * ᶜρq
+            @. ᶜhigh = (1 - ᶜbelow) * ᶜρq
+            @. ᶜevap = FT(0.1) * ᶜρq
+        end
+        if special_cells
+            ᶜcleared = @. ᶜempty | ᶜnegative
+            @. Y.c.ρq_rtag_low = ifelse(ᶜcleared, FT(0), Y.c.ρq_rtag_low)
+            @. Y.c.ρq_rtag_high = ifelse(ᶜcleared, FT(0), Y.c.ρq_rtag_high)
+            @. Y.c.ρq_rtag_evap = ifelse(ᶜnegative, FT(0), Y.c.ρq_rtag_evap)
+            @. Y.c.ρq_rai = ifelse(ᶜnegative, -FT(1e-5) * Y.c.ρ, Y.c.ρq_rai)
+        end
+        return Y
+    end
+    set_state!(Y)
+    upward(w) = Geometry.Contravariant3Vector.(Geometry.WVector.(w), ᶠlg)
+    # Up below 1 km and down above, with a Courant number of up to 0.48.
+    ᶠu³ = upward(@. FT(2) * tanh((1000 - ᶠz) / 200))
+    dt = FT(30)
+    scratch = (;
+        ᶜtagging_q_share_norm = similar(Y.c.ρ),
+        CA._water_tag_precipitation_scratch(Y, model, (; turbconv_model = nothing))...,
+    )
+    p = (;
+        atmos = (;
+            water_tagging_model = model,
+            numerics = (; tracer_upwinding = Val(:vanleer_limiter)),
+        ),
+        dt,
+        precomputed = (; ᶠu³),
+        scratch,
+    )
+    ᶠρ = @. CA.ᶠinterp(Y.c.ρ * ᶜJ) / ᶠJ
+    species = ((CA.RainPart(), :ρq_rai, :ρq_rtag_), (CA.SnowPart(), :ρq_sno, :ρq_stag_))
+    # The species' own tendency, as the explicit tracer loop computes it.
+    function species_tendency(Y, ᶠu³, mass, upwinding)
+        ᶜq = @. getproperty(Y.c, mass) / Y.c.ρ
+        ᶜT = similar(Y.c.ρ)
+        ᶜT .= CA.vertical_transport(Y.c.ρ, ᶠu³, ᶜq, dt, upwinding)
+        return cells(ᶜT)
+    end
+    # The parts' tendencies from the kernel, for rain and snow.
+    function part_tendencies(Y, ᶠu³, upwinding; hand_back = false)
+        Yₜ = similar(Y)
+        fill!(parent(Yₜ), 0)
+        CA.water_tag_share_norm!(p, Y)
+        for (part, mass, _) in species
+            ᶜq = @. getproperty(Y.c, mass) / Y.c.ρ
+            ᶠflux = CA._face_value_flux(ᶠu³, ᶜq, dt, upwinding)
+            CA._precip_part_species_fluxes!(
+                Yₜ.c,
+                Y.c,
+                scratch,
+                ᶠρ,
+                ᶠu³,
+                ᶠflux,
+                tags,
+                part,
+                hand_back,
+            )
+        end
+        return Yₜ
+    end
+    partition(Yₜ, prefix) =
+        cells(getproperty(Yₜ.c, Symbol(prefix, :low))) .+
+        cells(getproperty(Yₜ.c, Symbol(prefix, :high)))
+    # The face value of `J ρ u³ χ` at the top of each cell, from the cell
+    # tendencies and the zero flux through the bottom face.
+    face_flux(ᶜT) = -cumsum(ᶜT .* cells(ᶜJ))
+
+    @testset "The predicate" begin
+        p_off = (; atmos = (; water_tagging_model = CA.WaterTaggingModel(tags)))
+        @test CA.water_tag_takes_species_flux(p, @name(ρq_rtag_low))
+        @test CA.water_tag_takes_species_flux(p, @name(ρq_stag_evap))
+        @test !CA.water_tag_takes_species_flux(p, @name(ρq_rai))
+        @test !CA.water_tag_takes_species_flux(p, @name(ρq_tag_low))
+        @test !CA.water_tag_takes_species_flux(p_off, @name(ρq_rtag_low))
+    end
+
+    @testset "Per-part van Leer does not close; shares do" begin
+        upwinding = Val(:vanleer_limiter)
+        # (a) The control: each part limited on its own.
+        for (_, mass, prefix) in species
+            ᶜT_X = species_tendency(Y, ᶠu³, mass, upwinding)
+            ᶜT_parts = sum(
+                species_tendency(Y, ᶠu³, Symbol(prefix, name), upwinding) for
+                name in (:low, :high)
+            )
+            @test maximum(abs, ᶜT_parts .- ᶜT_X) > 1e-6 * maximum(abs, ᶜT_X)
+        end
+        # (b) The shares of the species' flux.
+        Yₜ = part_tendencies(Y, ᶠu³, upwinding)
+        for (_, mass, prefix) in species
+            ᶜT_X = species_tendency(Y, ᶠu³, mass, upwinding)
+            @test maximum(abs, partition(Yₜ, prefix) .- ᶜT_X) <=
+                  1e-13 * maximum(abs, ᶜT_X)
+        end
+        ᶜT_X = species_tendency(Y, ᶠu³, :ρq_rai, upwinding)
+        ᶠF_X = face_flux(ᶜT_X)
+        ᶠscale = maximum(abs, ᶠF_X)
+        # (d) Out of the cell whose partition holds no rain, the partition
+        # carries the species' flux, by its non-precipitating shares.
+        k = findfirst(cells(ᶜempty))
+        @test ᶠF_X[k] > 0
+        @test abs(face_flux(partition(Yₜ, :ρq_rtag_))[k] - ᶠF_X[k]) <=
+              1e-12 * ᶠscale
+        # The negative cell's outflow face points down while its flux points
+        # up. The low part takes the cell's non-precipitating share there.
+        k = findfirst(cells(ᶜnegative)) - 1
+        @test ᶠF_X[k] > 0
+        @test abs(
+            face_flux(cells(Yₜ.c.ρq_rtag_low))[k] - FT(0.7) * ᶠF_X[k],
+        ) <= 1e-12 * ᶠscale
+        # (f) The top-level call refills the share denominators itself.
+        for ᶜnorm in (
+            scratch.ᶜtagging_q_share_norm,
+            scratch.ᶜtagging_q_share_norm_rai,
+            scratch.ᶜtagging_q_share_norm_sno,
+        )
+            fill!(parent(ᶜnorm), 0)
+        end
+        Yₜ = similar(Y)
+        fill!(parent(Yₜ), 0)
+        CA.water_tag_precip_part_vertical_advection!(Yₜ, Y, p)
+        for (_, mass, prefix) in species
+            ᶜT_X = species_tendency(Y, ᶠu³, mass, upwinding)
+            @test maximum(abs, partition(Yₜ, prefix) .- ᶜT_X) <=
+                  1e-13 * maximum(abs, ᶜT_X)
+        end
+    end
+
+    @testset "The hand-back to the non-precipitating part" begin
+        # (e) Under increment the tag's `N` gives back what its rain and
+        # snow parts take.
+        Yₜ = part_tendencies(Y, ᶠu³, Val(:vanleer_limiter); hand_back = true)
+        for name in (:low, :high, :evap)
+            ᶜT_R = cells(getproperty(Yₜ.c, Symbol(:ρq_rtag_, name)))
+            ᶜT_S = cells(getproperty(Yₜ.c, Symbol(:ρq_stag_, name)))
+            ᶜT_N = cells(getproperty(Yₜ.c, Symbol(:ρq_tag_, name)))
+            @test any(!iszero, ᶜT_R)
+            @test ᶜT_N == -(ᶜT_R .+ ᶜT_S)
+        end
+        # Without the hand-back `N` takes nothing.
+        Yₜ = part_tendencies(Y, ᶠu³, Val(:vanleer_limiter))
+        @test all(iszero, cells(Yₜ.c.ρq_tag_low))
+    end
+
+    @testset "Composition moves from the upwind cell, $scheme" for scheme in
+                                                                   (
+        :vanleer_limiter,
+        :first_order,
+        :third_order,
+    )
+        upwinding = Val(scheme)
+        # (g) The closure under each scheme.
+        Yₜ = part_tendencies(Y, ᶠu³, upwinding)
+        for (_, mass, prefix) in species
+            ᶜT_X = species_tendency(Y, ᶠu³, mass, upwinding)
+            @test maximum(abs, partition(Yₜ, prefix) .- ᶜT_X) <=
+                  1e-13 * maximum(abs, ᶜT_X)
+        end
+        # (c) The low part holds all rain in cells 1 to 6, the high part all
+        # rain in cells 7 to 16. Upward flow moves the low part one cell up
+        # and no further. That cell takes the species' whole flux through
+        # the face below it. Under third order that flux can be negative.
+        Yc = set_state!(copy(Y); special_cells = false)
+        ᶜlow = @. ᶜz < 750
+        @. Yc.c.ρq_rtag_low = ifelse(ᶜlow, Yc.c.ρq_rai, FT(0))
+        @. Yc.c.ρq_rtag_high = ifelse(ᶜlow, FT(0), Yc.c.ρq_rai)
+        m = count(cells(ᶜlow))
+        ᶜJ_cells = cells(ᶜJ)
+        for (w, moved, k) in ((FT(2), :ρq_rtag_low, m + 1), (FT(-2), :ρq_rtag_high, m))
+            ᶠu³_one_way = upward(fill(w, ᶠspace))
+            ᶠF_X = face_flux(species_tendency(Yc, ᶠu³_one_way, :ρq_rai, upwinding))
+            Yₜ = part_tendencies(Yc, ᶠu³_one_way, upwinding)
+            ᶜT_moved = cells(getproperty(Yₜ.c, moved))
+            @test abs(ᶠF_X[m]) > 1e-6 * maximum(abs, ᶠF_X)
+            @test abs(ᶜT_moved[k] * ᶜJ_cells[k] - sign(w) * ᶠF_X[m]) <=
+                  1e-12 * maximum(abs, ᶠF_X)
+            beyond = w > 0 ? ((m + 2):length(ᶜT_moved)) : (1:(m - 1))
+            @test all(iszero, ᶜT_moved[beyond])
+        end
+    end
+
+    @testset "The parts stay non-negative, $scheme" for scheme in
+                                                        (:vanleer_limiter, :first_order)
+        # One forward step on a column where the partition holds all rain
+        # and snow. A part stays non-negative wherever its species does.
+        upwinding = Val(scheme)
+        Yn = set_state!(copy(Y); special_cells = false)
+        Yₜ = part_tendencies(Yn, ᶠu³, upwinding)
+        for (_, mass, prefix) in species
+            ᶜρq_X = cells(getproperty(Yn.c, mass))
+            ᶜT_X = species_tendency(Yn, ᶠu³, mass, upwinding)
+            @test all(>=(0), ᶜρq_X .+ dt .* ᶜT_X)
+            for name in (:low, :high, :evap)
+                ᶜρq_k = cells(getproperty(Yn.c, Symbol(prefix, name)))
+                ᶜT_k = cells(getproperty(Yₜ.c, Symbol(prefix, name)))
+                @test all(>=(0), ᶜρq_k .+ dt .* ᶜT_k)
+            end
         end
     end
 end

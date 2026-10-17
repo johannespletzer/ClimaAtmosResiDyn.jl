@@ -366,6 +366,12 @@ end
             p,
             turbconv_model,
         )
+        advection = second_call_allocations(
+            CA.water_tag_precip_part_vertical_advection!,
+            Yₜ,
+            Y,
+            p,
+        )
         alg = CA.ManualSparseJacobian(; approximate_solve_iters = 2)
         cache = CA.jacobian_cache(alg, Y, p.atmos)
         jacobian = second_call_allocations(
@@ -375,9 +381,10 @@ end
             p,
             cache.derivative_flags.water_tag_cross_flag,
         )
-        @info "Allocations of the new kernels" flows hook inputs sgs jacobian
+        @info "Allocations of the new kernels" flows hook inputs sgs advection jacobian
         @test flows <= 64
         @test inputs == 0
+        @test advection == 0
         if VERSION >= v"1.11"
             @test sgs <= 4 * 64
             @test hook <= 26736
