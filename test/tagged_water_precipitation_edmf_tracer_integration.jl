@@ -52,11 +52,11 @@ include("tagged_water_precipitation_edmf_common.jl")
     # Without the follow nothing restores a part that the microphysics or the
     # advection takes below zero. Each part is checked on its own, so a new
     # negative part fails here. The source tag's rain part reaches
-    # -1.3e-70 kg m⁻³, far below rounding against rain of order 1e-7 kg m⁻³.
-    # It is held to that order. Its non-precipitating part stays non-negative
-    # in this regime. With the default fixed rain speed it reaches
-    # -5.1e-5 kg m⁻³.
-    known_negative = (; ρq_rtag_evap = -1e-20)
+    # -2.1e-20 kg m⁻³ on Julia 1.11 and 1.10, against rain of order
+    # 1e-7 kg m⁻³. It is held to 1e-18. Its non-precipitating part stays
+    # non-negative in this regime. With the default fixed rain speed it
+    # reaches -5.1e-5 kg m⁻³.
+    known_negative = (; ρq_rtag_evap = -1e-18)
     for (part, value) in minima
         if haskey(known_negative, part)
             @test value >= known_negative[part]

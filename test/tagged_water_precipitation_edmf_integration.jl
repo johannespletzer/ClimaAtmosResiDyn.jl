@@ -111,28 +111,23 @@ end
         N_gross = sum(abs.(ᶜN_gap))
         left = sum(Y.c.q_tag_inc_left)
         @info "The closing ledger and the closure under EDMF" led_close led_close_gross sampled_precipitation column_precipitation result N_gap N_gross left
-        # Under van Leer the parts' own limited advection moves the parts'
-        # sum apart from the species' by water that sums to zero over the
-        # column, which the closing step books with both signs. So the gross
-        # is printed, and the signed integral is held to the design's bound.
-        # Both signs cancel in the signed integral, so passing it would not
-        # clear the operators. The design judges the gross. Measured 5.12e-9
-        # signed and 3.15e-8 gross, against a bound of 3.2e-10 from
-        # 0.032 kg m⁻² of sampled precipitation. The candidate source is the
-        # stage 1 rule for a negative compartment in the parts' microphysics,
-        # deferred to its own part 9 item (design PART9_WP4B_EDMF.md, section
-        # 13, "The second piece, measured"). The per-part van Leer drift is
-        # the other.
-        @test_broken led_close <= 1e-8 * sampled_precipitation
+        # The rain and snow parts take shares of their species' limited flux,
+        # so the closing step books only rounding. The design judges the
+        # gross. Measured 1.5e-18 signed and 3.1e-18 gross on Julia 1.11,
+        # against 0.043 kg m⁻² of sampled precipitation. The bound is 1e-14
+        # of that, far below the design's 1e-8.
+        @test led_close <= 1e-14 * sampled_precipitation
+        @test led_close_gross <= 1e-14 * sampled_precipitation
         @test result.rain < 1e-8
         # The non-precipitating parts' column total is the parent's less the
         # follower's left part, as without the key
-        # (`tagged_water_increment_integration.jl`). With first-order
-        # upwinding and no quadrature the two agree to 1.5% of the gross departure.
-        @test abs(N_gap + left) < 0.05 * N_gross
-        # Their largest departure per cell stays above 1e-8: 8.6e-8, and
-        # 1.8e-8 with first-order upwinding, where van Leer's part is gone.
-        @test_broken result.total < 1e-8
+        # (`tagged_water_increment_integration.jl`). Both are at rounding of
+        # the column's water here, 2.3e-15 kg m⁻² each on Julia 1.11, so the
+        # relation is judged only above that.
+        rounding = 100 * eps(sum(Y.c.ρq_tot))
+        @test abs(N_gap + left) < max(0.05 * N_gross, rounding)
+        # The largest departure per cell, 4.4e-15 on Julia 1.11.
+        @test result.total < 1e-12
     end
 
     # 3. The twin test, operator by operator.
@@ -331,15 +326,15 @@ end
         result = closure(continued.integrator.u)
         @info "The closure one step after the restart" result
         @test result.rain < 1e-8
-        # As after the hour, item 2.
-        @test_broken result.total < 1e-8
+        # As after the hour, item 2. Measured 4.0e-15 on Julia 1.11.
+        @test result.total < 1e-12
     end
 
     # 10. Allocations of the new kernels on a second call, Julia 1.11, the
     # 30-level column. The flows' 32 bytes and the SGS flux's 120 come from
     # the parent's helpers, as without the key (`tagged_water_edmf_integration.jl`
     # bounds the latter's one call by 64). `water_tag_microphysics_inputs!`
-    # allocates nothing. The rest of the microphysics hook allocates at most
+    # and the parts' explicit vertical advection allocate nothing. The rest of the microphysics hook allocates at most
     # 26736 bytes and the Jacobian update at most 3552. The bounds on these
     # three hold on Julia 1.11, where they were measured. On Julia 1.10 the SGS
     # flux allocates 23160 bytes, with ClimaCore 1.0.3 and 1.0.4 alike.

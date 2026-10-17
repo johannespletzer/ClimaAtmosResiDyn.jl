@@ -4043,6 +4043,23 @@ end
         # Without the hand-back `N` takes nothing.
         Yₜ = part_tendencies(Y, ᶠu³, Val(:vanleer_limiter))
         @test all(iszero, cells(Yₜ.c.ρq_tag_low))
+        # The model's call allocates nothing on a second call, with the
+        # hand-back under increment transport.
+        model_increment = CA.WaterTaggingModel(
+            tags;
+            precipitation = true,
+            transport = CA.IncrementWaterTagTransport(),
+        )
+        p_increment =
+            (; p..., atmos = (; p.atmos..., water_tagging_model = model_increment))
+        second_call(f, args...) = (f(args...); @allocated f(args...))
+        @test second_call(
+            CA.water_tag_precip_part_vertical_advection!,
+            Yₜ,
+            Y,
+            p_increment,
+        ) == 0
+        @test any(!iszero, cells(Yₜ.c.ρq_tag_low))
     end
 
     @testset "Composition moves from the upwind cell, $scheme" for scheme in

@@ -2691,12 +2691,16 @@ function _precip_part_species_fluxes!(
         ))
         ᶜpartₜ = water_tag_part_field(ᶜYₜ, tag, part)
         @. ᶜpartₜ += ᶜvtt
-        if hand_back
-            ᶜnonprecipₜ =
-                water_tag_part_field(ᶜYₜ, tag, NonPrecipitatingPart())
-            @. ᶜnonprecipₜ -= ᶜvtt
-        end
+        hand_back && _hand_back_precip_part_advection!(ᶜYₜ, tag, ᶜvtt)
     end
+    return nothing
+end
+
+# A function of its own, so that the field it subtracts from is not
+# allocated in the loop above.
+function _hand_back_precip_part_advection!(ᶜYₜ, tag, ᶜvtt)
+    ᶜnonprecipₜ = water_tag_part_field(ᶜYₜ, tag, NonPrecipitatingPart())
+    @. ᶜnonprecipₜ -= ᶜvtt
     return nothing
 end
 
