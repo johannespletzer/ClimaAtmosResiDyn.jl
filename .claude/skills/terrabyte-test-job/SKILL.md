@@ -79,7 +79,8 @@ grep -E '^env |= CI|CI has|differ from|ERROR' $W/<tag>_env111.log
     checkout's package paths, and `.buildkite`'s `PrecompileCI` then fails
     to precompile with "Missing source file". `test_job.sh` warns when an
     environment has no `PROVENANCE`, the mark of one `make_ci_env.jl` did
-    not build.
+    not build. The mutation-run skill's `make_mutants.jl` is the exception:
+    it repoints ClimaAtmos at each mutant and writes `PROVENANCE`.
   - `LocalPreferences.toml` comes from `.buildkite`. If it is missing, run
     `./runscripts/setup-julia-terrabyte.tcsh cpu` once, or copy it from
     another checkout. One-process tests run without it.
