@@ -164,7 +164,7 @@ it is, the contract's claim is then measured.
 
 Done in this pull request. `failed_claims(adapter)` in `report.jl` returns
 one line per claim of the last accepted step whose status is `:fail`, and
-`write_parent_budget_report` in `solve.jl` logs them with `@warn` after the
+`write_parent_budget_report` in `simulation/fork_seams.jl` logs them with `@warn` after the
 summary. The return code is unchanged: the parent budget is a diagnostic and
 does not decide whether a run succeeded. A test is still to be added: inject a
 fault with `inject_fault!` on a short column and check the log with

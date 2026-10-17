@@ -96,35 +96,6 @@ struct AtmosSolveResults{S, RT, WT}
 end
 
 """
-    write_parent_budget_report(simulation, comms_ctx)
-
-Write the parent budget's claim certificate into the output directory
-on the root process and log its summary, when the run has a parent budget. It is
-called at the end of a successful solve. A crashed run writes none.
-"""
-function write_parent_budget_report(simulation, comms_ctx)
-    adapter = simulation.integrator.p.parent_budget
-    isnothing(adapter) && return nothing
-    PB = Internals.ParentBudget
-    ClimaComms.iamroot(comms_ctx) || return nothing
-    float_type = String(nameof(eltype(simulation.integrator.u)))
-    path = PB.write_budget_report(
-        adapter,
-        simulation.output_dir;
-        job_id = simulation.job_id,
-        float_type,
-    )
-    @info "Parent-budget report written" path
-    @info PB.budget_summary(adapter)
-    # A failed identity is a finding about the run, so it is raised above the
-    # summary. The return code does not change: the parent budget is a diagnostic.
-    failed = PB.failed_claims(adapter)
-    isempty(failed) ||
-        @warn "Parent-budget claims failed on the last accepted step" failed
-    return nothing
-end
-
-"""
     solve_atmos!(simulation)
 
 Run `simulation` to its end time and return an `AtmosSolveResults` with the solution,
@@ -134,9 +105,7 @@ The first step is taken outside the timed solve so that compilation is not count
 the callbacks are precompiled. Failures are caught rather than rethrown, so that partial
 results can still be inspected: in a serial run the crashed state is written to the
 output directory first. The diagnostic writers are closed on every path.
-When the run has a parent budget, its report is written to the output
-directory after a successful solve. A failure to write it is logged and does not
-change the return code.
+After a successful solve, `finalize_fork_outputs!` writes the parent budget's report.
 
 # Examples
 
@@ -166,14 +135,8 @@ function solve_atmos!(simulation)
         else
             (sol, walltime) = timed_solve!(integrator)
         end
-        # The certificate is a diagnostic of a run that has already finished.
-        # A failure to write it must not turn that run into a reported crash.
-        try
-            write_parent_budget_report(simulation, comms_ctx)
-        catch report_error
-            @error "Writing the parent-budget report failed; the run itself succeeded" exception =
-                (report_error, catch_backtrace())
-        end
+        # The fork's outputs of a finished run, in simulation/fork_seams.jl.
+        finalize_fork_outputs!(simulation, comms_ctx)
         return AtmosSolveResults(sol, :success, walltime)
     catch ret_code
         if !is_distributed(comms_ctx)
