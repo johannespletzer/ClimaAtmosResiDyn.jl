@@ -1827,9 +1827,10 @@ end
         )
         # Each water copy's row has a block to each species, at the chain's
         # first level. One copy also has a block to `ρ`, at its second level,
-        # so that its right-hand side has two groups. The energy copy has its
-        # diagonal only. The grid tag has its diagonal only, as in the unsplit
-        # form.
+        # so that its right-hand side has two groups. The other has a block to
+        # `u₃`, which the Schur complement's second group solves. The energy
+        # copy has its diagonal only. The grid tag has its diagonal only, as in
+        # the unsplit form.
         copy_pairs(copy, shift) = (
             (sgs(copy), sgs(copy)) => ᶜtridiagonal(shift),
             map(
@@ -1843,6 +1844,7 @@ end
             copy_pairs(:q_tag_lower, 40)...,
             (sgs(:q_tag_lower), c(:ρ)) => ᶜdiagonal(45, 0),
             (sgs(:e_src_upper), sgs(:e_src_upper)) => ᶜtridiagonal(50),
+            (sgs(:q_tag_upper), u₃) => ᶜᶠbidiagonal(70),
         )
         block_pairs = (model_pairs..., tag_pairs...)
         updraft_names = (:ρa, species..., :q_tag_upper, :q_tag_lower, :e_src_upper)
@@ -1992,6 +1994,21 @@ end
             @test isequal(
                 parent(ΔY.c.sgsʲs.:(1).q_tag_upper),
                 parent(plain.c.sgsʲs.:(1).q_tag_upper),
+            )
+        end
+
+        # A pentadiagonal block on the diagonal would let ClimaCore solve the
+        # copies' former group in another way, so the build refuses it.
+        @testset "A coupled diagonal block that is not tridiagonal is refused ($FT)" begin
+            ρa_pair = (sgs(:ρa), sgs(:ρa))
+            penta =
+                ρa_pair => band_block(ᶜspace, MF.PentadiagonalMatrixRow{FT}, -1, 65)
+            pairs = (filter(pair -> pair.first != ρa_pair, block_pairs)..., penta)
+            @test_throws "neither diagonal nor tridiagonal" CA.split_jacobian_solver(
+                MF.FieldMatrix(pairs...),
+                Y,
+                iterative_alg(2),
+                uncoupled_names,
             )
         end
 
