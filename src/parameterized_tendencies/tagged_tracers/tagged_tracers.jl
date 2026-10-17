@@ -4,8 +4,8 @@
 ##### Under `energy_tracers`, each tag adds a field `Y.c.ρe_tag_<name>` that holds
 ##### part of `ρe_tot`. A region tag is a transported part of `ρe_tot`. A tag with
 ##### a `source` starts at zero and accumulates the signed increment of that
-##### process, so cooling drives it negative. Types are in `types.jl`, config
-##### parsing in `config/tracer_config.jl`, and the physics in
+##### process, so cooling drives it negative. Types are in `tagging_types.jl`,
+##### config parsing in `config/tracer_config.jl`, and the physics in
 ##### `docs/src/tagged_tracers.md`.
 #####
 ##### Tags are ρ-weighted tracers, so the tracer machinery transports them and
