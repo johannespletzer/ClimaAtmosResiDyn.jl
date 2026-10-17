@@ -2096,6 +2096,225 @@ end
     end
 end
 
+# Cells for the microphysics' entry point and the closing step, in Float64.
+# The compartments are per volume. `N`, `R` and `S` hold each tag's parts
+# (`low`, `high`, `evap`), and `F` the flows per cell. The rates are the
+# model's, per unit mass. Returns the state, a zero tendency and the cache.
+function microphysics_cells(ρ, ρq_tot, ρq_rai, ρq_sno, N, R, S, F, dq_rai_dt, dq_sno_dt)
+    n = length(ρ)
+    (; Y, p, model) = correction_setup(Float64, Random.MersenneTwister(1), n)
+    ᶜY = merge(Y.c, (; ρ = copy(ρ)))
+    ᶜY.ρq_tot .= ρq_tot
+    ᶜY.ρq_rai .= ρq_rai
+    ᶜY.ρq_sno .= ρq_sno
+    for (k, name) in enumerate((:low, :high, :evap))
+        getproperty(ᶜY, Symbol(:ρq_tag_, name)) .= N[k]
+        getproperty(ᶜY, Symbol(:ρq_rtag_, name)) .= R[k]
+        getproperty(ᶜY, Symbol(:ρq_stag_, name)) .= S[k]
+    end
+    part_names = (
+        CA.water_tag_state_names(model)...,
+        CA.water_tag_precip_part_state_names(model)...,
+    )
+    audit_names = CA.water_tag_audit_state_names(model)
+    Yₜ = (;
+        c = (;
+            ρq_rai = zeros(n),
+            ρq_sno = zeros(n),
+            NamedTuple{part_names}(ntuple(_ -> zeros(n), length(part_names)))...,
+            NamedTuple{audit_names}(ntuple(_ -> zeros(n), length(audit_names)))...,
+            q_tag_exp_negative = zeros(n),
+            q_tag_exp_negative_precip = zeros(n),
+        ),
+    )
+    scratch_names = (
+        :ᶜtagging_q_share_norm,
+        :ᶜtagging_q_share_norm_rai,
+        :ᶜtagging_q_share_norm_sno,
+        :ᶜtagging_q_pos_rai,
+        :ᶜtagging_q_neg_rai,
+        :ᶜtagging_q_pos_sno,
+        :ᶜtagging_q_neg_sno,
+        :ᶜtagging_q_rai_snapshot,
+        :ᶜtagging_q_sno_snapshot,
+    )
+    p = merge(
+        p,
+        (;
+            dt = 120.0,
+            scratch = NamedTuple{scratch_names}(ntuple(_ -> zeros(n), 9)),
+            tagging = merge(p.tagging, (; ᶜwater_mp_flows = F)),
+            precomputed = (; ᶜmp_tendency = (; dq_rai_dt, dq_sno_dt)),
+        ),
+    )
+    return (; Y = (; c = ᶜY), Yₜ, p, model)
+end
+# Flows from `N` to rain and snow, or back, that make the given rates.
+net_flows(dq_rai_dt, dq_sno_dt = 0.0) = (;
+    NR = max(dq_rai_dt, 0.0),
+    NS = max(dq_sno_dt, 0.0),
+    RN = max(-dq_rai_dt, 0.0),
+    RS = 0.0,
+    SR = 0.0,
+    SN = max(-dq_sno_dt, 0.0),
+)
+
+# A gain into negative rain whose partition's sum is negative too, mostly by
+# cancellation. The cell is from a day of the DYCOMS RF02 EDMF column with
+# rain and snow parts. It gives the density, the rain, the partition's
+# non-negative and negative sums of its parts, and the model's net rate of
+# rain per unit mass. The clause on cancellation declines there. But the cell
+# gains, so the net-flow rule gives the rain parts the losers' composition, and
+# the signed shares the clause guards do not enter. So the parts follow the
+# rain, and nothing is withheld.
+@testset "A gain into negative rain whose partition's sum is negative" begin
+    ρ = 1.1421610013960704
+    ρq_rai = -8.329647621334816e-8
+    (pos, neg) = (1.1927622274869888e-7, -2.0277553998977058e-7)
+    dq_rai_dt = 5.327602446849115e-8
+    # What the gate withholds in that cell: `ρ` times the gain.
+    withheld = 6.08497974573334e-8
+    @test ρ * CA.water_tag_microphysics_withheld(
+        net_flows(dq_rai_dt),
+        dq_rai_dt,
+        0.0,
+        false,
+        true,
+        false,
+    )[2] == withheld
+
+    @test !CA.water_tag_follows_negative(ρq_rai, pos, neg)
+    @test CA.water_tag_follows_negative(ρq_rai, pos, neg, dq_rai_dt)
+    @test CA.water_tag_follows_negative(ρq_rai, pos, neg, 0.0)
+    # A loss keeps the clause. An empty partition, a partition whose sum is
+    # not below zero and a compartment that is not negative do not follow.
+    @test !CA.water_tag_follows_negative(ρq_rai, pos, neg, -dq_rai_dt)
+    @test CA.water_tag_follows_negative(-1.0, 0.5, -1.5, -1.0)
+    @test !CA.water_tag_follows_negative(ρq_rai, 0.0, 0.0, dq_rai_dt)
+    @test !CA.water_tag_follows_negative(ρq_rai, 3e-7, -2e-7, dq_rai_dt)
+    @test !CA.water_tag_follows_negative(-ρq_rai, pos, neg, dq_rai_dt)
+
+    # Through the entry point. The non-precipitating water is 9e-3 per unit
+    # mass, held 0.4 to 0.6 by the region tags and 0.1 by the source tag.
+    nonprecip = 9e-3 * ρ
+    N = ([0.4nonprecip], [0.6nonprecip], [0.1nonprecip])
+    none = ([0.0], [0.0], [0.0])
+    rain_cell(R, rate) = microphysics_cells(
+        [ρ], [nonprecip + ρq_rai], [ρq_rai], [0.0], N, R, none,
+        [net_flows(rate)], [rate], [0.0],
+    )
+    cancelling = ([pos], [neg], [0.3ρq_rai])
+    (; Y, Yₜ, p) = rain_cell(cancelling, dq_rai_dt)
+    CA.water_tag_precipitation_microphysics_tendency!(Yₜ, Y, p)
+    c = Yₜ.c
+    scale = ρ * dq_rai_dt
+    @test c.q_tag_exp_negative_precip[1] == 0
+    @test c.q_tag_exp_negative[1] == 0
+    @test abs(c.ρq_rtag_low[1] + c.ρq_rtag_high[1] - scale) <= 1e-15 * scale
+    @test c.ρq_rtag_low[1] ≈ 0.4scale rtol = 1e-14
+    for name in (:low, :high, :evap)
+        Δ = map(
+            prefix -> getproperty(c, Symbol(prefix, name))[1],
+            (:ρq_tag_, :ρq_rtag_, :ρq_stag_),
+        )
+        @test abs(sum(Δ)) <= 1e-15 * scale
+    end
+
+    # The same gain into an empty partition is withheld, and the rain parts
+    # take nothing.
+    (; Y, Yₜ, p) = rain_cell(none, dq_rai_dt)
+    CA.water_tag_precipitation_microphysics_tendency!(Yₜ, Y, p)
+    @test Yₜ.c.q_tag_exp_negative_precip[1] == withheld
+    @test Yₜ.c.ρq_rtag_low[1] == 0 && Yₜ.c.ρq_rtag_high[1] == 0
+
+    # A loss from the same rain with the same partition keeps the gate. The
+    # rain parts do not change, and nothing is withheld.
+    (; Y, Yₜ, p) = rain_cell(cancelling, -dq_rai_dt)
+    CA.water_tag_precipitation_microphysics_tendency!(Yₜ, Y, p)
+    @test Yₜ.c.ρq_rtag_low[1] == 0 && Yₜ.c.ρq_rtag_high[1] == 0
+    @test Yₜ.c.q_tag_exp_negative_precip[1] == 0
+
+    # Snow the same, beside rain at zero.
+    (; Y, Yₜ, p) = microphysics_cells(
+        [ρ], [nonprecip + ρq_rai], [0.0], [ρq_rai], N, none, cancelling,
+        [net_flows(0.0, dq_rai_dt)], [0.0], [dq_rai_dt],
+    )
+    CA.water_tag_precipitation_microphysics_tendency!(Yₜ, Y, p)
+    c = Yₜ.c
+    @test c.q_tag_exp_negative_precip[1] == 0
+    @test abs(c.ρq_stag_low[1] + c.ρq_stag_high[1] - scale) <= 1e-15 * scale
+end
+
+# The same gain in a column, with the fall of the rain and of its parts solved
+# together, as the implicit step does. Three cells hold negative rain with a
+# cancelling partition, and the others positive rain. Where the gate withholds
+# the gain, the rain carries it down the column and its parts do not, so the
+# closing step books it a second time. Where the parts follow, the closing step
+# books only rounding.
+@testset "A gain into negative rain in a column, through the closing step" begin
+    rng = Random.MersenneTwister(69)
+    n = 16
+    Δt = 120.0
+    ρ = 1.1 .+ 0.1 .* rand(rng, n)
+    negative = [5, 9, 10]
+    low = 1e-6 .* (1 .+ rand(rng, n))
+    high = 1e-6 .* rand(rng, n)
+    dq_rai_dt = 1e-8 .* rand(rng, n) .- 2e-9
+    for k in negative
+        ρq = -1e-7 * (0.5 + rand(rng))
+        low[k] = -ρq * (0.6 + rand(rng))
+        high[k] = ρq - low[k]
+        dq_rai_dt[k] = 5e-8 * (1 + rand(rng))
+    end
+    ρq_rai = low .+ high
+    @test all(k -> ρq_rai[k] < 0, negative)
+    @test all(k -> !CA.water_tag_follows_negative(ρq_rai[k], low[k], high[k]), negative)
+    sno = 2e-7 .* rand(rng, n)
+    nonprecip = 9e-3 .* ρ
+    share = 0.2 .+ 0.6 .* rand(rng, n)
+    N = (share .* nonprecip, (1 .- share) .* nonprecip, 0.1 .* nonprecip)
+    R = (low, high, 0.1 .* max.(ρq_rai, 0))
+    S = (0.5 .* sno, 0.5 .* sno, zeros(n))
+    # Positive rain passes water both ways.
+    F = map(1:n) do k
+        rate = dq_rai_dt[k]
+        k in negative ? net_flows(rate) :
+        merge(net_flows(rate), (; NR = 2e-8, RN = 2e-8 - rate))
+    end
+    (; Y, Yₜ, p, model) = microphysics_cells(
+        ρ, nonprecip .+ ρq_rai .+ sno, ρq_rai, sno, N, R, S, F, dq_rai_dt, zeros(n),
+    )
+    CA.water_tag_precipitation_microphysics_tendency!(Yₜ, Y, p)
+    ᶜY = Y.c
+    W = sum(k -> Δt * ρ[k] * dq_rai_dt[k], negative)
+    @test sum(Yₜ.c.q_tag_exp_negative_precip) == 0
+    # The explicit step, then the fall: an implicit upwind solve with Courant
+    # number 0.4, the same for the rain and for each tag's rain part.
+    courant = 0.4
+    function fall!(x)
+        x[n] /= 1 + courant
+        for k in (n - 1):-1:1
+            x[k] = (x[k] + courant * x[k + 1]) / (1 + courant)
+        end
+        return x
+    end
+    ᶜY.ρq_rai .+= Δt .* ρ .* dq_rai_dt
+    fall!(ᶜY.ρq_rai)
+    for name in propertynames(Yₜ.c)
+        (name in (:ρq_rai, :ρq_sno) || !hasproperty(ᶜY, name)) && continue
+        getproperty(ᶜY, name) .+= Δt .* getproperty(Yₜ.c, name)
+        startswith(string(name), "ρq_rtag_") && fall!(getproperty(ᶜY, name))
+    end
+    @test minimum(ᶜY.ρq_rai) > 0
+    p.tagging.ᶜwater_rai_before .= ᶜY.ρq_rai
+    p.tagging.ᶜwater_sno_before .= ᶜY.ρq_sno
+    CA._follow_water_tag_precipitation!(Y, p, model)
+    closing_gross = sum(abs, ᶜY.q_tag_led_close)
+    @info "A gain into negative rain in a column" W closing_gross
+    @test closing_gross <= 1e-12 * W
+    @test maximum(abs, partition_sum(ᶜY, :ρq_rtag_) .- ᶜY.ρq_rai) <= 1e-12 * W
+end
+
 @testset "The flows weighted by subdomain under EDMF" begin
     FT = Float64
     flows(v) = NamedTuple{CA.WATER_TAG_FLOW_NAMES}(v)

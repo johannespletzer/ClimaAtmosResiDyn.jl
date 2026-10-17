@@ -214,7 +214,11 @@ Negative rain or snow whose partition's sum is negative too, not mostly by
 cancellation, is the exception, under the microphysics and the vapour
 nonnegativity tendency. Its parts follow it. Its share is each tag's signed
 share, the part over the partition's sum
-([`ClimaAtmos.water_tag_follows_negative`](@ref)). In such a cell the
+([`ClimaAtmos.water_tag_follows_negative`](@ref)). Under the microphysics the
+parts also follow such rain or snow where it gains, mostly by cancellation or
+not. A compartment that gains takes the losers' composition in the net-flow
+rule, so its signed shares do not enter. An empty partition does not follow,
+and its gain goes to `q_tag_exp_negative_precip`. In such a cell the
 microphysics moves the parts by the net-flow rule alone, since the pools are
 empty there. The partition's shares sum to one, so the parts' sum changes as
 the compartment does. The compartment
