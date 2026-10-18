@@ -12,7 +12,8 @@
 ##### Under `water_tag_precipitation: true` the `ρq_tag_<name>` fields take the
 ##### increment of `ρq_tot - ρq_rai - ρq_sno`. The rain and snow parts keep their
 ##### explicit advection and hand it back to the non-precipitating part
-##### (`water_tag_precip_advection!`). They take their own implicit terms.
+##### (`water_tag_precip_part_vertical_advection!`). They take their own implicit
+##### terms.
 
 # The names of the increment ledger, in the state's order.
 const WATER_TAG_LEDGER_NAMES =

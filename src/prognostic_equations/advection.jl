@@ -252,21 +252,21 @@ NVTX.@annotate function explicit_vertical_advection_tendency!(Yₜ, Y, p, t)
     # edmfx_sgs_mass_flux_tendency!.
     foreach_gs_tracer(Yₜ, Y) do ᶜρχₜ, ᶜρχ, ρχ_name
         # Under enthalpy transport the energy source tags take their shares of
-        # the parent's own flux instead, just below. Water tags that follow
+        # the parent's own flux instead, just below. So do the water tags'
+        # rain and snow parts, of their species' flux. Water tags that follow
         # the parent's implicit increment take its vertical advection from
         # that increment, after each solve (`correct_water_tag_increment!`).
         if !(ρχ_name in (@name(ρe_tot), @name(ρq_tot))) &&
            !energy_source_tag_moves_as_enthalpy(p, ρχ_name) &&
-           !water_tag_follows_increment(p, ρχ_name)
+           !water_tag_follows_increment(p, ρχ_name) &&
+           !water_tag_takes_species_flux(p, ρχ_name)
             ᶜχ = @. lazy(specific(ᶜρχ, Y.c.ρ))
             vtt = vertical_transport(ᶜρ, ᶠu³, ᶜχ, dt, tracer_upwinding)
             @. ᶜρχₜ += vtt
-            # A water tag's rain or snow part hands this back to the tag's
-            # non-precipitating part when that follows the increment.
-            water_tag_precip_advection!(Yₜ, p, ρχ_name, vtt)
         end
     end
     enthalpy_vertical_advection_of_energy_source_tags!(Yₜ, Y, p)
+    water_tag_precip_part_vertical_advection!(Yₜ, Y, p)
     if !(p.atmos.microphysics_model isa DryModel)
         vtt_bc =
             ᶜρq_tot_vertical_transport_bc(prescribed_flow, thermo_params, t, ᶠu³)
