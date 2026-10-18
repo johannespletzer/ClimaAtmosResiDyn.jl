@@ -123,8 +123,9 @@ end
         # follower's left part, as without the key
         # (`tagged_water_increment_integration.jl`). Both are at rounding of
         # the column's water here, 2.3e-15 kg m⁻² each on Julia 1.11, so the
-        # relation is judged only above that.
-        rounding = 100 * eps(sum(Y.c.ρq_tot))
+        # relation is judged only above ten units in the last place of the
+        # column's water.
+        rounding = 10 * eps(sum(Y.c.ρq_tot))
         @test abs(N_gap + left) < max(0.05 * N_gross, rounding)
         # The largest departure per cell, 4.4e-15 on Julia 1.11.
         @test result.total < 1e-12

@@ -46,6 +46,8 @@ include("tagged_water_precipitation_edmf_common.jl")
     )
     # A `NamedTuple`, which the log prints in full, unlike a `Dict`.
     @info "The parts' minima under EDMF as tracers" (; sort(collect(minima))...)
+    ρq_rai_extrema = extrema(parent(Y.c.ρq_rai))
+    @info "The rain's extrema under EDMF as tracers" ρq_rai_extrema
     for part in keys(minima)
         @test all(isfinite, parent(getproperty(Y.c, part)))
     end

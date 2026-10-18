@@ -165,12 +165,18 @@ alone would give an empty compartment no composition to pass on.
     extra solves per tag out. The parts are the same either way.
 
 Each rain and snow part's explicit vertical advection is its share of its
-species' face flux, taken in the upwind cell. The flux is the species' own,
+species' face flux, taken in the cell the flux leaves. The sign of the flux
+chooses that cell, as for the SGS mass flux. The flux is the species' own,
 with the configured `tracer_upwinding`. So the parts' advection sums to the
 species' at every face under every scheme. Under the default
 `vanleer_limiter` that would not hold for parts limited on their own, since
 the limiter is not additive. Composition moves between cells as under
-first-order upwinding. The closing step brings the rain and snow parts back
+first-order upwinding. A cell gives each part its own share of what the
+flux takes out, and inflow adds nothing negative. So a part stays
+non-negative wherever the partition holds its species and the species'
+outflow over the step does not exceed what the cell holds. Under
+`third_order` overshoot can take more out of a cell than it holds. The
+species and its parts can then go negative. The closing step brings the rain and snow parts back
 each time the state is constrained. The non-precipitating parts keep their
 drift from the parent, which `q_ntag_res` reports. The repair only removes
 negative parts.
@@ -382,7 +388,6 @@ ClimaAtmos.water_tag_part_follow_shift
 ClimaAtmos.water_tag_source_part_follow_shift
 ClimaAtmos.water_tag_part_closing_shift
 ClimaAtmos.water_tag_takes_species_flux
-ClimaAtmos.water_tag_moves_precip_advection
 ClimaAtmos.water_tag_precip_part_vertical_advection!
 ClimaAtmos.water_tag_hyperdiffusion_quantities
 ClimaAtmos.prep_water_tag_hyperdiffusion!

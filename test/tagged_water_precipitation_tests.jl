@@ -3841,7 +3841,7 @@ end
 @testset "The parts take shares of their species' limited flux" begin
     # The explicit vertical advection of the rain and snow parts on a
     # hand-built column. Each part takes its share of the species' face flux,
-    # from the upwind cell. The rain profile has extrema, so the van Leer
+    # from the cell the flux leaves. The rain profile has extrema, so the van Leer
     # limiter acts on it.
     CC = CA.ClimaCore
     Geometry = CC.Geometry
@@ -3952,7 +3952,6 @@ end
                 Y.c,
                 scratch,
                 ᶠρ,
-                ᶠu³,
                 ᶠflux,
                 tags,
                 part,
@@ -4004,13 +4003,20 @@ end
         @test ᶠF_X[k] > 0
         @test abs(face_flux(partition(Yₜ, :ρq_rtag_))[k] - ᶠF_X[k]) <=
               1e-12 * ᶠscale
-        # The negative cell's outflow face points down while its flux points
-        # up. The low part takes the cell's non-precipitating share there.
+        # Below the negative cell `u³` points down while the flux points up,
+        # out of the cell below. The low part takes that cell's share, not
+        # the non-precipitating share of the negative cell.
         k = findfirst(cells(ᶜnegative)) - 1
         @test ᶠF_X[k] > 0
-        @test abs(
-            face_flux(cells(Yₜ.c.ρq_rtag_low))[k] - FT(0.7) * ᶠF_X[k],
-        ) <= 1e-12 * ᶠscale
+        CA.water_tag_share_norm!(p, Y)
+        ᶜφ_low = cells(
+            Base.Broadcast.materialize(
+                CA.water_tag_part_flux_share(Y.c, scratch, tags[1], CA.RainPart()),
+            ),
+        )
+        @test ᶜφ_low[k] < FT(0.01)
+        @test abs(face_flux(cells(Yₜ.c.ρq_rtag_low))[k] - ᶜφ_low[k] * ᶠF_X[k]) <=
+              1e-12 * ᶠscale
         # (f) The top-level call refills the share denominators itself.
         for ᶜnorm in (
             scratch.ᶜtagging_q_share_norm,
@@ -4027,6 +4033,9 @@ end
             @test maximum(abs, partition(Yₜ, prefix) .- ᶜT_X) <=
                   1e-13 * maximum(abs, ᶜT_X)
         end
+        # Under tracer transport the call hands nothing back.
+        @test !CA.follows_water_increment(model)
+        @test all(iszero, cells(Yₜ.c.ρq_tag_low))
     end
 
     @testset "The hand-back to the non-precipitating part" begin
@@ -4062,8 +4071,8 @@ end
         @test any(!iszero, cells(Yₜ.c.ρq_tag_low))
     end
 
-    @testset "Composition moves from the upwind cell, $scheme" for scheme in
-                                                                   (
+    @testset "Composition moves from the cell the flux leaves, $scheme" for scheme in
+                                                                            (
         :vanleer_limiter,
         :first_order,
         :third_order,
@@ -4079,7 +4088,9 @@ end
         # (c) The low part holds all rain in cells 1 to 6, the high part all
         # rain in cells 7 to 16. Upward flow moves the low part one cell up
         # and no further. That cell takes the species' whole flux through
-        # the face below it. Under third order that flux can be negative.
+        # the face below it where the flux points into it. Under third order
+        # the flux can point out of it. It then leaves a cell without low
+        # rain, so the cell takes nothing and stays non-negative.
         Yc = set_state!(copy(Y); special_cells = false)
         ᶜlow = @. ᶜz < 750
         @. Yc.c.ρq_rtag_low = ifelse(ᶜlow, Yc.c.ρq_rai, FT(0))
@@ -4091,29 +4102,53 @@ end
             ᶠF_X = face_flux(species_tendency(Yc, ᶠu³_one_way, :ρq_rai, upwinding))
             Yₜ = part_tendencies(Yc, ᶠu³_one_way, upwinding)
             ᶜT_moved = cells(getproperty(Yₜ.c, moved))
+            ᶜρq_moved = cells(getproperty(Yc.c, moved))
             @test abs(ᶠF_X[m]) > 1e-6 * maximum(abs, ᶠF_X)
-            @test abs(ᶜT_moved[k] * ᶜJ_cells[k] - sign(w) * ᶠF_X[m]) <=
+            @test abs(ᶜT_moved[k] * ᶜJ_cells[k] - max(sign(w) * ᶠF_X[m], 0)) <=
                   1e-12 * maximum(abs, ᶠF_X)
+            @test ᶜρq_moved[k] + dt * ᶜT_moved[k] >= 0
             beyond = w > 0 ? ((m + 2):length(ᶜT_moved)) : (1:(m - 1))
             @test all(iszero, ᶜT_moved[beyond])
         end
     end
 
-    @testset "The parts stay non-negative, $scheme" for scheme in
-                                                        (:vanleer_limiter, :first_order)
-        # One forward step on a column where the partition holds all rain
-        # and snow. A part stays non-negative wherever its species does.
+    @testset "The parts stay non-negative, $scheme, special cells $special" for scheme in
+                                                                                (
+            :vanleer_limiter,
+            :first_order,
+            :third_order,
+        ),
+        special in (false, true)
+
+        # One forward step. Inflow takes the share of the cell it leaves, so
+        # it adds nothing negative. Outflow takes the cell's own share of
+        # what the species' flux takes out. So a part stays non-negative
+        # wherever the partition holds its species and that outflow over the
+        # step does not exceed the species. Under third order the outflow
+        # can exceed it by overshoot, and the species goes negative too.
         upwinding = Val(scheme)
-        Yn = set_state!(copy(Y); special_cells = false)
+        Yn = set_state!(copy(Y); special_cells = special)
         Yₜ = part_tendencies(Yn, ᶠu³, upwinding)
+        ᶜJ_cells = cells(ᶜJ)
+        k_below = findfirst(cells(ᶜnegative)) - 1
         for (_, mass, prefix) in species
             ᶜρq_X = cells(getproperty(Yn.c, mass))
             ᶜT_X = species_tendency(Yn, ᶠu³, mass, upwinding)
-            @test all(>=(0), ᶜρq_X .+ dt .* ᶜT_X)
+            F_top = face_flux(ᶜT_X)
+            F_bottom = [zero(FT); F_top[1:(end - 1)]]
+            ᶜoutflow = max.(F_top, 0) .+ max.(-F_bottom, 0)
+            ᶜheld = (ᶜρq_X .> 0) .& isapprox.(partition(Yn, prefix), ᶜρq_X; rtol = 1e-12)
+            ᶜkept = ᶜρq_X .* ᶜJ_cells .>= dt .* ᶜoutflow
+            ᶜguaranteed = ᶜheld .& ᶜkept
+            # The cell below the negative cell is covered.
+            @test ᶜguaranteed[k_below]
+            # On this column van Leer and first order keep the outflow within
+            # every cell the partition holds, so the guarantee covers them.
+            scheme != :third_order && @test all(ᶜkept[ᶜheld])
             for name in (:low, :high, :evap)
                 ᶜρq_k = cells(getproperty(Yn.c, Symbol(prefix, name)))
                 ᶜT_k = cells(getproperty(Yₜ.c, Symbol(prefix, name)))
-                @test all(>=(0), ᶜρq_k .+ dt .* ᶜT_k)
+                @test all(>=(0), (ᶜρq_k .+ dt .* ᶜT_k)[ᶜguaranteed])
             end
         end
     end

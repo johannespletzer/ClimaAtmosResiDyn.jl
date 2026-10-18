@@ -2589,34 +2589,20 @@ water_tag_takes_species_flux(p, name) =
     _is_water_precip_part_field(name)
 
 """
-    water_tag_moves_precip_advection(p, name)
-
-Whether `name` is a rain or snow part whose explicit vertical advection the
-tag's non-precipitating part gives back, under `water_tag_precipitation: true`
-and `water_tag_transport: increment`. The non-precipitating parts follow the
-parent's implicit increment of its non-precipitating water, and `ρq_tot` is
-advected implicitly with its rain and snow. So each takes minus its own rain's
-and snow's explicit advection.
-"""
-water_tag_moves_precip_advection(p, name) =
-    has_water_tag_precipitation(p.atmos.water_tagging_model) &&
-    follows_water_increment(p.atmos.water_tagging_model) &&
-    _is_water_precip_part_field(name)
-
-"""
     water_tag_precip_part_vertical_advection!(Yₜ, Y, p)
 
 Add the explicit vertical advection by `ᶠu³` to the rain and snow parts. Each
 part takes its share of its species' face flux. The flux is the one the
 species' own `vertical_transport` takes, with the configured
 `tracer_upwinding`. The share is
-[`water_tag_part_flux_share`](@ref) in the upwind cell, chosen by the sign of
-`u³`. So the partition's parts sum to their species at every face, for every
-scheme and either sign of the species. A part limited on its own would not,
-because the van Leer limiter is not additive. Where
-[`water_tag_moves_precip_advection`](@ref) says so, the tag's
-non-precipitating part gives back what its rain and snow parts take. A no-op
-without the key.
+[`water_tag_part_flux_share`](@ref) in the cell the flux leaves, chosen by the
+sign of the flux. So the partition's parts sum to their species at every face,
+for every scheme and either sign of the species. A part limited on its own
+would not, because the van Leer limiter is not additive. Under
+`water_tag_transport: increment` the tag's non-precipitating part gives back
+what its rain and snow parts take. The non-precipitating parts follow the
+parent's implicit increment of its non-precipitating water, and `ρq_tot` is
+advected implicitly with its rain and snow. A no-op without the key.
 """
 water_tag_precip_part_vertical_advection!(Yₜ, Y, p) =
     has_water_tag_precipitation(p.atmos.water_tagging_model) ?
@@ -2629,8 +2615,7 @@ function _precip_part_vertical_advection!(Yₜ, Y, p, model)
     ᶜJ = Fields.local_geometry_field(axes(Y.c.ρ)).J
     ᶠJ = Fields.local_geometry_field(axes(ᶠu³)).J
     ᶠρ = @. lazy(ᶠinterp(Y.c.ρ * ᶜJ) / ᶠJ)
-    # Every part hands back under increment transport, as
-    # `water_tag_moves_precip_advection` says.
+    # Every part hands back under increment transport.
     hand_back = follows_water_increment(model)
     ᶜχ_rai = @. lazy(specific(Y.c.ρq_rai, Y.c.ρ))
     ᶠflux_rai = _face_value_flux(ᶠu³, ᶜχ_rai, p.dt, tracer_upwinding)
@@ -2639,7 +2624,6 @@ function _precip_part_vertical_advection!(Yₜ, Y, p, model)
         Y.c,
         p.scratch,
         ᶠρ,
-        ᶠu³,
         ᶠflux_rai,
         model.tags,
         RainPart(),
@@ -2652,7 +2636,6 @@ function _precip_part_vertical_advection!(Yₜ, Y, p, model)
         Y.c,
         p.scratch,
         ᶠρ,
-        ᶠu³,
         ᶠflux_sno,
         model.tags,
         SnowPart(),
@@ -2661,17 +2644,18 @@ function _precip_part_vertical_advection!(Yₜ, Y, p, model)
     return nothing
 end
 
-# Each tag's `part` takes `ᶠρ ᶠflux` times its share in the upwind cell. The
-# upwind cell follows `u³`, on which the reconstruction is based, not the
-# flux, whose sign is the species' too. `ᶠflux` is the species' face flux per
-# unit density. The tendency goes through `ᶜtagging_precip_vtt`, so that the
+# Each tag's `part` takes `ᶠρ ᶠflux` times its share in the cell the flux
+# leaves, as `_sgs_water_tag_part_fluxes!` does. The sign of the flux chooses
+# that cell, not the sign of `u³`. The two differ where the species is
+# negative nearby or where third order overshoots. A cell then gives each part
+# its own share of what leaves it. `ᶠflux` is the species' face flux per unit
+# density. The tendency goes through `ᶜtagging_precip_vtt`, so that the
 # hand-back takes the same values.
 function _precip_part_species_fluxes!(
     ᶜYₜ,
     ᶜY,
     scratch,
     ᶠρ,
-    ᶠu³,
     ᶠflux,
     tags,
     part,
@@ -2684,7 +2668,7 @@ function _precip_part_species_fluxes!(
             ᶠρ *
             ᶠflux *
             ifelse(
-                _is_upward(ᶠu³),
+                _is_upward(ᶠflux),
                 ᶠbottom_bias_zero(ᶜshare),
                 ᶠtop_bias_zero(ᶜshare),
             ),
