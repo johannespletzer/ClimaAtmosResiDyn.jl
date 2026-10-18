@@ -461,19 +461,10 @@ function AtmosSimulation(
         Y, model, params, dt, start_date, resolved_steady_state_velocity;
         parent_budget, water_applications,
     )
-    # The tags' ledgers: the cadence their audit reports, and, on a restart,
-    # the accumulators the checkpoint carried. Both write only the tags' own
-    # cache.
+    # The cadence that the tags' audit reports. This writes only the tags' cache.
     set_tag_ledger_cadence!(p, update_constrain_state_every)
-    isnothing(restart_file) ||
-        restore_tag_ledger_checkpoint!(p.tagging, restart_file, context)
-    # A restarted run reads the tag closure checks' void flags and the water
-    # check's negative water flag back from its checkpoint. The first check
-    # runs when the integrator starts, below.
-    isnothing(restart_file) ||
-        restore_tag_closure_void!(p.tagging, restart_file, context)
-    isnothing(restart_file) ||
-        restore_negative_water_void!(p.tagging, restart_file, context)
+    # The tags' accumulators and flags from the checkpoint, in simulation/fork_seams.jl.
+    restore_fork_checkpoint!(p, restart_file, context)
     # The energy source tags' `throughput_tolerance` needs a verified partition.
     # Only the cache's masks show whether there is one, so it is checked here.
     default_callbacks &&

@@ -31,7 +31,7 @@ grep -q CXXABI_1.3.15 /usr/lib64/libstdc++.so.6 && export LD_PRELOAD=/usr/lib64/
 VER=${VER:-1.11}
 JULIA=${JULIA:-$(ls -d "$HOME"/.julia/juliaup/julia-"$VER".*/bin/julia | sort -V | tail -n 1)}
 # Slurm runs a spooled copy of this script, so its own path is no guide.
-SCRIPTS=${PARITY_SCRIPTS:-${CLIMA_SKILLS:?set CLIMA_SKILLS to the .claude/skills of the checkout}/}
+SCRIPTS=${PARITY_SCRIPTS:-${CLIMA_SKILLS:?set CLIMA_SKILLS to the .claude/skills of the checkout}/fork-parity/scripts}
 B_CONFIGS=${B_CONFIGS:-$CONFIGS}
 # With different configuration files b runs a diagnostic a does not, so b must
 # have fields of its own. With the same file it must have none: one would be a
