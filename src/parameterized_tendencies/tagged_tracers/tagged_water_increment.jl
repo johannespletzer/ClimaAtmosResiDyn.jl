@@ -172,17 +172,14 @@ end
 # The sum of the region tags of `ᶜY`, plus `dtγ` times that of `ᶜdY`.
 function _water_partition_sum!(ᶜsum, ᶜY, ᶜdY, dtγ, tags)
     ᶜsum .= zero(eltype(ᶜsum))
-    return _add_water_partition!(ᶜsum, ᶜY, ᶜdY, dtγ, tags)
-end
-_add_water_partition!(ᶜsum, ᶜY, ᶜdY, dtγ, ::Tuple{}) = ᶜsum
-function _add_water_partition!(ᶜsum, ᶜY, ᶜdY, dtγ, tags::Tuple)
-    tag = first(tags)
-    if _is_partition_tag(tag)
-        ᶜtag = tag_field(ᶜY, tag)
-        ᶜtag_increment = tag_field(ᶜdY, tag)
-        @. ᶜsum += ᶜtag + dtγ * ᶜtag_increment
+    MatrixFields.unrolled_foreach(tags) do tag
+        if _is_partition_tag(tag)
+            ᶜtag = tag_field(ᶜY, tag)
+            ᶜtag_increment = tag_field(ᶜdY, tag)
+            @. ᶜsum += ᶜtag + dtγ * ᶜtag_increment
+        end
     end
-    return _add_water_partition!(ᶜsum, ᶜY, ᶜdY, dtγ, Base.tail(tags))
+    return ᶜsum
 end
 
 """
@@ -643,16 +640,16 @@ end
 # Give each region tag its mask's part of `ᶜg`, a crossing's positive part,
 # as a tendency over `dtγ`. Only where the rule acted in the stage, `δL ≠ 0`,
 # so elsewhere the tendency is unchanged, signed zeros included.
-_give_crossing_by_mask!(ᶜYₜ, ᶜmasks, ᶜg, ᶜδL, dtγ, ::Tuple{}) = nothing
-function _give_crossing_by_mask!(ᶜYₜ, ᶜmasks, ᶜg, ᶜδL, dtγ, tags::Tuple)
-    tag = first(tags)
-    if _is_partition_tag(tag)
-        ᶜρq_tagₜ = tag_field(ᶜYₜ, tag)
-        ᶜmask = tag_field(ᶜmasks, tag)
-        @. ᶜρq_tagₜ =
-            ifelse(ᶜδL == 0, ᶜρq_tagₜ, ᶜρq_tagₜ + ᶜmask * ᶜg / dtγ)
+function _give_crossing_by_mask!(ᶜYₜ, ᶜmasks, ᶜg, ᶜδL, dtγ, tags)
+    MatrixFields.unrolled_foreach(tags) do tag
+        if _is_partition_tag(tag)
+            ᶜρq_tagₜ = tag_field(ᶜYₜ, tag)
+            ᶜmask = tag_field(ᶜmasks, tag)
+            @. ᶜρq_tagₜ =
+                ifelse(ᶜδL == 0, ᶜρq_tagₜ, ᶜρq_tagₜ + ᶜmask * ᶜg / dtγ)
+        end
     end
-    return _give_crossing_by_mask!(ᶜYₜ, ᶜmasks, ᶜg, ᶜδL, dtγ, Base.tail(tags))
+    return nothing
 end
 
 # The water the tags' `ρq_tag_<name>` fields partition after the stage, with the
@@ -684,51 +681,33 @@ end
 
 # The correction's flux, as `_sgs_water_tag_fluxes!` moves the default mode's,
 # with the shares of `_water_tag_follower_share_field`.
-_follower_water_tag_fluxes!(ᶜYₜ, ᶜY, ᶜnorm, ᶜpos, ᶠflux, ::Tuple{}, ᶜparent) = nothing
-function _follower_water_tag_fluxes!(ᶜYₜ, ᶜY, ᶜnorm, ᶜpos, ᶠflux, tags::Tuple, ᶜparent)
-    tag = first(tags)
-    ᶜρq_tagₜ = tag_field(ᶜYₜ, tag)
-    ᶜshare = _water_tag_follower_share_field(ᶜY, ᶜnorm, ᶜpos, tag, ᶜparent)
-    @. ᶜρq_tagₜ -= ᶜadvdivᵥ(
-        ᶠflux * ifelse(
-            _is_upward(ᶠflux),
-            ᶠbottom_bias_zero(ᶜshare),
-            ᶠtop_bias_zero(ᶜshare),
-        ),
-    )
-    return _follower_water_tag_fluxes!(
-        ᶜYₜ,
-        ᶜY,
-        ᶜnorm,
-        ᶜpos,
-        ᶠflux,
-        Base.tail(tags),
-        ᶜparent,
-    )
+function _follower_water_tag_fluxes!(ᶜYₜ, ᶜY, ᶜnorm, ᶜpos, ᶠflux, tags, ᶜparent)
+    MatrixFields.unrolled_foreach(tags) do tag
+        ᶜρq_tagₜ = tag_field(ᶜYₜ, tag)
+        ᶜshare = _water_tag_follower_share_field(ᶜY, ᶜnorm, ᶜpos, tag, ᶜparent)
+        @. ᶜρq_tagₜ -= ᶜadvdivᵥ(
+            ᶠflux * ifelse(
+                _is_upward(ᶠflux),
+                ᶠbottom_bias_zero(ᶜshare),
+                ᶠtop_bias_zero(ᶜshare),
+            ),
+        )
+    end
+    return nothing
 end
 
 # Give each tag its share of `ᶜgive`, the water a cell's partition takes for
 # the parent's negative part, as a tendency over `dtγ`, by the shares of
 # `_water_tag_follower_share_field`. Only where the column's total `N` is not
 # zero, so a run whose parent stays non-negative is unchanged bit for bit.
-_give_water_tags!(ᶜYₜ, ᶜY, ᶜnorm, ᶜpos, ᶜgive, N, dtγ, ::Tuple{}, ᶜparent) = nothing
-function _give_water_tags!(ᶜYₜ, ᶜY, ᶜnorm, ᶜpos, ᶜgive, N, dtγ, tags::Tuple, ᶜparent)
-    tag = first(tags)
-    ᶜρq_tagₜ = tag_field(ᶜYₜ, tag)
-    ᶜshare = _water_tag_follower_share_field(ᶜY, ᶜnorm, ᶜpos, tag, ᶜparent)
-    @. ᶜρq_tagₜ =
-        ifelse(N != 0, ᶜρq_tagₜ + ᶜgive * ᶜshare / dtγ, ᶜρq_tagₜ)
-    return _give_water_tags!(
-        ᶜYₜ,
-        ᶜY,
-        ᶜnorm,
-        ᶜpos,
-        ᶜgive,
-        N,
-        dtγ,
-        Base.tail(tags),
-        ᶜparent,
-    )
+function _give_water_tags!(ᶜYₜ, ᶜY, ᶜnorm, ᶜpos, ᶜgive, N, dtγ, tags, ᶜparent)
+    MatrixFields.unrolled_foreach(tags) do tag
+        ᶜρq_tagₜ = tag_field(ᶜYₜ, tag)
+        ᶜshare = _water_tag_follower_share_field(ᶜY, ᶜnorm, ᶜpos, tag, ᶜparent)
+        @. ᶜρq_tagₜ =
+            ifelse(N != 0, ᶜρq_tagₜ + ᶜgive * ᶜshare / dtγ, ᶜρq_tagₜ)
+    end
+    return nothing
 end
 
 """

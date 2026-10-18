@@ -311,6 +311,57 @@ altitude_region(above) = Dict{String, Any}(
             p,
             dtγ,
         ) == 0
+        # Nor does each of its loops over the tags, on the tags' tendency and
+        # on that of their own ledgers.
+        @test second_call_allocations(
+            CA._water_partition_sum!,
+            similar(Y.c.ρ),
+            U.c,
+            dY.c,
+            dtγ,
+            model.tags,
+        ) == 0
+        ᶜnorm = p.scratch.ᶜtagging_q_share_norm
+        ᶜparent = CA.water_tag_parent(U.c, model)
+        (; ᶜwater_pos, ᶠq_tag_increment_flux, ᶜq_tag_negative_weight) =
+            p.tagging
+        (; q_tag_negative_total, ᶜwater_masks) = p.tagging
+        (; ᶜq_tag_crossing, ᶜq_tag_exp_change) = p.tagging
+        ledger_view = CA.water_tag_inc_ledger_view(dY, model)
+        @test !isnothing(ledger_view)
+        for ᶜYₜ in (dY.c, ledger_view)
+            @test second_call_allocations(
+                CA._follower_water_tag_fluxes!,
+                ᶜYₜ,
+                U.c,
+                ᶜnorm,
+                ᶜwater_pos,
+                ᶠq_tag_increment_flux,
+                model.tags,
+                ᶜparent,
+            ) == 0
+            @test second_call_allocations(
+                CA._give_water_tags!,
+                ᶜYₜ,
+                U.c,
+                ᶜnorm,
+                ᶜwater_pos,
+                ᶜq_tag_negative_weight,
+                q_tag_negative_total,
+                dtγ,
+                model.tags,
+                ᶜparent,
+            ) == 0
+            @test second_call_allocations(
+                CA._give_crossing_by_mask!,
+                ᶜYₜ,
+                ᶜwater_masks,
+                ᶜq_tag_crossing,
+                ᶜq_tag_exp_change,
+                dtγ,
+                model.tags,
+            ) == 0
+        end
     end
 
     # 2. The run.

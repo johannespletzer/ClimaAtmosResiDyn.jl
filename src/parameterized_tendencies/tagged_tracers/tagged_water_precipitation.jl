@@ -1241,17 +1241,27 @@ one, bit for bit.
     lossS = max(-ΔS, zero(ΔS))
     loss = lossN + lossR + lossS
     mix =
-        loss > zero(loss) ? (lossN * φN + lossR * φR + lossS * φS) / loss :
-        zero(loss)
-    cN = min(ΔN, zero(ΔN)) * φN + max(ΔN, zero(ΔN)) * mix
-    cR = min(ΔR, zero(ΔR)) * φR + max(ΔR, zero(ΔR)) * mix
-    cS = min(ΔS, zero(ΔS)) * φS + max(ΔS, zero(ΔS)) * mix
-    return (
-        ifelse(negN, min(ΔN, zero(ΔN)) * φN, cN),
-        ifelse(negR, min(ΔR, zero(ΔR)) * φR, cR),
-        ifelse(negS, min(ΔS, zero(ΔS)) * φS, cS),
-    )
+        loss > zero(loss) ?
+        (
+            _water_tag_weighted_share(lossN, φN) +
+            _water_tag_weighted_share(lossR, φR) +
+            _water_tag_weighted_share(lossS, φS)
+        ) / loss : zero(loss)
+    outN = _water_tag_weighted_share(min(ΔN, zero(ΔN)), φN)
+    outR = _water_tag_weighted_share(min(ΔR, zero(ΔR)), φR)
+    outS = _water_tag_weighted_share(min(ΔS, zero(ΔS)), φS)
+    cN = outN + max(ΔN, zero(ΔN)) * mix
+    cR = outR + max(ΔR, zero(ΔR)) * mix
+    cS = outS + max(ΔS, zero(ΔS)) * mix
+    return (ifelse(negN, outN, cN), ifelse(negR, outR, cR), ifelse(negS, outS, cS))
 end
+
+# A flow times the share it carries, and zero where the flow is zero. A
+# gaining compartment's share then does not enter its own change. A signed
+# share of a cancelling partition can carry an infinite partial on dual
+# numbers, and a zero flow times it would give a NaN partial.
+@inline _water_tag_weighted_share(flow, φ) =
+    ifelse(flow == zero(flow), zero(flow * φ), flow * φ)
 
 """
     water_tag_microphysics_change(F, dq_rai_dt, dq_sno_dt, qN, qR, qS, Δt, φN, φR, φS, negN = false, negR = false, negS = false, follow = false)
