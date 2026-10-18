@@ -2272,6 +2272,36 @@ net_flows(dq_rai_dt, dq_sno_dt = 0.0) = (;
     @test abs(c.ρq_stag_low[1] + c.ρq_stag_high[1] - scale) <= 1e-15 * scale
 end
 
+# The same gain on dual numbers, as an autodiff Jacobian evaluates it. The
+# partition cancels to less than its parts' rounding, so the signed share is
+# finite and its partial is not in single precision. A gaining compartment's
+# share does not enter its change, so the partials stay finite.
+@testset "A followed gain on dual numbers ($FT)" for FT in (Float32, Float64)
+    Dual = CA.ForwardDiff.Dual{CA.Jacobian}
+    partial(x) = CA.ForwardDiff.partials(x)[1]
+    x = FT(1e-16)
+    other = -nextfloat(x)
+    rate = FT(1e-8)
+    @test !CA.water_tag_follows_negative(x + other, x, other)
+    @test CA.water_tag_follows_negative(x + other, x, other, rate)
+    dx = Dual(x, one(FT))
+    φR = CA.water_tag_negative_share(dx, dx + other)
+    @test isfinite(CA.ForwardDiff.value(φR))
+    # Rain gains what the non-precipitating water loses.
+    gain = CA.water_tag_net_flow_change(-rate, rate, zero(FT), FT(0.4), φR, FT(0.5))
+    @test all(c -> isfinite(partial(c)) && iszero(partial(c)), gain)
+    real_share = CA.water_tag_negative_share(x, x + other)
+    real_gain =
+        CA.water_tag_net_flow_change(-rate, rate, zero(FT), FT(0.4), real_share, FT(0.5))
+    @test all(map(isequal, map(CA.ForwardDiff.value, gain), real_gain))
+    # A losing compartment's share keeps its partial.
+    dφ = Dual(FT(0.3), one(FT))
+    loss = CA.water_tag_net_flow_change(rate, -rate, zero(FT), FT(0.4), dφ, FT(0.5))
+    @test partial(loss[2]) == -rate
+    @test partial(loss[1]) ≈ rate
+    @test iszero(partial(loss[3]))
+end
+
 # The same gain in a column, with the fall of the rain and of its parts solved
 # together, as the implicit step does. Three cells hold negative rain with a
 # cancelling partition, and the others positive rain. Where the gate withholds
