@@ -224,6 +224,8 @@ import .Diagnostics as CAD
 import .Diagnostics: DiagnosticsConfig
 
 include(joinpath("callbacks", "get_callbacks.jl"))
+# The fork's callbacks for the stratospheric tracers and the tags.
+include(joinpath("callbacks", "tagging_callbacks.jl"))
 
 include(joinpath("parameters", "create_parameters.jl"))
 
@@ -232,6 +234,8 @@ include(joinpath("simulation", "restart.jl"))
 include(joinpath("simulation", "integrator.jl"))
 include(joinpath("simulation", "AtmosSimulations.jl"))
 include(joinpath("simulation", "solve.jl"))
+# The fork's steps in the checkpoint, restart and solve functions above.
+include(joinpath("simulation", "fork_seams.jl"))
 
 include("presets.jl")
 

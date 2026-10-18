@@ -283,14 +283,9 @@ The file is named `day\$day.\$sec.hdf5` from the elapsed simulation time, and th
 written under the field name `"Y"`. Two attributes are attached: `"time"`, the simulation
 time in seconds, and `"atmos_model_hash"`, a hash of `p.atmos` that a restart checks
 against so a checkpoint is not silently loaded into a different model configuration.
-With energy source tags, their offset, definitions, transport and repair are
-attached as well, and a restart that changes one is refused (see
-[`write_energy_source_checkpoint_attributes!`](@ref)). With water tags, their
-definitions are, for the same reason (see
-[`write_water_tag_checkpoint_attributes!`](@ref)). With any tags, the closure
-checks' void flags are attached, so that a restarted run keeps marking its rows
-(see [`write_tag_closure_void_attributes!`](@ref)), and with water tags the
-negative water flag (see [`write_negative_water_void_attributes!`](@ref)).
+With tags or the parent budget, their attributes are attached as well (see
+`write_fork_checkpoint_attributes!`), and the tags' accumulators are written
+beside the state.
 
 Returns `nothing`. Installed by `checkpoint_callback` when `checkpoint_frequency` is
 finite.
@@ -315,22 +310,8 @@ NVTX.@annotate function save_state_to_disk_func(integrator, output_dir)
         "atmos_model_hash",
         hash_physics(p.atmos),
     )
-    # The parent budget's endpoint of this state, for the restart check.
-    Internals.ParentBudget.write_checkpoint_attributes!(hdfwriter.file, p.parent_budget)
-    # The energy source tags' settings, for the restart guard.
-    write_energy_source_checkpoint_attributes!(
-        hdfwriter.file,
-        p.atmos.energy_source_tagging_model,
-    )
-    # The water tags' definitions, for their restart guard.
-    write_water_tag_checkpoint_attributes!(
-        hdfwriter.file,
-        p.atmos.water_tagging_model,
-    )
-    # The closure checks' void flags and the water check's negative water
-    # flag, which a restart reads back.
-    write_tag_closure_void_attributes!(hdfwriter.file, p.tagging)
-    write_negative_water_void_attributes!(hdfwriter.file, p.tagging)
+    # The fork's checkpoint attributes, in simulation/fork_seams.jl.
+    write_fork_checkpoint_attributes!(hdfwriter.file, p)
     InputOutput.write!(hdfwriter, Y, "Y")
     # The tags' accumulators live in the cache, so they are written apart from
     # the state. A restart continues them. Nothing is written without tags.

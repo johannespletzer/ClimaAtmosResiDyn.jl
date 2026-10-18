@@ -83,11 +83,11 @@ Enforced, meaning the state is changed so the sum holds:
 Monitored only: the `q_tag_res`, `e_tag_res` and `e_src_res` diagnostics
 (`default_diagnostics.jl` 695, 686, 708), and the three `*_closure_check`
 callbacks (`default_model_callbacks(::AtmosTagging)` and
-`tag_closure_callback` in `get_callbacks.jl`). The callbacks write a CSV and warn when
+`tag_closure_callback` in `tagging_callbacks.jl`). The callbacks write a CSV and warn when
 `gross_relative > tolerance`, or when `nonpositive_fraction > 0`, both in
 `tag_closure_callback!` (`tagged_tracers.jl`). Nothing errors on a residual;
 the only errors are misconfiguration, in `tag_closure_callback`
-(`get_callbacks.jl`). The reductions in `tag_closure` run in the state type
+(`tagging_callbacks.jl`). The reductions in `tag_closure` run in the state type
 with no promotion (`tagged_tracers.jl`).
 
 ### Water tags against `ρq_tot`
