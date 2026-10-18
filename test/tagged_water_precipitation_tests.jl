@@ -4033,6 +4033,19 @@ end
         @test ᶠF_X[k] > 0
         @test abs(face_flux(partition(Yₜ, :ρq_rtag_))[k] - ᶠF_X[k]) <=
               1e-12 * ᶠscale
+        # Where the partition holds neither the cell's rain nor its
+        # non-precipitating water, the parts take none of the flux out of it.
+        # The flux stays untagged there, and the flux into the cell is still
+        # the partition's.
+        Y_void = copy(Y)
+        @. Y_void.c.ρq_tag_low = ifelse(ᶜempty, FT(0), Y_void.c.ρq_tag_low)
+        @. Y_void.c.ρq_tag_high = ifelse(ᶜempty, FT(0), Y_void.c.ρq_tag_high)
+        Yₜ_void = part_tendencies(Y_void, ᶠu³, upwinding)
+        ᶠF_void = face_flux(partition(Yₜ_void, :ρq_rtag_))
+        @test face_flux(species_tendency(Y_void, ᶠu³, :ρq_rai, upwinding))[k] > 0
+        @test abs(ᶠF_void[k]) <= 1e-12 * ᶠscale
+        @test abs(ᶠF_void[k - 1] - ᶠF_X[k - 1]) <= 1e-12 * ᶠscale
+        CA.water_tag_share_norm!(p, Y)
         # Below the negative cell `u³` points down while the flux points up,
         # out of the cell below. The low part takes that cell's share, not
         # the non-precipitating share of the negative cell.

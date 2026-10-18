@@ -2606,9 +2606,13 @@ part takes its share of its species' face flux. The flux is the one the
 species' own `vertical_transport` takes, with the configured
 `tracer_upwinding`. The share is
 [`water_tag_part_flux_share`](@ref) in the cell the flux leaves, chosen by the
-sign of the flux. So the partition's parts sum to their species at every face,
-for every scheme and either sign of the species. A part limited on its own
-would not, because the van Leer limiter is not additive. Under
+sign of the flux. The partition's shares there sum to one where the
+partition holds that cell's rain or snow, or else its non-precipitating
+water. So the partition's parts then sum to their species at the face, for
+every scheme and either sign of the species. Where the partition holds
+neither, its parts take none of the flux, and the flux stays untagged. A
+part limited on its own would not sum to its species, because the van Leer
+limiter is not additive. Under
 `water_tag_transport: increment` the tag's non-precipitating part gives back
 what its rain and snow parts take. The non-precipitating parts follow the
 parent's implicit increment of its non-precipitating water, and `ρq_tot` is
