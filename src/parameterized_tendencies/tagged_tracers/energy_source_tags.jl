@@ -9,7 +9,7 @@
 ##### signed `ρe_tag_*` family (`tagged_tracers.jl`) or the `prc_*` process
 ##### records (`process_record.jl`). Tag names are ρ-weighted, so the tracer
 ##### machinery transports them. Masks are static and built once with the cache.
-##### Types are in `types.jl` and config parsing in `config/tracer_config.jl`.
+##### Types are in `tagging_types.jl` and config parsing in `config/tracer_config.jl`.
 ##### Reference: `docs/src/energy_source_tags.md`.
 
 # ============================================================================
