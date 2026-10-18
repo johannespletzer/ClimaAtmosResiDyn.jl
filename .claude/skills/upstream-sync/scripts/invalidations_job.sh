@@ -27,7 +27,7 @@ export JULIA_NUM_PRECOMPILE_TASKS=${SLURM_CPUS_PER_TASK:-4}
 grep -q CXXABI_1.3.15 /usr/lib64/libstdc++.so.6 && export LD_PRELOAD=/usr/lib64/libstdc++.so.6
 VER=${VER:-1.10}
 JULIA=${JULIA:-$(ls -d "$HOME"/.julia/juliaup/julia-"$VER".*/bin/julia | sort -V | tail -n 1)}
-SCRIPTS=${SCRIPTS:-${CLIMA_SKILLS:?set CLIMA_SKILLS to the .claude/skills of the checkout}/}
+SCRIPTS=${SCRIPTS:-${CLIMA_SKILLS:?set CLIMA_SKILLS to the .claude/skills of the checkout}/upstream-sync/scripts}
 : "${ENVS:?set ENVS to one or more environment directories}"
 : "${OUT:?set OUT to a result directory}"
 mkdir -p "$OUT"

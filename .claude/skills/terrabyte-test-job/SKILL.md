@@ -75,6 +75,12 @@ grep -E '^env |= CI|CI has|differ from|ERROR' $W/<tag>_env111.log
     not finished, as on 5af1766c. Rebuild it when `Project.toml`'s compat changes or CI's
     versions move. Name it after the worktree, such as `rsedmf_ci111_env`.
     Each mutant or comparison checkout gets its own.
+  - Do not copy an environment to another checkout. A copy keeps the old
+    checkout's package paths, and `.buildkite`'s `PrecompileCI` then fails
+    to precompile with "Missing source file". `test_job.sh` warns when an
+    environment has no `PROVENANCE`, the mark of one `make_ci_env.jl` did
+    not build. The mutation-run skill's `make_mutants.jl` is the exception:
+    it repoints ClimaAtmos at each mutant and writes `PROVENANCE`.
   - `LocalPreferences.toml` comes from `.buildkite`. If it is missing, run
     `./runscripts/setup-julia-terrabyte.tcsh cpu` once, or copy it from
     another checkout. One-process tests run without it.
